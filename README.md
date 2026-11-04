@@ -43,6 +43,15 @@ publish the debug signing key as a production release key.
 - [User guide](docs/USER_GUIDE.md) (English and Persian)
 - [Security policy](SECURITY.md)
 
+## Support
+
+Rovunet is unpaid volunteer work. If it helps you, donations are welcome:
+
+- **USDT (Tron, TRC20):** `TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ`
+
+Send only USDT on the Tron (TRC20) network to this address. The same
+address is shown in the app under Settings → Support.
+
 ## License
 
 AGPL-3.0. Rovunet is based on SlipNet by Anonvector and is not affiliated
