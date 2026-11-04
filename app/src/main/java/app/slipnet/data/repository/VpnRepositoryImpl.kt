@@ -212,10 +212,10 @@ class VpnRepositoryImpl @Inject constructor(
         publishConnectionState(ConnectionState.Connecting)
     }
     private fun publishConnectionState(state: ConnectionState) {
-        _connectionState.value = state
-        _sessionState.value = app.slipnet.domain.model.SessionConnectionState(publishingSession, state)
         if (state is ConnectionState.Connected) connectedProfile = state.profile
         if (state is ConnectionState.Disconnected) connectedProfile = null
+        _connectionState.value = state
+        _sessionState.value = app.slipnet.domain.model.SessionConnectionState(publishingSession, state)
     }
 
     override val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()

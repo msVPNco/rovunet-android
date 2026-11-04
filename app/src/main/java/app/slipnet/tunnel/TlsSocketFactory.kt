@@ -6,12 +6,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
-import javax.net.ssl.SNIHostName
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLParameters
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
 
 /**
  * JSch [SocketFactory] that wraps TCP connections in TLS with a configurable SNI hostname.
@@ -37,22 +31,7 @@ class TlsSocketFactory(
         val rawSocket = Socket()
         rawSocket.connect(InetSocketAddress(host, port), connectTimeoutMs)
 
-        // 2. Wrap in TLS with custom SNI (validate the certificate, with explicit approval for self-signed servers)
-        val sslFactory = TransportTrust.tlsFactory(sniHost, port)
-        val sslSocket = sslFactory.createSocket(
-            rawSocket, sniHost, port, true  // autoClose = true
-        ) as SSLSocket
-
-        val params = sslSocket.sslParameters
-        params.serverNames = listOf(SNIHostName(sniHost))
-        params.endpointIdentificationAlgorithm = "HTTPS"
-        sslSocket.sslParameters = params
-
-        // 3. Perform TLS handshake
-        sslSocket.soTimeout = 15_000
-            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
-            sslSocket.soTimeout = 0
-        Log.i(TAG, "TLS handshake complete (protocol: ${sslSocket.session.protocol}, cipher: ${sslSocket.session.cipherSuite})")
+        val sslSocket = ValidatedTls.wrap(rawSocket, sniHost, port, connectTimeoutMs)
 
         return sslSocket
     }

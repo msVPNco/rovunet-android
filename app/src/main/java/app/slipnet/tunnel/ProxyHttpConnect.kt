@@ -7,12 +7,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
-import javax.net.ssl.SNIHostName
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLParameters
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
 
 /**
  * JSch [Proxy] that tunnels SSH through an HTTP CONNECT proxy.
@@ -66,9 +60,11 @@ class ProxyHttpConnect(
         val sock = Socket().apply {
             connect(InetSocketAddress(proxyHost, proxyPort), timeoutMs)
             tcpNoDelay = true
+            soTimeout = timeoutMs.coerceIn(1000, 15_000)
         }
         socket = sock
 
+        try {
         val out = sock.getOutputStream()
         val inp = sock.getInputStream()
 
@@ -113,23 +109,16 @@ class ProxyHttpConnect(
             val sniHost = tlsSni.ifBlank { host }
             Log.i(TAG, "Upgrading to TLS (SNI: $sniHost)")
 
-            val sslFactory = TransportTrust.tlsFactory(sniHost, port)
-            val sslSocket = sslFactory.createSocket(sock, sniHost, port, true) as SSLSocket
+            val sslSocket = ValidatedTls.wrap(sock, sniHost, port, timeoutMs)
 
-            val params = sslSocket.sslParameters
-            params.serverNames = listOf(SNIHostName(sniHost))
-        params.endpointIdentificationAlgorithm = "HTTPS"
-            sslSocket.sslParameters = params
-
-            sslSocket.soTimeout = 15_000
-            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
-            sslSocket.soTimeout = 0
-            Log.i(TAG, "TLS handshake complete (${sslSocket.session.protocol}, ${sslSocket.session.cipherSuite})")
             activeSocket = sslSocket
         }
 
+        activeSocket.soTimeout = 0
+        socket = activeSocket
         inputStream = activeSocket.getInputStream()
         outputStream = activeSocket.getOutputStream()
+        } catch (e: Exception) { close(); throw e }
     }
 
     override fun getInputStream(): InputStream = inputStream!!
@@ -148,6 +137,7 @@ class ProxyHttpConnect(
     private fun readLine(input: InputStream): String? {
         val sb = StringBuilder()
         while (true) {
+            check(sb.length < 16384) { "HTTP proxy header too large" }
             val b = input.read()
             if (b == -1) return if (sb.isEmpty()) null else sb.toString()
             if (b == '\r'.code) {

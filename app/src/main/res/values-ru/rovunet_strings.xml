@@ -219,4 +219,16 @@
     <string name="server_identity_title">Проверка сервера</string>
     <string name="server_identity_message">Сервер: %1$s\nSHA-256: %2$s\nСверьте отпечаток с администратором. Доверие неизвестному серверу может поставить соединение под угрозу. Изменённые ключи отклоняются.</string>
     <string name="server_identity_accept">Доверять серверу</string>
+    <string name="import_processing">Чтение конфигураций…</string>
+    <string name="trust_reset">Сбросить сохранённые ключи серверов</string>
+    <string name="trust_reset_message">Забыть подтверждённые ключи SSH и самоподписанные сертификаты? При следующем ручном подключении потребуется повторно проверить отпечаток каждого сервера.</string>
+    <string name="update_check">Проверить обновления</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_version">Доступна версия %1$s. Перед установкой файл будет загружен и проверен.</string>
+    <string name="update_download">Скачать</string>
+    <string name="update_install">Установить</string>
+    <string name="update_downloading">Загрузка и проверка… %1$d%%</string>
+    <string name="update_failed">Не удалось загрузить или проверить файл. Проверьте соединение и повторите попытку.</string>
+    <string name="update_check_failed">Не удалось проверить обновления. Повторите попытку.</string>
+    <string name="update_current">Установлена последняя версия.</string>
 </resources>

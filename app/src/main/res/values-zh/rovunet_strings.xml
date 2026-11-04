@@ -216,4 +216,16 @@
     <string name="server_identity_title">验证服务器身份</string>
     <string name="server_identity_message">服务器：%1$s\nSHA-256：%2$s\n请与服务器管理员核对此指纹。信任未知身份可能危及连接安全。已确认身份发生变化时将拒绝连接。</string>
     <string name="server_identity_accept">信任此服务器</string>
+    <string name="import_processing">正在读取配置…</string>
+    <string name="trust_reset">重置已保存的服务器身份</string>
+    <string name="trust_reset_message">忘记已批准的 SSH 密钥和自签名证书？下次手动连接时，您需要重新核实每台服务器的指纹。</string>
+    <string name="update_check">检查更新</string>
+    <string name="update_available">有可用更新</string>
+    <string name="update_version">版本 %1$s 已发布。安装前将下载并验证文件。</string>
+    <string name="update_download">下载</string>
+    <string name="update_install">安装</string>
+    <string name="update_downloading">下载和验证中… %1$d%%</string>
+    <string name="update_failed">下载或验证失败。请检查网络后重试。</string>
+    <string name="update_check_failed">无法检查更新，请重试。</string>
+    <string name="update_current">已是最新版本。</string>
 </resources>

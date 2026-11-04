@@ -177,7 +177,7 @@ class DomainRouter(
         fun rule(tag: String, domains: Collection<String> = emptyList(), ips: Collection<String> = emptyList()) {
             if (domains.isEmpty() && ips.isEmpty()) return
             val item = org.json.JSONObject().put("type", "field").put("outboundTag", tag)
-            if (domains.isNotEmpty()) item.put("domain", org.json.JSONArray(domains.map { "domain:" + it.removePrefix("*.") }))
+            if (domains.isNotEmpty()) item.put("domain", org.json.JSONArray(domains.map { "domain:" + it.removePrefix("*.").removePrefix(".").lowercase().trimEnd('.') }))
             if (ips.isNotEmpty()) item.put("ip", org.json.JSONArray(ips))
             rules.put(item)
         }
@@ -245,10 +245,12 @@ class DomainRouter(
      */
     fun createDirectConnection(host: String, port: Int, timeoutMs: Int = DIRECT_CONNECT_TIMEOUT_MS): Socket {
         val socket = Socket()
-        socket.connect(InetSocketAddress(host, port), timeoutMs)
-        socket.tcpNoDelay = true
-        Log.d(TAG, "Direct connection to $host:$port established")
-        return socket
+        try {
+            socket.connect(InetSocketAddress(host, port), timeoutMs)
+            socket.tcpNoDelay = true
+            Log.d(TAG, "Direct connection to $host:$port established")
+            return socket
+        } catch (e: Exception) { socket.close(); throw e }
     }
 
     private fun domainMatchesList(input: String): Boolean {

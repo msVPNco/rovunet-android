@@ -23,32 +23,9 @@ object LockPasswordUtil {
         SecretKeySpec(keyBytes, "AES")
     }
 
-    fun hashPassword(password: String): String {
-        val salt = ByteArray(16)
-        SecureRandom().nextBytes(salt)
-        val saltHex = salt.joinToString("") { "%02x".format(it) }
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(salt)
-        val hash = digest.digest(password.toByteArray(Charsets.UTF_8))
-        val hashHex = hash.joinToString("") { "%02x".format(it) }
-        return "$saltHex:$hashHex"
-    }
-
-    fun isValidHash(storedHash: String): Boolean = storedHash.matches(Regex("[0-9a-fA-F]{32}:[0-9a-fA-F]{64}"))
-
-    fun verifyPassword(password: String, storedHash: String): Boolean {
-        if (!isValidHash(storedHash)) return false
-        val parts = storedHash.split(":")
-        if (parts.size != 2) return false
-        val saltHex = parts[0]
-        val expectedHashHex = parts[1]
-        val salt = saltHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(salt)
-        val hash = digest.digest(password.toByteArray(Charsets.UTF_8))
-        val hashHex = hash.joinToString("") { "%02x".format(it) }
-        return MessageDigest.isEqual(hashHex.toByteArray(), expectedHashHex.lowercase().toByteArray())
-    }
+    fun hashPassword(password: String): String = app.slipnet.core.LockHash.create(password)
+    fun isValidHash(storedHash: String): Boolean = app.slipnet.core.LockHash.isValid(storedHash)
+    fun verifyPassword(password: String, storedHash: String): Boolean = app.slipnet.core.LockHash.verify(password, storedHash)
 
     fun encryptConfig(plaintext: String): ByteArray {
         val iv = ByteArray(IV_LENGTH).also { SecureRandom().nextBytes(it) }

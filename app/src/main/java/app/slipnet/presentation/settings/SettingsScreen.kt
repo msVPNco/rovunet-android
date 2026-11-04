@@ -143,6 +143,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
+    var showTrustResetDialog by remember { mutableStateOf(false) }
     var showDarkModeDialog by remember { mutableStateOf(false) }
     var showSshCipherDialog by remember { mutableStateOf(false) }
     var showSplitModeDialog by remember { mutableStateOf(false) }
@@ -844,6 +845,10 @@ fun SettingsScreen(
                 }
             }
 
+            TextButton(onClick = { showTrustResetDialog = true }) {
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.trust_reset))
+            }
+
             // App Info + Check for updates
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -855,14 +860,15 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                val openUpdateError = androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_open_failed)
-                TextButton(onClick = {
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(app.slipnet.util.UpdateChecker.RELEASES_URL)))
-                    } catch (_: android.content.ActivityNotFoundException) {
-                        android.widget.Toast.makeText(context, openUpdateError, android.widget.Toast.LENGTH_LONG).show()
-                    }
-                }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_view_releases)) }
+                TextButton(onClick = { viewModel.checkForUpdate() }, enabled = uiState.updateCheckResult != UpdateCheckResult.CHECKING) {
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_check))
+                }
+                when (uiState.updateCheckResult) {
+                    UpdateCheckResult.CHECKING -> CircularProgressIndicator()
+                    UpdateCheckResult.ERROR -> Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_check_failed))
+                    UpdateCheckResult.UP_TO_DATE -> Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_current))
+                    else -> Unit
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1417,37 +1423,22 @@ fun SettingsScreen(
         )
     }
 
-    // Update available dialog
+    if (showTrustResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showTrustResetDialog = false },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.trust_reset)) },
+            text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.trust_reset_message)) },
+            confirmButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.clear(); showTrustResetDialog = false }) { Text(androidx.compose.ui.res.stringResource(android.R.string.ok)) } },
+            dismissButton = { TextButton(onClick = { showTrustResetDialog = false }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } }
+        )
+    }
+
     if (uiState.updateCheckResult == UpdateCheckResult.UPDATE_AVAILABLE) {
-        val update = viewModel.availableUpdate
-        if (update != null) {
-            val context = LocalContext.current
-            AlertDialog(
-                onDismissRequest = { viewModel.clearUpdateCheck() },
-                title = { Text("Update Available") },
-                text = {
-                    Text("Version ${update.versionName} is available. You are on ${BuildConfig.VERSION_NAME}.")
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.clearUpdateCheck()
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse(update.downloadUrl)
-                        )
-                        context.startActivity(intent)
-                    }) {
-                        Text("Download")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.clearUpdateCheck() }) {
-                        Text("Later")
-                    }
-                }
-            )
+        viewModel.availableUpdate?.let { update ->
+            app.slipnet.presentation.common.components.UpdateDialog(update) { viewModel.clearUpdateCheck() }
         }
     }
+
 }
 
 @Composable

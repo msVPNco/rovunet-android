@@ -206,7 +206,7 @@ class VpnConnectionManager @Inject constructor(
         context.startService(intent)
     }
 
-    fun onVpnEstablished(sessionId: Long = currentSessionId) {
+    fun onVpnEstablished(sessionId: Long) {
         if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ESTABLISHED)
         val profile = pendingProfile ?: return
@@ -219,7 +219,7 @@ class VpnConnectionManager @Inject constructor(
         }
     }
 
-    fun onVpnDisconnected(sessionId: Long = currentSessionId) {
+    fun onVpnDisconnected(sessionId: Long) {
         cleanedSession.value = maxOf(cleanedSession.value, sessionId)
         if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_DISCONNECTED)
@@ -241,12 +241,10 @@ class VpnConnectionManager @Inject constructor(
         pendingProfile = null
     }
 
-    fun onVpnError(error: String, sessionId: Long = currentSessionId) {
+    fun onVpnError(error: String, sessionId: Long) {
         if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ERROR)
-        scope.launch {
-            if (ownsSession(sessionId)) _connectionState.value = ConnectionState.Error(friendlyError(error))
-        }
+        _connectionState.value = ConnectionState.Error(friendlyError(error))
     }
 
     private fun friendlyError(raw: String): String {

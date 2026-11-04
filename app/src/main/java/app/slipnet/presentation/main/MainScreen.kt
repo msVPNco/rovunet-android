@@ -1690,6 +1690,16 @@ fun MainScreen(
     }
 
     // Import input dialog
+    if (uiState.isImporting) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelImport() },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.import_processing)) },
+            text = { androidx.compose.material3.CircularProgressIndicator() },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { viewModel.cancelImport() }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } }
+        )
+    }
+
     if (showImportDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -1790,38 +1800,8 @@ fun MainScreen(
         )
     }
 
-    // Update available dialog
     uiState.availableUpdate?.let { update ->
-        val context = LocalContext.current
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissUpdate() },
-            title = { Text("Update Available") },
-            text = {
-                Text("Version ${update.versionName} is available. You are on ${BuildConfig.VERSION_NAME}.")
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.dismissUpdate()
-                    val intent = android.content.Intent(
-                        android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse(update.downloadUrl)
-                    )
-                    context.startActivity(intent)
-                }) {
-                    Text("Download")
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { viewModel.skipUpdate() }) {
-                        Text("Skip")
-                    }
-                    TextButton(onClick = { viewModel.dismissUpdate() }) {
-                        Text("Later")
-                    }
-                }
-            }
-        )
+        app.slipnet.presentation.common.components.UpdateDialog(update) { viewModel.dismissUpdate() }
     }
 }
 

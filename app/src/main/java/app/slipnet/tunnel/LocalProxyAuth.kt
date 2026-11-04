@@ -35,7 +35,7 @@ object LocalProxyAuth {
         username: String?,
         password: String?
     ): Boolean {
-        val authRequired = !username.isNullOrEmpty() && !password.isNullOrEmpty()
+        val authRequired = username != null || password != null
 
         if (!authRequired) {
             // No authentication required
@@ -79,14 +79,14 @@ object LocalProxyAuth {
         readExactly(input, pBytes)
         val clientPass = String(pBytes, Charsets.UTF_8)
 
-        return if (clientUser == username && clientPass == password) {
+        return if (!username.isNullOrEmpty() && !password.isNullOrEmpty() && java.security.MessageDigest.isEqual(clientUser.toByteArray(Charsets.UTF_8), username.toByteArray(Charsets.UTF_8)) && java.security.MessageDigest.isEqual(clientPass.toByteArray(Charsets.UTF_8), password.toByteArray(Charsets.UTF_8))) {
             // Auth success
             output.write(byteArrayOf(0x01, 0x00))
             output.flush()
             true
         } else {
             // Auth failure
-            Log.w(TAG, "Authentication failed for user: $clientUser")
+            Log.w(TAG, "Local proxy authentication failed")
             output.write(byteArrayOf(0x01, 0x01))
             output.flush()
             false

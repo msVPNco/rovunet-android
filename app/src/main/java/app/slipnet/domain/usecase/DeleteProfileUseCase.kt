@@ -19,7 +19,10 @@ class DeleteProfileUseCase @Inject constructor(
 
         val chains = chainRepository.getAllChains().first()
         if (chains.any { id in it.profileIds }) return Result.failure(IllegalStateException("Remove this profile from its chain first"))
-        profileRepository.deleteProfile(id)
-        return Result.success(Unit)
+        return try {
+            profileRepository.deleteProfile(id)
+            Result.success(Unit)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
     }
 }

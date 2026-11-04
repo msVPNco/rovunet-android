@@ -19,6 +19,26 @@ interface ChainDao {
     @Query("SELECT * FROM profile_chains WHERE id = :id")
     suspend fun getChainById(id: Long): ChainEntity?
 
+    @Query("SELECT COUNT(*) FROM server_profiles WHERE id = :id")
+    suspend fun profileExists(id: Long): Int
+
+    suspend fun validateMembers(chain: ChainEntity) {
+        val ids = org.json.JSONArray(chain.profileIdsJson)
+        for (i in 0 until ids.length()) check(profileExists(ids.getLong(i)) == 1) { "A chain profile was deleted" }
+    }
+
+    @Transaction
+    suspend fun insertChecked(chain: ChainEntity): Long {
+        validateMembers(chain)
+        return insertChain(chain)
+    }
+
+    @Transaction
+    suspend fun updateChecked(chain: ChainEntity) {
+        validateMembers(chain)
+        updateChain(chain)
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChain(chain: ChainEntity): Long
 

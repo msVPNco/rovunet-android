@@ -570,10 +570,14 @@ class SettingsViewModel @Inject constructor(
         private set
 
     fun checkForUpdate() {
+        if (_uiState.value.updateCheckResult == UpdateCheckResult.CHECKING) return
         _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.CHECKING)
         viewModelScope.launch {
             val current = app.slipnet.BuildConfig.VERSION_NAME
-            val update = app.slipnet.util.UpdateChecker.check(current)
+            val update = try { app.slipnet.util.UpdateChecker.check(current) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.ERROR)
+                return@launch
+            }
             availableUpdate = update
             preferencesDataStore.setLastUpdateCheckTime(System.currentTimeMillis())
             _uiState.value = _uiState.value.copy(

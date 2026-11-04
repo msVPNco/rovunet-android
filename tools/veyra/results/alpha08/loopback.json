@@ -1,0 +1,38 @@
+[
+  {
+    "protocol": "reality",
+    "tcp": true,
+    "udp": true,
+    "requests": 200,
+    "concurrency": 40,
+    "client_processes": 1,
+    "seconds": 11.392
+  },
+  {
+    "protocol": "xhttp",
+    "tcp": true,
+    "udp": true,
+    "requests": 200,
+    "concurrency": 40,
+    "client_processes": 1,
+    "seconds": 12.192
+  },
+  {
+    "protocol": "hysteria2",
+    "tcp": true,
+    "udp": true,
+    "requests": 200,
+    "concurrency": 40,
+    "client_processes": 1,
+    "seconds": 11.24
+  },
+  {
+    "protocol": "wireguard",
+    "tcp": true,
+    "udp": true,
+    "requests": 200,
+    "concurrency": 40,
+    "client_processes": 1,
+    "seconds": 11.282
+  }
+]

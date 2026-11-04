@@ -217,4 +217,16 @@
     <string name="server_identity_title">تأیید هویت سرور</string>
     <string name="server_identity_message">سرور: %1$s\nاثر انگشت SHA-256: %2$s\nاین اثر انگشت را با مدیر سرور تطبیق دهید. پذیرش هویت ناشناس می‌تواند اتصال شما را در معرض خطر قرار دهد. تغییر هویت تأییدشده رد می‌شود.</string>
     <string name="server_identity_accept">این سرور را تأیید می‌کنم</string>
+    <string name="import_processing">در حال خواندن کانفیگ‌ها…</string>
+    <string name="trust_reset">پاک‌کردن هویت‌های ذخیره‌شدهٔ سرورها</string>
+    <string name="trust_reset_message">کلیدهای SSH و گواهی‌های تأییدشده پاک شوند؟ در اتصال دستی بعدی باید اثر انگشت هر سرور را دوباره بررسی کنید.</string>
+    <string name="update_check">بررسی به‌روزرسانی</string>
+    <string name="update_available">به‌روزرسانی موجود است</string>
+    <string name="update_version">نسخهٔ %1$s موجود است. فایل پیش از نصب دانلود و بررسی می‌شود.</string>
+    <string name="update_download">دانلود</string>
+    <string name="update_install">نصب</string>
+    <string name="update_downloading">دانلود و بررسی… %1$d%%</string>
+    <string name="update_failed">دانلود یا بررسی فایل ناموفق بود. اتصال را بررسی و دوباره تلاش کنید.</string>
+    <string name="update_check_failed">بررسی به‌روزرسانی انجام نشد. دوباره تلاش کنید.</string>
+    <string name="update_current">آخرین نسخه نصب است.</string>
 </resources>

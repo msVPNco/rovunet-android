@@ -37,7 +37,7 @@ class SlipNetApp : Application() {
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Shows current VPN connection status"
-                setShowBadge(false)
+                setShowBadge(true)
             }
             notificationManager.createNotificationChannel(vpnChannel)
 

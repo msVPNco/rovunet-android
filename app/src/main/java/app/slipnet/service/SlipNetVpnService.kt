@@ -136,6 +136,14 @@ class SlipNetVpnService : VpnService() {
     lateinit var chainRepository: app.slipnet.domain.repository.ChainRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    // Every health check, recovery and delayed callback belongs to one connection.
+    // Setup/teardown jobs stay outside this group so they can join its cancellation.
+    private var runtimeJob: Job = SupervisorJob(serviceScope.coroutineContext[Job])
+    private var runtimeScope = CoroutineScope(serviceScope.coroutineContext + runtimeJob)
+    private fun resetRuntimeScope() {
+        runtimeJob = SupervisorJob(serviceScope.coroutineContext[Job])
+        runtimeScope = CoroutineScope(serviceScope.coroutineContext + runtimeJob)
+    }
     private var vpnInterface: ParcelFileDescriptor? = null
     private var healthCheckJob: Job? = null
     private var currentProfileId: Long = -1
@@ -148,6 +156,7 @@ class SlipNetVpnService : VpnService() {
     private var serviceSessionId: Long = 0
     private var serviceStartId: Int = 0
     private var requestedSessionId: Long = 0
+    private var requestAllowTrustPrompt: Boolean = false
     private fun reportConnectionError(error: String) = connectionManager.onVpnError(error, serviceSessionId)
     private fun reportDisconnected() = connectionManager.onVpnDisconnected(serviceSessionId)
     private fun reportEstablished() = connectionManager.onVpnEstablished(serviceSessionId)
@@ -244,7 +253,7 @@ class SlipNetVpnService : VpnService() {
                 }
                 if (!connectionManager.ownsSession(requestId)) return START_NOT_STICKY
                 requestedSessionId = requestId
-                app.slipnet.tunnel.TransportTrust.allowPrompt = !intent.getBooleanExtra("rovunet_test_mode", false)
+                requestAllowTrustPrompt = !intent.getBooleanExtra("rovunet_test_mode", false)
                 serviceStartId = startId
                 collectionResolvers = intent.getStringArrayExtra("rovunet_resolver_hosts")?.let { hosts ->
                     val ports = intent.getIntArrayExtra("rovunet_resolver_ports")
@@ -340,17 +349,24 @@ class SlipNetVpnService : VpnService() {
         stateObserverJob?.cancel()
         stateObserverJob = null
 
+        app.slipnet.tunnel.TransportTrust.answer(false)
+        val previousRuntime = runtimeJob
+        previousRuntime.cancel()
         val previousConnect = connectJob
         previousConnect?.cancel()
         val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart()
+        val allowTrustPrompt = requestAllowTrustPrompt
         connectJob = serviceScope.launch {
             previousConnect?.join()
+            previousRuntime.join()
             disconnectJob?.join()
             TunnelOperations.mutex.withLock {
             if (!connectionManager.ownsSession(session)) return@launch
             serviceSessionId = session
             TunnelOperations.owner = session
+            app.slipnet.tunnel.TransportTrust.allowPrompt = allowTrustPrompt
             vpnRepository.beginSession(session)
+            resetRuntimeScope()
             // Always stop previous proxies to ensure ports are freed.
             // This handles the case where onDestroy() sent stop signals but
             // didn't wait for native code to release ports (e.g. abandoned Rust threads).
@@ -377,7 +393,7 @@ class SlipNetVpnService : VpnService() {
             }
 
             // Clean up previous connection resources if switching profiles
-            if (currentProfileId != -1L && currentProfileId != profileId) {
+            if (currentProfileId != -1L) {
                 Log.i(TAG, "Switching profile: cleaning up previous connection")
                 cleanupConnection()
             }
@@ -524,6 +540,8 @@ class SlipNetVpnService : VpnService() {
                 if (proxyAuthEnabled) {
                     val authUser = preferencesDataStore.proxyAuthUsername.first().ifEmpty { null }
                     val authPass = preferencesDataStore.proxyAuthPassword.first().ifEmpty { null }
+                    require(!authUser.isNullOrEmpty() && !authPass.isNullOrEmpty() &&
+                        authUser.toByteArray(Charsets.UTF_8).size <= 255 && authPass.toByteArray(Charsets.UTF_8).size <= 255) { "Set a valid local proxy username and password in Settings" }
                     SshTunnelBridge.localAuthUsername = authUser
                     SshTunnelBridge.localAuthPassword = authPass
                 } else {
@@ -633,17 +651,24 @@ class SlipNetVpnService : VpnService() {
         stateObserverJob?.cancel()
         stateObserverJob = null
 
+        app.slipnet.tunnel.TransportTrust.answer(false)
+        val previousRuntime = runtimeJob
+        previousRuntime.cancel()
         val previousConnect = connectJob
         previousConnect?.cancel()
         val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart()
+        val allowTrustPrompt = requestAllowTrustPrompt
         connectJob = serviceScope.launch {
             previousConnect?.join()
+            previousRuntime.join()
             disconnectJob?.join()
             TunnelOperations.mutex.withLock {
             if (!connectionManager.ownsSession(session)) return@launch
             serviceSessionId = session
             TunnelOperations.owner = session
+            app.slipnet.tunnel.TransportTrust.allowPrompt = allowTrustPrompt
             vpnRepository.beginSession(session)
+            resetRuntimeScope()
             withContext(Dispatchers.IO) {
                 try { stopCurrentProxy() } catch (_: Exception) {}
                 delay(300)
@@ -769,6 +794,8 @@ class SlipNetVpnService : VpnService() {
                 if (proxyAuthEnabled2) {
                     val authUser = preferencesDataStore.proxyAuthUsername.first().ifEmpty { null }
                     val authPass = preferencesDataStore.proxyAuthPassword.first().ifEmpty { null }
+                    require(!authUser.isNullOrEmpty() && !authPass.isNullOrEmpty() &&
+                        authUser.toByteArray(Charsets.UTF_8).size <= 255 && authPass.toByteArray(Charsets.UTF_8).size <= 255) { "Set a valid local proxy username and password in Settings" }
                     SshTunnelBridge.localAuthUsername = authUser
                     SshTunnelBridge.localAuthPassword = authPass
                 } else {
@@ -3775,7 +3802,7 @@ class SlipNetVpnService : VpnService() {
 
         // Start HTTP proxy if enabled (chains through existing SOCKS5 proxy).
         // Skip if already running (started earlier by establishVpnInterface for VPN append).
-        serviceScope.launch {
+        runtimeScope.launch {
             try {
                 if (!HttpProxyServer.isRunning()) {
                     val httpEnabled = preferencesDataStore.httpProxyEnabled.first()
@@ -3819,13 +3846,14 @@ class SlipNetVpnService : VpnService() {
         // connections through a cold tunnel are slow and apps with aggressive
         // timeouts may fail and enter exponential backoff.
         if (!isProxyOnly) {
-            serviceScope.launch(Dispatchers.IO) {
+            runtimeScope.launch(Dispatchers.IO) {
                 try {
                     val proxyPort = preferencesDataStore.proxyListenPort.first()
                     repeat(3) {
                         try {
                             java.net.Socket().use { s ->
                                 s.connect(java.net.InetSocketAddress("127.0.0.1", proxyPort), 3000)
+                                s.soTimeout = 3000
                                 val out = s.getOutputStream()
                                 // SOCKS5 handshake + CONNECT to 8.8.8.8:53 to prime the tunnel
                                 out.write(byteArrayOf(0x05, 0x01, 0x00)) // SOCKS5 no-auth
@@ -4053,7 +4081,7 @@ class SlipNetVpnService : VpnService() {
         // The polled check in the loop below remains as a safety net.
         if (currentTunnelType == TunnelType.DNSTT || currentTunnelType == TunnelType.NOIZDNS || currentTunnelType == TunnelType.VAYDNS) {
             DnsttSocksBridge.onDnsPoolDead = {
-                serviceScope.launch(Dispatchers.Main) {
+                runtimeScope.launch(Dispatchers.Main) {
                     if (healthCheckJob?.isActive == true) {
                         handleTunnelFailure("DNS workers dead")
                     }
@@ -4061,7 +4089,7 @@ class SlipNetVpnService : VpnService() {
             }
         }
 
-        healthCheckJob = serviceScope.launch(Dispatchers.IO) {
+        healthCheckJob = runtimeScope.launch(Dispatchers.IO) {
             // Give the connection time to establish before monitoring
             delay(10_000L)
 
@@ -4075,7 +4103,7 @@ class SlipNetVpnService : VpnService() {
 
                 if (!proxyHealthy || !tunnelRunning) {
                     Log.e(TAG, "Health check failed: proxy=$proxyHealthy (type=$currentTunnelType), tunnel=$tunnelRunning")
-                    launch(Dispatchers.Main) {
+                    runtimeScope.launch(Dispatchers.Main) {
                         handleTunnelFailure("health check failed")
                     }
                     break
@@ -4094,7 +4122,7 @@ class SlipNetVpnService : VpnService() {
                         if (quicDownChecks >= QUIC_DOWN_THRESHOLD) {
                             Log.e(TAG, "QUIC connection dead for ${quicDownChecks * HEALTH_CHECK_INTERVAL_MS}ms, triggering reconnect")
                             quicDownChecks = 0
-                            launch(Dispatchers.Main) {
+                            runtimeScope.launch(Dispatchers.Main) {
                                 handleTunnelFailure("QUIC connection lost")
                             }
                             break
@@ -4114,7 +4142,7 @@ class SlipNetVpnService : VpnService() {
                     val alive = SshTunnelBridge.probeSessionAlive()
                     if (!alive) {
                         Log.e(TAG, "SSH session probe failed — session is dead")
-                        launch(Dispatchers.Main) {
+                        runtimeScope.launch(Dispatchers.Main) {
                             handleTunnelFailure("SSH session unresponsive")
                         }
                         break
@@ -4143,7 +4171,7 @@ class SlipNetVpnService : VpnService() {
                     val threshold = if (isDnsTunneled) DNS_POOL_DEAD_THRESHOLD else DNS_POOL_DEAD_THRESHOLD_SOCKS
                     if (dnsPoolDeadChecks >= threshold) {
                         Log.e(TAG, "All DNS workers dead for ${dnsPoolDeadChecks * HEALTH_CHECK_INTERVAL_MS / 1000}s, triggering reconnect")
-                        launch(Dispatchers.Main) {
+                        runtimeScope.launch(Dispatchers.Main) {
                             handleTunnelFailure("DNS workers dead")
                         }
                         break
@@ -4177,7 +4205,7 @@ class SlipNetVpnService : VpnService() {
                             if (tunnelStallChecks >= stallThreshold) {
                                 Log.e(TAG, "Tunnel stalled — data sent but no response for ~${tunnelStallChecks * stallCheckInterval * HEALTH_CHECK_INTERVAL_MS / 1000}s")
                                 tunnelStallChecks = 0
-                                launch(Dispatchers.Main) {
+                                runtimeScope.launch(Dispatchers.Main) {
                                     handleTunnelFailure("tunnel not responding")
                                 }
                                 break
@@ -4204,7 +4232,7 @@ class SlipNetVpnService : VpnService() {
                 }
                 if (capacityExhausted) {
                     Log.e(TAG, "Bridge capacity exhausted — all CONNECT slots stuck, triggering reconnect")
-                    launch(Dispatchers.Main) {
+                    runtimeScope.launch(Dispatchers.Main) {
                         handleTunnelFailure("bridge capacity exhausted")
                     }
                     break
@@ -4302,6 +4330,8 @@ class SlipNetVpnService : VpnService() {
      * Register for network connectivity changes to detect when we need to reconnect.
      */
     private fun registerNetworkCallback() {
+        val callbackRuntime = runtimeJob
+
         unregisterNetworkCallback() // Clean up any existing callback
 
         val request = NetworkRequest.Builder()
@@ -4317,6 +4347,7 @@ class SlipNetVpnService : VpnService() {
             private val quietPeriodMs = 2000L
 
             override fun onAvailable(network: Network) {
+                if (!callbackRuntime.isActive) return
                 Log.d(TAG, "Network available: $network")
                 // A network arrived — cancel any pending "no network" disconnect
                 networkLostJob?.cancel()
@@ -4344,6 +4375,7 @@ class SlipNetVpnService : VpnService() {
             }
 
             override fun onLost(network: Network) {
+                if (!callbackRuntime.isActive) return
                 Log.d(TAG, "Network lost: $network")
                 // Update underlying networks to remove the lost network
                 updateUnderlyingNetworks()
@@ -4356,15 +4388,16 @@ class SlipNetVpnService : VpnService() {
                     // Wait briefly for a replacement network (e.g. WiFi → cellular handoff).
                     // If no network arrives within the window, treat as full connectivity loss.
                     networkLostJob?.cancel()
-                    networkLostJob = serviceScope.launch {
+                    networkLostJob = runtimeScope.launch {
                         delay(3000)
                         Log.w(TAG, "No network available after loss of $network — reporting tunnel failure")
-                        handleTunnelFailure("network lost")
+                        runtimeScope.launch { handleTunnelFailure("network lost") }
                     }
                 }
             }
 
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                if (!callbackRuntime.isActive) return
                 // Network capabilities changed - check if we still have internet
                 val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                 Log.d(TAG, "Network capabilities changed: $network, hasInternet=$hasInternet")
@@ -4373,6 +4406,7 @@ class SlipNetVpnService : VpnService() {
             }
 
             override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+                if (!callbackRuntime.isActive) return
                 // Link properties changed - check for IP address and DNS server changes
                 val newAddresses = linkProperties.linkAddresses
                     .mapNotNull { it.address?.hostAddress }
@@ -4452,7 +4486,7 @@ class SlipNetVpnService : VpnService() {
         networkLostJob?.cancel()
         networkLostJob = null
         reconnectDebounceJob?.cancel()
-        reconnectDebounceJob = serviceScope.launch {
+        reconnectDebounceJob = runtimeScope.launch {
             Log.d(TAG, "Debouncing reconnect for: $reason")
             delay(2000) // Wait 2s for network to stabilize
             handleNetworkChange(reason)
@@ -4466,7 +4500,11 @@ class SlipNetVpnService : VpnService() {
      * connections until the new proxy is ready.
      */
     private fun handleNetworkChange(reason: String = "unknown") {
-        serviceScope.launch {
+        if (isReconnecting) return
+        val session = serviceSessionId
+        runtimeScope.launch {
+            TunnelOperations.mutex.withLock {
+            if (!connectionManager.ownsSession(session) || TunnelOperations.owner != session) return@launch
             // Ignore spurious network changes fired shortly after connection.
             // Chinese OEM ROMs (MIUI/HyperOS, EMUI) trigger network callbacks
             // when the VPN interface is first created, causing the proxy to be
@@ -5130,7 +5168,7 @@ class SlipNetVpnService : VpnService() {
                             val user = if (auth) preferencesDataStore.proxyAuthUsername.first() else null
                             val password = if (auth) preferencesDataStore.proxyAuthPassword.first() else null
                             withContext(Dispatchers.IO) {
-                                XrayBridge.start(this@SlipNetVpnService, profile.coreLink, proxyPort, user, password)
+                                XrayBridge.start(this@SlipNetVpnService, profile.coreLink, proxyPort, user, password, buildDomainRouter().coreRules())
                             }
                         }
                         TunnelType.DOH -> vpnRepository.startDohProxy(profile)
@@ -5257,6 +5295,7 @@ class SlipNetVpnService : VpnService() {
             } finally {
                 isReconnecting = false
                 vpnRepository.setAutoReconnect(false)
+            }
             }
         }
     }
@@ -5570,7 +5609,7 @@ class SlipNetVpnService : VpnService() {
 
     private fun observeConnectionState() {
         stateObserverJob?.cancel()
-        stateObserverJob = serviceScope.launch {
+        stateObserverJob = runtimeScope.launch {
             vpnRepository.connectionState.collect { state ->
                 val notification = notificationHelper.createVpnNotification(state, isProxyOnly)
                 val notificationManager = getSystemService(NotificationManager::class.java)
@@ -5621,7 +5660,7 @@ class SlipNetVpnService : VpnService() {
     private fun startTrafficNotificationPolling() {
         trafficNotificationJob?.cancel()
         vpnRepository.resetSpeedTracking()
-        trafficNotificationJob = serviceScope.launch {
+        trafficNotificationJob = runtimeScope.launch {
             val showTrafficInNotification = preferencesDataStore.showNotificationTraffic.first()
             var idleCount = 0
             var zeroThroughputSeconds = 0L
@@ -5755,6 +5794,9 @@ class SlipNetVpnService : VpnService() {
         vpnRepository.cancelPoolScan()
 
         // Cancel any in-progress connection attempt
+        app.slipnet.tunnel.TransportTrust.answer(false)
+        val previousRuntime = runtimeJob
+        previousRuntime.cancel()
         val previousConnect = connectJob
         previousConnect?.cancel()
         connectJob = null
@@ -5783,6 +5825,7 @@ class SlipNetVpnService : VpnService() {
 
         disconnectJob = serviceScope.launch {
             previousConnect?.join()
+            previousRuntime.join()
             TunnelOperations.mutex.withLock {
             if (!connectionManager.ownsSession(session)) return@launch
             serviceSessionId = session
@@ -5891,7 +5934,7 @@ class SlipNetVpnService : VpnService() {
         notificationManager.notify(NotificationHelper.VPN_NOTIFICATION_ID, notification)
 
         // Attempt reconnection after a brief delay
-        serviceScope.launch {
+        runtimeScope.launch {
             delay(2000)
             if (isKillSwitchActive) {
                 handleNetworkChange("kill switch reconnect")
@@ -5994,7 +6037,7 @@ class SlipNetVpnService : VpnService() {
                     Log.i(TAG, "Boot retry: network became available, triggering immediate connect")
                     bootRetryJob?.cancel()
                     unregisterBootNetworkCallback()
-                    serviceScope.launch {
+                    runtimeScope.launch {
                         if (!isUserInitiatedDisconnect) {
                             connect(profileId)
                         }
@@ -6010,7 +6053,7 @@ class SlipNetVpnService : VpnService() {
             }
         }
 
-        bootRetryJob = serviceScope.launch {
+        bootRetryJob = runtimeScope.launch {
             delay(delayMs)
 
             if (isUserInitiatedDisconnect) {
@@ -6068,7 +6111,7 @@ class SlipNetVpnService : VpnService() {
     /** Periodically re-acquires the WakeLock before it expires. */
     private fun startWakeLockRenewal() {
         wakeLockRenewJob?.cancel()
-        wakeLockRenewJob = serviceScope.launch(Dispatchers.IO) {
+        wakeLockRenewJob = runtimeScope.launch(Dispatchers.IO) {
             while (isActive) {
                 kotlinx.coroutines.delay(WAKELOCK_RENEW_INTERVAL_MS)
                 wakeLock?.let {
@@ -6199,15 +6242,22 @@ class SlipNetVpnService : VpnService() {
         connectionManager.expectServiceStop(requested)
         val setup = connectJob
         val teardown = disconnectJob
+        val runtime = runtimeJob
         serviceScope.cancel()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            setup?.join()
-            teardown?.join()
-            TunnelOperations.mutex.withLock {
-                if (TunnelOperations.owner == session) cleanupConnectionSync()
+            try {
+                setup?.join()
+                runtime.join()
+                teardown?.join()
+                TunnelOperations.mutex.withLock {
+                    if (TunnelOperations.owner == session) cleanupConnectionSync()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Service teardown failed", e)
+            } finally {
+                connectionManager.onServiceDestroyed(session)
+                if (requested != session) connectionManager.onServiceDestroyed(requested)
             }
-            connectionManager.onServiceDestroyed(session)
-            if (requested != session) connectionManager.onServiceDestroyed(requested)
         }
 
         // Ensure connection state is always reset when the service dies.

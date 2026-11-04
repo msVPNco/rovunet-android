@@ -8,12 +8,6 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.SecureRandom
-import javax.net.ssl.SNIHostName
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLParameters
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
 
 /**
  * JSch [Proxy] that tunnels SSH through a WebSocket connection.
@@ -81,24 +75,18 @@ class ProxyWebSocket(
             soTimeout = 15_000
         }
 
+        socket = rawSocket
+        try {
         // Step 2: Optional TLS (validate the certificate, with explicit approval for self-signed servers)
         val activeSocket: Socket = if (useTls) {
             val sniHost = tlsSni.ifBlank { wsHost }
-            val sslFactory = TransportTrust.tlsFactory(sniHost, wsPort)
-            val sslSocket = sslFactory.createSocket(rawSocket, sniHost, wsPort, true) as SSLSocket
-            val params = sslSocket.sslParameters
-            params.serverNames = listOf(SNIHostName(sniHost))
-        params.endpointIdentificationAlgorithm = "HTTPS"
-            sslSocket.sslParameters = params
-            sslSocket.soTimeout = 15_000
-            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
-            sslSocket.soTimeout = 0
-            Log.i(TAG, "TLS handshake complete (${sslSocket.session.protocol})")
-            sslSocket
+            ValidatedTls.wrap(rawSocket, sniHost, wsPort, timeoutMs)
+
         } else {
             rawSocket
         }
         socket = activeSocket
+        activeSocket.soTimeout = timeoutMs.coerceIn(1000, 15_000)
 
         val rawOut = activeSocket.getOutputStream()
         val rawIn = activeSocket.getInputStream()
@@ -122,21 +110,28 @@ class ProxyWebSocket(
             ?: throw RuntimeException("WebSocket server closed connection without response")
         Log.d(TAG, "RX: $statusLine")
 
-        if (!statusLine.contains("101")) {
+        if (!Regex("HTTP/1\\.[01] 101(?: .*)?").matches(statusLine)) {
             throw RuntimeException("WebSocket upgrade failed: $statusLine")
         }
-        // Consume response headers
+        val headers = mutableMapOf<String, String>()
+        var count = 0
         while (true) {
-            val line = readLine(rawIn) ?: break
+            val line = readLine(rawIn) ?: error("Incomplete WebSocket upgrade response")
             if (line.isEmpty()) break
-            Log.d(TAG, "RX header: $line")
+            check(++count <= 100) { "Too many WebSocket headers" }
+            headers[line.substringBefore(':').lowercase()] = line.substringAfter(':').trim()
         }
+        val accept = android.util.Base64.encodeToString(java.security.MessageDigest.getInstance("SHA-1").digest((wsKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").toByteArray(Charsets.US_ASCII)), android.util.Base64.NO_WRAP)
+        check(headers["sec-websocket-accept"] == accept && headers["upgrade"].equals("websocket", true) &&
+            headers["connection"].orEmpty().split(',').any { it.trim().equals("upgrade", true) }) { "Invalid WebSocket upgrade response" }
+        activeSocket.soTimeout = 0
 
         Log.i(TAG, "WebSocket connection established")
 
         // Step 5: Wrap streams in WebSocket framing
         wsInput = WebSocketInputStream(rawIn, rawOut)
         wsOutput = WebSocketOutputStream(rawOut)
+        } catch (e: Exception) { close(); throw e }
     }
 
     override fun getInputStream(): InputStream = wsInput!!
@@ -159,6 +154,7 @@ class ProxyWebSocket(
     private fun readLine(input: InputStream): String? {
         val sb = StringBuilder()
         while (true) {
+            check(sb.length < 16384) { "WebSocket header too large" }
             val b = input.read()
             if (b == -1) return if (sb.isEmpty()) null else sb.toString()
             if (b == '\r'.code) {

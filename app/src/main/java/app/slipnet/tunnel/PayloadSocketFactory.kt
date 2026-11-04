@@ -6,11 +6,6 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
-import javax.net.ssl.SNIHostName
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManager
 
 /**
  * JSch [SocketFactory] that sends a raw payload on the TCP socket before
@@ -62,20 +57,7 @@ class PayloadSocketFactory(
             val sniHost = tlsSni.ifBlank { host }
             Log.i(TAG, "Upgrading to TLS (SNI: $sniHost)")
 
-            val sslFactory = TransportTrust.tlsFactory(sniHost, port)
-            val sslSocket = sslFactory.createSocket(
-                rawSocket, sniHost, port, true
-            ) as SSLSocket
-
-            val params = sslSocket.sslParameters
-            params.serverNames = listOf(SNIHostName(sniHost))
-        params.endpointIdentificationAlgorithm = "HTTPS"
-            sslSocket.sslParameters = params
-
-            sslSocket.soTimeout = 15_000
-            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
-            sslSocket.soTimeout = 0
-            Log.i(TAG, "TLS handshake complete (${sslSocket.session.protocol}, ${sslSocket.session.cipherSuite})")
+            val sslSocket = ValidatedTls.wrap(rawSocket, sniHost, port, connectTimeoutMs)
 
             return sslSocket
         }

@@ -23,7 +23,7 @@ object TunnelProbe {
         timer.schedule(object : TimerTask() { override fun run() { runCatching { socket.close() } } }, timeoutMs.toLong())
         try {
             socket.connect(InetSocketAddress("127.0.0.1", port), minOf(2000, timeoutMs))
-            socket.soTimeout = minOf(6000, timeoutMs)
+            socket.soTimeout = timeoutMs
             val input = DataInputStream(socket.getInputStream())
             val out = socket.getOutputStream()
             val auth = !username.isNullOrEmpty()
@@ -49,7 +49,7 @@ object TunnelProbe {
             input.readFully(ByteArray(size + 2))
             (factory.createSocket(socket, host, remotePort, true) as SSLSocket).use { tls ->
                 tls.sslParameters = tls.sslParameters.apply { endpointIdentificationAlgorithm = "HTTPS" }
-                tls.soTimeout = minOf(6000, timeoutMs)
+                tls.soTimeout = timeoutMs
                 tls.startHandshake()
                 tls.outputStream.write("GET $path HTTP/1.1\r\nHost: $host\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n".toByteArray(Charsets.US_ASCII))
                 tls.outputStream.flush()

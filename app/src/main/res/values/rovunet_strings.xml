@@ -217,4 +217,16 @@
     <string name="server_identity_title">Verify server identity</string>
     <string name="server_identity_message">Endpoint: %1$s\nSHA-256: %2$s\nConfirm this fingerprint with your server administrator. Accepting an unknown identity may expose your connection. Changed identities are refused.</string>
     <string name="server_identity_accept">Trust this server</string>
+    <string name="import_processing">Reading configs…</string>
+    <string name="trust_reset">Reset saved server identities</string>
+    <string name="trust_reset_message">Forget approved SSH keys and self-signed certificates? You must verify each server fingerprint again on your next manual connection.</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_available">Update available</string>
+    <string name="update_version">Version %1$s is available. Download and verify it before installing.</string>
+    <string name="update_download">Download</string>
+    <string name="update_install">Install</string>
+    <string name="update_downloading">Downloading and verifying… %1$d%%</string>
+    <string name="update_failed">Download or verification failed. Check your connection and try again.</string>
+    <string name="update_check_failed">Could not check for updates. Try again.</string>
+    <string name="update_current">You have the latest version.</string>
 </resources>

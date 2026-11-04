@@ -40,9 +40,11 @@ object HttpProxyServer {
     private var serverSocket: ServerSocket? = null
     private var acceptorThread: Thread? = null
     private val running = AtomicBoolean(false)
+    private val generation = java.util.concurrent.atomic.AtomicLong()
     private val activeSockets = java.util.concurrent.ConcurrentHashMap.newKeySet<Socket>()
     private val connectionThreads = CopyOnWriteArrayList<Thread>()
 
+    @Synchronized
     fun start(
         socksHost: String,
         socksPort: Int,
@@ -67,6 +69,7 @@ object HttpProxyServer {
         return try {
             val ss = bindServerSocket(listenHost, listenPort)
             serverSocket = ss
+            val epoch = generation.incrementAndGet()
             running.set(true)
 
             acceptorThread = Thread({
@@ -74,7 +77,7 @@ object HttpProxyServer {
                 while (running.get() && !Thread.currentThread().isInterrupted) {
                     try {
                         val clientSocket = ss.accept()
-                        handleConnection(clientSocket)
+                        handleConnection(clientSocket, epoch)
                     } catch (e: Exception) {
                         if (running.get()) {
                             Log.w(TAG, "Accept error: ${e.message}")
@@ -93,7 +96,9 @@ object HttpProxyServer {
         }
     }
 
+    @Synchronized
     fun stop() {
+        generation.incrementAndGet()
         if (!running.getAndSet(false) && serverSocket == null) {
             return
         }
@@ -143,9 +148,18 @@ object HttpProxyServer {
         throw lastException ?: java.net.BindException("Failed to bind to port $port")
     }
 
-    private fun handleConnection(clientSocket: Socket) {
-        if (activeSockets.size >= 256) { clientSocket.close(); return }
-        activeSockets.add(clientSocket)
+    @Synchronized
+    private fun register(socket: Socket, epoch: Long): Boolean {
+        if (!running.get() || generation.get() != epoch || activeSockets.size >= 256) {
+            socket.close()
+            return false
+        }
+        activeSockets.add(socket)
+        return true
+    }
+
+    private fun handleConnection(clientSocket: Socket, epoch: Long) {
+        if (!register(clientSocket, epoch)) return
         val thread = Thread({
             try {
                 clientSocket.use { socket ->
@@ -167,9 +181,9 @@ object HttpProxyServer {
                     val target = parts[1]
 
                     if (method.equals("CONNECT", ignoreCase = true)) {
-                        handleConnect(target, socket, input)
+                        handleConnect(target, socket, input, epoch)
                     } else {
-                        handlePlainHttp(requestLine, socket, input)
+                        handlePlainHttp(requestLine, socket, input, epoch)
                     }
                 }
             } catch (e: Exception) {
@@ -190,7 +204,7 @@ object HttpProxyServer {
      * Handle HTTP CONNECT method (used for HTTPS tunneling).
      * Format: CONNECT host:port HTTP/1.1
      */
-    private fun handleConnect(target: String, clientSocket: Socket, clientInput: InputStream) {
+    private fun handleConnect(target: String, clientSocket: Socket, clientInput: InputStream, epoch: Long) {
         // Parse host:port from CONNECT target
         val (host, port) = parseHostPort(target, 443) ?: run {
             sendError(clientSocket, 400, "Bad Request")
@@ -212,13 +226,14 @@ object HttpProxyServer {
         // avoids DNS leaks to the local ISP.
         val remoteSocket: Socket
         try {
-            remoteSocket = connectViaSocks5(host, port)
+            remoteSocket = connectViaSocks5(host, port, epoch)
         } catch (e: Exception) {
             logd("CONNECT: failed to connect to $host:$port via SOCKS5: ${e.message}")
             sendError(clientSocket, 502, "Bad Gateway")
             return
         }
 
+        try {
         logd("CONNECT: $host:$port OK")
 
         // Send 200 Connection Established
@@ -258,13 +273,14 @@ object HttpProxyServer {
                 try { clientSocket.close() } catch (_: Exception) {}
             }
         }
+        } finally { runCatching { remoteSocket.close() } }
     }
 
     /**
      * Handle plain HTTP request (GET, POST, etc).
      * Parse Host header, connect via SOCKS5, rewrite absolute URI to relative, forward.
      */
-    private fun handlePlainHttp(requestLine: String, clientSocket: Socket, clientInput: InputStream) {
+    private fun handlePlainHttp(requestLine: String, clientSocket: Socket, clientInput: InputStream, epoch: Long) {
         val parts = requestLine.split(" ", limit = 3)
         val method = parts[0]
         val uri = parts[1]
@@ -319,7 +335,7 @@ object HttpProxyServer {
         // Connect through SOCKS5 using manual handshake — avoids DNS leaks
         val remoteSocket: Socket
         try {
-            remoteSocket = connectViaSocks5(host, port)
+            remoteSocket = connectViaSocks5(host, port, epoch)
         } catch (e: Exception) {
             logd("HTTP: failed to connect to $host:$port via SOCKS5: ${e.message}")
             sendError(clientSocket, 502, "Bad Gateway")
@@ -442,7 +458,8 @@ object HttpProxyServer {
     private fun authenticate(header: String?, socket: Socket): Boolean {
         val user = socksAuthUsername
         val pass = socksAuthPassword
-        if (user.isNullOrEmpty() || pass.isNullOrEmpty()) return true
+        if (user == null && pass == null) return true
+        if (user.isNullOrEmpty() || pass.isNullOrEmpty()) { sendError(socket, 503, "Proxy authentication is not configured"); return false }
         val supplied = runCatching {
             if (header?.startsWith("Basic ", true) != true) return@runCatching byteArrayOf()
             android.util.Base64.decode(header.substringAfter(' '), android.util.Base64.NO_WRAP)
@@ -471,9 +488,9 @@ object HttpProxyServer {
      * This replaces java.net.Proxy(SOCKS) which wraps the socket in SocksSocketImpl
      * and can interfere with socket options, buffering, and relay behavior.
      */
-    private fun connectViaSocks5(host: String, port: Int): Socket {
+    private fun connectViaSocks5(host: String, port: Int, epoch: Long): Socket {
         val socket = Socket()
-        activeSockets.add(socket)
+        check(register(socket, epoch)) { "Proxy session stopped" }
         try {
         socket.connect(InetSocketAddress(socksHost, socksPort), TCP_CONNECT_TIMEOUT_MS)
         socket.soTimeout = TCP_CONNECT_TIMEOUT_MS // timeout for handshake only

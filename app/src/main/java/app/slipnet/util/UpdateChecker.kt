@@ -1,73 +1,104 @@
 package app.slipnet.util
 
-import android.util.Log
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import app.slipnet.core.UpdateManifest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 
-data class AppUpdate(
-    val versionName: String,
-    val downloadUrl: String,
-    val releaseNotes: String
-)
+data class AppUpdate(val versionName: String, val downloadUrl: String, val releaseNotes: String, val sha256: String, val size: Long)
 
+/** Only HTTPS release assets from this repository; no installation without OS confirmation. */
 object UpdateChecker {
-    private const val TAG = "UpdateChecker"
     const val RELEASES_URL = "https://github.com/msVPNco/rovunet-android/releases"
-    private const val GITHUB_API = "https://api.github.com/repos/msVPNco/rovunet-android/releases/latest"
-    private const val TIMEOUT_MS = 10_000
-    // Only check once per 12 hours
+    private const val API = "https://api.github.com/repos/msVPNco/rovunet-android/releases/latest"
     const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
 
-    /**
-     * Check GitHub for a newer release. Returns null if up-to-date or on error.
-     * Safe to call from any coroutine — uses Dispatchers.IO, never throws.
-     */
-    suspend fun check(currentVersionName: String): AppUpdate? = withContext(Dispatchers.IO) {
-        if (GITHUB_API.isBlank()) return@withContext null
-        try {
-            val conn = URL(GITHUB_API).openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("Accept", "application/vnd.github+json")
-            conn.connectTimeout = TIMEOUT_MS
-            conn.readTimeout = TIMEOUT_MS
-
-            if (conn.responseCode != 200) {
-                Log.d(TAG, "GitHub API returned ${conn.responseCode}")
-                conn.disconnect()
-                return@withContext null
-            }
-
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            conn.disconnect()
-
-            val json = JSONObject(body)
-            val tagName = json.optString("tag_name", "").removePrefix("v")
-            val htmlUrl = json.optString("html_url", "")
-            val releaseBody = json.optString("body", "").take(500)
-
-            if (json.optBoolean("draft", false) || tagName.isBlank() ||
-                !htmlUrl.startsWith("https://github.com/msVPNco/rovunet-android/releases/tag/")) {
-                return@withContext null
-            }
-
-            if (app.slipnet.core.ReleaseVersion.isNewer(tagName, currentVersionName)) {
-                Log.d(TAG, "Update available: $tagName (current: $currentVersionName)")
-                AppUpdate(
-                    versionName = tagName,
-                    downloadUrl = htmlUrl,
-                    releaseNotes = releaseBody
-                )
-            } else {
-                Log.d(TAG, "Up to date ($currentVersionName)")
-                null
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, "Update check failed: ${e.message}")
-            null
-        }
+    private fun connection(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+        require(URL(url).protocol == "https")
+        connectTimeout = 15_000
+        readTimeout = 15_000
+        setRequestProperty("Accept", "application/vnd.github+json")
+        setRequestProperty("User-Agent", "Rovunet-Android")
     }
-
+    private fun readText(url: String, maxBytes: Int): String {
+        val conn = connection(url)
+        try {
+            check(conn.responseCode == 200) { "Update service unavailable" }
+            return conn.inputStream.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (output.size() <= maxBytes) {
+                    val n = input.read(buffer, 0, minOf(buffer.size, maxBytes + 1 - output.size()))
+                    if (n < 0) break
+                    output.write(buffer, 0, n)
+                }
+                val bytes = output.toByteArray()
+                check(bytes.size <= maxBytes) { "Update response too large" }
+                String(bytes, Charsets.UTF_8)
+            }
+        } finally { conn.disconnect() }
+    }
+    suspend fun check(currentVersionName: String): AppUpdate? = withContext(Dispatchers.IO) {
+        val manifest = UpdateManifest.parse(readText(API, 2_000_000), currentVersionName, currentVersionName.endsWith("-lite")) ?: return@withContext null
+        val digest = manifest.digest.ifEmpty { UpdateManifest.checksum(readText(manifest.checksumsUrl, 64_000), manifest.url) }
+        AppUpdate(manifest.version, manifest.url, manifest.notes, digest, manifest.size)
+    }
+    suspend fun download(context: Context, update: AppUpdate, progress: suspend (Int) -> Unit): File = withContext(Dispatchers.IO) {
+        require(UpdateManifest.trustedAsset(update.downloadUrl) && update.sha256.matches(Regex("[a-f0-9]{64}")))
+        val folder = File(context.cacheDir, "shared/updates").apply { mkdirs() }
+        folder.listFiles()?.forEach { it.delete() }
+        val part = File(folder, "update.part")
+        val apk = File(folder, "Rovunet-update.apk")
+        val conn = connection(update.downloadUrl)
+        try {
+            check(conn.responseCode == 200) { "Download unavailable" }
+            val hash = MessageDigest.getInstance("SHA-256")
+            var total = 0L
+            var previous = -1
+            conn.inputStream.use { input -> part.outputStream().use { out ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    total += count
+                    check(total <= update.size && total <= 400_000_000) { "Unexpected APK size" }
+                    out.write(buffer, 0, count); hash.update(buffer, 0, count)
+                    val percent = (total * 100 / update.size).toInt()
+                    if (percent != previous) { previous = percent; progress(percent) }
+                }
+            } }
+            check(total == update.size) { "Incomplete APK" }
+            val actual = hash.digest().joinToString("") { "%02x".format(it) }
+            check(MessageDigest.isEqual(actual.toByteArray(), update.sha256.toByteArray())) { "APK checksum mismatch" }
+            verifyPackage(context, part)
+            check(part.renameTo(apk)) { "Could not save APK" }
+            apk
+        } finally { conn.disconnect(); part.delete() }
+    }
+    @Suppress("DEPRECATION")
+    private fun verifyPackage(context: Context, file: File) {
+        val pm = context.packageManager
+        val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        val archive = pm.getPackageArchiveInfo(file.absolutePath, flags) ?: error("Invalid APK")
+        val installed = pm.getPackageInfo(context.packageName, flags)
+        check(archive.packageName == context.packageName) { "Wrong application package" }
+        val oldVersion = if (Build.VERSION.SDK_INT >= 28) installed.longVersionCode else installed.versionCode.toLong()
+        val newVersion = if (Build.VERSION.SDK_INT >= 28) archive.longVersionCode else archive.versionCode.toLong()
+        check(newVersion > oldVersion) { "APK is not newer" }
+        fun signers(info: android.content.pm.PackageInfo): Set<String> {
+            val signatures = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners else info.signatures
+            return signatures.orEmpty().map { signature -> MessageDigest.getInstance("SHA-256").digest(signature.toByteArray()).joinToString("") { "%02x".format(it) } }.toSet()
+        }
+        val expected = signers(installed)
+        check(expected.isNotEmpty() && signers(archive) == expected) { "APK signing identity mismatch" }
+    }
 }

@@ -45,8 +45,20 @@ interface ProfileDao {
         return true
     }
 
+    @Query("SELECT * FROM profile_chains")
+    suspend fun chainSnapshots(): List<ChainEntity>
+
+    @Transaction
+    suspend fun deleteProfile(id: Long) {
+        check(chainSnapshots().none { chain ->
+            val ids = org.json.JSONArray(chain.profileIdsJson)
+            (0 until ids.length()).any { ids.getLong(it) == id }
+        }) { "Remove this profile from its chain first" }
+        deleteProfileRow(id)
+    }
+
     @Query("DELETE FROM server_profiles WHERE id = :id")
-    suspend fun deleteProfile(id: Long)
+    suspend fun deleteProfileRow(id: Long)
 
     @Transaction
     suspend fun activateProfile(id: Long) {

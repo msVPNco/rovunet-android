@@ -28,9 +28,9 @@ class ChainRepositoryImpl @Inject constructor(
         val entity = ChainMapper.toEntity(chain.copy(updatedAt = now))
         return if (chain.id == 0L) {
             val maxSort = chainDao.getMaxSortOrder() ?: -1
-            chainDao.insertChain(entity.copy(createdAt = now, sortOrder = maxSort + 1))
+            chainDao.insertChecked(entity.copy(createdAt = now, sortOrder = maxSort + 1))
         } else {
-            chainDao.updateChain(entity)
+            chainDao.updateChecked(entity)
             chain.id
         }
     }

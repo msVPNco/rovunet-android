@@ -9,6 +9,7 @@ for coordinate in \
  org/jetbrains/kotlin/kotlin-script-runtime/2.2.21/kotlin-script-runtime-2.2.21 \
  org/jetbrains/kotlin/kotlin-reflect/1.6.10/kotlin-reflect-1.6.10 \
  org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.8.0/kotlinx-coroutines-core-jvm-1.8.0 \
+ com/github/mwiede/jsch/2.27.7/jsch-2.27.7 \
  org/jetbrains/annotations/13.0/annotations-13.0; do
  [[ -s "$KOTLIN_JARS/${coordinate##*/}.jar" ]] || curl --fail --retry 3 -L "$maven/$coordinate.jar" -o "$KOTLIN_JARS/${coordinate##*/}.jar"
 done
