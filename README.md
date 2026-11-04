@@ -15,8 +15,8 @@ some inherited advanced text still falls back to English.
 
 ## Current build
 
-0.3.0-alpha06 Full, versionCode 12. Experimental and debug-signed; real-device
-testing remains incomplete. [Alpha06 is published as a public prerelease](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06). No store listing is available.
+0.3.0-alpha06 Full, versionCode 12. Debug-signed; real-device
+testing remains incomplete. [Alpha06 is published as a public release](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06). No store listing is available.
 
 Download the Full APK, Android source package and Persian guide from the release's Assets. The release is pinned to commit `bb8d78b82fba44188add499d5984996747379eec`; later documentation changes do not rebuild that APK.
 
