@@ -39,6 +39,15 @@ SHA-256 فایل APK:
 
 فقط USDT روی شبکهٔ TRC20 ارسال کنید. استفاده از برنامه به کمک مالی وابسته نیست.
 
-## مجوز
+<h2 dir="rtl">مجوز و انتساب‌ها</h2>
 
-AGPL-3.0؛ برگرفته از [SlipNet](https://github.com/anonvector/SlipNet) اثر Anonvector. انتساب‌ها و مجوزها در [NOTICE](NOTICE.md) حفظ شده‌اند. Xray-core تحت MPL-2.0 است.
+<p dir="rtl">مجوز پروژهٔ رووُنت:</p>
+<p dir="ltr">AGPL-3.0</p>
+
+<p dir="rtl">این پروژه بر پایهٔ اسلیپ‌نت، اثر سازندهٔ زیر، توسعه یافته است و وابستگی رسمی به پروژهٔ اصلی ندارد:</p>
+<p dir="ltr"><a href="https://github.com/anonvector/SlipNet">SlipNet</a> — Anonvector</p>
+
+<p dir="rtl">انتساب‌ها و اطلاعات مجوز در <a href="NOTICE.md">فایل اعلامیهٔ حقوقی</a> حفظ شده‌اند.</p>
+
+<p dir="rtl">مجوز هستهٔ ایکس‌ری:</p>
+<p dir="ltr">Xray-core — MPL-2.0</p>
