@@ -34,8 +34,6 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                 Box {
                     IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_collection_actions_06a9e8)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_mode_auto)) }, enabled = !busy,
-                            onClick = { menuOpen = false; onSelect() })
                         DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(rv(if (expanded) "Hide paths" else "Show paths")) },

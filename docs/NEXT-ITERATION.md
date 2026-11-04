@@ -5,7 +5,7 @@ No APK, release, version bump or signing change is included in this iteration.
 ## Implemented
 
 - Selecting a path explicitly makes Connect use that path directly, without a collection scan. Selection is held in the current screen session; it does not depend on the asynchronous database active-profile update. A removed manual target does not silently fall back to another path.
-- Selecting a collection, or choosing Automatic selection in its menu, enables the existing automatic connection workflow. Test collection remains a separate action. Testing the selected collection preserves the manual choice.
+- Selecting a collection enables the existing automatic connection workflow. Test collection remains a separate action. Testing the selected collection preserves the manual choice.
 - Collection cards distinguish automatic, manually selected and currently connected paths. While connected, the summary never borrows another member's HTTPS measurement. Measurements are labelled as the last test, not a live speed measurement.
 - Connection setup failures retain allowlisted categories without exposing raw exception messages or credentials. This improves diagnosis; it does not establish the cause of the reported SSH test failure.
 - Update checks use this project's latest GitHub release. Numeric alpha/beta/rc revisions are compared correctly. Settings provides an explicit releases/downloads link. This opens the release page, not an automatic APK installer or signature-verification system.
@@ -32,3 +32,8 @@ No APK, release, version bump or signing change is included in this iteration.
 Eight JVM test entry points passed locally: import/export, collections, collection inference/undo, duplicates, bounded test phases, failure redaction, connection choice and release comparison. Real panel-fixture and device/native lifecycle tests were not run in this iteration.
 
 Android `:app:compileFullDebugKotlin` succeeded against the prepared native dependencies. Resource XML parsing and duplicate-key checks passed for all four languages. This was compilation only: no APK assembly, release signing or publication. Push CI is deliberately skipped for this source-only commit to avoid the existing APK-building workflow.
+
+## Follow-up after alpha07
+
+- Removed the redundant Automatic selection menu item at the user's request; tapping the collection still selects automatic mode. This source change is not yet packaged in a new APK.
+- User reports manual SSH opens sites/apps with good speed and StunTLS also opens sites/apps despite failed automatic tests. These are user field observations, not reproduced device tests. Investigate false-negative setup results and separate historical test errors from live connection status; do not assume server failure or persistent SSH slowness.
