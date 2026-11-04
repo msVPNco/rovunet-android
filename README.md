@@ -4,7 +4,7 @@
 
 # Rovunet
 
-[English](README.md) · [فارسی](README.fa.md) · [Downloads](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha08) · [Telegram](https://t.me/RovunetVPN)
+[English](README.md) · [فارسی](README.fa.md) · [Downloads](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha09) · [Telegram](https://t.me/RovunetVPN)
 
 An Android multi-protocol VPN client.
 
@@ -15,7 +15,7 @@ some inherited advanced text still falls back to English.
 
 ## Current build
 
-0.3.0-alpha08 Full, versionCode 14. Uses the existing signing identity for update compatibility; device testing remains incomplete. [Alpha08 is published as a public release](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha08). No store listing is available.
+0.3.0-alpha09 Full, versionCode 15. Uses the existing signing identity for update compatibility; device testing remains incomplete. [Alpha09 is published as a public release](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha09). No store listing is available.
 
 Download the Full APK, Android source package and Persian guide from the release's Assets. The release is pinned to commit `bb8d78b82fba44188add499d5984996747379eec`; later documentation changes do not rebuild that APK.
 
@@ -45,7 +45,7 @@ publish the debug signing key as a production release key.
 ## Documentation
 
 - [Current status and roadmap](docs/STATUS.md): verified scope and remaining work
-- [Alpha08 release record](docs/releases/alpha08.md)
+- [Alpha09 release record](docs/releases/alpha09.md)
 
 - [Guide](docs/GUIDE.md): tunnel types, building, CLI client and configuration
 - [User guide](docs/USER_GUIDE.md) (English and Persian)

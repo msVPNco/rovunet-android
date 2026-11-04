@@ -161,13 +161,14 @@ class SlipNetVpnService : VpnService() {
     private fun reportDisconnected() = connectionManager.onVpnDisconnected(serviceSessionId)
     private fun reportEstablished() = connectionManager.onVpnEstablished(serviceSessionId)
     private fun stopOwnedService() {
-        if (serviceSessionId == 0L && requestedSessionId == 0L) {
-            stopSelfResult(serviceStartId)
-        } else if (connectionManager.ownsSession(serviceSessionId)) {
+        // A newer manager request may be queued behind this instance's stop barrier.
+        // It must not prevent the last delivered request from finishing teardown.
+        if (app.slipnet.domain.model.ServiceCommandPolicy.mayStopService(serviceSessionId, requestedSessionId)) {
             connectionManager.expectServiceStop(serviceSessionId)
             stopSelfResult(serviceStartId)
         }
     }
+
     private var connectJob: Job? = null
     private var disconnectJob: Job? = null
     private var stateObserverJob: Job? = null
@@ -274,8 +275,9 @@ class SlipNetVpnService : VpnService() {
                 }
             }
             ACTION_DISCONNECT -> {
-                val expected = intent.getLongExtra(EXTRA_SESSION_ID, serviceSessionId)
-                if (connectionManager.ownsSession(expected) && (expected == requestedSessionId || expected == serviceSessionId)) {
+                val delivered = requestedSessionId.takeIf { it > 0 } ?: serviceSessionId
+                val expected = intent.getLongExtra(EXTRA_SESSION_ID, delivered)
+                if (app.slipnet.domain.model.ServiceCommandPolicy.acceptsStop(expected, delivered)) {
                     disconnect(intent.getBooleanExtra(EXTRA_KEEP_SERVICE, false), expected)
                 }
             }
@@ -354,7 +356,7 @@ class SlipNetVpnService : VpnService() {
         previousRuntime.cancel()
         val previousConnect = connectJob
         previousConnect?.cancel()
-        val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart()
+        val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart().also { requestedSessionId = it }
         val allowTrustPrompt = requestAllowTrustPrompt
         connectJob = serviceScope.launch {
             previousConnect?.join()
@@ -656,7 +658,7 @@ class SlipNetVpnService : VpnService() {
         previousRuntime.cancel()
         val previousConnect = connectJob
         previousConnect?.cancel()
-        val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart()
+        val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart().also { requestedSessionId = it }
         val allowTrustPrompt = requestAllowTrustPrompt
         connectJob = serviceScope.launch {
             previousConnect?.join()
@@ -5827,7 +5829,7 @@ class SlipNetVpnService : VpnService() {
             previousConnect?.join()
             previousRuntime.join()
             TunnelOperations.mutex.withLock {
-            if (!connectionManager.ownsSession(session)) return@launch
+            if (!app.slipnet.domain.model.ServiceCommandPolicy.acceptsStop(session, requestedSessionId)) return@launch
             serviceSessionId = session
             TunnelOperations.owner = session
             Log.i(TAG, "Disconnecting VPN")

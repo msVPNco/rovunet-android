@@ -41,3 +41,5 @@ java -cp "$output_dir/tests.jar:$KOTLIN_JARS/kotlin-stdlib-2.2.21.jar:$KOTLIN_JA
 bash tools/veyra/run-session-regression.sh
 
 if [[ -n "${TEST_TLS_STORE:-}" ]]; then bash tools/veyra/run-network-regression.sh; fi
+
+java -cp "$output_dir/tests.jar:$KOTLIN_JARS/kotlin-stdlib-2.2.21.jar:$KOTLIN_JARS/json.jar:$KOTLIN_JARS/kotlinx-coroutines-core-jvm-1.8.0.jar" CoreReadinessTestKt

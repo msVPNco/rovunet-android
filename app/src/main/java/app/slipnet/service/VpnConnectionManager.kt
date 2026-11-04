@@ -47,6 +47,7 @@ class VpnConnectionManager @Inject constructor(
     /** Distilled DNS-pool scan progress (per-profile pool feature). */
     val dnsPoolScanState: StateFlow<app.slipnet.tunnel.DnsPoolScanState> = vpnRepository.dnsPoolScanState
 
+    private var dispatchedSessionId: Long = 0
     private val sessions = app.slipnet.domain.model.ConnectionSessions()
     val currentSessionId: Long get() = sessions.current
     fun ownsSession(id: Long) = sessions.owns(id)
@@ -59,19 +60,30 @@ class VpnConnectionManager @Inject constructor(
         stopBarrier = barrier
     }
     fun onServiceDestroyed(id: Long) {
+        if (dispatchedSessionId == id) dispatchedSessionId = 0
         stopping.remove(id)?.complete(Unit)
         if (ownsSession(id)) onVpnDisconnected(id)
     }
-    fun claimServiceStart(): Long = sessions.begin().also { _connectionState.value = ConnectionState.Connecting }
+    fun claimServiceStart(): Long = sessions.begin().also { dispatchedSessionId = it; _connectionState.value = ConnectionState.Connecting }
     suspend fun awaitSessionDisconnected(id: Long) {
         cleanedSession.first { it >= id || !ownsSession(id) }
     }
     private fun dispatchConnect(intent: Intent, id: Long) {
         val barrier = stopBarrier
-        scope.launch {
-            barrier.await()
-            if (ownsSession(id)) ContextCompat.startForegroundService(context, intent)
+        fun sendIfCurrent() {
+            if (!ownsSession(id) || _connectionState.value !is ConnectionState.Connecting) return
+            dispatchedSessionId = id
+            try { ContextCompat.startForegroundService(context, intent) }
+            catch (_: Exception) {
+                dispatchedSessionId = 0
+                cleanedSession.value = maxOf(cleanedSession.value, id)
+                onVpnError("Android could not start the VPN service", id)
+            }
         }
+        // Queue only when an old service is actually being destroyed. Otherwise
+        // dispatch now, preserving CONNECT/DISCONNECT order on the Android service.
+        if (barrier.isCompleted) sendIfCurrent()
+        else scope.launch { barrier.await(); sendIfCurrent() }
     }
 
     private var pendingProfile: ServerProfile? = null
@@ -101,7 +113,8 @@ class VpnConnectionManager @Inject constructor(
     fun connect(profile: ServerProfile, profileResolvers: Boolean = false, testMode: Boolean = false): Long {
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.CONNECT_REQUEST)
         if (_connectionState.value is ConnectionState.Connected ||
-            _connectionState.value is ConnectionState.Connecting) {
+            _connectionState.value is ConnectionState.Connecting ||
+            _connectionState.value is ConnectionState.Disconnecting) {
             return 0
         }
 
@@ -141,6 +154,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun reconnect(profile: ServerProfile) {
+        if (_connectionState.value is ConnectionState.Disconnecting) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.RECONNECT_REQUEST)
         if (profile.isExpired) {
             _connectionState.value = ConnectionState.Error("This profile has expired")
@@ -173,7 +187,8 @@ class VpnConnectionManager @Inject constructor(
 
     fun connectChain(chain: ProfileChain, firstProfile: ServerProfile) {
         if (_connectionState.value is ConnectionState.Connected ||
-            _connectionState.value is ConnectionState.Connecting) {
+            _connectionState.value is ConnectionState.Connecting ||
+            _connectionState.value is ConnectionState.Disconnecting) {
             return
         }
 
@@ -194,6 +209,16 @@ class VpnConnectionManager @Inject constructor(
     fun disconnect(keepServiceAlive: Boolean = false, expectedSessionId: Long = currentSessionId) {
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.DISCONNECT_REQUEST)
         if (!ownsSession(expectedSessionId)) return
+        if (dispatchedSessionId != expectedSessionId) {
+            // A queued request owns no Android service yet. Cancel the queue
+            // without replacing the old instance's destruction barrier.
+            _connectionState.value = ConnectionState.Disconnected
+            _dnsWarning.value = null
+            pendingProfile = null
+            pendingChain = null
+            cleanedSession.value = maxOf(cleanedSession.value, expectedSessionId)
+            return
+        }
         if (keepServiceAlive && _connectionState.value is ConnectionState.Disconnected) return
         if (!keepServiceAlive) expectServiceStop(expectedSessionId)
         _connectionState.value = ConnectionState.Disconnecting
