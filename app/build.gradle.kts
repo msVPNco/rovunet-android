@@ -15,8 +15,8 @@ plugins {
 
 val veyraPrebuiltNative = providers.gradleProperty("veyraPrebuiltNative").orNull == "true"
 val minSdkVersion = 24
-val appVersionName = "0.3.0-alpha04"
-val appVersionCode = 10
+val appVersionName = "0.3.0-alpha06"
+val appVersionCode = 12
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"

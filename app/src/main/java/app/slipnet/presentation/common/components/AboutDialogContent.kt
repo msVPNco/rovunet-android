@@ -18,6 +18,7 @@ fun AboutDialogContent() {
         Text("One app for DNS tunnels, SSH, Tor, VLESS REALITY, XHTTP, Hysteria2 and WireGuard.")
         Text("Import standard links, WireGuard configuration files, QR codes or Rovunet profiles.")
         Text("Experimental alpha build. Device and network compatibility testing is ongoing.", style = MaterialTheme.typography.bodySmall)
+        TelegramCommunityLink()
         Text("Open-source acknowledgements", style = MaterialTheme.typography.titleSmall)
         Text("Based on SlipNet 2.5.6 Full by its original contributors. Rovunet is an independent fork, not an official SlipNet release. Original copyright and license notices are retained. Xray-core is distributed under MPL-2.0.", style = MaterialTheme.typography.bodySmall)
     }

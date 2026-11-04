@@ -233,7 +233,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Donate Card
-            app.slipnet.presentation.common.components.SupportRovunetCard()
+            app.slipnet.presentation.common.components.TelegramCommunityLink()
 
             // Connection Settings
             SettingsSection(title = "Connection") {

@@ -200,4 +200,8 @@
     <string name="delete_collection_confirm">Delete %1$s and all %2$d configurations?</string>
     <string name="collection_chain_protected">This collection contains chain members. Edit the chains before deleting it.</string>
     <string name="collection_delete_failed">Collection changed or deletion failed. Review it again.</string>
+<string name="community_telegram">Rovunet Telegram group</string>
+    
+<string name="community_open_failed">Install Telegram or a browser to open this link.</string>
+
 </resources>

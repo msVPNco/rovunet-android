@@ -189,6 +189,8 @@ class ConfigImporter @Inject constructor() {
         val accountHints = mutableListOf<String>()
         var panelAccountHint = ""
         for ((index, line) in lines.withIndex()) {
+            // Ignore descriptive panel comments while retaining URI fragments.
+            if (line.trimStart().startsWith("#")) continue
             // Presentation labels (e.g. Rovunet) are never account identities.
             val heading = Regex("^\\[([A-Za-z0-9_+.-]+)\\]\\s+user=([A-Za-z0-9_.@-]{1,120})(?:\\s+#.*)?$").matchEntire(line.trim())
             if (line.trim().startsWith("[")) {

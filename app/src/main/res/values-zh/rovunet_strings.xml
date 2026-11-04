@@ -199,4 +199,8 @@
     <string name="delete_collection_confirm">删除「%1$s」及其中的全部 %2$d 个配置？</string>
     <string name="collection_chain_protected">此配置组包含链式配置，请先编辑链。</string>
     <string name="collection_delete_failed">配置组已更改或删除失败，请重新检查。</string>
+<string name="community_telegram">Rovunet Telegram 群组</string>
+    
+<string name="community_open_failed">请安装 Telegram 或浏览器以打开此链接。</string>
+
 </resources>

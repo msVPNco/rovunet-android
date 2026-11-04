@@ -200,4 +200,8 @@
     <string name="delete_collection_confirm">مجموعهٔ «%1$s» و هر %2$d کانفیگ آن حذف شود؟</string>
     <string name="collection_chain_protected">این مجموعه عضو زنجیره دارد؛ ابتدا زنجیره‌ها را ویرایش کنید.</string>
     <string name="collection_delete_failed">مجموعه تغییر کرده یا حذف انجام نشد؛ دوباره بررسی کنید.</string>
+<string name="community_telegram">گروه تلگرام Rovunet</string>
+    
+<string name="community_open_failed">برای باز کردن لینک، تلگرام یا یک مرورگر نصب کنید.</string>
+
 </resources>
