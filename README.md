@@ -6,7 +6,7 @@
 
 [English](README.md) · [فارسی](README.fa.md) · [Downloads](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06) · [Telegram](https://t.me/RovunetVPN)
 
-An independent Android multi-protocol VPN client based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full. Not affiliated with the SlipNet project.
+An Android multi-protocol VPN client.
 
 Rovunet groups imported connection paths into named collections, verifies HTTPS
 through the real tunnel, and asks before trying DNS fallback. The light interface
@@ -65,6 +65,7 @@ Send only USDT on Tron (TRC20) to this address.
 
 ## License
 
-AGPL-3.0. Rovunet is based on SlipNet by Anonvector and is not affiliated
-with it; see [NOTICE](NOTICE.md). Xray-core is distributed under MPL-2.0; its
+AGPL-3.0; see [NOTICE](NOTICE.md). Xray-core is distributed under MPL-2.0; its
 source pin and native dependency metadata are kept under tools/veyra.
+
+Rovunet is based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full by Anonvector. It is an independent project and is not affiliated with the SlipNet project.
