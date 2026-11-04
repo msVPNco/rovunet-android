@@ -79,6 +79,7 @@ data class MainUiState(
     val error: String? = null,
     val exportedJson: String? = null,
     val importPreview: ImportPreview? = null,
+    val isImporting: Boolean = false,
     val regroupPreview: List<CollectionInference.Group>? = null,
     val regroupUndoAvailable: Boolean = false,
     val regroupBusy: Boolean = false,
@@ -145,6 +146,7 @@ class MainViewModel @Inject constructor(
     private var trafficPollingJob: Job? = null
     private var sleepTimerJob: Job? = null
     private var pingJob: Job? = null
+    private var importJob: Job? = null
 
     private val networkManager = appContext.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
     private val underlyingNetworks = mutableSetOf<android.net.Network>()
@@ -394,9 +396,15 @@ class MainViewModel @Inject constructor(
             ) { profiles, activeProfile ->
                 Pair(profiles, activeProfile)
             }.collect { (profiles, activeProfile) ->
+                val previous = _uiState.value.profiles.associateBy { it.id }
+                val unchanged = profiles.filter { p -> previous[p.id]?.let { ProfileDuplicates.key(it) == ProfileDuplicates.key(p) } == true }.map { it.id }.toSet()
+                val results = _uiState.value.pingResults.filterKeys { it in unchanged }
+                discoveredProfiles.keys.retainAll(unchanged)
                 _uiState.value = _uiState.value.copy(
                     profiles = if (_uiState.value.sortByHttps) app.slipnet.domain.model.ProfileRanking.sort(profiles, _uiState.value.pingResults, _uiState.value.sortByReliability) else profiles,
                     activeProfile = activeProfile,
+                    pingResults = results,
+                    manualProfileId = _uiState.value.manualProfileId?.takeIf { id -> profiles.any { it.id == id } },
                     isLoading = false
                 )
             }
@@ -622,7 +630,7 @@ class MainViewModel @Inject constructor(
             try {
                 check(profileRepository.deleteReviewedProfiles(reviewed, ids.toList()))
                 if (_uiState.value.selectedCollection == ProfileCollections.key(reviewed.first())) {
-                    _uiState.value = _uiState.value.copy(selectedCollection = null)
+                    _uiState.value = _uiState.value.copy(selectedCollection = null, manualProfileId = null)
                 }
             } catch (_: Exception) {
                 _uiState.value = _uiState.value.copy(error = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.collection_delete_failed))
@@ -633,15 +641,26 @@ class MainViewModel @Inject constructor(
     fun deleteAllProfiles() {
         if (_uiState.value.isPingRunning) return
         viewModelScope.launch {
-            // Disconnect first so no profile is protected from deletion
+            if (_uiState.value.chains.isNotEmpty()) {
+                _uiState.value = _uiState.value.copy(error = "Remove chains before deleting all profiles")
+                return@launch
+            }
+            // Wait for acknowledged cleanup before deleting referenced data.
             if (_uiState.value.connectionState is ConnectionState.Connected ||
                 _uiState.value.connectionState is ConnectionState.Connecting) {
+                val id = connectionManager.currentSessionId
                 connectionManager.disconnect()
-                // Give VPN service time to clean up so connectedProfile is cleared
-                kotlinx.coroutines.delay(500)
+                if (kotlinx.coroutines.withTimeoutOrNull(20_000) { connectionManager.awaitSessionDisconnected(id); true } != true) {
+                    _uiState.value = _uiState.value.copy(error = "Connection cleanup is still running; no profiles were deleted")
+                    return@launch
+                }
             }
             for (profile in _uiState.value.profiles) {
-                deleteProfileUseCase(profile.id)
+                val result = deleteProfileUseCase(profile.id)
+                if (result.isFailure) {
+                    _uiState.value = _uiState.value.copy(error = result.exceptionOrNull()?.message ?: "Deletion failed")
+                    return@launch
+                }
             }
         }
     }
@@ -665,13 +684,17 @@ class MainViewModel @Inject constructor(
         boundDeviceId: String = "",
         hideResolvers: Boolean = false
     ) {
+        viewModelScope.launch(Dispatchers.Default) {
         val json = configExporter.exportSingleProfileLocked(
             profile, password, expirationDate, allowSharing, boundDeviceId, hideResolvers
         )
         _uiState.value = _uiState.value.copy(exportedJson = json)
+    
+        }
     }
 
     fun exportCollection(profile: ServerProfile) {
+        viewModelScope.launch(Dispatchers.Default) {
         try {
             val data = configExporter.exportCollection(_uiState.value.profiles, profile)
             _uiState.value = _uiState.value.copy(exportedJson = data)
@@ -679,16 +702,21 @@ class MainViewModel @Inject constructor(
             val reason = e.message?.takeIf { it in setOf("No exportable profiles", "Collection contains profiles that do not allow sharing") } ?: "Collection export failed"
             _uiState.value = _uiState.value.copy(error = reason)
         }
+    
+        }
     }
 
     fun exportAllProfiles() {
+        viewModelScope.launch(Dispatchers.Default) {
         val profiles = _uiState.value.profiles.filter { !it.isLocked }
         if (profiles.isEmpty()) {
             _uiState.value = _uiState.value.copy(error = "No exportable profiles")
-            return
+            return@launch
         }
         val json = configExporter.exportAllProfiles(profiles)
         _uiState.value = _uiState.value.copy(exportedJson = json)
+    
+        }
     }
 
     fun exportAllProfilesEncrypted(
@@ -699,10 +727,11 @@ class MainViewModel @Inject constructor(
         boundDeviceId: String = "",
         hideResolvers: Boolean = false
     ) {
+        viewModelScope.launch(Dispatchers.Default) {
         val profiles = _uiState.value.profiles.filter { !it.isLocked }
         if (profiles.isEmpty()) {
             _uiState.value = _uiState.value.copy(error = "No exportable profiles")
-            return
+            return@launch
         }
         try {
             val encrypted = configExporter.exportAllProfilesEncrypted(
@@ -718,6 +747,8 @@ class MainViewModel @Inject constructor(
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(error = "Failed to encrypt: ${e.message}")
         }
+    
+        }
     }
 
     fun clearExportedJson() {
@@ -725,9 +756,14 @@ class MainViewModel @Inject constructor(
     }
 
     fun parseImportConfig(json: String, bundlePassword: String? = null) {
+        if (_uiState.value.isImporting) return
+        _uiState.value = _uiState.value.copy(isImporting = true)
+        importJob = viewModelScope.launch(Dispatchers.Default) {
+            try {
         val result = configImporter.parseAndImport(
             json, connectionManager.getDeviceId(), bundlePassword
         )
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
         when (result) {
             is ImportResult.Success -> {
                 _uiState.value = _uiState.value.copy(
@@ -741,6 +777,9 @@ class MainViewModel @Inject constructor(
             ImportResult.NeedsPassword -> {
                 _uiState.value = _uiState.value.copy(pendingEncryptedImport = json)
             }
+        }
+    
+            } finally { _uiState.value = _uiState.value.copy(isImporting = false) }
         }
     }
 
@@ -762,7 +801,7 @@ class MainViewModel @Inject constructor(
                     group.profiles.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
                 }
                 profileRepository.insertCollection(importedProfiles).firstOrNull()?.let { setActiveProfileUseCase(it) }
-                _uiState.value = _uiState.value.copy(selectedCollection = null)
+                _uiState.value = _uiState.value.copy(selectedCollection = null, manualProfileId = null)
                 _uiState.value = _uiState.value.copy(
                     importPreview = null,
                     error = null
@@ -777,6 +816,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun cancelImport() {
+        importJob?.cancel()
         _uiState.value = _uiState.value.copy(importPreview = null)
     }
 
@@ -803,24 +843,31 @@ class MainViewModel @Inject constructor(
         boundDeviceId: String = "",
         hideResolvers: Boolean = false
     ) {
+        viewModelScope.launch(Dispatchers.Default) {
         val configUri = configExporter.exportSingleProfileLocked(
             profile, password, expirationDate, allowSharing, boundDeviceId, hideResolvers
         )
         _uiState.value = _uiState.value.copy(
             qrCodeData = QrCodeData(profile.name, configUri)
         )
+    
+        }
     }
 
     fun reExportLockedProfile(profile: ServerProfile) {
+        viewModelScope.launch(Dispatchers.Default) {
         try {
             val json = configExporter.reExportLockedProfile(profile)
             _uiState.value = _uiState.value.copy(exportedJson = json)
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(error = e.message ?: "Re-export failed")
         }
+    
+        }
     }
 
     fun showQrCodeLockedReExport(profile: ServerProfile) {
+        viewModelScope.launch(Dispatchers.Default) {
         try {
             val configUri = configExporter.reExportLockedProfile(profile)
             _uiState.value = _uiState.value.copy(
@@ -828,6 +875,8 @@ class MainViewModel @Inject constructor(
             )
         } catch (e: Exception) {
             _uiState.value = _uiState.value.copy(error = e.message ?: "Re-export failed")
+        }
+    
         }
     }
 
@@ -890,7 +939,7 @@ class MainViewModel @Inject constructor(
                 val restored = app.slipnet.domain.model.RegroupHistory.restore(snapshot, _uiState.value.profiles)
                 profileRepository.updateProfiles(restored)
                 check(regroupStore.edit().remove("snapshot").commit())
-                _uiState.value = _uiState.value.copy(regroupUndoAvailable = false, selectedCollection = null)
+                _uiState.value = _uiState.value.copy(regroupUndoAvailable = false, selectedCollection = null, manualProfileId = null)
             } catch (_: Exception) { _uiState.value = _uiState.value.copy(error = "Could not undo regrouping; later group changes are preserved") }
             finally { _uiState.value = _uiState.value.copy(regroupBusy = false) }
         }
@@ -915,7 +964,7 @@ class MainViewModel @Inject constructor(
                 val snapshot = app.slipnet.domain.model.RegroupHistory.encode(current.values.toList(), updated)
                 check(regroupStore.edit().putString("snapshot", snapshot).commit()) { "Could not save undo" }
                 profileRepository.updateProfiles(updated)
-                _uiState.value = _uiState.value.copy(regroupPreview = null, selectedCollection = null, regroupUndoAvailable = true)
+                _uiState.value = _uiState.value.copy(regroupPreview = null, selectedCollection = null, manualProfileId = null, regroupUndoAvailable = true)
             } catch (_: Exception) { _uiState.value = _uiState.value.copy(error = "Could not regroup profiles") }
             finally { _uiState.value = _uiState.value.copy(regroupBusy = false) }
         }
@@ -971,6 +1020,7 @@ class MainViewModel @Inject constructor(
                     if (connectionManager.connectionState.value.isDisconnected) {
                         if (originalSelection != null) profileRepository.setActiveProfile(originalSelection) else profileRepository.clearActiveProfile()
                     }
+                    if (connectionManager.connectionState.value.isDisconnected) connectionManager.disconnect()
                     _uiState.value = _uiState.value.copy(isPingRunning = false, collectionProgress = "",
                         pingResults = _uiState.value.pingResults.mapValues { (_, v) -> if (v is PingResult.Pending || v is PingResult.Testing) PingResult.Skipped else v })
                     sortProfilesByPing()
@@ -1049,6 +1099,7 @@ class MainViewModel @Inject constructor(
                     if (connectionManager.connectionState.value.isDisconnected) {
                         if (originalSelection != null) profileRepository.setActiveProfile(originalSelection) else profileRepository.clearActiveProfile()
                     }
+                    if (connectionManager.connectionState.value.isDisconnected) connectionManager.disconnect()
                     _uiState.value = _uiState.value.copy(isPingRunning = false,
                         pingResults = _uiState.value.pingResults.mapValues { (_, v) -> if (v is PingResult.Pending || v is PingResult.Testing) PingResult.Skipped else v })
                     sortProfilesByPing()
@@ -1064,14 +1115,17 @@ class MainViewModel @Inject constructor(
         if (profile.isExpired) return PingResult.Error("Expired")
         val start = System.nanoTime()
         var owned = false
+        var attemptId = connectionManager.currentSessionId
         var verified = false
         try {
             if (!reuse) {
                 owned = true
-                connectionManager.connect(profile, profileResolvers)
+                attemptId = connectionManager.connect(profile, profileResolvers, testMode = true)
+                check(attemptId > 0) { "Connection request rejected" }
                 val state = kotlinx.coroutines.withTimeout(if (ProfileCollections.isDns(profile) || profile.tunnelType == TunnelType.SNOWFLAKE) 45000 else 20000) {
                     connectionManager.connectionState.first { it is ConnectionState.Connected || it is ConnectionState.Error || it is ConnectionState.Disconnected }
                 }
+                check(connectionManager.ownsSession(attemptId)) { "Connection changed during test" }
                 if (state is ConnectionState.Error) {
                     val reason = app.slipnet.core.ProbeFailure.connection(state.message)
                     app.slipnet.util.AppLog.w("CollectionProbe", reason)
@@ -1087,13 +1141,25 @@ class MainViewModel @Inject constructor(
             val pass = if (auth) preferencesDataStore.proxyAuthPassword.first() else null
             val samples = mutableListOf<Long?>()
             var lastFailure = "Unknown probe failure"
+            var probeHost = app.slipnet.core.TunnelProbe.HOST
             repeat(3) { n ->
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 val current = connectionManager.connectionState.value
                 check(current is ConnectionState.Connected && current.profile.id == profile.id && current.chainId < 0) { "Connection changed during test" }
                 _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to PingResult.Testing("HTTPS ${n + 1}/3")))
                 val latency = withContext(Dispatchers.IO) {
-                    try { app.slipnet.core.TunnelProbe.measure(port, user, pass) }
+                    try {
+                        // A single blocked destination must not mark a usable tunnel as dead.
+                        // Cache the successful target for the remaining samples of this attempt.
+                        try { app.slipnet.core.TunnelProbe.measure(port, user, pass, host = probeHost) }
+                        catch (e: Exception) {
+                            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                            if (probeHost != app.slipnet.core.TunnelProbe.HOST) throw e
+                            val elapsed = app.slipnet.core.TunnelProbe.measure(port, user, pass, host = "cp.cloudflare.com")
+                            probeHost = "cp.cloudflare.com"
+                            elapsed
+                        }
+                    }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (e: Exception) { lastFailure = app.slipnet.core.ProbeFailure.describe(e); app.slipnet.util.AppLog.w("CollectionProbe", "Sample ${n + 1}/3: $lastFailure"); null }
                 }
@@ -1115,9 +1181,13 @@ class MainViewModel @Inject constructor(
         } finally {
             if (owned && !(keepConnected && verified)) withContext(kotlinx.coroutines.NonCancellable) {
                 val current = connectionManager.connectionState.value
-                if (current !is ConnectionState.Connected || current.profile.id == profile.id) {
-                    connectionManager.disconnect()
-                    kotlinx.coroutines.withTimeoutOrNull(15000) { connectionManager.connectionState.first { it is ConnectionState.Disconnected } }
+                if (connectionManager.ownsSession(attemptId)) {
+                    connectionManager.disconnect(keepServiceAlive = true, expectedSessionId = attemptId)
+                    try { kotlinx.coroutines.withTimeout(20000) { connectionManager.awaitSessionDisconnected(attemptId) } }
+                    catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                        // Never start another test over a backend that has not acknowledged teardown.
+                        throw IllegalStateException("Tunnel cleanup timed out; stop the VPN before testing again")
+                    }
                 }
             }
         }

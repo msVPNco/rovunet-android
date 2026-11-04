@@ -1,5 +1,6 @@
 package app.slipnet.data.local.database
 
+import androidx.room.Transaction
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -26,6 +27,12 @@ interface ChainDao {
 
     @Query("DELETE FROM profile_chains WHERE id = :id")
     suspend fun deleteChain(id: Long)
+
+    @Transaction
+    suspend fun activateChain(id: Long) {
+        clearActiveChain()
+        setActiveChain(id)
+    }
 
     @Query("UPDATE profile_chains SET is_active = 0")
     suspend fun clearActiveChain()

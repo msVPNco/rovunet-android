@@ -165,6 +165,48 @@ class DomainRouter(
      * 2. Geo-bypass: domestic domain suffix match
      * 3. Geo-bypass: IP address CIDR range match (binary search)
      */
+    fun shouldBypassDestination(address: String, hostname: String?): Boolean {
+        if (shouldBypass(hostname ?: address)) return true
+        val ip = ipToLong(address)
+        return geoBypassEnabled && ip != null && ipInRanges(ip)
+    }
+
+    /** Equivalent routing for the external core, including native UDP. */
+    fun coreRules(): org.json.JSONObject {
+        val rules = org.json.JSONArray()
+        fun rule(tag: String, domains: Collection<String> = emptyList(), ips: Collection<String> = emptyList()) {
+            if (domains.isEmpty() && ips.isEmpty()) return
+            val item = org.json.JSONObject().put("type", "field").put("outboundTag", tag)
+            if (domains.isNotEmpty()) item.put("domain", org.json.JSONArray(domains.map { "domain:" + it.removePrefix("*.") }))
+            if (ips.isNotEmpty()) item.put("ip", org.json.JSONArray(ips))
+            rules.put(item)
+        }
+        if (geoBypassEnabled) {
+            rule("direct", geoBypass.domains)
+            val cidrs = mutableListOf<String>()
+            for (i in geoBypass.ipRangeStarts.indices) {
+                var start = geoBypass.ipRangeStarts[i]
+                val end = geoBypass.ipRangeEnds[i]
+                while (start <= end) {
+                    var bits = if (start == 0L) 32 else java.lang.Long.numberOfTrailingZeros(start).coerceAtMost(32)
+                    while ((1L shl bits) > end-start+1) bits--
+                    val ip = (24 downTo 0 step 8).joinToString(".") { ((start shr it) and 255).toString() }
+                    cidrs += "$ip/${32-bits}"
+                    start += 1L shl bits
+                }
+            }
+            rule("direct", ips=cidrs)
+        }
+        if (enabled && domains.isNotEmpty()) {
+            val ips = domains.filter { isIpAddress(it) }
+            val names = domains.filterNot { isIpAddress(it) }
+            val tag = if (mode == DomainRoutingMode.BYPASS) "direct" else "proxy"
+            rule(tag, names); rule(tag, ips=ips)
+            if (mode == DomainRoutingMode.ONLY_VPN) rules.put(org.json.JSONObject().put("type","field").put("network","tcp,udp").put("outboundTag","direct"))
+        }
+        return org.json.JSONObject().put("domainStrategy","AsIs").put("rules",rules)
+    }
+
     fun shouldBypass(host: String): Boolean {
         // Check domain routing rules first
         if (enabled && domains.isNotEmpty()) {

@@ -34,7 +34,10 @@ object LockPasswordUtil {
         return "$saltHex:$hashHex"
     }
 
+    fun isValidHash(storedHash: String): Boolean = storedHash.matches(Regex("[0-9a-fA-F]{32}:[0-9a-fA-F]{64}"))
+
     fun verifyPassword(password: String, storedHash: String): Boolean {
+        if (!isValidHash(storedHash)) return false
         val parts = storedHash.split(":")
         if (parts.size != 2) return false
         val saltHex = parts[0]
@@ -44,7 +47,7 @@ object LockPasswordUtil {
         digest.update(salt)
         val hash = digest.digest(password.toByteArray(Charsets.UTF_8))
         val hashHex = hash.joinToString("") { "%02x".format(it) }
-        return hashHex == expectedHashHex
+        return MessageDigest.isEqual(hashHex.toByteArray(), expectedHashHex.lowercase().toByteArray())
     }
 
     fun encryptConfig(plaintext: String): ByteArray {

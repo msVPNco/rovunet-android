@@ -32,7 +32,7 @@ class ConfigExporter @Inject constructor() {
         const val ENCRYPTED_SCHEME = "rovunet-enc://"
         /** Scheme for password-encrypted multi-profile bundles (see [exportAllProfilesEncrypted]). */
         const val BUNDLE_ENCRYPTED_SCHEME = "rovunet-bundle-enc://"
-        const val VERSION = "32"
+        const val VERSION = "33"
         const val MODE_SLIPSTREAM = "ss"
         const val MODE_SLIPSTREAM_SSH = "slipstream_ssh"
         const val MODE_DNSTT = "dnstt"
@@ -85,7 +85,7 @@ class ConfigExporter @Inject constructor() {
     fun reExportLockedProfile(profile: ServerProfile): String {
         if (!profile.isLocked) throw IllegalStateException("Profile is not locked")
         if (!profile.allowSharing) throw IllegalStateException("Profile does not allow re-sharing")
-        val data = buildProfileData(profile)
+        val data = buildProfileData(profile, profile.resolversHidden)
         val encrypted = LockPasswordUtil.encryptConfig(data)
         val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
         return "$ENCRYPTED_SCHEME$encoded"
@@ -161,7 +161,7 @@ class ConfigExporter @Inject constructor() {
     /** Strip the field delimiter so user-supplied strings can't shift field positions. */
     private fun sanitize(value: String): String = value.replace(FIELD_DELIMITER, "")
 
-    private fun buildProfileData(profile: ServerProfile, hideResolvers: Boolean = false): String {
+    private fun buildProfileData(profile: ServerProfile, hideResolvers: Boolean = profile.resolversHidden): String {
         val resolversStr = profile.resolvers.joinToString(RESOLVER_DELIMITER) { resolver ->
             "${resolver.host}${RESOLVER_PART_DELIMITER}${resolver.port}${RESOLVER_PART_DELIMITER}${if (resolver.authoritative) "1" else "0"}"
         }
@@ -304,12 +304,16 @@ class ConfigExporter @Inject constructor() {
             sanitize(profile.soarDiscoveryCustom),
             Base64.encodeToString(profile.coreLink.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
             Base64.encodeToString(profile.collectionId.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
-            Base64.encodeToString(profile.collectionName.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+            Base64.encodeToString(profile.collectionName.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            // v33: lossless credentials; earlier positional fields remain readable by old clients.
+            Base64.encodeToString(org.json.JSONObject().put("sshUser", profile.sshUsername)
+                .put("sshPass", profile.sshPassword).put("socksUser", profile.socksUsername ?: "")
+                .put("socksPass", profile.socksPassword ?: "").toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         ).joinToString(FIELD_DELIMITER)
     }
 
     private fun encodeProfile(profile: ServerProfile, hideResolvers: Boolean = false): String {
-        val data = buildProfileData(profile, hideResolvers)
+        val data = buildProfileData(profile, hideResolvers || profile.resolversHidden)
         val encoded = Base64.encodeToString(data.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         return "$SCHEME$encoded"
     }

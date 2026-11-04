@@ -7,9 +7,9 @@ import java.io.File
 
 object XrayBridge {
     private val core = CoreProcess()
-    fun start(context: Context, link: String, port: Int, username: String?, password: String?): Result<Unit> =
+    fun start(context: Context, link: String, port: Int, username: String?, password: String?, routing: org.json.JSONObject? = null): Result<Unit> =
         runCatching {
-            CoreLink.runtime(link, port, username, password)
+            CoreLink.runtime(link, port, username, password, routing)
         }.fold(
             onSuccess = { core.start(File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so"), it, File(context.applicationInfo.nativeLibraryDir, "libveyra_core_launcher.so")) },
             onFailure = { Result.failure(it) })

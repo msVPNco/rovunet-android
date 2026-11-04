@@ -6,6 +6,7 @@ object ProbeFailure {
     fun connection(message: String): String {
         val lower = message.lowercase()
         return when {
+            "hostkey" in lower || "identity" in lower -> "Server identity approval required or changed; connect manually to review"
             "auth" in lower || "credential" in lower || "password" in lower -> "Connection authentication failed"
             "expired" in lower -> "Profile expired"
             "bound" in lower && "device" in lower -> "Profile belongs to another device"

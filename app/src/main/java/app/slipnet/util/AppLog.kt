@@ -93,6 +93,8 @@ object AppLog {
 
     /** Tags whose messages contain sensitive config details (hosts, ports, credentials). */
     private val SENSITIVE_TAGS = setOf(
+        "VlessBridge",
+        "LocalProxyAuth",
         "HevSocks5Tunnel",
         "SlipstreamSocksBridge",
         "DnsttSocksBridge",

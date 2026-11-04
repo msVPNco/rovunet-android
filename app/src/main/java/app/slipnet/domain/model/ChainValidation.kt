@@ -124,6 +124,8 @@ object ChainValidation {
         if (profiles.size < 2) return "Chain must have at least 2 profiles"
         if (profiles.size > 4) return "Chain cannot have more than 4 layers"
 
+        if (profiles.any { it.isExpired }) return "A profile in this chain has expired"
+
         // Check all types are single-layer chainable
         for ((i, p) in profiles.withIndex()) {
             if (p.tunnelType !in CHAINABLE_TYPES) {

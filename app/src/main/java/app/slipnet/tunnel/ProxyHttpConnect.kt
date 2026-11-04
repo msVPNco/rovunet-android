@@ -7,15 +7,12 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 /**
  * JSch [Proxy] that tunnels SSH through an HTTP CONNECT proxy.
@@ -116,14 +113,17 @@ class ProxyHttpConnect(
             val sniHost = tlsSni.ifBlank { host }
             Log.i(TAG, "Upgrading to TLS (SNI: $sniHost)")
 
-            val sslFactory = trustAllSslFactory()
+            val sslFactory = TransportTrust.tlsFactory(sniHost, port)
             val sslSocket = sslFactory.createSocket(sock, sniHost, port, true) as SSLSocket
 
             val params = sslSocket.sslParameters
             params.serverNames = listOf(SNIHostName(sniHost))
+        params.endpointIdentificationAlgorithm = "HTTPS"
             sslSocket.sslParameters = params
 
-            sslSocket.startHandshake()
+            sslSocket.soTimeout = 15_000
+            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
+            sslSocket.soTimeout = 0
             Log.i(TAG, "TLS handshake complete (${sslSocket.session.protocol}, ${sslSocket.session.cipherSuite})")
             activeSocket = sslSocket
         }
@@ -143,16 +143,7 @@ class ProxyHttpConnect(
         outputStream = null
     }
 
-    private fun trustAllSslFactory(): SSLSocketFactory {
-        val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-            override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        })
-        val ctx = SSLContext.getInstance("TLS")
-        ctx.init(null, trustAll, SecureRandom())
-        return ctx.socketFactory
-    }
+
 
     private fun readLine(input: InputStream): String? {
         val sb = StringBuilder()

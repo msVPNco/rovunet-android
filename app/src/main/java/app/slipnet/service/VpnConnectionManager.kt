@@ -47,14 +47,41 @@ class VpnConnectionManager @Inject constructor(
     /** Distilled DNS-pool scan progress (per-profile pool feature). */
     val dnsPoolScanState: StateFlow<app.slipnet.tunnel.DnsPoolScanState> = vpnRepository.dnsPoolScanState
 
+    private val sessions = app.slipnet.domain.model.ConnectionSessions()
+    val currentSessionId: Long get() = sessions.current
+    fun ownsSession(id: Long) = sessions.owns(id)
+    private val stopping = java.util.concurrent.ConcurrentHashMap<Long, kotlinx.coroutines.CompletableDeferred<Unit>>()
+    private val cleanedSession = MutableStateFlow(0L)
+    private var stopBarrier = kotlinx.coroutines.CompletableDeferred(Unit)
+    fun expectServiceStop(id: Long) {
+        if (id <= 0) return
+        val barrier = stopping.getOrPut(id) { kotlinx.coroutines.CompletableDeferred() }
+        stopBarrier = barrier
+    }
+    fun onServiceDestroyed(id: Long) {
+        stopping.remove(id)?.complete(Unit)
+        if (ownsSession(id)) onVpnDisconnected(id)
+    }
+    fun claimServiceStart(): Long = sessions.begin().also { _connectionState.value = ConnectionState.Connecting }
+    suspend fun awaitSessionDisconnected(id: Long) {
+        cleanedSession.first { it >= id || !ownsSession(id) }
+    }
+    private fun dispatchConnect(intent: Intent, id: Long) {
+        val barrier = stopBarrier
+        scope.launch {
+            barrier.await()
+            if (ownsSession(id)) ContextCompat.startForegroundService(context, intent)
+        }
+    }
+
     private var pendingProfile: ServerProfile? = null
     private var pendingChain: ProfileChain? = null
 
     init {
         // Observe VPN repository state
         scope.launch {
-            vpnRepository.connectionState.collect { state ->
-                _connectionState.value = state
+            vpnRepository.sessionState.collect { event ->
+                if (ownsSession(event.sessionId)) _connectionState.value = event.state
             }
         }
 
@@ -71,22 +98,23 @@ class VpnConnectionManager @Inject constructor(
         return DeviceIdUtil.getScrambledDeviceId(context)
     }
 
-    fun connect(profile: ServerProfile, profileResolvers: Boolean = false) {
+    fun connect(profile: ServerProfile, profileResolvers: Boolean = false, testMode: Boolean = false): Long {
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.CONNECT_REQUEST)
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting) {
-            return
+            return 0
         }
 
         if (profile.isExpired) {
             _connectionState.value = ConnectionState.Error("This profile has expired")
-            return
+            return 0
         }
         if (profile.boundDeviceId.isNotEmpty() && profile.boundDeviceId != getDeviceId()) {
             _connectionState.value = ConnectionState.Error("This profile is bound to a different device")
-            return
+            return 0
         }
 
+        val sessionId = sessions.begin()
         pendingProfile = profile
         _connectionState.value = ConnectionState.Connecting
         _dnsWarning.value = null
@@ -100,13 +128,16 @@ class VpnConnectionManager @Inject constructor(
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_CONNECT
             putExtra(SlipNetVpnService.EXTRA_PROFILE_ID, profile.id)
+            putExtra(SlipNetVpnService.EXTRA_SESSION_ID, sessionId)
+            putExtra("rovunet_test_mode", testMode)
             if (profileResolvers) {
                 putExtra("rovunet_resolver_hosts", profile.resolvers.map { it.host }.toTypedArray())
                 putExtra("rovunet_resolver_ports", profile.resolvers.map { it.port }.toIntArray())
                 putExtra("rovunet_resolver_auth", profile.resolvers.map { it.authoritative }.toBooleanArray())
             }
         }
-        ContextCompat.startForegroundService(context, intent)
+        dispatchConnect(intent, sessionId)
+        return sessionId
     }
 
     fun reconnect(profile: ServerProfile) {
@@ -120,6 +151,7 @@ class VpnConnectionManager @Inject constructor(
             return
         }
 
+        val sessionId = sessions.begin()
         pendingProfile = profile
         _connectionState.value = ConnectionState.Connecting
         _dnsWarning.value = null
@@ -132,10 +164,11 @@ class VpnConnectionManager @Inject constructor(
         // (disconnectJob?.join()) before starting the new one.
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_CONNECT
+            putExtra(SlipNetVpnService.EXTRA_SESSION_ID, sessionId)
             putExtra(SlipNetVpnService.EXTRA_PROFILE_ID, profile.id)
 
         }
-        ContextCompat.startForegroundService(context, intent)
+        dispatchConnect(intent, sessionId)
     }
 
     fun connectChain(chain: ProfileChain, firstProfile: ServerProfile) {
@@ -144,6 +177,7 @@ class VpnConnectionManager @Inject constructor(
             return
         }
 
+        val sessionId = sessions.begin()
         pendingProfile = firstProfile
         pendingChain = chain
         _connectionState.value = ConnectionState.Connecting
@@ -151,26 +185,29 @@ class VpnConnectionManager @Inject constructor(
 
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_CONNECT
+            putExtra(SlipNetVpnService.EXTRA_SESSION_ID, sessionId)
             putExtra(SlipNetVpnService.EXTRA_CHAIN_ID, chain.id)
         }
-        ContextCompat.startForegroundService(context, intent)
+        dispatchConnect(intent, sessionId)
     }
 
-    fun disconnect() {
+    fun disconnect(keepServiceAlive: Boolean = false, expectedSessionId: Long = currentSessionId) {
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.DISCONNECT_REQUEST)
-        if (_connectionState.value is ConnectionState.Disconnected) {
-            return
-        }
-
+        if (!ownsSession(expectedSessionId)) return
+        if (keepServiceAlive && _connectionState.value is ConnectionState.Disconnected) return
+        if (!keepServiceAlive) expectServiceStop(expectedSessionId)
         _connectionState.value = ConnectionState.Disconnecting
 
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_DISCONNECT
+            putExtra(SlipNetVpnService.EXTRA_SESSION_ID, expectedSessionId)
+            putExtra(SlipNetVpnService.EXTRA_KEEP_SERVICE, keepServiceAlive)
         }
         context.startService(intent)
     }
 
-    fun onVpnEstablished() {
+    fun onVpnEstablished(sessionId: Long = currentSessionId) {
+        if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ESTABLISHED)
         val profile = pendingProfile ?: return
 
@@ -182,7 +219,9 @@ class VpnConnectionManager @Inject constructor(
         }
     }
 
-    fun onVpnDisconnected() {
+    fun onVpnDisconnected(sessionId: Long = currentSessionId) {
+        cleanedSession.value = maxOf(cleanedSession.value, sessionId)
+        if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_DISCONNECTED)
         // Reset repository state without going through the full disconnect flow
         // (which would redundantly stop tunnels and emit Disconnecting state that
@@ -202,10 +241,11 @@ class VpnConnectionManager @Inject constructor(
         pendingProfile = null
     }
 
-    fun onVpnError(error: String) {
+    fun onVpnError(error: String, sessionId: Long = currentSessionId) {
+        if (!ownsSession(sessionId)) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ERROR)
         scope.launch {
-            _connectionState.value = ConnectionState.Error(friendlyError(error))
+            if (ownsSession(sessionId)) _connectionState.value = ConnectionState.Error(friendlyError(error))
         }
     }
 

@@ -150,11 +150,15 @@ object CoreLink {
         return Parsed("WireGuard", ep.host, obj("protocol" to "wireguard", "settings" to settings))
     }
 
-    fun runtime(text: String, port: Int, username: String? = null, password: String? = null): String {
+    fun runtime(text: String, port: Int, username: String? = null, password: String? = null, routing: JSONObject? = null): String {
         require(port in 1..65535)
         val socks = obj("auth" to "noauth", "udp" to true, "ip" to "127.0.0.1")
         if (!username.isNullOrEmpty()) { require(password != null); socks.put("auth", "password"); socks.put("accounts", arr(obj("user" to username, "pass" to password))) }
         val outbound = parse(text).outbound.put("tag", "proxy")
-        return obj("log" to obj("loglevel" to "none"), "inbounds" to arr(obj("listen" to "127.0.0.1", "port" to port, "protocol" to "socks", "settings" to socks)), "outbounds" to arr(outbound)).toString()
+        val inbound = obj("listen" to "127.0.0.1", "port" to port, "protocol" to "socks", "settings" to socks)
+        if (routing != null) inbound.put("sniffing", obj("enabled" to true, "destOverride" to arr("http", "tls", "quic"), "routeOnly" to true))
+        val config = obj("log" to obj("loglevel" to "none"), "inbounds" to arr(inbound), "outbounds" to arr(outbound, obj("tag" to "direct", "protocol" to "freedom")))
+        routing?.let { config.put("routing", it) }
+        return config.toString()
     }
 }

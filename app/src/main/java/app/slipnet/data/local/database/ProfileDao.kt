@@ -48,6 +48,12 @@ interface ProfileDao {
     @Query("DELETE FROM server_profiles WHERE id = :id")
     suspend fun deleteProfile(id: Long)
 
+    @Transaction
+    suspend fun activateProfile(id: Long) {
+        clearActiveProfile()
+        setActiveProfile(id)
+    }
+
     @Query("UPDATE server_profiles SET is_active = 0")
     suspend fun clearActiveProfile()
 

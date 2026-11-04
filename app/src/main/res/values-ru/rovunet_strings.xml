@@ -215,4 +215,8 @@
     <string name="connection_last_https">Последняя проверка HTTPS: %1$d мс · %2$d/%3$d</string>
     <string name="update_view_releases">Обновления и загрузки</string>
     <string name="update_open_failed">Нет браузера для открытия страницы загрузки</string>
+    <string name="last_test_error">Последняя проверка (%1$s): %2$s</string>
+    <string name="server_identity_title">Проверка сервера</string>
+    <string name="server_identity_message">Сервер: %1$s\nSHA-256: %2$s\nСверьте отпечаток с администратором. Доверие неизвестному серверу может поставить соединение под угрозу. Изменённые ключи отклоняются.</string>
+    <string name="server_identity_accept">Доверять серверу</string>
 </resources>

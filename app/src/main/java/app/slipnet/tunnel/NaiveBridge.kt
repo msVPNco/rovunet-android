@@ -95,7 +95,9 @@ object NaiveBridge {
                 return Result.failure(RuntimeException("Cannot resolve server hostname '$serverHost'"))
             }
 
-            args.add("--proxy=https://$username:$password@$serverHost:$serverPort")
+            fun encode(value: String) = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+            val authorityHost = if (':' in serverHost && !serverHost.startsWith("[")) "[$serverHost]" else serverHost
+            args.add("--proxy=https://${encode(username)}:${encode(password)}@$authorityHost:$serverPort")
             args.add("--host-resolver-rules=MAP $serverHost $resolvedIp")
             Log.i(TAG, "Pre-resolved: $serverHost -> $resolvedIp")
 

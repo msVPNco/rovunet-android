@@ -36,6 +36,7 @@ import javax.net.ssl.SSLSocketFactory
  *   DNS: -> FWD_UDP -> persistent DNS worker pool (via Dante) -> DNS server
  */
 object DnsttSocksBridge {
+    var domainRouter: DomainRouter = DomainRouter.DISABLED
     private const val TAG = "DnsttSocksBridge"
     @Volatile var debugLogging = false
     @Volatile var proxyOnlyMode = false
@@ -922,6 +923,7 @@ object DnsttSocksBridge {
         clientInput: InputStream,
         clientOutput: OutputStream
     ) {
+        if (DirectRouting.relay(domainRouter, destHost, destPort, clientSocket, input=clientInput)) return
         // Fail fast if upstream tunnel is dead — avoids 10s connect timeout per request
         if (!upstreamRunningCheck()) {
             logd("CONNECT: upstream tunnel not running, rejecting $destHost:$destPort")

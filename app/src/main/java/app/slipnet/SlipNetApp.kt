@@ -21,6 +21,7 @@ class SlipNetApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        app.slipnet.tunnel.TransportTrust.initialize(this)
         createNotificationChannels()
         appScope.launch { preferencesDataStore.ensureProxyPortInitialized() }
     }

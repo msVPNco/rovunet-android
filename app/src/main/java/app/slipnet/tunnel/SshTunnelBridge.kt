@@ -14,6 +14,10 @@ object SshTunnelBridge {
 
     private val defaultInstance = SshTunnelInstance("default")
 
+    var trustIdentity: String
+        get() = defaultInstance.trustIdentity
+        set(value) { defaultInstance.trustIdentity = value }
+
     var debugLogging: Boolean
         get() = defaultInstance.debugLogging
         set(value) { defaultInstance.debugLogging = value }

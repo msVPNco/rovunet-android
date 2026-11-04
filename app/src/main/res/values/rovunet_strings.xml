@@ -213,4 +213,8 @@
     <string name="connection_last_https">Last HTTPS test: %1$d ms · %2$d/%3$d</string>
     <string name="update_view_releases">Updates and downloads</string>
     <string name="update_open_failed">No browser available to open the download page</string>
+    <string name="last_test_error">Last test (%1$s): %2$s</string>
+    <string name="server_identity_title">Verify server identity</string>
+    <string name="server_identity_message">Endpoint: %1$s\nSHA-256: %2$s\nConfirm this fingerprint with your server administrator. Accepting an unknown identity may expose your connection. Changed identities are refused.</string>
+    <string name="server_identity_accept">Trust this server</string>
 </resources>

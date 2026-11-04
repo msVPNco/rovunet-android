@@ -177,6 +177,14 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val trustRequest by app.slipnet.tunnel.TransportTrust.request.collectAsState()
+    trustRequest?.let { request ->
+        AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(false) },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_title)) },
+            text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_message, request.endpoint, request.fingerprint)) },
+            confirmButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(true) }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_accept)) } },
+            dismissButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(false) }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
+    }
     var showConnectionGuide by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

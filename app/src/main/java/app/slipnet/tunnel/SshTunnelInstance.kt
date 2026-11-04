@@ -92,6 +92,7 @@ class SshTunnelInstance(val instanceId: String = "default") {
     private var configCipher: String? = null       // null = auto
     private var configCompression: Boolean = false
     private var configMaxChannels: Int = DEFAULT_MAX_CHANNELS
+    var trustIdentity: String = ""
     var localAuthUsername: String? = null
     var localAuthPassword: String? = null
     private var session: Session? = null
@@ -172,7 +173,9 @@ class SshTunnelInstance(val instanceId: String = "default") {
      * Apply cipher and compression settings to a JSch session.
      */
     private fun applySessionConfig(session: Session) {
-        session.setConfig("StrictHostKeyChecking", "no")
+        if (trustIdentity.isNotBlank()) session.setHostKeyAlias(trustIdentity)
+        session.setHostKeyRepository(TransportTrust.sshKeys)
+        session.setConfig("StrictHostKeyChecking", "yes")
         session.setServerAliveInterval(KEEPALIVE_INTERVAL_MS)
         session.setServerAliveCountMax(3)
 

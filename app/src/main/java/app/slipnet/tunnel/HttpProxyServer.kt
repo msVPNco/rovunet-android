@@ -40,6 +40,7 @@ object HttpProxyServer {
     private var serverSocket: ServerSocket? = null
     private var acceptorThread: Thread? = null
     private val running = AtomicBoolean(false)
+    private val activeSockets = java.util.concurrent.ConcurrentHashMap.newKeySet<Socket>()
     private val connectionThreads = CopyOnWriteArrayList<Thread>()
 
     fun start(
@@ -104,6 +105,8 @@ object HttpProxyServer {
         acceptorThread?.interrupt()
         acceptorThread = null
 
+        activeSockets.forEach { runCatching { it.close() } }
+        activeSockets.clear()
         for (thread in connectionThreads) {
             thread.interrupt()
         }
@@ -141,6 +144,8 @@ object HttpProxyServer {
     }
 
     private fun handleConnection(clientSocket: Socket) {
+        if (activeSockets.size >= 256) { clientSocket.close(); return }
+        activeSockets.add(clientSocket)
         val thread = Thread({
             try {
                 clientSocket.use { socket ->
@@ -172,6 +177,7 @@ object HttpProxyServer {
                     logd("Connection handler error: ${e.message}")
                 }
             }
+            finally { activeSockets.remove(clientSocket); activeSockets.removeAll { it.isClosed } }
         }, "http-proxy-handler")
         thread.isDaemon = true
         connectionThreads.add(thread)
@@ -191,11 +197,15 @@ object HttpProxyServer {
             return
         }
 
-        // Read and discard remaining headers until empty line
+        var authorization: String? = null
+        var headerCount = 0
         while (true) {
             val line = readLine(clientInput) ?: return
             if (line.isEmpty()) break
+            check(++headerCount <= 100) { "Too many proxy headers" }
+            if (line.startsWith("Proxy-Authorization:", true)) authorization = line.substringAfter(':').trim()
         }
+        if (!authenticate(authorization, clientSocket)) return
 
         // Connect to target through SOCKS5 proxy using manual handshake.
         // Sends DOMAINNAME address type so the bridge resolves DNS remotely —
@@ -261,16 +271,22 @@ object HttpProxyServer {
         val httpVersion = parts[2]
 
         // Read all headers
+        var authorization: String? = null
+        var headerCount = 0
         val headers = mutableListOf<String>()
         var hostHeader: String? = null
         while (true) {
             val line = readLine(clientInput) ?: return
             if (line.isEmpty()) break
+            check(++headerCount <= 100) { "Too many proxy headers" }
+            if (line.startsWith("Proxy-Authorization:", true)) authorization = line.substringAfter(':').trim()
             headers.add(line)
             if (line.startsWith("Host:", ignoreCase = true)) {
                 hostHeader = line.substringAfter(":").trim()
             }
         }
+        if (!authenticate(authorization, clientSocket)) return
+
 
         // Determine target host and port from URI or Host header
         val (host, port) = if (uri.startsWith("http://", ignoreCase = true)) {
@@ -418,8 +434,25 @@ object HttpProxyServer {
                 }
                 return sb.toString()
             }
+            check(sb.length < 16 * 1024) { "Proxy header too large" }
             sb.append(b.toChar())
         }
+    }
+
+    private fun authenticate(header: String?, socket: Socket): Boolean {
+        val user = socksAuthUsername
+        val pass = socksAuthPassword
+        if (user.isNullOrEmpty() || pass.isNullOrEmpty()) return true
+        val supplied = runCatching {
+            if (header?.startsWith("Basic ", true) != true) return@runCatching byteArrayOf()
+            android.util.Base64.decode(header.substringAfter(' '), android.util.Base64.NO_WRAP)
+        }.getOrDefault(byteArrayOf())
+        if (java.security.MessageDigest.isEqual(supplied, "$user:$pass".toByteArray(Charsets.UTF_8))) return true
+        socket.getOutputStream().apply {
+            write("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Rovunet\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII))
+            flush()
+        }
+        return false
     }
 
     private fun sendError(socket: Socket, code: Int, reason: String) {
@@ -440,6 +473,8 @@ object HttpProxyServer {
      */
     private fun connectViaSocks5(host: String, port: Int): Socket {
         val socket = Socket()
+        activeSockets.add(socket)
+        try {
         socket.connect(InetSocketAddress(socksHost, socksPort), TCP_CONNECT_TIMEOUT_MS)
         socket.soTimeout = TCP_CONNECT_TIMEOUT_MS // timeout for handshake only
         socket.tcpNoDelay = true
@@ -470,6 +505,7 @@ object HttpProxyServer {
                 // RFC 1929 username/password subnegotiation
                 val user = socksAuthUsername!!.toByteArray(Charsets.UTF_8)
                 val pass = socksAuthPassword!!.toByteArray(Charsets.UTF_8)
+                require(user.size in 1..255 && pass.size in 1..255) { "Invalid SOCKS credentials" }
                 val authReq = ByteArray(1 + 1 + user.size + 1 + pass.size)
                 authReq[0] = 0x01 // subnegotiation version
                 authReq[1] = user.size.toByte()
@@ -498,6 +534,7 @@ object HttpProxyServer {
 
         // CONNECT request with DOMAINNAME address type
         val domainBytes = host.toByteArray(Charsets.US_ASCII)
+        require(domainBytes.size in 1..255 && port in 1..65535) { "Invalid SOCKS target" }
         val req = ByteArray(4 + 1 + domainBytes.size + 2)
         req[0] = 0x05 // version
         req[1] = 0x01 // CONNECT
@@ -536,6 +573,11 @@ object HttpProxyServer {
         socket.soTimeout = 0 // clear handshake timeout before relay
         socket.keepAlive = true
         return socket
+        } catch (e: Exception) {
+            activeSockets.remove(socket)
+            runCatching { socket.close() }
+            throw e
+        }
     }
 
     private fun readExactly(input: InputStream, buf: ByteArray) {

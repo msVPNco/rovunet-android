@@ -38,8 +38,7 @@ class ChainRepositoryImpl @Inject constructor(
     override suspend fun deleteChain(id: Long) = chainDao.deleteChain(id)
 
     override suspend fun setActiveChain(id: Long) {
-        chainDao.clearActiveChain()
-        chainDao.setActiveChain(id)
+        chainDao.activateChain(id)
     }
 
     override suspend fun clearActiveChain() = chainDao.clearActiveChain()

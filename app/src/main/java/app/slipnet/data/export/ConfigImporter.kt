@@ -371,17 +371,34 @@ class ConfigImporter @Inject constructor() {
             "30" -> parseProfileV30(fields, lineNum)
             "31" -> parseProfileV31(fields, lineNum)
             "32" -> parseProfileV32(fields, lineNum)
+            "33" -> parseProfileV33(fields, lineNum)
             else -> {
                 // Forward compatibility: try the highest known parser for newer versions.
                 // Extra trailing fields are safely ignored (parsers only check minimum count).
                 val versionNum = version.toIntOrNull()
-                if (versionNum != null && versionNum > 32) {
-                    parseProfileV32(fields, lineNum)
+                if (versionNum != null && versionNum > 33) {
+                    parseProfileV33(fields, lineNum)
                 } else {
                     ProfileParseResult.Error("Line $lineNum: Unsupported version '$version'")
                 }
             }
         }
+    }
+
+    private fun parseProfileV33(fields: List<String>, lineNum: Int): ProfileParseResult {
+        if (fields.size < 88) return ProfileParseResult.Error("Line $lineNum: Incomplete v33 credentials")
+        return try {
+            val credentials = org.json.JSONObject(String(Base64.decode(fields[87], Base64.NO_WRAP), Charsets.UTF_8))
+            val restored = fields.toMutableList().also {
+                it[12] = credentials.getString("socksUser"); it[13] = credentials.getString("socksPass")
+                it[15] = credentials.getString("sshUser"); it[16] = credentials.getString("sshPass")
+            }
+            val base = parseProfileV32(restored, lineNum)
+            if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(
+                sshUsername = credentials.getString("sshUser"), sshPassword = credentials.getString("sshPass"),
+                socksUsername = credentials.getString("socksUser").ifEmpty { null },
+                socksPassword = credentials.getString("socksPass").ifEmpty { null })) else base
+        } catch (_: Exception) { ProfileParseResult.Error("Line $lineNum: Invalid v33 credentials") }
     }
 
     private fun parseProfileV32(fields: List<String>, lineNum: Int): ProfileParseResult {
@@ -1991,6 +2008,8 @@ class ConfigImporter @Inject constructor() {
         // v15 new fields: locked profile
         val isLocked = fields[31] == "1"
         val lockPasswordHash = fields[32]
+        if (isLocked && !LockPasswordUtil.isValidHash(lockPasswordHash))
+            return ProfileParseResult.Error("Line $lineNum: Invalid profile lock")
 
         if (name.isBlank()) {
             return ProfileParseResult.Error("Line $lineNum: Profile name is required")

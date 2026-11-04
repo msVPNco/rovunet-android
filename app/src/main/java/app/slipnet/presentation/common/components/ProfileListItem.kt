@@ -123,7 +123,7 @@ fun ProfileListItem(
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f)
                     )
                     if (profile.isPinned) {
                         Spacer(modifier = Modifier.width(6.dp))
@@ -200,6 +200,9 @@ fun ProfileListItem(
                     }
 
                     // Ping result badge
+
+                }
+
                     when (pingResult) {
                         is PingResult.Pending -> {
                             Spacer(modifier = Modifier.width(8.dp))
@@ -261,7 +264,10 @@ fun ProfileListItem(
                         is PingResult.Error -> {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = pingResult.message,
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.last_test_error,
+                                    java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(pingResult.measuredAt)), pingResult.message),
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = DisconnectedRed,
                                 modifier = Modifier
@@ -274,7 +280,6 @@ fun ProfileListItem(
                         }
                         is PingResult.Skipped, null -> { /* nothing */ }
                     }
-                }
 
                 // Subtitle: server/domain info (hidden when locked)
                 Text(

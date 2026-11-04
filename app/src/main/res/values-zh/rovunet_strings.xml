@@ -212,4 +212,8 @@
     <string name="connection_last_https">上次 HTTPS 测试：%1$d 毫秒 · %2$d/%3$d</string>
     <string name="update_view_releases">更新与下载</string>
     <string name="update_open_failed">没有可打开下载页面的浏览器</string>
+    <string name="last_test_error">上次测试（%1$s）：%2$s</string>
+    <string name="server_identity_title">验证服务器身份</string>
+    <string name="server_identity_message">服务器：%1$s\nSHA-256：%2$s\n请与服务器管理员核对此指纹。信任未知身份可能危及连接安全。已确认身份发生变化时将拒绝连接。</string>
+    <string name="server_identity_accept">信任此服务器</string>
 </resources>

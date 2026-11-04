@@ -204,6 +204,20 @@ class VpnRepositoryImpl @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    private var publishingSession: Long = 0
+    private val _sessionState = MutableStateFlow(app.slipnet.domain.model.SessionConnectionState(0, ConnectionState.Disconnected))
+    val sessionState = _sessionState.asStateFlow()
+    fun beginSession(id: Long) {
+        publishingSession = id
+        publishConnectionState(ConnectionState.Connecting)
+    }
+    private fun publishConnectionState(state: ConnectionState) {
+        _connectionState.value = state
+        _sessionState.value = app.slipnet.domain.model.SessionConnectionState(publishingSession, state)
+        if (state is ConnectionState.Connected) connectedProfile = state.profile
+        if (state is ConnectionState.Disconnected) connectedProfile = null
+    }
+
     override val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     private val _trafficStats = MutableStateFlow(TrafficStats.EMPTY)
@@ -260,7 +274,7 @@ class VpnRepositoryImpl @Inject constructor(
             return Result.failure(IllegalStateException("Already connected or connecting"))
         }
 
-        _connectionState.value = ConnectionState.Connecting
+        publishConnectionState(ConnectionState.Connecting)
         connectedProfile = profile
 
         return Result.success(Unit)
@@ -660,7 +674,7 @@ class VpnRepositoryImpl @Inject constructor(
                 // multiple variants (single connect / chain layer / SSH-wrapped)
                 // and would otherwise leave the UI stuck if any one swallows
                 // the Result.failure.
-                _connectionState.value = ConnectionState.Error(msg)
+                publishConnectionState(ConnectionState.Error(msg))
                 return Result.failure(Exception(msg))
             }
             val topResolvers = top.map { (e, _) -> DnsResolver(host = e.host, port = e.port) }
@@ -1023,12 +1037,12 @@ class VpnRepositoryImpl @Inject constructor(
         )
 
         return if (hevResult.isSuccess) {
-            _connectionState.value = ConnectionState.Connected(profile)
+            publishConnectionState(ConnectionState.Connected(profile))
             Log.i(TAG, "Tunnel started successfully")
             Result.success(Unit)
         } else {
             val error = hevResult.exceptionOrNull()?.message ?: "Failed to start tun2socks"
-            _connectionState.value = ConnectionState.Error(error)
+            publishConnectionState(ConnectionState.Error(error))
             connectedProfile = null
             // Stop the SOCKS5 proxy since tun2socks failed
             stopCurrentProxy()
@@ -1176,7 +1190,7 @@ class VpnRepositoryImpl @Inject constructor(
 
                 if (!success) {
                     val error = tunnelStartException?.message ?: "Failed to start tunnel"
-                    _connectionState.value = ConnectionState.Error(error)
+                    publishConnectionState(ConnectionState.Error(error))
                     connectedProfile = null
                     Log.e(TAG, "Failed to start tunnel: $error")
                     return@launch
@@ -1212,11 +1226,11 @@ class VpnRepositoryImpl @Inject constructor(
                 )
 
                 if (hevResult.isSuccess) {
-                    _connectionState.value = ConnectionState.Connected(profile)
+                    publishConnectionState(ConnectionState.Connected(profile))
                     Log.i(TAG, "Tunnel started successfully")
                 } else {
                     val error = hevResult.exceptionOrNull()?.message ?: "Failed to start tun2socks"
-                    _connectionState.value = ConnectionState.Error(error)
+                    publishConnectionState(ConnectionState.Error(error))
                     connectedProfile = null
                     // Stop the SOCKS5 proxy since tun2socks failed
                     SlipstreamBridge.stopClient()
@@ -1225,7 +1239,7 @@ class VpnRepositoryImpl @Inject constructor(
 
             } catch (e: Exception) {
                 Log.e(TAG, "Exception starting tunnel", e)
-                _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
+                publishConnectionState(ConnectionState.Error(e.message ?: "Unknown error"))
                 connectedProfile = null
             }
         }
@@ -1268,7 +1282,7 @@ class VpnRepositoryImpl @Inject constructor(
             return Result.success(Unit)
         }
 
-        _connectionState.value = ConnectionState.Disconnecting
+        publishConnectionState(ConnectionState.Disconnecting)
 
         try {
             // Stop hev-socks5-tunnel first
@@ -1278,13 +1292,13 @@ class VpnRepositoryImpl @Inject constructor(
             stopCurrentProxy()
 
             currentTunFd = null
-            _connectionState.value = ConnectionState.Disconnected
+            publishConnectionState(ConnectionState.Disconnected)
             connectedProfile = null
             Log.i(TAG, "Tunnel stopped successfully")
             return Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping tunnel", e)
-            _connectionState.value = ConnectionState.Error(e.message ?: "Unknown error")
+            publishConnectionState(ConnectionState.Error(e.message ?: "Unknown error"))
             return Result.failure(e)
         }
     }
@@ -1298,11 +1312,11 @@ class VpnRepositoryImpl @Inject constructor(
     }
 
     fun setProxyConnected(profile: ServerProfile) {
-        _connectionState.value = ConnectionState.Connected(profile)
+        publishConnectionState(ConnectionState.Connected(profile))
     }
 
     fun updateConnectionState(state: ConnectionState) {
-        _connectionState.value = state
+        publishConnectionState(state)
     }
 
     fun updateTrafficStats(stats: TrafficStats) {

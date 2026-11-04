@@ -45,6 +45,9 @@ object VlessBridge {
     private const val VLESS_ADDR_DOMAIN: Byte = 0x02
     private const val VLESS_ADDR_IPV6: Byte = 0x03
 
+    var domainRouter: DomainRouter = DomainRouter.DISABLED
+    var localAuthUsername: String? = null
+    var localAuthPassword: String? = null
     var debugLogging = false
     private fun logd(msg: String) { if (debugLogging) Log.d(TAG, msg) }
 
@@ -306,9 +309,7 @@ object VlessBridge {
             val nMethods = input.read()
             val methods = ByteArray(nMethods)
             readFully(input, methods)
-            // Reply: no auth required
-            output.write(byteArrayOf(0x05, 0x00))
-            output.flush()
+            if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword)) return
 
             // SOCKS5 request: ver(1) + cmd(1) + rsv(1) + atyp(1) + addr + port(2)
             val reqVer = input.read()
@@ -385,6 +386,7 @@ object VlessBridge {
     // ── VLESS Connection ─────────────────────────────────────────────
 
     private fun handleVlessConnect(client: Socket, destHost: String, destPort: Int, initialData: ByteArray = ByteArray(0)) {
+        if (DirectRouting.relay(domainRouter, destHost, destPort, client, initialData=initialData, socksReply=false)) return
         // Step 1: TCP connect (through fragment forwarder if enabled, or direct to CDN)
         val raw: Socket
         if (fragmentEnabled) {

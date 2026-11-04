@@ -8,14 +8,12 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLParameters
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 /**
  * JSch [Proxy] that tunnels SSH through a WebSocket connection.
@@ -80,17 +78,21 @@ class ProxyWebSocket(
         val rawSocket = Socket().apply {
             connect(InetSocketAddress(wsHost, wsPort), timeoutMs)
             tcpNoDelay = true
+            soTimeout = 15_000
         }
 
-        // Step 2: Optional TLS (trust all certs for self-signed StunTLS servers)
+        // Step 2: Optional TLS (validate the certificate, with explicit approval for self-signed servers)
         val activeSocket: Socket = if (useTls) {
             val sniHost = tlsSni.ifBlank { wsHost }
-            val sslFactory = trustAllSslFactory()
+            val sslFactory = TransportTrust.tlsFactory(sniHost, wsPort)
             val sslSocket = sslFactory.createSocket(rawSocket, sniHost, wsPort, true) as SSLSocket
             val params = sslSocket.sslParameters
             params.serverNames = listOf(SNIHostName(sniHost))
+        params.endpointIdentificationAlgorithm = "HTTPS"
             sslSocket.sslParameters = params
-            sslSocket.startHandshake()
+            sslSocket.soTimeout = 15_000
+            try { sslSocket.startHandshake() } catch (e: Exception) { sslSocket.close(); throw e }
+            sslSocket.soTimeout = 0
             Log.i(TAG, "TLS handshake complete (${sslSocket.session.protocol})")
             sslSocket
         } else {
@@ -344,14 +346,5 @@ class ProxyWebSocket(
         return buf
     }
 
-    private fun trustAllSslFactory(): SSLSocketFactory {
-        val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-            override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        })
-        val ctx = SSLContext.getInstance("TLS")
-        ctx.init(null, trustAll, SecureRandom())
-        return ctx.socketFactory
-    }
+
 }

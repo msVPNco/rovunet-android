@@ -14,14 +14,16 @@ object TunnelProbe {
     const val PATH = "/generate_204"
     fun measure(port: Int, username: String? = null, password: String? = null,
                 host: String = HOST, remotePort: Int = 443, path: String = PATH,
-                factory: SSLSocketFactory = SSLSocketFactory.getDefault() as SSLSocketFactory): Long {
+                factory: SSLSocketFactory = SSLSocketFactory.getDefault() as SSLSocketFactory,
+                timeoutMs: Int = 8000): Long {
+        require(timeoutMs in 100..30000)
         val start = System.nanoTime()
         val socket = Socket()
         val timer = Timer("veyra-probe-deadline", true)
-        timer.schedule(object : TimerTask() { override fun run() { runCatching { socket.close() } } }, 8000)
+        timer.schedule(object : TimerTask() { override fun run() { runCatching { socket.close() } } }, timeoutMs.toLong())
         try {
-            socket.connect(InetSocketAddress("127.0.0.1", port), 2000)
-            socket.soTimeout = 6000
+            socket.connect(InetSocketAddress("127.0.0.1", port), minOf(2000, timeoutMs))
+            socket.soTimeout = minOf(6000, timeoutMs)
             val input = DataInputStream(socket.getInputStream())
             val out = socket.getOutputStream()
             val auth = !username.isNullOrEmpty()
@@ -47,7 +49,7 @@ object TunnelProbe {
             input.readFully(ByteArray(size + 2))
             (factory.createSocket(socket, host, remotePort, true) as SSLSocket).use { tls ->
                 tls.sslParameters = tls.sslParameters.apply { endpointIdentificationAlgorithm = "HTTPS" }
-                tls.soTimeout = 6000
+                tls.soTimeout = minOf(6000, timeoutMs)
                 tls.startHandshake()
                 tls.outputStream.write("GET $path HTTP/1.1\r\nHost: $host\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n".toByteArray(Charsets.US_ASCII))
                 tls.outputStream.flush()

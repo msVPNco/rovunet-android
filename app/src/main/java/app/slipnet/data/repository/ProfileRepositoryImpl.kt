@@ -53,8 +53,7 @@ class ProfileRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setActiveProfile(id: Long) {
-        profileDao.clearActiveProfile()
-        profileDao.setActiveProfile(id)
+        profileDao.activateProfile(id)
     }
 
     override suspend fun clearActiveProfile() {

@@ -213,4 +213,8 @@
     <string name="connection_last_https">آخرین تست HTTPS: %1$d میلی‌ثانیه · %2$d/%3$d</string>
     <string name="update_view_releases">به‌روزرسانی و دانلود</string>
     <string name="update_open_failed">مرورگری برای بازکردن صفحهٔ دانلود موجود نیست</string>
+    <string name="last_test_error">آخرین تست (%1$s): %2$s</string>
+    <string name="server_identity_title">تأیید هویت سرور</string>
+    <string name="server_identity_message">سرور: %1$s\nاثر انگشت SHA-256: %2$s\nاین اثر انگشت را با مدیر سرور تطبیق دهید. پذیرش هویت ناشناس می‌تواند اتصال شما را در معرض خطر قرار دهد. تغییر هویت تأییدشده رد می‌شود.</string>
+    <string name="server_identity_accept">این سرور را تأیید می‌کنم</string>
 </resources>
