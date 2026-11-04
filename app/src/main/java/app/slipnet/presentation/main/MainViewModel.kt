@@ -98,6 +98,7 @@ data class MainUiState(
     val collectionConnect: Boolean = false,
     val collectionProgress: String = "",
     val selectedCollection: String? = null,
+    val manualProfileId: Long? = null,
     val sortByHttps: Boolean = false,
     val sortByReliability: Boolean = false,
     val pingResults: Map<Long, PingResult> = emptyMap(),
@@ -403,12 +404,15 @@ class MainViewModel @Inject constructor(
     }
 
     fun connect(profile: ServerProfile? = null) {
-        if (profile == null) { runCollection(connectAfter = true); return }
         if (_uiState.value.isPingRunning) { _uiState.value = _uiState.value.copy(error = "Stop the connection test first"); return }
-        val targetProfile = profile ?: _uiState.value.activeProfile ?: _uiState.value.profiles.firstOrNull()
-        if (targetProfile == null) {
-            _uiState.value = _uiState.value.copy(error = "No profile available to connect")
-            return
+        val targetProfile = profile ?: when (val choice = app.slipnet.domain.model.ConnectionChoice.resolve(
+            _uiState.value.manualProfileId, _uiState.value.profiles)) {
+            app.slipnet.domain.model.ConnectionChoice.Target.Automatic -> { runCollection(connectAfter = true); return }
+            app.slipnet.domain.model.ConnectionChoice.Target.Missing -> {
+                _uiState.value = _uiState.value.copy(error = "No profile available to connect")
+                return
+            }
+            is app.slipnet.domain.model.ConnectionChoice.Target.Direct -> choice.profile
         }
         if (targetProfile.isExpired) {
             _uiState.value = _uiState.value.copy(error = "This profile has expired")
@@ -499,7 +503,7 @@ class MainViewModel @Inject constructor(
 
     fun selectCollection(profile: ServerProfile) {
         if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
-        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
+        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile), manualProfileId = null)
         viewModelScope.launch { setActiveProfileUseCase(profile.id) }
     }
 
@@ -528,7 +532,7 @@ class MainViewModel @Inject constructor(
 
     fun setActiveProfile(profile: ServerProfile) {
         if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
-        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
+        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile), manualProfileId = profile.id)
         val state = _uiState.value.connectionState
         val isConnectedOrConnecting = state is ConnectionState.Connected ||
                 state is ConnectionState.Connecting
@@ -867,7 +871,11 @@ class MainViewModel @Inject constructor(
 
     fun pingCollection(profile: ServerProfile) {
         if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
-        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
+        val key = ProfileCollections.key(profile)
+        val manual = _uiState.value.manualProfileId?.takeIf { id ->
+            _uiState.value.profiles.any { it.id == id && ProfileCollections.key(it) == key }
+        }
+        _uiState.value = _uiState.value.copy(selectedCollection = key, manualProfileId = manual)
         runCollection(connectAfter = false)
     }
 
@@ -1064,7 +1072,13 @@ class MainViewModel @Inject constructor(
                 val state = kotlinx.coroutines.withTimeout(if (ProfileCollections.isDns(profile) || profile.tunnelType == TunnelType.SNOWFLAKE) 45000 else 20000) {
                     connectionManager.connectionState.first { it is ConnectionState.Connected || it is ConnectionState.Error || it is ConnectionState.Disconnected }
                 }
-                check(state is ConnectionState.Connected && state.profile.id == profile.id && state.chainId < 0) { "Connection failed" }
+                if (state is ConnectionState.Error) {
+                    val reason = app.slipnet.core.ProbeFailure.connection(state.message)
+                    app.slipnet.util.AppLog.w("CollectionProbe", reason)
+                    return PingResult.Error(reason)
+                }
+                if (state is ConnectionState.Disconnected) return PingResult.Error("Tunnel stopped during setup")
+                check(state is ConnectionState.Connected && state.profile.id == profile.id && state.chainId < 0) { "Connection changed during test" }
             }
             val setup = if (reuse) 0L else (System.nanoTime() - start) / 1_000_000
             val port = preferencesDataStore.proxyListenPort.first()

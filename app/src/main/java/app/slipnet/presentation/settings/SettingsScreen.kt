@@ -855,7 +855,14 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Updates are distributed manually during alpha testing.", style = MaterialTheme.typography.bodySmall)
+                val openUpdateError = androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_open_failed)
+                TextButton(onClick = {
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(app.slipnet.util.UpdateChecker.RELEASES_URL)))
+                    } catch (_: android.content.ActivityNotFoundException) {
+                        android.widget.Toast.makeText(context, openUpdateError, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_view_releases)) }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -843,7 +843,8 @@ fun MainScreen(
                                         CollectionCard(
                                             profiles = collection, results = uiState.pingResults,
                                             selected = selected, expanded = expandedCollection == collectionKey,
-                                            connected = collection.any { it.id == uiState.connectedProfileId },
+                                            connectedProfileId = uiState.connectedProfileId?.takeIf { id -> collection.any { it.id == id } },
+                                            manualProfileId = uiState.manualProfileId?.takeIf { id -> collection.any { it.id == id } },
                                             busy = uiState.isPingRunning || uiState.collectionPrompt,
                                             onSelect = { viewModel.selectCollection(representative) },
                                             onDetails = { expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
@@ -861,7 +862,7 @@ fun MainScreen(
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
-                                        isSelected = profile.isActive,
+                                        isSelected = profile.id == uiState.manualProfileId,
                                         isConnected = isConnected,
                                         pingResult = uiState.pingResults[profile.id],
                                         onClick = { viewModel.setActiveProfile(profile) },

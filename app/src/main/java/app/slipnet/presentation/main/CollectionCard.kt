@@ -17,8 +17,11 @@ import app.slipnet.presentation.theme.rv
 
 @Composable
 fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>, selected: Boolean,
-    expanded: Boolean, connected: Boolean, busy: Boolean, onSelect: () -> Unit, onDetails: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
-    val best = profiles.mapNotNull { results[it.id] as? PingResult.Success }.filter { it.verified }.minByOrNull { it.latencyMs }
+    expanded: Boolean, connectedProfileId: Long?, manualProfileId: Long?, busy: Boolean, onSelect: () -> Unit, onDetails: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
+    val connected = connectedProfileId != null
+    val summaryId = ConnectionChoice.summaryProfileId(profiles, results, connectedProfileId, manualProfileId)
+    val measurement = (results[summaryId] as? PingResult.Success)?.takeIf { it.verified }
+    val summaryProfile = profiles.firstOrNull { it.id == summaryId }
     Card(onClick = onSelect, enabled = !busy, shape = RoundedCornerShape(24.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .35f) else MaterialTheme.colorScheme.surface)) {
@@ -31,6 +34,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                 Box {
                     IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_collection_actions_06a9e8)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_mode_auto)) }, enabled = !busy,
+                            onClick = { menuOpen = false; onSelect() })
                         DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(rv(if (expanded) "Hide paths" else "Show paths")) },
@@ -47,8 +52,16 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                     }
                 }
             }
+            Text(androidx.compose.ui.res.stringResource(
+                if (connected) app.slipnet.R.string.connection_active_path
+                else if (manualProfileId != null) app.slipnet.R.string.connection_manual_path
+                else app.slipnet.R.string.connection_mode_auto) +
+                (if (connected || manualProfileId != null) " · ${summaryProfile?.name.orEmpty()}" else ""),
+                style = MaterialTheme.typography.bodySmall)
             Text(androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(app.slipnet.R.plurals.connection_paths, profiles.size, profiles.size) + " · " +
-                (best?.let { "HTTPS ${it.latencyMs} ms · ${it.successes}/${it.attempts}" } ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_not_tested_on_this_network_38ef7b)),
+                (measurement?.let {
+                    androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_last_https, it.latencyMs, it.successes, it.attempts)
+                } ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_not_tested_on_this_network_38ef7b)),
                 modifier = Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

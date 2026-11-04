@@ -206,4 +206,10 @@
     <string name="donation_title">支持 Rovunet 开发</string>
     <string name="donation_description">如果您愿意帮助改进 Rovunet，可以自愿捐款。</string>
     <string name="donation_network_notice">请仅通过 Tron（TRC20）网络向此地址发送 USDT。</string>
+    <string name="connection_mode_auto">自动选择</string>
+    <string name="connection_active_path">当前连接</string>
+    <string name="connection_manual_path">手动选择</string>
+    <string name="connection_last_https">上次 HTTPS 测试：%1$d 毫秒 · %2$d/%3$d</string>
+    <string name="update_view_releases">更新与下载</string>
+    <string name="update_open_failed">没有可打开下载页面的浏览器</string>
 </resources>

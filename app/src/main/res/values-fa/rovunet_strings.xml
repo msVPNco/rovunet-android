@@ -207,4 +207,10 @@
     <string name="donation_title">حمایت از توسعهٔ Rovunet</string>
     <string name="donation_description">اگر تمایل دارید به پیشرفت Rovunet کمک کنید، می‌توانید به‌صورت اختیاری حمایت مالی کنید.</string>
     <string name="donation_network_notice">فقط USDT روی شبکهٔ Tron (TRC20) به این آدرس ارسال کنید.</string>
+    <string name="connection_mode_auto">انتخاب خودکار</string>
+    <string name="connection_active_path">مسیر فعال</string>
+    <string name="connection_manual_path">انتخاب دستی</string>
+    <string name="connection_last_https">آخرین تست HTTPS: %1$d میلی‌ثانیه · %2$d/%3$d</string>
+    <string name="update_view_releases">به‌روزرسانی و دانلود</string>
+    <string name="update_open_failed">مرورگری برای بازکردن صفحهٔ دانلود موجود نیست</string>
 </resources>

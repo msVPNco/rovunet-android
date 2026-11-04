@@ -209,4 +209,10 @@
     <string name="donation_title">Поддержать разработку Rovunet</string>
     <string name="donation_description">Если вы хотите помочь развитию Rovunet, вы можете сделать добровольное пожертвование.</string>
     <string name="donation_network_notice">Отправляйте на этот адрес только USDT в сети Tron (TRC20).</string>
+    <string name="connection_mode_auto">Автоматический выбор</string>
+    <string name="connection_active_path">Активное подключение</string>
+    <string name="connection_manual_path">Ручной выбор</string>
+    <string name="connection_last_https">Последняя проверка HTTPS: %1$d мс · %2$d/%3$d</string>
+    <string name="update_view_releases">Обновления и загрузки</string>
+    <string name="update_open_failed">Нет браузера для открытия страницы загрузки</string>
 </resources>

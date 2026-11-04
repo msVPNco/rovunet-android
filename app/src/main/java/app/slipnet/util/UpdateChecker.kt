@@ -15,7 +15,8 @@ data class AppUpdate(
 
 object UpdateChecker {
     private const val TAG = "UpdateChecker"
-    private val GITHUB_API: String = "" // Set only after a Veyra release repository exists.
+    const val RELEASES_URL = "https://github.com/msVPNco/rovunet-android/releases"
+    private const val GITHUB_API = "https://api.github.com/repos/msVPNco/rovunet-android/releases/latest"
     private const val TIMEOUT_MS = 10_000
     // Only check once per 12 hours
     const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
@@ -47,11 +48,12 @@ object UpdateChecker {
             val htmlUrl = json.optString("html_url", "")
             val releaseBody = json.optString("body", "").take(500)
 
-            if (tagName.isBlank() || htmlUrl.isBlank()) {
+            if (json.optBoolean("draft", false) || tagName.isBlank() ||
+                !htmlUrl.startsWith("https://github.com/msVPNco/rovunet-android/releases/tag/")) {
                 return@withContext null
             }
 
-            if (isNewer(tagName, currentVersionName)) {
+            if (app.slipnet.core.ReleaseVersion.isNewer(tagName, currentVersionName)) {
                 Log.d(TAG, "Update available: $tagName (current: $currentVersionName)")
                 AppUpdate(
                     versionName = tagName,
@@ -68,36 +70,4 @@ object UpdateChecker {
         }
     }
 
-    /**
-     * Compare version strings. Returns true if remote > current.
-     * Handles: "2.2.1", "2.3-beta", "2.3.0-rc1"
-     * Pre-release tags (beta, rc, alpha) are considered older than the
-     * same version without a tag: 2.3-beta < 2.3
-     */
-    private fun isNewer(remote: String, current: String): Boolean {
-        // Strip build-variant suffixes (e.g. "-lite") — they aren't version indicators
-        val cleanCurrent = current.removeSuffix("-lite")
-        val (rNums, rPre) = parseVersion(remote)
-        val (cNums, cPre) = parseVersion(cleanCurrent)
-        for (i in 0 until maxOf(rNums.size, cNums.size)) {
-            val rv = rNums.getOrElse(i) { 0 }
-            val cv = cNums.getOrElse(i) { 0 }
-            if (rv > cv) return true
-            if (rv < cv) return false
-        }
-        // Same numeric version: release > pre-release
-        // e.g., "2.3" (no pre) is newer than "2.3-beta"
-        if (cPre != null && rPre == null) return true
-        if (cPre == null && rPre != null) return false
-        return false
-    }
-
-    /** Split "2.3.1-beta" into ([2,3,1], "beta"). */
-    private fun parseVersion(version: String): Pair<List<Int>, String?> {
-        val dashIndex = version.indexOf('-')
-        val numPart = if (dashIndex >= 0) version.substring(0, dashIndex) else version
-        val prePart = if (dashIndex >= 0) version.substring(dashIndex + 1) else null
-        val nums = numPart.split(".").map { it.toIntOrNull() ?: 0 }
-        return nums to prePart
-    }
 }
