@@ -1,17 +1,6 @@
-# SlipNet
+# Rovunet — Guide
 
-> **SlipNet is NOT available on any app store.** Any version you find on Google Play, the Apple App Store, or any other marketplace is **not published by us** and may be outdated, modified, or unsafe. The only official sources are this GitHub repository and our [Telegram channel](https://t.me/SlipNet_app).
-
-> Copyright (C) 2026 Anonvector
-
-
-<p align="center">
-  <img src="imgs/icon.png" alt="SlipNet Logo" width="200">
-</p>
-
-<p align="center">
-  <a href="https://oosmetrics.com/repo/anonvector/SlipNet"><img src="https://api.oosmetrics.com/api/v1/badge/achievement/c36a7332-cc55-4dfc-8b48-49678a659abe.svg" alt="oosmetrics"></a>
-</p>
+> Based on [SlipNet](https://github.com/anonvector/SlipNet), Copyright (C) 2026 Anonvector; not affiliated. See [NOTICE](../NOTICE.md).
 
 A fast, modern VPN client featuring DNS tunneling with support for multiple protocols. Available as an Android app (Jetpack Compose + Kotlin) and a cross-platform CLI client (Go).
 
@@ -21,26 +10,15 @@ A fast, modern VPN client featuring DNS tunneling with support for multiple prot
 
 Full step-by-step user guide (installation, profiles, scanner, troubleshooting, sharing & backup, security notes) — available in English and Persian:
 
-- [English (PDF)](docs/SlipNet_User_Guide_EN.pdf)
-- [فارسی (PDF)](docs/SlipNet_User_Guide_FA.pdf)
-- [Markdown source (EN + FA)](docs/USER_GUIDE.md)
+- [English and Persian](USER_GUIDE.md)
 
-## Donations
+Telegram group: [t.me/RovunetVPN](https://t.me/RovunetVPN)
 
-If you want to support development:
 
-- **BEP-20 / ERC-20 / Arbitrum**: `0xd4140058389572D50dC8716e768e687C050Dd5C9`
-- **Monero (XMR)**: `48wa9asF4AdZCq8KvPqBmqN3s98XFQ2MG7pL8MY6hAc6ZXBd8D61LArebdmAwCk5jBBbR2BuiHkSraEYFhx5AdDqLxDB4GU`
-
-## Community
-
-Join our Telegram channel for updates, support, and discussions:
-
-[![Telegram](https://img.shields.io/badge/Telegram-@SlipNet__app-blue?logo=telegram)](https://t.me/SlipNet_app)
 
 ## Tunnel Types
 
-SlipNet supports multiple tunnel types with optional SSH chaining:
+Rovunet supports multiple tunnel types with optional SSH chaining:
 
 | Tunnel Type | Protocol | Description |
 |-------------|----------|-------------|
@@ -89,9 +67,9 @@ SlipNet supports multiple tunnel types with optional SSH chaining:
 
 ## Server Setup
 
-To use this client, you must run a compatible server. The official, supported way is **SlipGate** — a one-command Linux installer that sets up every protocol SlipNet supports (DNSTT, NoizDNS, VayDNS, Slipstream, SSH, NaiveProxy, VLESS).
+To use this client, you must run a compatible server. The official, supported way is **Rovunet Panel** — a one-command Linux installer that sets up every protocol Rovunet supports (DNSTT, NoizDNS, VayDNS, Slipstream, SSH, NaiveProxy, VLESS).
 
-[**SlipGate**](https://github.com/anonvector/slipgate) — one-command server installer with interactive management menu
+[**Rovunet Panel**](https://github.com/msVPNco/rovunet-panel) — one-command server installer with interactive management menu
 
 ### Soar server
 
@@ -100,21 +78,12 @@ Soar profiles connect to a standard [`soar-server`](https://github.com/getlanter
 ```sh
 go install github.com/getlantern/soar/cmd/soar-server@latest
 (umask 077; soar-server keygen | awk '$1 == "private" { print $2 }' > key)
-soar-server pubkey key        # paste this public key into the SlipNet profile
+soar-server pubkey key        # paste this public key into the Rovunet profile
 soar-server -zone t.example.com -key-file key -listen :53
 ```
 
-By default `soar-server` only lets streams reach public addresses on ports 80 and 443. SlipNet resolves DNS through the tunnel with DNS over HTTPS, so plain **Soar** profiles work with these defaults. **Soar + SSH** connects to SSH on the server itself (`127.0.0.1`), so it needs `-allow-private -allow-ports 22,80,443` (with your SSH port). Note that `-allow-private` lets anyone holding the server's public key reach private addresses from the server, including other services on `127.0.0.1`.
+By default `soar-server` only lets streams reach public addresses on ports 80 and 443. Rovunet resolves DNS through the tunnel with DNS over HTTPS, so plain **Soar** profiles work with these defaults. **Soar + SSH** connects to SSH on the server itself (`127.0.0.1`), so it needs `-allow-private -allow-ports 22,80,443` (with your SSH port). Note that `-allow-private` lets anyone holding the server's public key reach private addresses from the server, including other services on `127.0.0.1`.
 
-## Screenshots
-
-<p align="center">
-  <img src="imgs/screenshot_3_3.jpg" alt="Home Screen" width="250">
-  &nbsp;&nbsp;
-  <img src="imgs/screenshot_2_2.jpg" alt="Tunnel Types" width="250">
-  &nbsp;&nbsp;
-  <img src="imgs/screenshot_1_1.jpg" alt="Settings" width="250">
-</p>
 
 ## Requirements
 
@@ -161,8 +130,8 @@ By default `soar-server` only lets streams reach public addresses on ports 80 an
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/anonvector/SlipNet.git
-   cd SlipNet
+   git clone --recursive https://github.com/msVPNco/rovunet-android.git
+   cd rovunet-android
    ```
 
 2. **Initialize submodules**
@@ -179,7 +148,7 @@ By default `soar-server` only lets streams reach public addresses on ports 80 an
 
 ## CLI Client
 
-SlipNet includes a cross-platform CLI client for **macOS**, **Linux**, and **Windows**. It supports DNSTT, NoizDNS, VayDNS, SSH, and SOCKS5 tunnel types. It connects using a `slipnet://` config URI and starts a local SOCKS5 proxy. For a GUI alternative, see [SlipStreamGUI](https://github.com/mirzaaghazadeh/SlipStreamGUI).
+Rovunet includes a cross-platform CLI client for **macOS**, **Linux**, and **Windows**. It supports DNSTT, NoizDNS, VayDNS, SSH, and SOCKS5 tunnel types. It connects using a `slipnet://` config URI and starts a local SOCKS5 proxy. For a GUI alternative, see [SlipStreamGUI](https://github.com/mirzaaghazadeh/SlipStreamGUI).
 
 ### Download
 
@@ -400,7 +369,7 @@ Skips the DNS scan entirely and runs E2E tunnel tests directly on the provided r
 
 #### Prism (Server-Verified Scan)
 
-Sends HMAC-authenticated probes to verify that the tunnel server is genuine. Requires [SlipGate](https://github.com/anonvector/slipgate) running on the server.
+Sends HMAC-authenticated probes to verify that the tunnel server is genuine. Requires [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) running on the server.
 
 ```bash
 # Using a slipnet:// config
@@ -428,8 +397,8 @@ Running `./slipnet` with no arguments launches an interactive menu with all mode
 ### Building CLI from Source
 
 ```bash
-git clone https://github.com/anonvector/SlipNet.git
-cd SlipNet
+git clone --recursive https://github.com/msVPNco/rovunet-android.git
+cd Rovunet
 git submodule update --init --recursive
 cd cli
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o slipnet .
@@ -488,7 +457,7 @@ app/
 
 ## Architecture
 
-SlipNet follows Clean Architecture principles with three main layers:
+Rovunet follows Clean Architecture principles with three main layers:
 
 - **Presentation Layer**: Jetpack Compose UI with ViewModels
 - **Domain Layer**: Business logic and use cases
@@ -577,7 +546,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-SlipNet is licensed under the [GNU Affero General Public License v3.0](./LICENSE).
+Rovunet is licensed under the [GNU Affero General Public License v3.0](../LICENSE).
 
 ## Acknowledgments
 

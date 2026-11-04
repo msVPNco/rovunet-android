@@ -15,14 +15,14 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     env:
-      KOTLIN_JARS: ${{ runner.temp }}/kotlin
-      XRAY: ${{ runner.temp }}/xray
-      CORE_LAUNCHER: ${{ runner.temp }}/core-launcher
-      TLS_TARGET: ${{ runner.temp }}/tls-target
-      TEST_TLS_STORE: ${{ runner.temp }}/probe.p12
-      ROVUNET_PANEL_TEXT_FIXTURE: ${{ runner.temp }}/panel-text.txt
-      ROVUNET_ANDROID_FIXTURE: ${{ runner.temp }}/panel-fixture.txt
-      CORE_TEST_JAR: ${{ runner.temp }}/tests.jar
+      KOTLIN_JARS: ${{ github.workspace }}/../ci/kotlin
+      XRAY: ${{ github.workspace }}/../ci/xray
+      CORE_LAUNCHER: ${{ github.workspace }}/../ci/core-launcher
+      TLS_TARGET: ${{ github.workspace }}/../ci/tls-target
+      TEST_TLS_STORE: ${{ github.workspace }}/../ci/probe.p12
+      ROVUNET_PANEL_TEXT_FIXTURE: ${{ github.workspace }}/../ci/panel-text.txt
+      ROVUNET_ANDROID_FIXTURE: ${{ github.workspace }}/../ci/panel-fixture.txt
+      CORE_TEST_JAR: ${{ github.workspace }}/../ci/tests.jar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -40,7 +40,7 @@ jobs:
           echo "value=$ref" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/kotlin
+          path: ${{ github.workspace }}/../ci/kotlin
           key: kotlin-${{ runner.os }}-${{ hashFiles('tools/veyra/jars.sha256') }}
       - uses: actions/cache@v4
         with:
@@ -53,6 +53,9 @@ jobs:
           repository: msVPNco/rovunet-panel
           ref: ${{ steps.manager-ref.outputs.value }}
           path: panel-contract
+          # Needed while rovunet-panel is private: a fine-grained token with
+          # read access to it, stored as the PANEL_REPO_TOKEN secret.
+          token: ${{ secrets.PANEL_REPO_TOKEN || github.token }}
       - name: Prepare pinned core and JVM tooling
         run: tools/veyra/prepare-jvm-ci.sh
       - name: Generate actual Go exporter fixture and validate coreplan

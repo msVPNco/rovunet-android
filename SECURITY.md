@@ -2,7 +2,7 @@
 
 ## About This Project
 
-SlipNet is an open-source anti-censorship tool that provides DNS tunneling to help users bypass internet restrictions. It is a **client-side privacy tool** — it does not target, exploit, or attack any systems or networks.
+Rovunet is an open-source anti-censorship tool that provides DNS tunneling to help users bypass internet restrictions. It is a **client-side privacy tool** — it does not target, exploit, or attack any systems or networks.
 
 This project is comparable to other well-known anti-censorship tools:
 - [Tor Project](https://www.torproject.org/)
@@ -13,14 +13,14 @@ This project is comparable to other well-known anti-censorship tools:
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in SlipNet, please report it responsibly:
+If you discover a security vulnerability in Rovunet, please report it responsibly:
 
 1. **Do NOT open a public issue**
-2. Contact us via the [Telegram channel](https://t.me/SlipNet_app)
+2. Contact us via the [Telegram group](https://t.me/RovunetVPN)
 3. Include details about the vulnerability and steps to reproduce
 
 We take security reports seriously and will respond promptly.
 
 ## Responsible Use
 
-SlipNet is intended for lawful use to protect privacy and access information freely. Users are responsible for complying with the laws of their jurisdiction.
+Rovunet is intended for lawful use to protect privacy and access information freely. Users are responsible for complying with the laws of their jurisdiction.

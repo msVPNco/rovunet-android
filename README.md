@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/rovunet-logo.png" alt="Rovunet" width="200">
+</p>
+
 # Rovunet
 
 An independent Android multi-protocol VPN client based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full. Not affiliated with the SlipNet project.
@@ -33,9 +37,14 @@ See [core build notes](VEYRA-CORE.md) and tools/veyra/run-jvm-tests.sh.
 Build Full Android with Gradle and the prepared native dependencies. Do not
 publish the debug signing key as a production release key.
 
-## Attribution
+## Documentation
 
-Original SlipNet copyright and license notices are retained in LICENSE and
-[upstream documentation](README-UPSTREAM.md). Rovunet is not an official
-SlipNet release. Xray-core is distributed under MPL-2.0; its source pin and
-native dependency metadata are retained under tools/veyra.
+- [Guide](docs/GUIDE.md): tunnel types, building, CLI client and configuration
+- [User guide](docs/USER_GUIDE.md) (English and Persian)
+- [Security policy](SECURITY.md)
+
+## License
+
+AGPL-3.0. Rovunet is based on SlipNet by Anonvector and is not affiliated
+with it; see [NOTICE](NOTICE.md). Xray-core is distributed under MPL-2.0; its
+source pin and native dependency metadata are kept under tools/veyra.

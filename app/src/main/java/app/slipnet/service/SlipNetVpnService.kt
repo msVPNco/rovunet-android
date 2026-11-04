@@ -398,7 +398,7 @@ class SlipNetVpnService : VpnService() {
 
             // Acquire WakeLock with timeout (Chinese OEM ROMs kill indefinite WakeLocks)
             if (wakeLock == null) {
-                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SlipNet:VpnWakeLock").apply {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Rovunet:VpnWakeLock").apply {
                     setReferenceCounted(false)
                     acquire(WAKELOCK_TIMEOUT_MS)
                 }
@@ -417,7 +417,7 @@ class SlipNetVpnService : VpnService() {
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> WifiManager.WIFI_MODE_FULL_LOW_LATENCY
                     else -> WifiManager.WIFI_MODE_FULL_HIGH_PERF
                 }
-                wifiLock = wifiManager?.createWifiLock(wifiMode, "SlipNet:VpnWifiLock")?.apply {
+                wifiLock = wifiManager?.createWifiLock(wifiMode, "Rovunet:VpnWifiLock")?.apply {
                     setReferenceCounted(false)
                     acquire()
                 }
@@ -664,7 +664,7 @@ class SlipNetVpnService : VpnService() {
 
             val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
             if (wakeLock == null) {
-                wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "SlipNet:VpnWakeLock").apply {
+                wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "Rovunet:VpnWakeLock").apply {
                     setReferenceCounted(false)
                     acquire(WAKELOCK_TIMEOUT_MS)
                 }
@@ -678,7 +678,7 @@ class SlipNetVpnService : VpnService() {
                     android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q -> android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY
                     else -> android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
                 }
-                wifiLock = wifiManager?.createWifiLock(wifiMode, "SlipNet:VpnWifiLock")?.apply {
+                wifiLock = wifiManager?.createWifiLock(wifiMode, "Rovunet:VpnWifiLock")?.apply {
                     setReferenceCounted(false)
                     acquire()
                 }

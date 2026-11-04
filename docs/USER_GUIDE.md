@@ -1,18 +1,18 @@
-# SlipNet — Complete User Guide
+# Rovunet — Complete User Guide
 
-> Official channel: [@SlipNet_app](https://t.me/SlipNet_app)
-> Source code: https://github.com/anonvector/SlipNet
-> SlipNet is **NOT** on Google Play, the App Store, or any other marketplace. Only download it from the official channel or GitHub.
+> Telegram group: [@RovunetVPN](https://t.me/RovunetVPN)
+> Source code: https://github.com/msVPNco/rovunet-android
+> Rovunet is **NOT** on Google Play, the App Store, or any other marketplace. Only download it from the official channel or GitHub.
 
 ---
 
 ## Table of Contents
 
-1. What SlipNet is — and why it exists
+1. What Rovunet is — and why it exists
 2. Supported tunnel types
 3. Editions: Full vs. Lite
 4. Installing the APK
-5. You need a server (use SlipGate)
+5. You need a server (use Rovunet Panel)
 6. Adding your first profile
 7. Connecting and disconnecting
 8. The DNS Resolver Scanner
@@ -21,29 +21,28 @@
 11. Per-tunnel quick reference
 12. Troubleshooting
 13. Sharing & backups
-14. Donations
 15. Stay safe
 
 ---
 
-## 1. What SlipNet is — and why it exists
+## 1. What Rovunet is — and why it exists
 
-SlipNet is a free, **source-available** anti-censorship tool. The main client is an Android app, with a matching command-line client for macOS, Linux, and Windows. It tunnels your internet traffic through different protocols — DNS, QUIC, SSH, HTTPS, VLESS, or Tor — so you can reach the open internet even on networks that block, throttle, or deep-packet-inspect normal traffic.
+Rovunet is a free, open-source (AGPL-3.0) anti-censorship tool. The main client is an Android app, with a matching command-line client for macOS, Linux, and Windows. It tunnels your internet traffic through different protocols — DNS, QUIC, SSH, HTTPS, VLESS, or Tor — so you can reach the open internet even on networks that block, throttle, or deep-packet-inspect normal traffic.
 
-Unlike a typical VPN that ships with a single protocol, SlipNet offers many **transports** so you can pick the one that survives on whatever network you're stuck on:
+Unlike a typical VPN that ships with a single protocol, Rovunet offers many **transports** so you can pick the one that survives on whatever network you're stuck on:
 
 - If your ISP only lets DNS traffic out, use a DNS tunnel — DNSTT, NoizDNS, or VayDNS.
 - If only HTTPS gets through, use NaiveProxy or VLESS fronted through a CDN like Cloudflare.
 - If your network does deep traffic inspection and recognises tunnel-shaped flows, layer SSH on top of any of the above for zero DNS leaks and an extra layer of encryption.
 - In the worst case, fall back to Tor with Snowflake, obfs4, or Meek bridges (Full edition only).
 
-SlipNet sits in the same family as projects like [Tor](https://torproject.org), [Psiphon](https://psiphon.ca), and [Outline VPN](https://getoutline.org), but with one critical difference: SlipNet is **pure client software**. There is no central network or company-run infrastructure — you either run your own server (a few minutes with [SlipGate](https://github.com/anonvector/slipgate)) or get a config from someone you trust. That model has three real advantages:
+Rovunet sits in the same family as projects like [Tor](https://torproject.org), [Psiphon](https://psiphon.ca), and [Outline VPN](https://getoutline.org), but with one critical difference: Rovunet is **pure client software**. There is no central network or company-run infrastructure — you either run your own server (a few minutes with [Rovunet Panel](https://github.com/msVPNco/rovunet-panel)) or get a config from someone you trust. That model has three real advantages:
 
 - **Privacy.** Your traffic exits through a server you or someone you know controls — not an unknown company's exit node.
 - **Resilience.** With no central infrastructure to filter, blocking the project is impractical. If a single server gets blocked, swap the IP and update one DNS record.
 - **Flexibility.** You choose the protocol, the CDN, the domain, even the country your traffic exits from — control that no commercial VPN gives you.
 
-The full source code lives on GitHub under a **source-available** license — readable, studyable, and open to contributions, but not licensed for redistribution or republishing on app stores. SlipNet is **not** on Google Play, the App Store, or any other marketplace; the only official sources are the [@SlipNet_app](https://t.me/SlipNet_app) Telegram channel and the project's GitHub repository.
+The full source code is on GitHub under the GNU AGPL-3.0 license. Rovunet is **not** on Google Play, the App Store, or any other marketplace; the only official sources are the [@RovunetVPN](https://t.me/RovunetVPN) Telegram group and the project's GitHub repository.
 
 ---
 
@@ -74,7 +73,7 @@ The full source code lives on GitHub under a **source-available** license — re
 
 ## 3. Editions: Full vs. Lite
 
-SlipNet ships in two editions — the difference is the size of the APK and which protocols are bundled.
+Rovunet ships in two editions — the difference is the size of the APK and which protocols are bundled.
 
 | Feature | Full | Lite |
 |---------|:----:|:----:|
@@ -93,30 +92,30 @@ SlipNet ships in two editions — the difference is the size of the APK and whic
 
 ## 4. Installing the APK
 
-1. Open the official Telegram channel [@SlipNet_app](https://t.me/SlipNet_app) or the GitHub Releases page.
+1. Open the official Telegram channel [@RovunetVPN](https://t.me/RovunetVPN) or the GitHub Releases page.
 2. Download the APK that matches your phone's CPU. Most modern phones are `arm64-v8a`. If you don't know, download the **universal** APK.
 3. On your phone: **Settings → Security → Install unknown apps** → allow your browser/Telegram to install APKs.
 4. Tap the downloaded APK and install.
-5. Open SlipNet. On first launch, Android will ask for **VPN permission** — tap **OK**.
-6. Recommended one-time setup: **Settings → Battery optimization → Don't optimize SlipNet**, so Android doesn't kill it in the background.
+5. Open Rovunet. On first launch, Android will ask for **VPN permission** — tap **OK**.
+6. Recommended one-time setup: **Settings → Battery optimization → Don't optimize Rovunet**, so Android doesn't kill it in the background.
 
-> ⚠️ If you find SlipNet on Google Play, App Store, or any other store, it is **not** ours. Don't install it.
+> ⚠️ If you find Rovunet on Google Play, App Store, or any other store, it is **not** ours. Don't install it.
 
 ---
 
-## 5. You need a server — use SlipGate
+## 5. You need a server — use Rovunet Panel
 
-SlipNet is a *client*. To use it you must connect to a **server** running a compatible tunnel.
+Rovunet is a *client*. To use it you must connect to a **server** running a compatible tunnel.
 
-The official, supported way to run a server is **SlipGate** — a one-command Linux installer that sets up every protocol SlipNet supports.
+The official, supported way to run a server is **Rovunet Panel** — a one-command Linux installer that sets up every protocol Rovunet supports.
 
-> https://github.com/anonvector/slipgate
+> https://github.com/msVPNco/rovunet-panel
 
-A separate operator guide for SlipGate is available alongside this document. In short: get a $5/month VPS, point a domain at it, run a single install command, create a user, and SlipGate prints a `slipnet://` link you paste straight into the app.
+A separate operator guide for Rovunet Panel is available alongside this document. In short: get a $5/month VPS, point a domain at it, run a single install command, create a user, and Rovunet Panel prints a `slipnet://` link you paste straight into the app.
 
 If you don't run your own server, you can:
-- Get a `slipnet://` link from a friend who runs SlipGate, or
-- Use a public test link sometimes shared in [@SlipNet_app](https://t.me/SlipNet_app).
+- Get a `slipnet://` link from a friend who runs Rovunet Panel, or
+- Use a public test link sometimes shared in [@RovunetVPN](https://t.me/RovunetVPN).
 
 ---
 
@@ -126,7 +125,7 @@ There are three ways to add a server profile.
 
 ### A) Paste a `slipnet://` link (easiest)
 
-1. Open SlipNet → tap the **+** button at the bottom right.
+1. Open Rovunet → tap the **+** button at the bottom right.
 2. Choose **Import from URI**.
 3. Paste the `slipnet://...` link.
 4. Done — the profile appears in your list.
@@ -161,7 +160,7 @@ Useful when your provider gives you raw values (domain + key) instead of a URI.
 To disconnect, tap **Connect** again. To switch profiles, disconnect first, pick a different profile, then reconnect.
 
 **Quick toggle without opening the app:**
-- Pull down the notification shade → tap the **SlipNet Quick Settings tile** (you may need to add it from the tile picker the first time).
+- Pull down the notification shade → tap the **Rovunet Quick Settings tile** (you may need to add it from the tile picker the first time).
 - Or use the **home-screen widget** for one-tap connect/disconnect.
 
 **Live ping test:** while a profile is selected, tap **Real Ping** or **Simple Ping** to measure latency. **Sort by Ping** orders the profile list fastest-first.
@@ -205,11 +204,11 @@ The classic two-stage flow. Stage 1 is the DNS probe and gives every resolver a 
 Skips the DNS probe entirely. For each candidate IP it just opens a real tunnel and tries an HTTP request. Use this when you already have a list of "known DNS-tunnel-capable" IPs and you only want to know which ones currently reach your specific server fast.
 
 #### Prism
-*"Server-verified scan: only resolvers that cryptographically prove they reach your specific server are shown. Requires SlipGate installed on your server."*
+*"Server-verified scan: only resolvers that cryptographically prove they reach your specific server are shown. Requires Rovunet Panel installed on your server."*
 
-The strongest mode. Sends HMAC-authenticated probes that only a real SlipGate server can sign correctly, so a resolver that "works" but actually delivers traffic to an attacker's middlebox will fail the check. Each resolver is probed N times; resolvers that get ≥ *threshold* signed responses pass. Use this when you suspect transparent-proxy interception or want defense against tunnel hijacking.
+The strongest mode. Sends HMAC-authenticated probes that only a real Rovunet Panel server can sign correctly, so a resolver that "works" but actually delivers traffic to an attacker's middlebox will fail the check. Each resolver is probed N times; resolvers that get ≥ *threshold* signed responses pass. Use this when you suspect transparent-proxy interception or want defense against tunnel hijacking.
 
-Only available when your selected profile has a valid public key and your server runs [SlipGate](https://github.com/anonvector/slipgate).
+Only available when your selected profile has a valid public key and your server runs [Rovunet Panel](https://github.com/msVPNco/rovunet-panel).
 
 ---
 
@@ -413,7 +412,7 @@ SSH transport options (work with any SSH-based tunnel):
 - **UUID** — your VLESS user ID (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
 - **Domain** — the hostname behind the CDN; used as TLS SNI and WS Host
 - **Security** — `tls` (recommended) or `none`
-- **Transport** — WebSocket only (raw TCP isn't supported in the app — VLESS in SlipNet is positioned as a CDN-fronted tunnel)
+- **Transport** — WebSocket only (raw TCP isn't supported in the app — VLESS in Rovunet is positioned as a CDN-fronted tunnel)
 - **WS Path** — e.g., `/`, `/vless`
 - **CDN IP / Port** — a Cloudflare clean IP if you're fronting through CF (otherwise direct server IP, port 443)
 - **TLS SNI** — what gets put in the ClientHello (must match the CDN cert when using CDN routing)
@@ -427,12 +426,12 @@ SSH transport options (work with any SSH-based tunnel):
 
 #### ⚠️ Why SOCKS5 can show "Connected" but still not work
 
-SlipNet's SOCKS5 mode is a **passthrough** — it just opens a local listener on your phone and forwards every downstream request to the remote SOCKS5 proxy. There is **no upfront end-to-end probe** of the upstream. The "Connected" status only confirms two things:
+Rovunet's SOCKS5 mode is a **passthrough** — it just opens a local listener on your phone and forwards every downstream request to the remote SOCKS5 proxy. There is **no upfront end-to-end probe** of the upstream. The "Connected" status only confirms two things:
 
 1. The local SOCKS5 listener bound on your phone, and
 2. Some downstream connection completed the SOCKS5 handshake (CONNECT + auth) with the upstream.
 
-It does **not** confirm that the upstream proxy can actually reach the open internet. The proxy may be silently dropping outbound traffic, returning forged CONNECT replies, sitting behind a cloud firewall that only allows internal CIDRs, or itself behind a censored uplink — and SlipNet has no way to tell from the SOCKS5 protocol alone, because SOCKS5 carries **no server identity, no end-to-end key exchange, and no liveness signal**.
+It does **not** confirm that the upstream proxy can actually reach the open internet. The proxy may be silently dropping outbound traffic, returning forged CONNECT replies, sitting behind a cloud firewall that only allows internal CIDRs, or itself behind a censored uplink — and Rovunet has no way to tell from the SOCKS5 protocol alone, because SOCKS5 carries **no server identity, no end-to-end key exchange, and no liveness signal**.
 
 #### SSH vs. SOCKS5
 
@@ -479,7 +478,7 @@ If any step fails, SSH never goes green. So when SSH says "connected", an encryp
 | Can't connect at all | Run the **Scanner**, replace resolvers; switch DNS Transport (UDP → DoT → DoH); try **NoizDNS** instead of DNSTT |
 | Connects, then drops in seconds | Lower **VPN MTU** (1280), set **DNS Workers = 1** or *per-query* |
 | Connected but no internet | Disable **QUIC** in settings; toggle **Auto-reconnect** |
-| Phone kills SlipNet in background | Settings → **Battery optimization** → don't optimize SlipNet |
+| Phone kills Rovunet in background | Settings → **Battery optimization** → don't optimize Rovunet |
 | YouTube / streaming buffers | Enable **Disable QUIC**; lower **Max Query Size** on DNS tunnels; try **Slipstream** or **VLESS** |
 | Heavy DPI environment | Use **NoizDNS + SSH**, **VLESS + SNI Fragmentation**, or **Tor + Snowflake** (Full) |
 | VLESS times out via Cloudflare | Set **CDN IP** to a known clean Cloudflare IP; verify **TLS SNI** matches your CF cert |
@@ -497,17 +496,17 @@ If any step fails, SSH never goes green. So when SSH says "connected", an encryp
 
 ### Config URI types
 
-SlipNet exports use three URI schemes. They are **not** equivalent — the security model is very different.
+Rovunet exports use three URI schemes. They are **not** equivalent — the security model is very different.
 
 | Scheme | What it is | Encryption key |
 |---|---|---|
 | `slipnet://` | Plain base64-encoded profile | None — anyone can decode it |
-| `slipnet-enc://` | Single **locked** profile (single-recipient share) | App-baked key from SlipNet's native library |
+| `slipnet-enc://` | Single **locked** profile (single-recipient share) | App-baked key from Rovunet's native library |
 | `slipnet-bundle-enc://` | Multi-profile **password-encrypted** backup bundle | Derived from your password |
 
 **`slipnet://`** — readable by anyone who can run base64. Use only for trusted recipients.
 
-**`slipnet-enc://`** — produced when you export a single profile with a lock (password, optional expiration date, optional device-binding, hidden resolvers, no-resharing). The payload is AES-256-GCM encrypted, **but the AES key is baked into the SlipNet app itself**, not derived from your password. The password you set is checked by the recipient's app — it controls **how** the recipient can use the profile (use only, no editing, expires on date X, bound to one device, resolvers hidden). It does **not** keep your config secret from anyone with the SlipNet APK. Treat it as a **sharing-control** mechanism, not real confidentiality.
+**`slipnet-enc://`** — produced when you export a single profile with a lock (password, optional expiration date, optional device-binding, hidden resolvers, no-resharing). The payload is AES-256-GCM encrypted, **but the AES key is baked into the Rovunet app itself**, not derived from your password. The password you set is checked by the recipient's app — it controls **how** the recipient can use the profile (use only, no editing, expires on date X, bound to one device, resolvers hidden). It does **not** keep your config secret from anyone with the Rovunet APK. Treat it as a **sharing-control** mechanism, not real confidentiality.
 
 **`slipnet-bundle-enc://`** — produced by **Export All (Encrypted)**. This one *is* real password-derived encryption (your password is the key material). Suitable for off-device backups.
 
@@ -515,7 +514,7 @@ SlipNet exports use three URI schemes. They are **not** equivalent — the secur
 
 Encrypting the config bytes does **not** protect the **identity** of your server, domain, or CDN host. The moment a `slipnet-enc://` link reaches a public channel:
 
-- Anyone with the SlipNet APK can decrypt it and read the domain, IP, SNI, CDN host, and credentials.
+- Anyone with the Rovunet APK can decrypt it and read the domain, IP, SNI, CDN host, and credentials.
 - Censors monitor public channels for new configs and add the domains/IPs to their blocklists within hours.
 - The domain itself becomes a permanent blocklist target — encryption cannot undo that.
 
@@ -527,51 +526,48 @@ This is doubly serious if you bought your **VPS or domain inside the country who
 
 Rules of thumb:
 
-- For wider distribution, host on a **VPS bought outside the country** with a domain registered through an **off-shore registrar**. On that same VPS, **enable Warp from inside SlipGate** so the server's egress goes through Cloudflare Warp and the real VPS IP is never exposed downstream.
+- For wider distribution, host on a **VPS bought outside the country** with a domain registered through an **off-shore registrar**. On that same VPS, **enable Warp from inside Rovunet Panel** so the server's egress goes through Cloudflare Warp and the real VPS IP is never exposed downstream.
 - Share configs **privately** (1-to-1, end-to-end-encrypted chat) — not in groups, not on websites, not pinned in channels.
 - Use `slipnet-enc://` lock features (expiration, device-bind, hide-resolvers, no-resharing) to **slow down** abuse, not to make a config publicly shareable.
 
 > ⚠️ A `slipnet://` link contains your credentials. Never post yours in a public group.
-> ⚠️ A `slipnet-enc://` link is **not** safe to post publicly either — the SlipNet app can decrypt it. The lock controls usage, not secrecy. The encryption protects the *credentials* on the wire; it does **not** protect the *domain identity* once the link is in the open.
+> ⚠️ A `slipnet-enc://` link is **not** safe to post publicly either — the Rovunet app can decrypt it. The lock controls usage, not secrecy. The encryption protects the *credentials* on the wire; it does **not** protect the *domain identity* once the link is in the open.
 
 ---
 
-## 14. Donations
-
-Development is unpaid. If SlipNet helps you, donation addresses (BEP-20 / ERC-20 / Arbitrum, Monero, etc.) are kept up to date in the project README on GitHub: <https://github.com/anonvector/SlipNet#donations>
 
 ---
 
 ## 15. Stay safe
 
-- Only download SlipNet from the **official Telegram channel** or **GitHub**.
+- Only download Rovunet from the **official Telegram group** or **GitHub**.
 - Verify the APK signature if you're paranoid (signing fingerprint is on the GitHub release page).
 - Never share your `slipnet://` link with strangers.
 - Use **encrypted export** for backups.
-- Verify your server is genuine with **Prism** (server-verified scan) — works with SlipGate.
-- If you run your own server: never hand out `root` or any shell-login account as a VPN credential — always create dedicated SlipGate users.
+- Verify your server is genuine with **Prism** (server-verified scan) — works with Rovunet Panel.
+- If you run your own server: never hand out `root` or any shell-login account as a VPN credential — always create dedicated Rovunet Panel users.
 
-Channel: [@SlipNet_app](https://t.me/SlipNet_app)
-Source: https://github.com/anonvector/SlipNet
+Channel: [@RovunetVPN](https://t.me/RovunetVPN)
+Source: https://github.com/msVPNco/rovunet-android
 
 ---
 ---
 
-# راهنمای کامل SlipNet (فارسی)
+# راهنمای کامل Rovunet (فارسی)
 
-> کانال رسمی: [@SlipNet_app](https://t.me/SlipNet_app)
-> سورس‌کد: https://github.com/anonvector/SlipNet
-> SlipNet در گوگل‌پلی، اپ‌استور یا هیچ مارکت دیگری نیست. فقط از کانال رسمی یا گیت‌هاب دانلود کنید.
+> گروه تلگرام: [@RovunetVPN](https://t.me/RovunetVPN)
+> سورس‌کد: https://github.com/msVPNco/rovunet-android
+> Rovunet در گوگل‌پلی، اپ‌استور یا هیچ مارکت دیگری نیست. فقط از کانال رسمی یا گیت‌هاب دانلود کنید.
 
 ---
 
 ## فهرست
 
-- ۱. SlipNet چیست و چرا ساخته شده
+- ۱. Rovunet چیست و چرا ساخته شده
 - ۲. تونل‌های پشتیبانی‌شده
 - ۳. نسخه‌ها: Full و Lite
 - ۴. نصب APK
-- ۵. سرور لازم است (با SlipGate)
+- ۵. سرور لازم است (با Rovunet Panel)
 - ۶. اولین پروفایل
 - ۷. اتصال و قطع
 - ۸. اسکنر DNS
@@ -580,29 +576,28 @@ Source: https://github.com/anonvector/SlipNet
 - ۱۱. مرجع سریع هر تونل
 - ۱۲. عیب‌یابی
 - ۱۳. اشتراک‌گذاری و پشتیبان
-- ۱۴. حمایت مالی
 - ۱۵. نکات امنیتی
 
 ---
 
-## ۱. SlipNet چیست و چرا ساخته شده
+## ۱. Rovunet چیست و چرا ساخته شده
 
-SlipNet یک ابزار رایگان و **source-available** (سورس‌کدش قابل مطالعه است، اما اجازه‌ی توزیع مجدد ندارد) برای دور زدن سانسور و بازرسی شبکه است. نسخه‌ی اصلی برای اندروید است و یک کلاینت CLI هم برای مک، لینوکس و ویندوز ارائه می‌شود. SlipNet ترافیک اینترنت شما را از داخل پروتکل‌های متفاوتی مثل DNS، QUIC، SSH، HTTPS، VLESS یا Tor عبور می‌دهد تا حتی در شبکه‌هایی که اینترنت در آن‌ها فیلتر، محدود یا با DPI بازرسی می‌شود، بتوانید آزادانه به وب دسترسی پیدا کنید.
+Rovunet یک ابزار رایگان و متن‌باز (مجوز AGPL-3.0) برای دور زدن سانسور و بازرسی شبکه است. نسخه‌ی اصلی برای اندروید است و یک کلاینت CLI هم برای مک، لینوکس و ویندوز ارائه می‌شود. Rovunet ترافیک اینترنت شما را از داخل پروتکل‌های متفاوتی مثل DNS، QUIC، SSH، HTTPS، VLESS یا Tor عبور می‌دهد تا حتی در شبکه‌هایی که اینترنت در آن‌ها فیلتر، محدود یا با DPI بازرسی می‌شود، بتوانید آزادانه به وب دسترسی پیدا کنید.
 
-برخلاف یک VPN معمولی که تنها یک پروتکل دارد، SlipNet چند **حامل (transport)** مختلف ارائه می‌کند تا متناسب با شرایط شبکه‌ای که در آن گیر افتاده‌اید بتوانید بهترین مسیر را انتخاب کنید:
+برخلاف یک VPN معمولی که تنها یک پروتکل دارد، Rovunet چند **حامل (transport)** مختلف ارائه می‌کند تا متناسب با شرایط شبکه‌ای که در آن گیر افتاده‌اید بتوانید بهترین مسیر را انتخاب کنید:
 
 - اگر ISP فقط ترافیک DNS را عبور می‌دهد، از تونل‌های DNS مثل DNSTT، NoizDNS یا VayDNS استفاده کنید.
 - اگر فقط HTTPS کار می‌کند، می‌توانید به سراغ NaiveProxy یا VLESS از پشت CDN (مثل Cloudflare) بروید.
 - اگر شبکه به‌شدت بازرسی می‌شود و الگوی ترافیک شما را تشخیص می‌دهد، می‌توانید روی هر کدام از این تونل‌ها یک لایه‌ی SSH هم اضافه کنید تا نشت DNS صفر شود و ترافیک رمزنگاری بیشتری داشته باشد.
 - در سخت‌ترین شرایط، می‌توانید از Tor همراه با Snowflake، obfs4 یا Meek استفاده کنید (فقط در نسخه‌ی Full).
 
-از نظر فلسفه، SlipNet در همان خانواده‌ی پروژه‌های ضد سانسور قرار می‌گیرد که [Tor](https://torproject.org)، [Psiphon](https://psiphon.ca) و [Outline VPN](https://getoutline.org) متعلق به آن هستند؛ با این تفاوت مهم که SlipNet **فقط کلاینت** است: شبکه یا سرور مرکزی متعلق به یک سازمان خاص وجود ندارد و سرور را یا خودتان راه‌اندازی می‌کنید (با [SlipGate](https://github.com/anonvector/slipgate) فقط چند دقیقه طول می‌کشد) یا از طریق فردی مورد اعتماد دریافت می‌کنید. این مدل سه مزیت اصلی دارد:
+از نظر فلسفه، Rovunet در همان خانواده‌ی پروژه‌های ضد سانسور قرار می‌گیرد که [Tor](https://torproject.org)، [Psiphon](https://psiphon.ca) و [Outline VPN](https://getoutline.org) متعلق به آن هستند؛ با این تفاوت مهم که Rovunet **فقط کلاینت** است: شبکه یا سرور مرکزی متعلق به یک سازمان خاص وجود ندارد و سرور را یا خودتان راه‌اندازی می‌کنید (با [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) فقط چند دقیقه طول می‌کشد) یا از طریق فردی مورد اعتماد دریافت می‌کنید. این مدل سه مزیت اصلی دارد:
 
 - **حریم خصوصی**: ترافیک شما از سروری عبور می‌کند که خودتان یا کسی که می‌شناسید کنترل می‌کند، نه یک شرکت ناشناس.
 - **مقیاس‌پذیری و دوام**: چون هیچ زیرساخت متمرکزی برای فیلتر کردن وجود ندارد، حتی اگر یک سرور بلاک شود، یک IP جدید و تغییر یک رکورد DNS کافی است.
 - **انعطاف**: می‌توانید پروتکل، CDN، دامنه و حتی کشور سرور را خودتان انتخاب کنید — چیزی که هیچ VPN تجاری به شما نمی‌دهد.
 
-سورس‌کد SlipNet به‌صورت کامل روی گیت‌هاب در دسترس است (تحت لایسنس source-available — قابل مطالعه و مشارکت، اما بدون اجازه‌ی توزیع مجدد یا انتشار در استورها) و در هیچ مارکت اپ (گوگل‌پلی، اپ‌استور و…) منتشر نمی‌شود؛ تنها منبع رسمی، کانال [@SlipNet_app](https://t.me/SlipNet_app) و مخزن گیت‌هاب پروژه است.
+سورس‌کد Rovunet به‌صورت کامل و با مجوز GNU AGPL-3.0 روی گیت‌هاب در دسترس است. Rovunet در هیچ فروشگاه اپی منتشر نشده است؛ تنها منابع رسمی گروه تلگرام [@RovunetVPN](https://t.me/RovunetVPN) و مخزن گیت‌هاب پروژه است.
 
 ---
 
@@ -633,7 +628,7 @@ SlipNet یک ابزار رایگان و **source-available** (سورس‌کدش 
 
 ## ۳. نسخه‌ها: Full و Lite
 
-SlipNet در دو نسخه عرضه می‌شود — تفاوت در حجم APK و پروتکل‌های موجود است.
+Rovunet در دو نسخه عرضه می‌شود — تفاوت در حجم APK و پروتکل‌های موجود است.
 
 | ویژگی | Full | Lite |
 |-------|:----:|:----:|
@@ -652,30 +647,30 @@ SlipNet در دو نسخه عرضه می‌شود — تفاوت در حجم APK
 
 ## ۴. نصب APK
 
-۱. کانال رسمی [@SlipNet_app](https://t.me/SlipNet_app) یا صفحه‌ی Releases در گیت‌هاب را باز کنید.
+۱. کانال رسمی [@RovunetVPN](https://t.me/RovunetVPN) یا صفحه‌ی Releases در گیت‌هاب را باز کنید.
 ۲. APK مناسب CPU گوشی‌تان را دانلود کنید. اکثر گوشی‌های جدید `arm64-v8a` هستند. اگر مطمئن نیستید، APK نسخه‌ی **universal** را بگیرید.
 ۳. در گوشی: **تنظیمات → امنیت → نصب از منابع ناشناس** را برای مرورگر یا تلگرام فعال کنید.
 ۴. روی APK دانلودشده بزنید و نصب کنید.
 ۵. اپ را باز کنید. در اولین اجرا، اندروید مجوز VPN می‌خواهد — **OK** را بزنید.
-۶. تنظیم پیشنهادی یک‌باره: **تنظیمات → بهینه‌سازی باتری → SlipNet را بهینه نکن** تا اندروید آن را در پس‌زمینه نکشد.
+۶. تنظیم پیشنهادی یک‌باره: **تنظیمات → بهینه‌سازی باتری → Rovunet را بهینه نکن** تا اندروید آن را در پس‌زمینه نکشد.
 
-> ⚠️ اگر SlipNet را در گوگل‌پلی، اپ‌استور یا هر مارکت دیگری دیدید، **مال ما نیست**؛ نصب نکنید.
+> ⚠️ اگر Rovunet را در گوگل‌پلی، اپ‌استور یا هر مارکت دیگری دیدید، **مال ما نیست**؛ نصب نکنید.
 
 ---
 
-## ۵. سرور لازم است — از SlipGate استفاده کنید
+## ۵. سرور لازم است — از Rovunet Panel استفاده کنید
 
-SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز دارد که تونل سازگار را اجرا کند.
+Rovunet *کلاینت* است. برای کار به یک **سرور** نیاز دارد که تونل سازگار را اجرا کند.
 
-روش رسمی و پشتیبانی‌شده برای راه‌اندازی سرور **SlipGate** است — یک نصاب لینوکسی تک‌دستوری که سمت سرور تمام پروتکل‌های SlipNet را راه می‌اندازد.
+روش رسمی و پشتیبانی‌شده برای راه‌اندازی سرور **Rovunet Panel** است — یک نصاب لینوکسی تک‌دستوری که سمت سرور تمام پروتکل‌های Rovunet را راه می‌اندازد.
 
-> https://github.com/anonvector/slipgate
+> https://github.com/msVPNco/rovunet-panel
 
-راهنمای جداگانه‌ی SlipGate در کنار همین سند منتشر شده است. خلاصه: یک VPS ۵ دلاری بگیرید، دامنه‌اش را به آن وصل کنید، یک دستور نصب اجرا کنید، یک کاربر بسازید، و SlipGate یک لینک `slipnet://` می‌دهد که مستقیم در اپ پیست می‌شود.
+راهنمای جداگانه‌ی Rovunet Panel در کنار همین سند منتشر شده است. خلاصه: یک VPS ۵ دلاری بگیرید، دامنه‌اش را به آن وصل کنید، یک دستور نصب اجرا کنید، یک کاربر بسازید، و Rovunet Panel یک لینک `slipnet://` می‌دهد که مستقیم در اپ پیست می‌شود.
 
 اگر سرور خودتان را راه نمی‌اندازید، می‌توانید:
-- از دوستی که SlipGate دارد لینک `slipnet://` بگیرید، یا
-- از لینک تستی عمومی که گاهی در [@SlipNet_app](https://t.me/SlipNet_app) منتشر می‌شود استفاده کنید.
+- از دوستی که Rovunet Panel دارد لینک `slipnet://` بگیرید، یا
+- از لینک تستی عمومی که گاهی در [@RovunetVPN](https://t.me/RovunetVPN) منتشر می‌شود استفاده کنید.
 
 ---
 
@@ -685,7 +680,7 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 
 ### الف) چسباندن لینک `slipnet://` (ساده‌ترین)
 
-۱. SlipNet را باز کنید → دکمه‌ی **+** پایین سمت راست.
+۱. Rovunet را باز کنید → دکمه‌ی **+** پایین سمت راست.
 ۲. **Import from URI** را انتخاب کنید.
 ۳. لینک `slipnet://...` را پیست کنید.
 ۴. تمام — پروفایل به لیست اضافه می‌شود.
@@ -720,7 +715,7 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 برای قطع، دوباره **Connect** را بزنید. برای تعویض پروفایل، اول قطع کنید، پروفایل دیگر را انتخاب و دوباره وصل کنید.
 
 **سوییچ سریع بدون باز کردن اپ:**
-- نوار اعلان را پایین بکشید → **کاشی Quick Settings** SlipNet را بزنید (اولین بار باید از پنل کاشی‌ها اضافه‌اش کنید).
+- نوار اعلان را پایین بکشید → **کاشی Quick Settings** Rovunet را بزنید (اولین بار باید از پنل کاشی‌ها اضافه‌اش کنید).
 - یا از **ویجت صفحه‌ی اصلی** برای اتصال یک‌ضربه‌ای استفاده کنید.
 
 **تست پینگ زنده:** پس از انتخاب پروفایل، روی **Real Ping** یا **Simple Ping** بزنید. **Sort by Ping** لیست را از سریع‌ترین مرتب می‌کند.
@@ -764,11 +759,11 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 پروب DNS را کامل رد می‌کند. برای هر IP کاندید فقط یک تونل واقعی باز می‌کند و یک درخواست HTTP می‌فرستد. وقتی از قبل لیست IPهای «شناخته‌شده‌ی تونل-سازگار» دارید و فقط می‌خواهید بدانید کدام در حال حاضر سریع به سرور خاص شما می‌رسد، این را انتخاب کنید.
 
 #### Prism
-*«اسکن سرور-تأییدشده: فقط ریزالورهایی نمایش داده می‌شوند که به‌صورت رمزنگاری‌شده اثبات کنند به سرور خاص شما می‌رسند. به نصب SlipGate روی سرور نیاز دارد.»*
+*«اسکن سرور-تأییدشده: فقط ریزالورهایی نمایش داده می‌شوند که به‌صورت رمزنگاری‌شده اثبات کنند به سرور خاص شما می‌رسند. به نصب Rovunet Panel روی سرور نیاز دارد.»*
 
-قوی‌ترین حالت. پروب‌های HMAC-authenticated می‌فرستد که فقط یک سرور SlipGate واقعی می‌تواند درست امضا کند، پس ریزالوری که «کار می‌کند» اما در واقع ترافیک را به یک middlebox مهاجم می‌رساند، در این چک رد می‌شود. هر ریزالور N بار پروب می‌شود؛ ریزالورهایی که ≥ *threshold* پاسخ امضاشده می‌گیرند، عبور می‌کنند. وقتی به transparent-proxy interception شک دارید یا می‌خواهید جلوی hijacking تونل را بگیرید، این را انتخاب کنید.
+قوی‌ترین حالت. پروب‌های HMAC-authenticated می‌فرستد که فقط یک سرور Rovunet Panel واقعی می‌تواند درست امضا کند، پس ریزالوری که «کار می‌کند» اما در واقع ترافیک را به یک middlebox مهاجم می‌رساند، در این چک رد می‌شود. هر ریزالور N بار پروب می‌شود؛ ریزالورهایی که ≥ *threshold* پاسخ امضاشده می‌گیرند، عبور می‌کنند. وقتی به transparent-proxy interception شک دارید یا می‌خواهید جلوی hijacking تونل را بگیرید، این را انتخاب کنید.
 
-فقط وقتی پروفایل انتخاب‌شده‌تان کلید عمومی معتبر دارد و سرور شما [SlipGate](https://github.com/anonvector/slipgate) اجرا می‌کند، در دسترس است.
+فقط وقتی پروفایل انتخاب‌شده‌تان کلید عمومی معتبر دارد و سرور شما [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) اجرا می‌کند، در دسترس است.
 
 ---
 
@@ -972,7 +967,7 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 - **UUID** — شناسه‌ی کاربر VLESS (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)
 - **Domain** — هاست پشت CDN؛ به‌عنوان TLS SNI و WS Host
 - **Security** — `tls` (پیشنهادی) یا `none`
-- **Transport** — فقط WebSocket (TCP خام در اپ پشتیبانی نمی‌شود — VLESS در SlipNet به‌عنوان تونل پشت CDN در نظر گرفته شده)
+- **Transport** — فقط WebSocket (TCP خام در اپ پشتیبانی نمی‌شود — VLESS در Rovunet به‌عنوان تونل پشت CDN در نظر گرفته شده)
 - **WS Path** — مثلاً `/`، `/vless`
 - **CDN IP / Port** — یک IP تمیز Cloudflare اگر فرانتینگ CF می‌کنید (وگرنه IP مستقیم سرور، پورت ۴۴۳)
 - **TLS SNI** — چیزی که در ClientHello می‌رود (موقع روتینگ روی CDN باید با گواهی CDN بخواند)
@@ -986,12 +981,12 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 
 #### ⚠️ چرا SOCKS5 ممکن است «Connected» نشان دهد ولی واقعاً کار نکند
 
-حالت SOCKS5 در SlipNet یک **passthrough** ساده است — فقط یک listener محلی روی گوشی باز می‌کند و هر درخواست را به پراکسی SOCKS5 ریموت زنجیر می‌کند. **هیچ تست end-to-end اولیه‌ای انجام نمی‌شود.** وضعیت «Connected» فقط دو چیز را تأیید می‌کند:
+حالت SOCKS5 در Rovunet یک **passthrough** ساده است — فقط یک listener محلی روی گوشی باز می‌کند و هر درخواست را به پراکسی SOCKS5 ریموت زنجیر می‌کند. **هیچ تست end-to-end اولیه‌ای انجام نمی‌شود.** وضعیت «Connected» فقط دو چیز را تأیید می‌کند:
 
 1. listener محلی SOCKS5 روی گوشی شما با موفقیت bind شده، و
 2. یک کانکشن downstream توانسته handshake (CONNECT + auth) را با پراکسی ریموت کامل کند.
 
-این **تأیید نمی‌کند** که پراکسی ریموت واقعاً به اینترنت آزاد دسترسی دارد. پراکسی می‌تواند بی‌سروصدا ترافیک خروجی را drop کند، پاسخ CONNECT جعلی برگرداند، پشت یک فایروال ابری باشد که فقط CIDR داخلی را اجازه می‌دهد، یا خودش پشت uplink سانسورشده گیر کرده باشد — و SlipNet هیچ راهی برای تشخیص این‌ها از روی پروتکل SOCKS5 ندارد، چون SOCKS5 **نه هویت سرور را تأیید می‌کند، نه key exchange سرتاسری دارد، نه سیگنال liveness**.
+این **تأیید نمی‌کند** که پراکسی ریموت واقعاً به اینترنت آزاد دسترسی دارد. پراکسی می‌تواند بی‌سروصدا ترافیک خروجی را drop کند، پاسخ CONNECT جعلی برگرداند، پشت یک فایروال ابری باشد که فقط CIDR داخلی را اجازه می‌دهد، یا خودش پشت uplink سانسورشده گیر کرده باشد — و Rovunet هیچ راهی برای تشخیص این‌ها از روی پروتکل SOCKS5 ندارد، چون SOCKS5 **نه هویت سرور را تأیید می‌کند، نه key exchange سرتاسری دارد، نه سیگنال liveness**.
 
 #### مقایسه‌ی SSH و SOCKS5
 
@@ -1038,7 +1033,7 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 | اصلاً وصل نمی‌شود | **اسکنر** را اجرا کن، ریزالورها را عوض کن؛ DNS Transport را عوض کن (UDP → DoT → DoH)؛ به‌جای DNSTT از **NoizDNS** استفاده کن |
 | وصل می‌شود ولی چند ثانیه بعد قطع می‌شود | **VPN MTU** را پایین بیار (1280)، **DNS Workers = 1** یا حالت *per-query* |
 | وصل است ولی اینترنت نیست | **Disable QUIC** را روشن کن؛ **Auto-reconnect** را تست کن |
-| اندروید SlipNet را در پس‌زمینه می‌کشد | تنظیمات → **بهینه‌سازی باتری** → SlipNet را بهینه نکن |
+| اندروید Rovunet را در پس‌زمینه می‌کشد | تنظیمات → **بهینه‌سازی باتری** → Rovunet را بهینه نکن |
 | یوتیوب / استریم بافر می‌کند | **Disable QUIC**؛ **Max Query Size** را روی تونل DNS کم کن؛ **Slipstream** یا **VLESS** را امتحان کن |
 | محیط DPI سختگیر | از **NoizDNS + SSH**، **VLESS + SNI Fragmentation**، یا **Tor + Snowflake** (Full) استفاده کن |
 | VLESS از Cloudflare تایم‌اوت می‌شود | **CDN IP** را روی یک IP تمیز معروف Cloudflare بگذار؛ **TLS SNI** باید با گواهی CF تو بخواند |
@@ -1056,17 +1051,17 @@ SlipNet *کلاینت* است. برای کار به یک **سرور** نیاز �
 
 ### انواع URI کانفیگ
 
-SlipNet سه نوع URI برای خروجی دارد. این‌ها **هم‌ارز نیستند** — مدل امنیتی هرکدام فرق می‌کند.
+Rovunet سه نوع URI برای خروجی دارد. این‌ها **هم‌ارز نیستند** — مدل امنیتی هرکدام فرق می‌کند.
 
 | فرمت | چیست | کلید رمزنگاری |
 |---|---|---|
 | `slipnet://` | پروفایل ساده‌ی base64 | ندارد — هرکسی می‌تواند بخواند |
-| `slipnet-enc://` | پروفایل تکیِ **قفل‌شده** (مخصوص گیرنده‌ی خاص) | کلید درون‌برنامه‌ای SlipNet |
+| `slipnet-enc://` | پروفایل تکیِ **قفل‌شده** (مخصوص گیرنده‌ی خاص) | کلید درون‌برنامه‌ای Rovunet |
 | `slipnet-bundle-enc://` | بسته‌ی چندپروفایلی، رمز شده با رمز عبور | از رمز عبور خود شما مشتق می‌شود |
 
 **`slipnet://`** — هرکسی با base64 می‌تواند بخواند. فقط برای گیرنده‌ی مورد اعتماد.
 
-**`slipnet-enc://`** — وقتی یک پروفایل تکی را با قفل خروجی می‌گیرید (رمز، تاریخ انقضا اختیاری، قید به یک دستگاه، مخفی‌سازی resolverها، عدم اجازه‌ی بازنشر). محتوا با AES-256-GCM رمز می‌شود، **اما کلید AES درون اپ SlipNet جاسازی شده** و از رمز شما مشتق نمی‌شود. رمزی که می‌گذارید توسط اپ گیرنده بررسی می‌شود و فقط **نحوه‌ی استفاده** را کنترل می‌کند (فقط استفاده، عدم ویرایش، انقضا، قید به دستگاه، مخفی‌بودن resolverها). محرمانگی کانفیگ در برابر کسی که اپ را نصب دارد تأمین نمی‌شود. این را یک ابزار **کنترل اشتراک‌گذاری** بدانید، نه محرمانگی واقعی.
+**`slipnet-enc://`** — وقتی یک پروفایل تکی را با قفل خروجی می‌گیرید (رمز، تاریخ انقضا اختیاری، قید به یک دستگاه، مخفی‌سازی resolverها، عدم اجازه‌ی بازنشر). محتوا با AES-256-GCM رمز می‌شود، **اما کلید AES درون اپ Rovunet جاسازی شده** و از رمز شما مشتق نمی‌شود. رمزی که می‌گذارید توسط اپ گیرنده بررسی می‌شود و فقط **نحوه‌ی استفاده** را کنترل می‌کند (فقط استفاده، عدم ویرایش، انقضا، قید به دستگاه، مخفی‌بودن resolverها). محرمانگی کانفیگ در برابر کسی که اپ را نصب دارد تأمین نمی‌شود. این را یک ابزار **کنترل اشتراک‌گذاری** بدانید، نه محرمانگی واقعی.
 
 **`slipnet-bundle-enc://`** — توسط **Export All (Encrypted)** ساخته می‌شود. این یکی واقعاً با رمز عبور خودتان رمزنگاری می‌شود و برای پشتیبان‌گیری مناسب است.
 
@@ -1074,7 +1069,7 @@ SlipNet سه نوع URI برای خروجی دارد. این‌ها **هم‌ا�
 
 رمزنگاریِ بایت‌های کانفیگ، **هویت** سرور، دامنه یا CDN شما را پنهان نمی‌کند. به محض اینکه یک لینک `slipnet-enc://` در کانال عمومی منتشر شود:
 
-- هرکسی که APK SlipNet را داشته باشد می‌تواند آن را باز کند و دامنه، IP، SNI، CDN host و credential را ببیند.
+- هرکسی که APK Rovunet را داشته باشد می‌تواند آن را باز کند و دامنه، IP، SNI، CDN host و credential را ببیند.
 - سامانه‌های سانسور، کانال‌های عمومی را برای کانفیگ‌های جدید رصد می‌کنند و دامنه/IP را در عرض چند ساعت بلاک می‌کنند.
 - خود دامنه از این به بعد یک هدف دائمی blocklist است؛ رمزنگاری نمی‌تواند آن را برگرداند.
 
@@ -1086,29 +1081,26 @@ SlipNet سه نوع URI برای خروجی دارد. این‌ها **هم‌ا�
 
 قواعد کلی:
 
-- برای پخش گسترده‌تر، روی **VPS خریداری‌شده از خارج کشور** و دامنه‌ی ثبت‌شده در **ریجیسترار خارج از کشور** میزبانی کنید. روی همان VPS، **Warp را از داخل SlipGate فعال کنید** تا ترافیک خروجی سرور از پشت Cloudflare Warp عبور کند و IP واقعی VPS لو نرود.
+- برای پخش گسترده‌تر، روی **VPS خریداری‌شده از خارج کشور** و دامنه‌ی ثبت‌شده در **ریجیسترار خارج از کشور** میزبانی کنید. روی همان VPS، **Warp را از داخل Rovunet Panel فعال کنید** تا ترافیک خروجی سرور از پشت Cloudflare Warp عبور کند و IP واقعی VPS لو نرود.
 - کانفیگ را **خصوصی** بفرستید (تک به تک، در چت رمزنگاری‌شده‌ی end-to-end) — نه در گروه، نه در سایت، نه پین‌شده در کانال.
 - قابلیت‌های قفل `slipnet-enc://` (انقضا، قید به دستگاه، مخفی‌بودن resolverها، عدم بازنشر) را برای **کند کردن سوءاستفاده** به کار ببرید، نه برای اینکه کانفیگ را عمومی کنید.
 
 > ⚠️ لینک `slipnet://` حاوی اطلاعات حساس شماست؛ هرگز آن را در گروه عمومی نگذارید.
 >
-> ⚠️ لینک `slipnet-enc://` هم **برای انتشار عمومی امن نیست**: هر کسی که اپ SlipNet را داشته باشد می‌تواند آن را رمزگشایی کند. قفل، فقط *نحوه‌ی استفاده* را محدود می‌کند و **محرمانگی محتوا را تضمین نمی‌کند**. رمزنگاری از credentialها در حین انتقال محافظت می‌کند، اما به محض اینکه لینک علنی شد، **هویت دامنه و سرور شما لو می‌رود** و رمزنگاری نمی‌تواند جلویش را بگیرد.
+> ⚠️ لینک `slipnet-enc://` هم **برای انتشار عمومی امن نیست**: هر کسی که اپ Rovunet را داشته باشد می‌تواند آن را رمزگشایی کند. قفل، فقط *نحوه‌ی استفاده* را محدود می‌کند و **محرمانگی محتوا را تضمین نمی‌کند**. رمزنگاری از credentialها در حین انتقال محافظت می‌کند، اما به محض اینکه لینک علنی شد، **هویت دامنه و سرور شما لو می‌رود** و رمزنگاری نمی‌تواند جلویش را بگیرد.
 
 ---
 
-## ۱۴. حمایت مالی
-
-توسعه‌ی SlipNet داوطلبانه و بدون درآمد است. اگر این اپ به شما کمک کرده، آدرس‌های دونیت (BEP-20 / ERC-20 / Arbitrum، Monero و…) همیشه به‌روز در README پروژه روی گیت‌هاب نگه‌داری می‌شوند: <https://github.com/anonvector/SlipNet#donations>
 
 ---
 
 ## ۱۵. نکات امنیتی
 
-- SlipNet را فقط از **کانال رسمی تلگرام** یا **گیت‌هاب** دانلود کنید.
+- Rovunet را فقط از **کانال رسمی تلگرام** یا **گیت‌هاب** دانلود کنید.
 - لینک `slipnet://` خود را با غریبه‌ها به اشتراک نگذارید.
 - موقع پشتیبان‌گیری از **Export رمزشده** استفاده کنید.
-- اصالت سرور را با **Prism** (اسکن سرور-تأییدشده) اعتبارسنجی کنید — با SlipGate کار می‌کند.
-- اگر سرور خودتان را اجرا می‌کنید: هیچ‌وقت `root` یا هر اکانت shell را به‌عنوان credential VPN ندهید — همیشه با SlipGate کاربر مخصوص بسازید.
+- اصالت سرور را با **Prism** (اسکن سرور-تأییدشده) اعتبارسنجی کنید — با Rovunet Panel کار می‌کند.
+- اگر سرور خودتان را اجرا می‌کنید: هیچ‌وقت `root` یا هر اکانت shell را به‌عنوان credential VPN ندهید — همیشه با Rovunet Panel کاربر مخصوص بسازید.
 
-کانال: [@SlipNet_app](https://t.me/SlipNet_app)
-سورس: https://github.com/anonvector/SlipNet
+کانال: [@RovunetVPN](https://t.me/RovunetVPN)
+سورس: https://github.com/msVPNco/rovunet-android

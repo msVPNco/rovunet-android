@@ -478,7 +478,7 @@ class DnsScannerViewModel @Inject constructor(
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
         val pm = appContext.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SlipNet:ScanWakeLock").apply {
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Rovunet:ScanWakeLock").apply {
             acquire(4 * 60 * 60 * 1000L) // 4-hour safety timeout
         }
         Log.d("DnsScanner", "WakeLock acquired")
