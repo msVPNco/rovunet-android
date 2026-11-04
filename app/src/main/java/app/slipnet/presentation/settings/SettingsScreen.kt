@@ -1,5 +1,6 @@
 package app.slipnet.presentation.settings
 
+import app.slipnet.presentation.theme.rv
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
@@ -199,7 +200,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_settings_74a883)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -232,7 +233,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Donate Card
-            DonateCard()
+            app.slipnet.presentation.common.components.SupportRovunetCard()
 
             // Connection Settings
             SettingsSection(title = "Connection") {
@@ -391,7 +392,7 @@ fun SettingsScreen(
                                 proxyAuthUsername = text
                                 viewModel.setProxyAuthUsername(text)
                             },
-                            label = { Text("Username") },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_username_e3b89e)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                             modifier = Modifier.weight(1f)
@@ -402,7 +403,7 @@ fun SettingsScreen(
                                 proxyAuthPassword = text
                                 viewModel.setProxyAuthPassword(text)
                             },
-                            label = { Text("Password") },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                             modifier = Modifier.weight(1f)
@@ -848,44 +849,12 @@ fun SettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "SlipNet VPN v${BuildConfig.VERSION_NAME}",
+                    text = "Rovunet VPN v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                when (uiState.updateCheckResult) {
-                    UpdateCheckResult.CHECKING -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Text(
-                                text = "Checking...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    UpdateCheckResult.UP_TO_DATE -> {
-                        Text(
-                            text = "You're up to date",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    else -> {
-                        TextButton(onClick = { viewModel.checkForUpdate() }) {
-                            Text(
-                                text = "Check for updates",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
+                Text("Updates are distributed manually during alpha testing.", style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -977,13 +946,13 @@ fun SettingsScreen(
                             }
                         }
                     ) {
-                        Text("Apply")
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showMtuDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1051,7 +1020,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showDnsWorkerDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1097,7 +1066,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showDarkModeDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1151,7 +1120,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSplitModeDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1205,7 +1174,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showDomainRoutingModeDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1257,7 +1226,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showGeoBypassCountryDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1320,10 +1289,10 @@ fun SettingsScreen(
                         showGlobalResolverDialog = false
                     },
                     enabled = !tooMany && !hasInvalid && resolverCount > 0
-                ) { Text("Save") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_save_1509f5)) }
             },
             dismissButton = {
-                TextButton(onClick = { showGlobalResolverDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showGlobalResolverDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1396,7 +1365,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSshCipherDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1415,12 +1384,12 @@ fun SettingsScreen(
                     viewModel.resetAllSettings()
                     showResetSettingsDialog = false
                 }) {
-                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetSettingsDialog = false }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -1430,11 +1399,11 @@ fun SettingsScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("About SlipNet") },
+            title = { Text("About Rovunet") },
             text = { AboutDialogContent() },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
-                    Text("Close")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7))
                 }
             }
         )
@@ -1564,7 +1533,7 @@ private fun DomainManagementDialog(
         },
         confirmButton = {
             TextButton(onClick = { addDomain(); onDismiss() }) {
-                Text("Done")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_done_11a676))
             }
         }
     )
@@ -1679,7 +1648,7 @@ private fun RemoteDnsDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
             }
         }
     )
@@ -1697,7 +1666,7 @@ private fun SettingsSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -1762,12 +1731,12 @@ private fun SwitchSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = description,
+                text = rv(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1806,12 +1775,12 @@ private fun ClickableSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = description,
+                text = rv(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1849,11 +1818,11 @@ private fun IndentedSettingItem(
                 .padding(horizontal = 12.dp)
         ) {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = description,
+                text = rv(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1924,7 +1893,7 @@ private fun SliderSettingItem(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = title,
+                    text = rv(title),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 if (subtitle != null) {
@@ -1988,12 +1957,12 @@ private fun StepperSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = description,
+                text = rv(description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -2371,7 +2340,7 @@ private fun TextFieldSettingItem(
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(start = 16.dp)
             )
@@ -2441,158 +2410,17 @@ private fun BandwidthLimitDialog(
                     onApply(up.coerceAtLeast(0), down.coerceAtLeast(0))
                 }
             ) {
-                Text("Apply")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
             }
         }
     )
 }
 
-@Composable
-private fun DonateCard() {
-    val clipboardManager = LocalClipboardManager.current
-    val donationAddress = "0xd4140058389572D50dC8716e768e687C050Dd5C9"
-    var showDonateDialog by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showDonateDialog = true },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
-            ) {
-                Text(
-                    text = "Support SlipNet",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Help keep this project free and maintained",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-
-    if (showDonateDialog) {
-        AlertDialog(
-            onDismissRequest = { showDonateDialog = false },
-            title = { Text("Support SlipNet") },
-            text = {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "SlipNet is free, source-available, and built to fight internet censorship. No ads, no data collection, no subscriptions. Your donation helps keep this tool free and improving for everyone who needs it.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    Text(
-                        text = "USDT (BEP20 / ERC20 / Arbitrum)",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = donationAddress,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        IconButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(donationAddress))
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = "Copy address",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    val xmrAddress = "48wa9asF4AdZCq8KvPqBmqN3s98XFQ2MG7pL8MY6hAc6ZXBd8D61LArebdmAwCk5jBBbR2BuiHkSraEYFhx5AdDqLxDB4GU"
-                    Text(
-                        text = "Monero (XMR)",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = xmrAddress,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        IconButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(xmrAddress))
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.ContentCopy,
-                                contentDescription = "Copy address",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                    Text(
-                        text = "Even a small amount makes a difference. Thank you.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDonateDialog = false }) {
-                    Text("Close")
-                }
-            }
-        )
-    }
-}
 
 @Composable
 private fun DnsPoolDialog(
@@ -2680,10 +2508,10 @@ private fun DnsPoolDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(text) }) { Text("Save") }
+            TextButton(onClick = { onSave(text) }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_save_1509f5)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
         }
     )
 }

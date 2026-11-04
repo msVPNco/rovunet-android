@@ -28,11 +28,11 @@ import javax.inject.Singleton
 class ConfigExporter @Inject constructor() {
 
     companion object {
-        const val SCHEME = "slipnet://"
-        const val ENCRYPTED_SCHEME = "slipnet-enc://"
+        const val SCHEME = "rovunet://"
+        const val ENCRYPTED_SCHEME = "rovunet-enc://"
         /** Scheme for password-encrypted multi-profile bundles (see [exportAllProfilesEncrypted]). */
-        const val BUNDLE_ENCRYPTED_SCHEME = "slipnet-bundle-enc://"
-        const val VERSION = "30"
+        const val BUNDLE_ENCRYPTED_SCHEME = "rovunet-bundle-enc://"
+        const val VERSION = "32"
         const val MODE_SLIPSTREAM = "ss"
         const val MODE_SLIPSTREAM_SSH = "slipstream_ssh"
         const val MODE_DNSTT = "dnstt"
@@ -89,6 +89,16 @@ class ConfigExporter @Inject constructor() {
         val encrypted = LockPasswordUtil.encryptConfig(data)
         val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
         return "$ENCRYPTED_SCHEME$encoded"
+    }
+
+    /** Export exactly one collection; never silently omit restricted profiles. */
+    fun exportCollection(profiles: List<ServerProfile>, representative: ServerProfile): String {
+        val members = app.slipnet.domain.model.ProfileCollections.members(profiles, representative)
+        require(members.isNotEmpty()) { "No exportable profiles" }
+        check(members.none { it.isLocked && !it.allowSharing }) { "Collection contains profiles that do not allow sharing" }
+        return members.joinToString("\n") { p ->
+            if (p.isLocked) reExportLockedProfile(p) else exportSingleProfile(p)
+        }
     }
 
     fun exportAllProfiles(profiles: List<ServerProfile>): String {
@@ -171,6 +181,7 @@ class ConfigExporter @Inject constructor() {
             TunnelType.SOCKS5 -> MODE_SOCKS5
             TunnelType.VAYDNS -> MODE_VAYDNS
             TunnelType.VAYDNS_SSH -> MODE_VAYDNS_SSH
+            TunnelType.XRAY -> "xray"
             TunnelType.VLESS -> MODE_VLESS
             TunnelType.SOAR -> MODE_SOAR
             TunnelType.SOAR_SSH -> MODE_SOAR_SSH
@@ -290,7 +301,10 @@ class ConfigExporter @Inject constructor() {
             sanitize(profile.soarTcpMode),
             // v30: Soar discovery list ("soar", "app" or "custom") and the custom list
             sanitize(profile.soarDiscoveryList),
-            sanitize(profile.soarDiscoveryCustom)
+            sanitize(profile.soarDiscoveryCustom),
+            Base64.encodeToString(profile.coreLink.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            Base64.encodeToString(profile.collectionId.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            Base64.encodeToString(profile.collectionName.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         ).joinToString(FIELD_DELIMITER)
     }
 

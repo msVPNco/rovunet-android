@@ -1,5 +1,6 @@
 package app.slipnet.presentation.scanner
 
+import app.slipnet.presentation.theme.rv
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -185,7 +186,7 @@ fun DnsScannerScreen(
             text = { Text(dialogText) },
             confirmButton = {
                 Button(onClick = { viewModel.resumeScan() }) {
-                    Text("Continue")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef))
                 }
             },
             dismissButton = {
@@ -226,7 +227,7 @@ fun DnsScannerScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissLastScanIpsDialog() }) {
-                    Text("Cancel")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                 }
             }
         )
@@ -237,7 +238,7 @@ fun DnsScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("DNS Scanner") },
+                title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_dns_scanner_a08849)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.stopAll(); onNavigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -559,7 +560,7 @@ private fun ScanModeToggle(
                 selected = scanMode == ScanMode.ADVANCED,
                 onClick = { onModeChange(ScanMode.ADVANCED) },
                 enabled = enabled,
-                label = { Text("Advanced") },
+                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d)) },
                 leadingIcon = if (scanMode == ScanMode.ADVANCED) {
                     { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 } else null,
@@ -818,7 +819,7 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = scanPort,
                         onValueChange = onScanPortChange,
-                        label = { Text("Port") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_port_72e9a5)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(0.7f),
@@ -1340,7 +1341,7 @@ private fun ResolverListSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Import", maxLines = 1)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_2cff9b), maxLines = 1)
                 }
             }
 
@@ -1521,7 +1522,7 @@ private fun ResolverListSection(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Start Scan", fontWeight = FontWeight.SemiBold)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_start_scan_1f5473), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -1789,7 +1790,7 @@ private fun ResolverListSection(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Start Scan", fontWeight = FontWeight.SemiBold)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_start_scan_1f5473), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -2036,7 +2037,7 @@ private fun ResolverListSection(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Start Scan", fontWeight = FontWeight.SemiBold)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_start_scan_1f5473), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -2283,7 +2284,7 @@ private fun ResolverListSection(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Start Scan", fontWeight = FontWeight.SemiBold)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_start_scan_1f5473), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }

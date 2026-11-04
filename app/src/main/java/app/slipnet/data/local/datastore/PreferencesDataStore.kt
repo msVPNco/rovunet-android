@@ -160,7 +160,7 @@ class PreferencesDataStore @Inject constructor(
 
     // Dark mode
     val darkMode: Flow<DarkMode> = dataStore.data.map { prefs ->
-        DarkMode.fromValue(prefs[Keys.DARK_MODE] ?: DarkMode.SYSTEM.value)
+        DarkMode.fromValue(prefs[Keys.DARK_MODE] ?: DarkMode.LIGHT.value)
     }
 
     suspend fun setDarkMode(mode: DarkMode) {

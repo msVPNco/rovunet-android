@@ -13,9 +13,10 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+val veyraPrebuiltNative = providers.gradleProperty("veyraPrebuiltNative").orNull == "true"
 val minSdkVersion = 24
-val appVersionName = "2.5.6"
-val appVersionCode = 81
+val appVersionName = "0.3.0-alpha04"
+val appVersionCode = 10
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"
@@ -81,7 +82,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "app.slipnet"
+        applicationId = "app.veyra.client"
         minSdk = minSdkVersion
         targetSdk = 35
         versionCode = appVersionCode
@@ -126,7 +127,7 @@ android {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abiFilter = output.getFilter("ABI")
             val abi = abiFilter ?: "universal"
-            output.outputFileName = "SlipNet-v${appVersionName}-${flavorName}-${buildType.name}-${abi}.apk"
+            output.outputFileName = "Rovunet-v${appVersionName}-${flavorName}-${buildType.name}-${abi}.apk"
         }
     }
 
@@ -143,11 +144,13 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // Do not advertise a 32-bit x86 ABI containing only dependency stubs.
+            excludes += "**/x86/**"
         }
     }
 
     // Build hev-socks5-tunnel with ndk-build
-    externalNativeBuild {
+    if (!veyraPrebuiltNative) externalNativeBuild {
         ndkBuild {
             path = file("src/main/cpp/Android.mk")
         }
@@ -387,9 +390,9 @@ tasks.whenTaskAdded {
         }
         "mergeFullDebugJniLibFolders", "mergeFullReleaseJniLibFolders",
         "mergeLiteDebugJniLibFolders", "mergeLiteReleaseJniLibFolders" -> {
-            dependsOn("cargoBuild")
+            if (!veyraPrebuiltNative) dependsOn("cargoBuild")
             // Track Rust JNI output without adding a second source set (avoids duplicate resources).
-            inputs.dir(layout.buildDirectory.dir("rustJniLibs/android"))
+            if (!veyraPrebuiltNative) inputs.dir(layout.buildDirectory.dir("rustJniLibs/android"))
         }
     }
 }
@@ -487,3 +490,17 @@ ksp {
     // Room schema export
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+// Missing native assets must fail the build rather than advertise unusable protocols.
+val verifyVeyraCore by tasks.registering {
+    doLast {
+        for (abi in listOf("arm64-v8a", "armeabi-v7a", "x86_64")) {
+            for (binary in listOf("libveyra_xray.so", "libveyra_core_launcher.so")) {
+                check(file("src/main/jniLibs/$abi/$binary").isFile) {
+                    "Missing Veyra core for $abi; run tools/veyra/prepare-native.py first"
+                }
+            }
+        }
+    }
+}
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach { dependsOn(verifyVeyraCore) }

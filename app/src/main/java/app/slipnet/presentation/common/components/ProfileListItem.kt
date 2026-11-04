@@ -1,5 +1,6 @@
 package app.slipnet.presentation.common.components
 
+import app.slipnet.presentation.theme.rv
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -173,7 +174,7 @@ fun ProfileListItem(
                     if (isConnected) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Connected",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655),
                             style = MaterialTheme.typography.labelSmall,
                             color = ConnectedGreen,
                             modifier = Modifier
@@ -186,7 +187,7 @@ fun ProfileListItem(
                     } else if (isSelected) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Selected",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_selected_57fd7a),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
@@ -246,7 +247,7 @@ fun ProfileListItem(
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "${pingResult.latencyMs}ms",
+                                text = "${if (pingResult.verified) "HTTPS" else "TCP"} ${pingResult.latencyMs}ms",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = latencyColor,
                                 modifier = Modifier
@@ -296,6 +297,14 @@ fun ProfileListItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = if (pingResult is PingResult.Success && pingResult.verified)
+                        "${pingResult.successes}/${pingResult.attempts} passed • spread ${pingResult.jitterMs}ms • setup ${pingResult.setupMs}ms\nLast test ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(pingResult.measuredAt))} • short sample only"
+                    else "${app.slipnet.domain.model.ProfileGuidance.category(profile)} • HTTPS not verified",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Detail line: tunnel type
@@ -364,7 +373,7 @@ fun ProfileListItem(
                         )
                         if (!profile.isLocked || profile.allowSharing) {
                             DropdownMenuItem(
-                                text = { Text("Export") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_export_366489)) },
                                 onClick = {
                                     showExportMenu = false
                                     onExportClick()

@@ -1,0 +1,22 @@
+Rovunet 0.3.0-alpha04 / versionCode 10
+
+Implemented:
+- Collection card menu: Delete collection, name/count confirmation, disconnected-only guard, chain membership protection, reviewed-profile transactional deletion.
+- Full-profile duplicate equality scoped to collection, deletion preview, protected/pinned/active exclusions. Equivalent native/standard VLESS deduplicated within an import group.
+- Naive and Naive SSH initialize repository tunnel type so the existing bridge traffic counters are selected.
+- Direct test phase bounded to 90 seconds, configured DNS phase to 180 seconds. Cleanup can add up to 15 seconds. Resolver discovery has its own existing 180-second budget.
+- Default TCP-before-UDP core order, with verified results allowed to override it.
+- Distinct panel NoizDNS labels and anonymous Soar explanation, optional heading comments, repeated inferred names disambiguated, export errors separated.
+- Partial migration to Android resources in English/Persian/Chinese/Russian, notification and tile localization, Russian plurals.
+
+Validation:
+- Local JVM suite passed: parser/exporter, actual Go fixture, HTTPS probe, diagnostics, lifecycle, inference/undo, duplicates and phase timeout/cancellation.
+- Local Go handler/clientcfg/coreplan tests passed with pinned Xray.
+- APK build and package checks recorded separately.
+
+Limitations:
+- No Android device or emulator test. Naive traffic display, deletion UI/Room behavior, notification language, legacy RTL forms and JNI encrypted export still need device verification.
+- Four-language coverage is NOT complete; many legacy editor/scanner labels and dynamic messages remain English.
+- No GitHub push or CI run. MANAGER_REF points to a local commit not yet published.
+- Debug-signed alpha; no assertion that Play Protect warnings are resolved.
+- Alternate HTTPS target, full DNS orchestration tests and future manager identity/port coordination remain open.

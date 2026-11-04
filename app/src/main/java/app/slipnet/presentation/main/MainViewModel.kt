@@ -1,5 +1,11 @@
 package app.slipnet.presentation.main
 
+import app.slipnet.domain.model.ProfileDuplicates
+import app.slipnet.domain.model.CollectionInference
+import app.slipnet.domain.model.ProfileCollections
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.cancelAndJoin
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.slipnet.data.export.ConfigExporter
@@ -29,6 +35,7 @@ import app.slipnet.domain.usecase.SetActiveProfileUseCase
 import app.slipnet.service.VpnConnectionManager
 import app.slipnet.tunnel.SnowflakeBridge
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +52,9 @@ import javax.inject.Inject
 
 data class ImportPreview(
     val profiles: List<ServerProfile>,
-    val warnings: List<String>
+    val warnings: List<String>,
+    val groups: List<CollectionInference.Group> = CollectionInference.plan(profiles).map { it.copy(profiles = ProfileDuplicates.withinImport(it.profiles)) },
+    val collectionName: String = groups.singleOrNull()?.name ?: ""
 )
 
 data class QrCodeData(
@@ -70,6 +79,10 @@ data class MainUiState(
     val error: String? = null,
     val exportedJson: String? = null,
     val importPreview: ImportPreview? = null,
+    val regroupPreview: List<CollectionInference.Group>? = null,
+    val regroupUndoAvailable: Boolean = false,
+    val regroupBusy: Boolean = false,
+    val duplicatePreview: List<ProfileDuplicates.Match> = emptyList(),
     /** Input awaiting a password to decrypt (user pasted a slipnet-bundle-enc:// URI). */
     val pendingEncryptedImport: String? = null,
     val qrCodeData: QrCodeData? = null,
@@ -81,6 +94,12 @@ data class MainUiState(
     val sessionTotalUpload: Long = 0,
     val sessionTotalDownload: Long = 0,
     // Ping results per profile ID
+    val collectionPrompt: Boolean = false,
+    val collectionConnect: Boolean = false,
+    val collectionProgress: String = "",
+    val selectedCollection: String? = null,
+    val sortByHttps: Boolean = false,
+    val sortByReliability: Boolean = false,
     val pingResults: Map<Long, PingResult> = emptyMap(),
     val isPingRunning: Boolean = false,
     /**
@@ -101,6 +120,7 @@ data class MainUiState(
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val connectionManager: VpnConnectionManager,
     private val getProfilesUseCase: GetProfilesUseCase,
     private val getActiveProfileUseCase: GetActiveProfileUseCase,
@@ -125,6 +145,13 @@ class MainViewModel @Inject constructor(
     private var sleepTimerJob: Job? = null
     private var pingJob: Job? = null
 
+    private val networkManager = appContext.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    private val underlyingNetworks = mutableSetOf<android.net.Network>()
+    private var networkCallbackRegistered = false
+    private val networkCallback = object : android.net.ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: android.net.Network) { networkChanged(network, true) }
+        override fun onLost(network: android.net.Network) { networkChanged(network, false) }
+    }
     init {
         observeConnectionState()
         observeDnsWarning()
@@ -135,6 +162,29 @@ class MainViewModel @Inject constructor(
         observeDebugLogging()
         checkFirstLaunch()
         checkForUpdate()
+        observeUnderlyingNetworks()
+    }
+
+    private fun observeUnderlyingNetworks() {
+        // NOT_VPN excludes our temporary tunnels, so probing does not invalidate itself.
+        val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build()
+        runCatching { networkManager.registerNetworkCallback(request, networkCallback); networkCallbackRegistered = true }
+    }
+    private fun networkChanged(network: android.net.Network, available: Boolean) {
+        viewModelScope.launch {
+            val changed = if (available) underlyingNetworks.add(network) else underlyingNetworks.remove(network)
+            if (!changed) return@launch
+            pingJob?.cancelAndJoin()
+            discoveredProfiles.clear()
+            clearPingResults()
+            _uiState.value = _uiState.value.copy(collectionPrompt = false)
+        }
+    }
+    override fun onCleared() {
+        if (networkCallbackRegistered) runCatching { networkManager.unregisterNetworkCallback(networkCallback) }
+        super.onCleared()
     }
 
     // ── Connection ──────────────────────────────────────────────────────
@@ -154,7 +204,7 @@ class MainViewModel @Inject constructor(
                     connectionState = state,
                     connectedProfileId = if (chainId != null) null else connectedId,
                     connectedChainId = chainId,
-                    error = if (state is ConnectionState.Error) state.message else _uiState.value.error
+                    error = if (state is ConnectionState.Error && !_uiState.value.isPingRunning) state.message else _uiState.value.error
                 )
                 if (state is ConnectionState.Connecting) {
                     startBootstrapPolling()
@@ -344,7 +394,7 @@ class MainViewModel @Inject constructor(
                 Pair(profiles, activeProfile)
             }.collect { (profiles, activeProfile) ->
                 _uiState.value = _uiState.value.copy(
-                    profiles = profiles,
+                    profiles = if (_uiState.value.sortByHttps) app.slipnet.domain.model.ProfileRanking.sort(profiles, _uiState.value.pingResults, _uiState.value.sortByReliability) else profiles,
                     activeProfile = activeProfile,
                     isLoading = false
                 )
@@ -353,6 +403,8 @@ class MainViewModel @Inject constructor(
     }
 
     fun connect(profile: ServerProfile? = null) {
+        if (profile == null) { runCollection(connectAfter = true); return }
+        if (_uiState.value.isPingRunning) { _uiState.value = _uiState.value.copy(error = "Stop the connection test first"); return }
         val targetProfile = profile ?: _uiState.value.activeProfile ?: _uiState.value.profiles.firstOrNull()
         if (targetProfile == null) {
             _uiState.value = _uiState.value.copy(error = "No profile available to connect")
@@ -372,6 +424,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun disconnect() {
+        if (_uiState.value.isPingRunning) { cancelPing(); return }
         connectionManager.disconnect()
     }
 
@@ -408,6 +461,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun connectChain(chain: ProfileChain) {
+        if (_uiState.value.isPingRunning) return
         viewModelScope.launch {
             val profiles = chain.profileIds.mapNotNull { profileRepository.getProfileById(it) }
             if (profiles.size != chain.profileIds.size) {
@@ -443,7 +497,38 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun selectCollection(profile: ServerProfile) {
+        if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
+        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
+        viewModelScope.launch { setActiveProfileUseCase(profile.id) }
+    }
+
+    fun moveCollection(source: ServerProfile, target: ServerProfile) {
+        if (_uiState.value.isPingRunning || !connectionManager.connectionState.value.isDisconnected) return
+        viewModelScope.launch {
+            val sourceKey = ProfileCollections.key(source)
+            val targetKey = ProfileCollections.key(target)
+            val id = target.collectionId.ifBlank { java.util.UUID.randomUUID().toString() }
+            profileRepository.updateProfiles(_uiState.value.profiles.filter { ProfileCollections.key(it) == sourceKey || ProfileCollections.key(it) == targetKey }.map {
+                it.copy(collectionId = id, collectionName = ProfileCollections.name(target))
+            })
+            _uiState.value = _uiState.value.copy(selectedCollection = id)
+        }
+    }
+
+    fun renameCollection(profile: ServerProfile, name: String) {
+        if (_uiState.value.isPingRunning || name.isBlank()) return
+        viewModelScope.launch {
+            val key = ProfileCollections.key(profile)
+            profileRepository.updateProfiles(_uiState.value.profiles.filter { ProfileCollections.key(it) == key }.map {
+                it.copy(collectionName = name.trim().take(120))
+            })
+        }
+    }
+
     fun setActiveProfile(profile: ServerProfile) {
+        if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
+        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
         val state = _uiState.value.connectionState
         val isConnectedOrConnecting = state is ConnectionState.Connected ||
                 state is ConnectionState.Connecting
@@ -484,6 +569,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun deleteProfile(profile: ServerProfile) {
+        if (_uiState.value.isPingRunning) return
         viewModelScope.launch {
             val result = deleteProfileUseCase(profile.id)
             if (result.isFailure) {
@@ -494,40 +580,54 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun previewDuplicateProfiles() {
+        if (_uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected) return
+        val protected = _uiState.value.chains.flatMap { it.profileIds }.toSet()
+        _uiState.value = _uiState.value.copy(duplicatePreview = ProfileDuplicates.plan(_uiState.value.profiles, protected))
+    }
     fun deleteDuplicateProfiles() {
+        if (_uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected) return
+        val preview = _uiState.value.duplicatePreview
+        if (preview.isEmpty()) return
         viewModelScope.launch {
-            val profiles = _uiState.value.profiles
-            val connectedId = (_uiState.value.connectionState as? ConnectionState.Connected)
-                ?.profile?.id
-
-            // Group by connection-relevant fields; keep the first (oldest by sortOrder) in each group
-            val seen = mutableSetOf<String>()
-            val duplicateIds = mutableListOf<Long>()
-            for (profile in profiles) {
-                val key = profile.duplicateKey()
-                if (!seen.add(key)) {
-                    // Skip the currently connected profile
-                    if (profile.id != connectedId) {
-                        duplicateIds.add(profile.id)
-                    }
+            try {
+                val protected = _uiState.value.chains.flatMap { it.profileIds }.toSet()
+                // Re-check all reviewed records before deleting any. A changed record requires a new preview.
+                for (m in preview) {
+                    check(m.remove.id !in protected)
+                    check(profileRepository.getProfileById(m.keep.id) == m.keep)
+                    check(profileRepository.getProfileById(m.remove.id) == m.remove)
+                    check(ProfileDuplicates.key(m.keep) == ProfileDuplicates.key(m.remove))
                 }
-            }
-            for (id in duplicateIds) {
-                deleteProfileUseCase(id)
+                check(profileRepository.deleteReviewedProfiles(preview.flatMap { listOf(it.keep,it.remove) }.distinctBy { it.id }, preview.map { it.remove.id }))
+                _uiState.value = _uiState.value.copy(duplicatePreview = emptyList())
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Profiles changed or deletion failed. Review duplicates again.", duplicatePreview = emptyList())
             }
         }
     }
 
-    private fun ServerProfile.duplicateKey(): String = listOf(
-        tunnelType.value, domain, dnsttPublicKey, dohUrl,
-        sshHost, sshPort, sshUsername, sshPassword, sshAuthType.name, sshPrivateKey,
-        resolvers.map { "${it.host}:${it.port}" }.sorted().joinToString(","),
-        naivePort, naiveUsername, naivePassword,
-        socksUsername.orEmpty(), socksPassword.orEmpty(),
-        torBridgeLines
-    ).joinToString("|")
+    fun deleteCollection(reviewed: List<ServerProfile>) {
+        if (_uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected || reviewed.isEmpty()) return
+        viewModelScope.launch {
+            val ids = reviewed.map { it.id }.toSet()
+            if (_uiState.value.chains.any { chain -> chain.profileIds.any { it in ids } }) {
+                _uiState.value = _uiState.value.copy(error = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.collection_chain_protected))
+                return@launch
+            }
+            try {
+                check(profileRepository.deleteReviewedProfiles(reviewed, ids.toList()))
+                if (_uiState.value.selectedCollection == ProfileCollections.key(reviewed.first())) {
+                    _uiState.value = _uiState.value.copy(selectedCollection = null)
+                }
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(error = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.collection_delete_failed))
+            }
+        }
+    }
 
     fun deleteAllProfiles() {
+        if (_uiState.value.isPingRunning) return
         viewModelScope.launch {
             // Disconnect first so no profile is protected from deletion
             if (_uiState.value.connectionState is ConnectionState.Connected ||
@@ -565,6 +665,16 @@ class MainViewModel @Inject constructor(
             profile, password, expirationDate, allowSharing, boundDeviceId, hideResolvers
         )
         _uiState.value = _uiState.value.copy(exportedJson = json)
+    }
+
+    fun exportCollection(profile: ServerProfile) {
+        try {
+            val data = configExporter.exportCollection(_uiState.value.profiles, profile)
+            _uiState.value = _uiState.value.copy(exportedJson = data)
+        } catch (e: Exception) {
+            val reason = e.message?.takeIf { it in setOf("No exportable profiles", "Collection contains profiles that do not allow sharing") } ?: "Collection export failed"
+            _uiState.value = _uiState.value.copy(error = reason)
+        }
     }
 
     fun exportAllProfiles() {
@@ -634,13 +744,21 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(pendingEncryptedImport = null)
     }
 
+    fun setImportCollectionName(name: String) {
+        _uiState.value.importPreview?.let { _uiState.value = _uiState.value.copy(importPreview = it.copy(collectionName = name.take(120))) }
+    }
+
     fun confirmImport() {
         val preview = _uiState.value.importPreview ?: return
         viewModelScope.launch {
             try {
-                for (profile in preview.profiles.reversed()) {
-                    saveProfileUseCase(profile)
+                val importedProfiles = preview.groups.flatMap { group ->
+                    val id = java.util.UUID.randomUUID().toString()
+                    val name = if (preview.groups.size == 1) preview.collectionName else group.name
+                    group.profiles.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
                 }
+                profileRepository.insertCollection(importedProfiles).firstOrNull()?.let { setActiveProfileUseCase(it) }
+                _uiState.value = _uiState.value.copy(selectedCollection = null)
                 _uiState.value = _uiState.value.copy(
                     importPreview = null,
                     error = null
@@ -726,7 +844,6 @@ class MainViewModel @Inject constructor(
         private val PING_UNSUPPORTED_TYPES = setOf(
             TunnelType.SNOWFLAKE, TunnelType.SOAR, TunnelType.SOAR_SSH
         )
-        private const val E2E_TEST_URL = "http://www.gstatic.com/generate_204"
         /** Per-resolver E2E test timeout. With HTTP verification removed and
          *  the warmup SOCKS5 CONNECT dropped, the only significant cost is
          *  the Noise/QUIC handshake (~2–5s typical). 8s leaves ~3s headroom
@@ -739,64 +856,255 @@ class MainViewModel @Inject constructor(
         private const val E2E_TOTAL_BUDGET_MS = 15000L
     }
 
-    fun pingAllProfiles() {
-        if (_uiState.value.isPingRunning) {
-            cancelPing()
+    private fun selectedMembers(): List<ServerProfile> {
+        val state = _uiState.value
+        val key = state.selectedCollection ?: state.activeProfile?.let { ProfileCollections.key(it) }
+            ?: state.profiles.firstOrNull()?.let { ProfileCollections.key(it) }
+        return state.profiles.filter { ProfileCollections.key(it) == key }
+    }
+
+    fun pingAllProfiles() { runCollection(connectAfter = false) }
+
+    fun pingCollection(profile: ServerProfile) {
+        if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
+        _uiState.value = _uiState.value.copy(selectedCollection = ProfileCollections.key(profile))
+        runCollection(connectAfter = false)
+    }
+
+    private val regroupStore get() = appContext.getSharedPreferences("rovunet_regroup", android.content.Context.MODE_PRIVATE)
+    fun refreshRegroupUndo() { _uiState.value = _uiState.value.copy(regroupUndoAvailable = regroupStore.contains("snapshot")) }
+    fun undoRegroup() {
+        if (_uiState.value.isLoading || _uiState.value.regroupBusy || _uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected) return
+        val snapshot = regroupStore.getString("snapshot", null) ?: return
+        _uiState.value = _uiState.value.copy(regroupBusy = true)
+        viewModelScope.launch {
+            try {
+                val restored = app.slipnet.domain.model.RegroupHistory.restore(snapshot, _uiState.value.profiles)
+                profileRepository.updateProfiles(restored)
+                check(regroupStore.edit().remove("snapshot").commit())
+                _uiState.value = _uiState.value.copy(regroupUndoAvailable = false, selectedCollection = null)
+            } catch (_: Exception) { _uiState.value = _uiState.value.copy(error = "Could not undo regrouping; later group changes are preserved") }
+            finally { _uiState.value = _uiState.value.copy(regroupBusy = false) }
+        }
+    }
+    fun previewRegroup() {
+        if (_uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected) return
+        val profiles = _uiState.value.profiles.map { it.copy(collectionId = "") }
+        _uiState.value = _uiState.value.copy(regroupPreview = CollectionInference.plan(profiles), regroupUndoAvailable = regroupStore.contains("snapshot"))
+    }
+    fun cancelRegroup() { _uiState.value = _uiState.value.copy(regroupPreview = null) }
+    fun confirmRegroup() {
+        val groups = _uiState.value.regroupPreview ?: return
+        if (_uiState.value.isLoading || _uiState.value.regroupBusy || _uiState.value.isPingRunning || !_uiState.value.connectionState.isDisconnected) return
+        _uiState.value = _uiState.value.copy(regroupBusy = true)
+        viewModelScope.launch {
+            try {
+                val current = _uiState.value.profiles.associateBy { it.id }
+                val updated = groups.flatMap { group ->
+                    val id = java.util.UUID.randomUUID().toString()
+                    group.profiles.mapNotNull { p -> current[p.id]?.copy(collectionId = id, collectionName = group.name) }
+                }
+                val snapshot = app.slipnet.domain.model.RegroupHistory.encode(current.values.toList(), updated)
+                check(regroupStore.edit().putString("snapshot", snapshot).commit()) { "Could not save undo" }
+                profileRepository.updateProfiles(updated)
+                _uiState.value = _uiState.value.copy(regroupPreview = null, selectedCollection = null, regroupUndoAvailable = true)
+            } catch (_: Exception) { _uiState.value = _uiState.value.copy(error = "Could not regroup profiles") }
+            finally { _uiState.value = _uiState.value.copy(regroupBusy = false) }
+        }
+    }
+
+    fun dismissCollectionPrompt() {
+        _uiState.value = _uiState.value.copy(collectionPrompt = false, collectionProgress = "")
+    }
+
+    fun acceptCollectionPrompt() {
+        if (_uiState.value.isPingRunning) return
+        val connect = _uiState.value.collectionConnect
+        _uiState.value = _uiState.value.copy(collectionPrompt = false)
+        runCollection(connectAfter = connect, dnsOnly = true)
+    }
+
+    private fun runCollection(connectAfter: Boolean, dnsOnly: Boolean = false) {
+        if (_uiState.value.isPingRunning) { cancelPing(); return }
+        if (!connectionManager.connectionState.value.isDisconnected) {
+            _uiState.value = _uiState.value.copy(error = "Disconnect the VPN before testing a collection")
             return
         }
-
-        val profiles = _uiState.value.profiles
-        if (profiles.isEmpty()) return
-
-        val skipped = PING_UNSUPPORTED_TYPES
-        val initial = profiles.associate { profile ->
-            profile.id to if (profile.tunnelType in skipped) {
-                PingResult.Skipped
-            } else {
-                PingResult.Pending
+        if (!_uiState.value.proxyOnlyMode && android.net.VpnService.prepare(appContext) != null) {
+            _uiState.value = _uiState.value.copy(error = "Grant VPN permission first")
+            return
+        }
+        val members = selectedMembers().filter { !it.isExpired && it.tunnelType.isAvailable() }
+        if (members.isEmpty()) { _uiState.value = _uiState.value.copy(error = "Select a collection with an available, unexpired profile"); return }
+        val candidates = ProfileCollections.ordered(members, _uiState.value.pingResults).filter { ProfileCollections.isDns(it) == dnsOnly }
+        val originalSelection = _uiState.value.activeProfile?.id
+        _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
+            selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",
+            pingResults = _uiState.value.pingResults + candidates.associate { it.id to PingResult.Pending })
+        pingJob = viewModelScope.launch {
+            var passed = false
+            try {
+                passed = app.slipnet.domain.model.CollectionPhase.run(candidates, connectAfter,
+                    if (dnsOnly) 180_000L else 90_000L,
+                    onProgress = { index, p -> _uiState.value = _uiState.value.copy(collectionProgress = "${index + 1}/${candidates.size} · ${p.name}") },
+                    onResult = { p, result -> _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (p.id to result)) },
+                    probe = { p -> probeThroughService(p, keepConnected = connectAfter, profileResolvers = dnsOnly) })
+                if (!passed && dnsOnly) passed = discoverCollectionDns(candidates, connectAfter)
+                if (!passed && !dnsOnly && members.any { ProfileCollections.isDns(it) }) {
+                    _uiState.value = _uiState.value.copy(collectionPrompt = true)
+                } else if (!passed) {
+                    _uiState.value = _uiState.value.copy(error = "No verified connection found within the test budget. Try again or edit this collection.")
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Collection test failed; no configuration was removed")
+            } finally {
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    if (connectionManager.connectionState.value.isDisconnected) {
+                        if (originalSelection != null) profileRepository.setActiveProfile(originalSelection) else profileRepository.clearActiveProfile()
+                    }
+                    _uiState.value = _uiState.value.copy(isPingRunning = false, collectionProgress = "",
+                        pingResults = _uiState.value.pingResults.mapValues { (_, v) -> if (v is PingResult.Pending || v is PingResult.Testing) PingResult.Skipped else v })
+                    sortProfilesByPing()
+                }
             }
         }
-        _uiState.value = _uiState.value.copy(pingResults = initial, isPingRunning = true)
+    }
 
+    /** Bounded DNS preflight across all selected servers; real VPN tests stay serialized.
+     * A DNS reply never becomes a successful ping. Originals remain unchanged.
+     */
+    private suspend fun discoverCollectionDns(profiles: List<ServerProfile>, connectAfter: Boolean): Boolean = coroutineScope {
+        val eligible = profiles.filter { it.dnsTransport == app.slipnet.domain.model.DnsTransport.UDP && !it.authoritativeMode && !it.dnsttAuthoritative }
+        if (eligible.isEmpty()) return@coroutineScope false
+        val hosts = resolverScannerRepository.getDefaultResolversShuffled().distinct().take(128)
+        val tasks = Channel<Pair<ServerProfile, String>>(16)
+        val ready = Channel<ServerProfile>(8)
+        val producer = launch {
+            try { for (host in hosts) for (p in eligible) tasks.send(p to host) } finally { tasks.close() }
+        }
+        val workers = List(4) { launch(Dispatchers.IO) {
+            for ((p, host) in tasks) {
+                val alive = try { resolverScannerRepository.isResolverAlive(host, 53, p.domain, 2000) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
+                if (alive) ready.send(p.copy(resolvers = listOf(DnsResolver(host))))
+            }
+        } }
+        val closer = launch { workers.forEach { it.join() }; ready.close() }
+        var passed = false
+        try {
+            kotlinx.coroutines.withTimeoutOrNull(180_000) {
+                val attempts = mutableMapOf<Long, Int>()
+                for (candidate in ready) {
+                    if ((attempts[candidate.id] ?: 0) >= 3) continue
+                    attempts[candidate.id] = (attempts[candidate.id] ?: 0) + 1
+                    _uiState.value = _uiState.value.copy(collectionProgress = "DNS discovery · ${candidate.name}")
+                    val result = probeThroughService(candidate, keepConnected = connectAfter, profileResolvers = true)
+                    _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (candidate.id to result))
+                    if (result is PingResult.Success && result.verified) {
+                        // Remember only in this view-model session, never overwrite imported resolvers.
+                        discoveredProfiles[candidate.id] = candidate
+                        passed = true
+                        if (connectAfter) break
+                        attempts[candidate.id] = 3
+                    }
+                }
+            }
+        } finally {
+            producer.cancel(); workers.forEach { it.cancel() }; closer.cancel()
+            withContext(kotlinx.coroutines.NonCancellable) { producer.join(); workers.forEach { it.join() }; closer.join() }
+        }
+        passed
+    }
+
+    private val discoveredProfiles = mutableMapOf<Long, ServerProfile>()
+
+    private fun startRealTests(profiles: List<ServerProfile>) {
+        if (profiles.isEmpty() || _uiState.value.isPingRunning) return
+        if (!_uiState.value.proxyOnlyMode && android.net.VpnService.prepare(appContext) != null) {
+            _uiState.value = _uiState.value.copy(error = "Connect once and grant Android VPN permission, then disconnect and run the HTTPS test.")
+            return
+        }
+        val originalSelection = _uiState.value.activeProfile?.id
+        _uiState.value = _uiState.value.copy(isPingRunning = true,
+            pingResults = _uiState.value.pingResults + profiles.associate { it.id to PingResult.Pending })
         pingJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers()
-            )
             try {
-                val tcpProfiles = profiles.filter {
-                    it.tunnelType !in skipped && it.tunnelType !in E2E_TUNNEL_TYPES
+                for (profile in profiles) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to PingResult.Testing("Connecting…")))
+                    val result = probeThroughService(profile)
+                    _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to result))
                 }
-                val e2eProfiles = profiles.filter {
-                    it.tunnelType in E2E_TUNNEL_TYPES
-                }
-
-                // Launch all TCP pings in parallel
-                val tcpJobs = tcpProfiles.map { profile ->
-                    launch {
-                        val result = pingProfileTcp(profile)
-                        _uiState.value = _uiState.value.copy(
-                            pingResults = _uiState.value.pingResults + (profile.id to result)
-                        )
-                    }
-                }
-
-                // E2E tests run sequentially: Slipstream still uses the singleton
-                // native lib; DNSTT/NoizDNS/Vaydns now use the isolated variant
-                // and *could* run in parallel, but a mixed list is simplest to
-                // schedule one-at-a-time.
-                val e2eJob = launch {
-                    for (profile in e2eProfiles) {
-                        val result = testProfileE2e(profile)
-                        _uiState.value = _uiState.value.copy(
-                            pingResults = _uiState.value.pingResults + (profile.id to result)
-                        )
-                    }
-                }
-
-                tcpJobs.forEach { it.join() }
-                e2eJob.join()
             } finally {
-                _uiState.value = _uiState.value.copy(isPingRunning = false)
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    if (connectionManager.connectionState.value.isDisconnected) {
+                        if (originalSelection != null) profileRepository.setActiveProfile(originalSelection) else profileRepository.clearActiveProfile()
+                    }
+                    _uiState.value = _uiState.value.copy(isPingRunning = false,
+                        pingResults = _uiState.value.pingResults.mapValues { (_, v) -> if (v is PingResult.Pending || v is PingResult.Testing) PingResult.Skipped else v })
+                    sortProfilesByPing()
+                }
+            }
+        }
+    }
+
+    private suspend fun probeThroughService(profile: ServerProfile, keepConnected: Boolean = false, profileResolvers: Boolean = false): PingResult {
+        val before = connectionManager.connectionState.value
+        val reuse = before is ConnectionState.Connected && before.profile.id == profile.id && before.chainId < 0
+        if (!reuse && !before.isDisconnected) return PingResult.Error("Disconnect VPN first")
+        if (profile.isExpired) return PingResult.Error("Expired")
+        val start = System.nanoTime()
+        var owned = false
+        var verified = false
+        try {
+            if (!reuse) {
+                owned = true
+                connectionManager.connect(profile, profileResolvers)
+                val state = kotlinx.coroutines.withTimeout(if (ProfileCollections.isDns(profile) || profile.tunnelType == TunnelType.SNOWFLAKE) 45000 else 20000) {
+                    connectionManager.connectionState.first { it is ConnectionState.Connected || it is ConnectionState.Error || it is ConnectionState.Disconnected }
+                }
+                check(state is ConnectionState.Connected && state.profile.id == profile.id && state.chainId < 0) { "Connection failed" }
+            }
+            val setup = if (reuse) 0L else (System.nanoTime() - start) / 1_000_000
+            val port = preferencesDataStore.proxyListenPort.first()
+            val auth = preferencesDataStore.proxyAuthEnabled.first()
+            val user = if (auth) preferencesDataStore.proxyAuthUsername.first() else null
+            val pass = if (auth) preferencesDataStore.proxyAuthPassword.first() else null
+            val samples = mutableListOf<Long?>()
+            var lastFailure = "Unknown probe failure"
+            repeat(3) { n ->
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                val current = connectionManager.connectionState.value
+                check(current is ConnectionState.Connected && current.profile.id == profile.id && current.chainId < 0) { "Connection changed during test" }
+                _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to PingResult.Testing("HTTPS ${n + 1}/3")))
+                val latency = withContext(Dispatchers.IO) {
+                    try { app.slipnet.core.TunnelProbe.measure(port, user, pass) }
+                    catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch (e: Exception) { lastFailure = app.slipnet.core.ProbeFailure.describe(e); app.slipnet.util.AppLog.w("CollectionProbe", "Sample ${n + 1}/3: $lastFailure"); null }
+                }
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                samples += latency
+                delay(300)
+            }
+            val summary = app.slipnet.core.ProbeSummary.of(samples) ?: return PingResult.Error("HTTPS failed 0/3: $lastFailure")
+            verified = true
+            return PingResult.Success(summary.medianMs, true, summary.successes, summary.attempts, summary.jitterMs, setup)
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            return PingResult.Error("Connection timed out")
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (e: Exception) {
+            val reason = app.slipnet.core.ProbeFailure.describe(e)
+            app.slipnet.util.AppLog.w("CollectionProbe", reason)
+            return PingResult.Error(reason)
+        } finally {
+            if (owned && !(keepConnected && verified)) withContext(kotlinx.coroutines.NonCancellable) {
+                val current = connectionManager.connectionState.value
+                if (current !is ConnectionState.Connected || current.profile.id == profile.id) {
+                    connectionManager.disconnect()
+                    kotlinx.coroutines.withTimeoutOrNull(15000) { connectionManager.connectionState.first { it is ConnectionState.Disconnected } }
+                }
             }
         }
     }
@@ -807,7 +1115,7 @@ class MainViewModel @Inject constructor(
             return
         }
 
-        val profiles = _uiState.value.profiles
+        val profiles = selectedMembers()
         if (profiles.isEmpty()) return
 
         val skipped = PING_UNSUPPORTED_TYPES
@@ -818,7 +1126,7 @@ class MainViewModel @Inject constructor(
                 PingResult.Pending
             }
         }
-        _uiState.value = _uiState.value.copy(pingResults = initial, isPingRunning = true)
+        _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + initial, isPingRunning = true)
 
         pingJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -885,35 +1193,17 @@ class MainViewModel @Inject constructor(
     }
 
     fun pingSingleProfile(profile: ServerProfile) {
-        if (profile.tunnelType in PING_UNSUPPORTED_TYPES) return
-
-        _uiState.value = _uiState.value.copy(
-            pingResults = _uiState.value.pingResults + (profile.id to PingResult.Pending)
-        )
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers()
-            )
-            val result = if (profile.tunnelType in E2E_TUNNEL_TYPES) {
-                testProfileE2e(profile)
-            } else {
-                pingProfileTcp(profile)
-            }
-            _uiState.value = _uiState.value.copy(
-                pingResults = _uiState.value.pingResults + (profile.id to result)
-            )
-        }
+        if (_uiState.value.isPingRunning) return
+        startRealTests(listOf(profile))
     }
 
     fun cancelPing() {
         pingJob?.cancel()
-        pingJob = null
-        _uiState.value = _uiState.value.copy(isPingRunning = false)
+        // Keep the running flag until owned service cleanup has finished.
     }
 
     fun clearPingResults() {
-        _uiState.value = _uiState.value.copy(pingResults = emptyMap(), pingingViaGlobalDns = emptyList())
+        _uiState.value = _uiState.value.copy(pingResults = emptyMap(), pingingViaGlobalDns = emptyList(), sortByHttps = false)
     }
 
     /**
@@ -922,106 +1212,14 @@ class MainViewModel @Inject constructor(
      * and sit at the bottom. Mirrors [moveProfile] by updating both in-memory
      * state and DB so the new order survives restarts.
      */
-    fun sortProfilesByPing() {
+    fun sortProfilesByPing(reliability: Boolean = false) {
         val current = _uiState.value.profiles
         val pings = _uiState.value.pingResults
-        val sorted = current.sortedBy { profile ->
-            (pings[profile.id] as? PingResult.Success)?.latencyMs ?: Long.MAX_VALUE
-        }
-        if (sorted == current) return
-        _uiState.value = _uiState.value.copy(profiles = sorted)
+        val sorted = app.slipnet.domain.model.ProfileRanking.sort(current, pings, reliability)
+        if (sorted == current) { _uiState.value = _uiState.value.copy(sortByHttps = true, sortByReliability = reliability); return }
+        _uiState.value = _uiState.value.copy(profiles = sorted, sortByHttps = true, sortByReliability = reliability)
         viewModelScope.launch {
             profileRepository.updateProfileOrder(sorted.map { it.id })
-        }
-    }
-
-    /**
-     * E2E test for DNS-tunneled profiles: starts a real tunnel with the first resolver,
-     * performs a handshake and HTTP/SSH verification, then reports total latency.
-     */
-    private suspend fun testProfileE2e(profile: ServerProfile): PingResult {
-        // Honor Global DNS override so the test mirrors what Connect uses.
-        val resolvers = effectiveResolvers(profile)
-        if (resolvers.isEmpty()) return PingResult.Error("No resolver")
-
-        // Try resolvers in order — if the first is geo-blocked / rate-limited
-        // right now, the profile can still work through a later one, so we
-        // shouldn't mark the whole profile as failed on the first resolver's
-        // error. Stop at the first success; otherwise surface the last error.
-        // Hard-bound total time via E2E_TOTAL_BUDGET_MS so a profile with many
-        // dead resolvers doesn't stall the ping job: remaining resolvers are
-        // skipped once the budget is exhausted.
-        val budgetStart = System.currentTimeMillis()
-        var lastError = "Failed"
-        for ((index, resolver) in resolvers.withIndex()) {
-            val elapsed = System.currentTimeMillis() - budgetStart
-            val remainingBudget = E2E_TOTAL_BUDGET_MS - elapsed
-            if (remainingBudget <= 1000L) {
-                lastError = "Timeout (${index} of ${resolvers.size} resolvers tried)"
-                break
-            }
-            val perResolverTimeout = minOf(E2E_TIMEOUT_MS, remainingBudget)
-            try {
-                // Use the *isolated* variant: spins up an ephemeral DNSTT/NoizDNS/
-                // Vaydns client on a unique port instead of reusing the singleton
-                // DnsttBridge / DnsttSocksBridge that the live VPN session owns.
-                // Fixes the flaky "Bridge start failed" / port-collision errors
-                // seen when testing multiple DNS-tunnel profiles sequentially.
-                val result: E2eTestResult = resolverScannerRepository.testResolverE2eIsolated(
-                    resolverHost = resolver.host,
-                    resolverPort = resolver.port,
-                    profile = profile,
-                    testUrl = E2E_TEST_URL,
-                    timeoutMs = perResolverTimeout,
-                    // fullVerification=false: stop after the tunnel warmup
-                    // handshake (Noise + KCP + smux + remote Dante SOCKS5
-                    // CONNECT for non-SSH, SSH banner read for SSH variants).
-                    // That already requires bidirectional data flow through
-                    // the entire tunnel stack — strong enough proof of
-                    // "reachability" without the false negatives caused by
-                    // fetching gstatic.com over a 12s budget.
-                    fullVerification = false
-                ) { phase ->
-                    val prefix = if (resolvers.size > 1) "[${index + 1}/${resolvers.size}] " else ""
-                    _uiState.value = _uiState.value.copy(
-                        pingResults = _uiState.value.pingResults + (profile.id to PingResult.Testing(prefix + phase))
-                    )
-                }
-
-                if (result.success) {
-                    return PingResult.Success(result.totalMs)
-                }
-                lastError = result.errorMessage?.take(25) ?: "Failed"
-            } catch (e: Exception) {
-                lastError = e.message?.take(25) ?: "Failed"
-            }
-        }
-        return PingResult.Error(lastError)
-    }
-
-    /**
-     * Simple TCP ping for non-tunnel profiles (SSH, Naive, DOH).
-     */
-    private suspend fun pingProfileTcp(profile: ServerProfile): PingResult {
-        val target = getTcpTarget(profile) ?: return PingResult.Error("No target")
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val socket = Socket()
-                val start = System.nanoTime()
-                socket.connect(InetSocketAddress(target.first, target.second), 5000)
-                val elapsed = (System.nanoTime() - start) / 1_000_000
-                socket.close()
-                PingResult.Success(elapsed)
-            } catch (e: Exception) {
-                val msg = when (e) {
-                    is java.net.SocketTimeoutException -> "Timeout"
-                    is java.net.ConnectException -> "Refused"
-                    is java.net.UnknownHostException -> "DNS failed"
-                    else -> e.message?.take(20) ?: "Failed"
-                }
-                PingResult.Error(msg)
-            }
         }
     }
 

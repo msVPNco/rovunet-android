@@ -62,6 +62,16 @@ class MainActivity : ComponentActivity() {
         // Notification permission result - continue regardless
     }
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val lang = newBase.getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", null)
+        if (lang == null) { super.attachBaseContext(newBase); return }
+        val locale = java.util.Locale.forLanguageTag(if (lang == "zh") "zh-Hans" else lang)
+        val configuration = android.content.res.Configuration(newBase.resources.configuration)
+        configuration.setLocale(locale)
+        configuration.setLayoutDirection(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -70,7 +80,7 @@ class MainActivity : ComponentActivity() {
         requestNotificationPermissionIfNeeded()
 
         setContent {
-            val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.SYSTEM)
+            val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.LIGHT)
 
             SlipstreamTheme(darkMode = darkMode) {
                 Surface(
@@ -91,7 +101,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleDeepLink(intent: Intent?) {
         val uri = intent?.data?.toString()
-        if (uri != null && (uri.startsWith("slipnet://") || uri.startsWith("slipnet-enc://") || uri.startsWith("vless://"))) {
+        if (uri != null && (app.slipnet.data.export.ConfigSchemes.accepts(uri))) {
             _deepLinkUri.value = uri
         }
     }

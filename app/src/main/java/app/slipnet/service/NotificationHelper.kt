@@ -19,6 +19,8 @@ import javax.inject.Singleton
 class NotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val localized get() = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+
     companion object {
         const val VPN_NOTIFICATION_ID = 1
         const val RECONNECT_NOTIFICATION_ID = 2
@@ -81,13 +83,13 @@ class NotificationHelper @Inject constructor(
         when (state) {
             is ConnectionState.Disconnected -> {
                 builder
-                    .setContentTitle("SlipNet")
-                    .setContentText("Disconnected")
+                    .setContentTitle("Rovunet")
+                    .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, "Disconnected"))
             }
             is ConnectionState.Connecting -> {
                 builder
-                    .setContentTitle("SlipNet")
-                    .setContentText("Connecting...")
+                    .setContentTitle("Rovunet")
+                    .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, "Connecting..."))
                     .setProgress(0, 0, true)
             }
             is ConnectionState.Connected -> {
@@ -114,7 +116,7 @@ class NotificationHelper @Inject constructor(
                     val downLine = "\u2193 ${trafficStats.formatBytesReceived()}  ${TrafficStats.formatSpeed(downloadSpeed)}"
                     "$upLine\n$downLine"
                 } else {
-                    if (isProxyOnly) "Proxy is active" else "VPN is active"
+                    if (isProxyOnly) app.slipnet.presentation.theme.RovunetStrings.text(context, "Proxy is active") else app.slipnet.presentation.theme.RovunetStrings.text(context, "VPN is active")
                 }
 
                 if (hasTraffic) {
@@ -122,29 +124,29 @@ class NotificationHelper @Inject constructor(
                 }
 
                 builder
-                    .setContentTitle("Connected: ${state.profile.name}")
+                    .setContentTitle(localized.getString(R.string.notification_connected, state.profile.name))
                     .setContentText(bodyText)
                     .addAction(
                         R.drawable.ic_shield,
-                        "Reconnect",
+                        localized.getString(R.string.rv_reconnect),
                         reconnectPendingIntent
                     )
                     .addAction(
                         R.drawable.ic_shield,
-                        "Disconnect",
+                        app.slipnet.presentation.theme.RovunetStrings.text(context, "Disconnect"),
                         disconnectPendingIntent
                     )
             }
             is ConnectionState.Disconnecting -> {
                 builder
-                    .setContentTitle("SlipNet")
-                    .setContentText("Disconnecting...")
+                    .setContentTitle("Rovunet")
+                    .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, "Disconnecting..."))
                     .setProgress(0, 0, true)
             }
             is ConnectionState.Error -> {
                 builder
-                    .setContentTitle("SlipNet")
-                    .setContentText("Error: ${state.message}")
+                    .setContentTitle("Rovunet")
+                    .setContentText(localized.getString(R.string.notification_error, state.message))
             }
         }
 
@@ -172,14 +174,14 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Traffic blocked \u2014 Kill switch active")
-            .setContentText("Reconnecting to $profileName\u2026")
+            .setContentTitle(localized.getString(R.string.rv_traffic_blocked_kill_switch_active_1b0a8a))
+            .setContentText(localized.getString(R.string.notification_reconnecting, profileName))
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(R.drawable.ic_shield, "Disconnect", disconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, app.slipnet.presentation.theme.RovunetStrings.text(context, "Disconnect"), disconnectPendingIntent)
             .build()
     }
 
@@ -208,14 +210,14 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Reconnecting to $profileName\u2026")
-            .setContentText("Attempt $attempt of $maxAttempts")
+            .setContentTitle(localized.getString(R.string.notification_reconnecting, profileName))
+            .setContentText(localized.getString(R.string.notification_attempt, attempt, maxAttempts))
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(R.drawable.ic_shield, "Cancel", disconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, app.slipnet.presentation.theme.RovunetStrings.text(context, "Cancel"), disconnectPendingIntent)
             .build()
     }
 
@@ -244,14 +246,14 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Waiting for network\u2026")
-            .setContentText("Attempt $attempt of $maxAttempts \u2014 ${profileName.ifEmpty { "VPN" }}")
+            .setContentTitle(localized.getString(R.string.rv_waiting_for_network_d1c557))
+            .setContentText(localized.getString(R.string.notification_attempt, attempt, maxAttempts) + " — " + profileName.ifEmpty { "VPN" })
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .addAction(R.drawable.ic_shield, "Cancel", disconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, app.slipnet.presentation.theme.RovunetStrings.text(context, "Cancel"), disconnectPendingIntent)
             .build()
     }
 
@@ -281,10 +283,10 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Connection Lost")
-            .setContentText(message)
+            .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "Connection Lost"))
+            .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, message))
             .setContentIntent(mainPendingIntent)
-            .addAction(R.drawable.ic_shield, "Reconnect", reconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, localized.getString(R.string.rv_reconnect), reconnectPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -307,8 +309,8 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Smart Connect: Trying $transportName...")
-            .setContentText("Attempt $attempt of $total")
+            .setContentTitle(localized.getString(R.string.notification_smart, transportName))
+            .setContentText(localized.getString(R.string.notification_attempt, attempt, total))
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -344,10 +346,10 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("VPN Disconnected")
-            .setContentText("Connection to $profileName was interrupted")
+            .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "VPN Disconnected"))
+            .setContentText(localized.getString(R.string.notification_interrupted, profileName))
             .setContentIntent(mainPendingIntent)
-            .addAction(R.drawable.ic_shield, "Reconnect", reconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, localized.getString(R.string.rv_reconnect), reconnectPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -376,10 +378,10 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle("Tunnel not passing traffic")
-            .setContentText("The VPN tunnel appears to be broken")
+            .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "Tunnel not passing traffic"))
+            .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, "The VPN tunnel appears to be broken"))
             .setContentIntent(mainPendingIntent)
-            .addAction(R.drawable.ic_shield, "Reconnect", reconnectPendingIntent)
+            .addAction(R.drawable.ic_shield, localized.getString(R.string.rv_reconnect), reconnectPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
@@ -414,21 +416,21 @@ class NotificationHelper @Inject constructor(
         )
 
         val title = when {
-            isE2eRunning && !isScanning -> "Testing tunnel connections"
-            isE2eRunning -> "Scanning & testing resolvers"
-            else -> "Scanning DNS resolvers"
+            isE2eRunning && !isScanning -> localized.getString(R.string.notification_testing)
+            isE2eRunning -> localized.getString(R.string.notification_scanning_testing)
+            else -> localized.getString(R.string.notification_scanning)
         }
         val text = when {
             isE2eRunning && !isScanning && e2eTotalCount > 0 ->
-                "$e2eTestedCount / $e2eTotalCount tested  \u2022  $e2ePassedCount passed"
+                localized.getString(R.string.notification_test_count, e2eTestedCount, e2eTotalCount, e2ePassedCount)
             totalCount > 0 ->
-                "$scannedCount / $totalCount checked  \u2022  $workingCount working"
-            else -> "Starting scan\u2026"
+                localized.getString(R.string.notification_scan_count, scannedCount, totalCount, workingCount)
+            else -> localized.getString(R.string.notification_scan_start)
         }
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_SCAN_STATUS)
             .setSmallIcon(R.drawable.ic_search)
-            .setContentTitle(title)
+            .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, title))
             .setContentText(text)
             .setContentIntent(mainPendingIntent)
             .setOngoing(true)
@@ -436,7 +438,7 @@ class NotificationHelper @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setProgress(totalCount, scannedCount, totalCount == 0)
-            .addAction(R.drawable.ic_search, "Stop", stopPendingIntent)
+            .addAction(R.drawable.ic_search, app.slipnet.presentation.theme.RovunetStrings.text(context, "Stop"), stopPendingIntent)
             .build()
     }
 
@@ -456,8 +458,8 @@ class NotificationHelper @Inject constructor(
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle(title)
-            .setContentText(message)
+            .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, title))
+            .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, message))
             .setContentIntent(mainPendingIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

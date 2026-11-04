@@ -211,6 +211,10 @@ data class ProfileEntity(
     val rrSpreadCount: Int = 3,
 
     // VLESS fields
+    @ColumnInfo(defaultValue = "''")
+    val coreLink: String = "",
+    @ColumnInfo(defaultValue = "''") val collectionId: String = "",
+    @ColumnInfo(defaultValue = "''") val collectionName: String = "",
     @ColumnInfo(name = "vless_uuid", defaultValue = "")
     val vlessUuid: String = "",
 

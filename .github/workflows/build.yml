@@ -2,15 +2,72 @@ name: APK Build
 
 on:
   push:
+    branches: ['**']
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 env:
   OPENSSL_VERSION: "3.0.15"
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      KOTLIN_JARS: ${{ runner.temp }}/kotlin
+      XRAY: ${{ runner.temp }}/xray
+      CORE_LAUNCHER: ${{ runner.temp }}/core-launcher
+      TLS_TARGET: ${{ runner.temp }}/tls-target
+      TEST_TLS_STORE: ${{ runner.temp }}/probe.p12
+      ROVUNET_PANEL_TEXT_FIXTURE: ${{ runner.temp }}/panel-text.txt
+      ROVUNET_ANDROID_FIXTURE: ${{ runner.temp }}/panel-fixture.txt
+      CORE_TEST_JAR: ${{ runner.temp }}/tests.jar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+      - name: Read versioned manager revision
+        id: manager-ref
+        run: |
+          ref=$(cat tools/veyra/MANAGER_REF)
+          [[ "$ref" =~ ^[0-9a-f]{40}$ ]]
+          echo "value=$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/kotlin
+          key: kotlin-${{ runner.os }}-${{ hashFiles('tools/veyra/jars.sha256') }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: xray-${{ runner.os }}-${{ hashFiles('tools/veyra/prepare-jvm-ci.sh') }}
+      - uses: actions/checkout@v4
+        with:
+          repository: msVPNco/rovunet-panel
+          ref: ${{ steps.manager-ref.outputs.value }}
+          path: panel-contract
+      - name: Prepare pinned core and JVM tooling
+        run: tools/veyra/prepare-jvm-ci.sh
+      - name: Generate actual Go exporter fixture and validate coreplan
+        working-directory: panel-contract
+        run: go test ./internal/clientcfg ./internal/coreplan ./internal/handlers -count=1
+      - name: JVM, TLS, lifecycle and contract tests
+        run: tools/veyra/run-jvm-tests.sh
+      - name: Loopback integration
+        run: |
+          python3 -m pip install cryptography==46.0.3
+          python3 tools/veyra/integration.py
+
   build:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
@@ -139,17 +196,20 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           echo "CONFIG_ENCRYPTION_KEY=$CONFIG_ENCRYPTION_KEY" >> local.properties
 
+      - name: Prepare verified Full native engines
+        run: python3 tools/veyra/prepare-native.py
+
       - name: Build Full Release APK
-        run: ./gradlew assembleFullRelease --no-daemon
+        run: ./gradlew assembleFullRelease -PveyraPrebuiltNative=true --no-daemon
 
       - name: Build Lite Release APK
-        run: ./gradlew assembleLiteRelease --no-daemon
+        run: ./gradlew assembleLiteRelease -PveyraPrebuiltNative=true --no-daemon
 
       - name: Collect release APKs
         run: |
           mkdir -p release-apks
-          cp app/build/outputs/apk/full/release/SlipNet-*-full-*.apk release-apks/ 2>/dev/null || true
-          cp app/build/outputs/apk/lite/release/SlipNet-*-lite-*.apk release-apks/ 2>/dev/null || true
+          cp app/build/outputs/apk/full/release/*.apk release-apks/ 2>/dev/null || true
+          cp app/build/outputs/apk/lite/release/*.apk release-apks/ 2>/dev/null || true
 
       - name: Upload Release APKs
         uses: actions/upload-artifact@v4

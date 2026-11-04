@@ -113,6 +113,9 @@ data class ServerProfile(
     val resolverMode: ResolverMode = ResolverMode.ROUND_ROBIN,
     // Round-robin spread count: how many resolvers each query is sent to in fast mode (1=no duplicates, default 3)
     val rrSpreadCount: Int = 3,
+    val collectionId: String = "",
+    val collectionName: String = "",
+    val coreLink: String = "",
     // VLESS fields (CDN-based VLESS tunnel with SNI fragmentation)
     val vlessUuid: String = "",
     val vlessSecurity: String = "tls",
@@ -174,7 +177,9 @@ data class ServerProfile(
     val soarDiscoveryCustom: String = "",
     // Soar: TCP/53 paths — "auto" (TCP for resolvers whose UDP never answers),
     // "on" (TCP alongside UDP), "only" (TCP alone), "off"
-    val soarTcpMode: String = "auto"
+    val soarTcpMode: String = "auto",
+    // Ephemeral panel heading hint; never persisted or exported as credentials.
+    val importAccountHint: String = ""
 ) {
     val isExpired: Boolean get() = expirationDate > 0 && System.currentTimeMillis() > expirationDate
 }
@@ -211,6 +216,7 @@ enum class TunnelType(val value: String, val displayName: String) {
     SOCKS5("socks5", "SOCKS5 Proxy"),
     VAYDNS("vaydns", "VayDNS"),
     VAYDNS_SSH("vaydns_ssh", "VayDNS + SSH"),
+    XRAY("xray", "Xray · REALITY / XHTTP / HY2 / WG"),
     VLESS("vless", "VLESS"),
     SOAR("soar", "Soar"),
     SOAR_SSH("soar_ssh", "Soar + SSH");

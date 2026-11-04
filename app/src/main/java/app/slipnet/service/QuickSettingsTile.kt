@@ -53,37 +53,37 @@ class QuickSettingsTile : TileService() {
             when (state) {
                 is ConnectionState.Disconnected -> {
                     tile.state = Tile.STATE_INACTIVE
-                    tile.label = "SlipNet"
+                    tile.label = "Rovunet"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        tile.subtitle = "Disconnected"
+                        tile.subtitle = app.slipnet.presentation.theme.RovunetStrings.text(this@QuickSettingsTile, "Disconnected")
                     }
                 }
                 is ConnectionState.Connecting -> {
                     tile.state = Tile.STATE_ACTIVE
-                    tile.label = "SlipNet"
+                    tile.label = "Rovunet"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        tile.subtitle = "Connecting..."
+                        tile.subtitle = app.slipnet.presentation.theme.RovunetStrings.text(this@QuickSettingsTile, "Connecting...")
                     }
                 }
                 is ConnectionState.Connected -> {
                     tile.state = Tile.STATE_ACTIVE
-                    tile.label = "SlipNet"
+                    tile.label = "Rovunet"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         tile.subtitle = state.profile.name
                     }
                 }
                 is ConnectionState.Disconnecting -> {
                     tile.state = Tile.STATE_INACTIVE
-                    tile.label = "SlipNet"
+                    tile.label = "Rovunet"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        tile.subtitle = "Disconnecting..."
+                        tile.subtitle = app.slipnet.presentation.theme.RovunetStrings.text(this@QuickSettingsTile, "Disconnecting...")
                     }
                 }
                 is ConnectionState.Error -> {
                     tile.state = Tile.STATE_INACTIVE
-                    tile.label = "SlipNet"
+                    tile.label = "Rovunet"
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        tile.subtitle = "Error"
+                        tile.subtitle = app.slipnet.presentation.theme.RovunetStrings.text(this@QuickSettingsTile, "Error")
                     }
                 }
             }

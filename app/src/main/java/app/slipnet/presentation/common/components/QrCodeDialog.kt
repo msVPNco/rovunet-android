@@ -1,5 +1,6 @@
 package app.slipnet.presentation.common.components
 
+import app.slipnet.presentation.theme.rv
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -80,7 +81,7 @@ fun QrCodeDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_done_11a676))
             }
         }
     )

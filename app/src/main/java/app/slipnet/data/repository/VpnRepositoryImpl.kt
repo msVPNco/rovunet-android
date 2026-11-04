@@ -30,6 +30,7 @@ import app.slipnet.tunnel.SnowflakeBridge
 import app.slipnet.tunnel.Socks5ProxyBridge
 import app.slipnet.tunnel.SshTunnelBridge
 import app.slipnet.tunnel.TorSocksBridge
+import app.slipnet.tunnel.XrayBridge
 import app.slipnet.tunnel.VlessBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -1004,7 +1005,7 @@ class VpnRepositoryImpl @Inject constructor(
         // (e.g. WhatsApp) fall back to TCP instantly instead of waiting for
         // silent-drop timeouts. DOH is excluded because DohBridge forwards
         // non-DNS UDP directly via DatagramSocket.
-        val rejectNonDnsUdp = profile.tunnelType != TunnelType.DOH
+        val rejectNonDnsUdp = profile.tunnelType != TunnelType.DOH && profile.tunnelType != TunnelType.XRAY
 
         val hevResult = HevSocks5Tunnel.start(
             tunFd = pfd,
@@ -1013,6 +1014,7 @@ class VpnRepositoryImpl @Inject constructor(
             socksUsername = socksUsername,
             socksPassword = socksPassword,
             enableUdpTunneling = enableUdpTunneling,
+            udpOverTcp = profile.tunnelType != TunnelType.XRAY,
             mtu = mtu,
             ipv4Address = "10.255.255.1",
             ipv6Address = "fd00::1",
@@ -1110,6 +1112,7 @@ class VpnRepositoryImpl @Inject constructor(
                 Log.d(TAG, "Stopping SOCKS5 proxy bridge")
                 Socks5ProxyBridge.stop()
             }
+            TunnelType.XRAY -> XrayBridge.stop()
             TunnelType.VLESS -> {
                 Log.d(TAG, "Stopping VLESS proxy bridge")
                 VlessBridge.stop()

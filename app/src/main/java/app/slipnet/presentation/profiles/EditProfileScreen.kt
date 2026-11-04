@@ -1,5 +1,6 @@
 package app.slipnet.presentation.profiles
 
+import app.slipnet.presentation.theme.rv
 import android.net.Uri
 import kotlin.math.roundToInt
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -178,6 +179,12 @@ fun EditProfileScreen(
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
+    }
+
+    if (uiState.tunnelType == app.slipnet.domain.model.TunnelType.XRAY && !uiState.isLocked && !uiState.isLoading) {
+        CoreProfileEditor(uiState, viewModel::updateCoreField, viewModel::updateName, viewModel::save,
+            onNavigateBack, snackbarHostState)
+        return
     }
 
     Scaffold(
@@ -678,13 +685,13 @@ fun EditProfileScreen(
                                                         }
                                                     }
                                                 ) {
-                                                    Text("Apply")
+                                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                                                 }
                                             }
                                         },
                                         dismissButton = {
                                             TextButton(onClick = { showMtuDialogLocked = false }) {
-                                                Text("Cancel")
+                                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                                             }
                                         }
                                     )
@@ -924,7 +931,7 @@ fun EditProfileScreen(
                                                 val finalValue = if (custom != null && custom in minQname..maxQname) custom else displayValue
                                                 viewModel.updateVaydnsMaxQnameLen(finalValue)
                                                 showQnameDialogLocked = false
-                                            }) { Text("Apply") }
+                                            }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392)) }
                                         },
                                         dismissButton = {
                                             Row {
@@ -933,9 +940,9 @@ fun EditProfileScreen(
                                                         sliderValue = 0.5f; customText = ""; customError = false
                                                         viewModel.updateVaydnsMaxQnameLen(midQname)
                                                         showQnameDialogLocked = false
-                                                    }) { Text("Reset") }
+                                                    }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76)) }
                                                 }
-                                                TextButton(onClick = { showQnameDialogLocked = false }) { Text("Cancel") }
+                                                TextButton(onClick = { showQnameDialogLocked = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
                                             }
                                         }
                                     )
@@ -966,7 +973,7 @@ fun EditProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Advanced",
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                     Icon(
@@ -1195,7 +1202,7 @@ fun EditProfileScreen(
                                     unlockPassword = it
                                     unlockError = false
                                 },
-                                label = { Text("Password") },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
                                 visualTransformation = PasswordVisualTransformation(),
                                 isError = unlockError,
                                 supportingText = if (unlockError) {
@@ -1221,7 +1228,7 @@ fun EditProfileScreen(
                         ) { Text("Unlock") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showUnlockDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = { showUnlockDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
                     }
                 )
             }
@@ -1305,7 +1312,7 @@ fun EditProfileScreen(
                     OutlinedTextField(
                         value = uiState.socks5ServerPort,
                         onValueChange = { viewModel.updateSocks5ServerPort(it) },
-                        label = { Text("Port") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_port_72e9a5)) },
                         placeholder = { Text("1080") },
                         isError = uiState.socks5ServerPortError != null,
                         supportingText = { Text(uiState.socks5ServerPortError ?: "SOCKS5 proxy port") },
@@ -1344,6 +1351,13 @@ fun EditProfileScreen(
 
                 // VLESS fields
                 if (uiState.isVless) {
+                    Text("VLESS WebSocket settings", style = MaterialTheme.typography.titleMedium)
+                    Text("For REALITY or XHTTP, use the advanced editor below. Existing saved WebSocket profiles are kept; saving creates a separate profile. The server must support the chosen transport.", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { viewModel.openCoreEditor("reality") }) { Text("REALITY") }
+                        TextButton(onClick = { viewModel.openCoreEditor("xhttp") }) { Text("XHTTP") }
+                    }
+
                     OutlinedTextField(
                         value = uiState.vlessUuid,
                         onValueChange = { viewModel.updateVlessUuid(it) },
@@ -2123,7 +2137,7 @@ fun EditProfileScreen(
                                         showQnameDialog = false
                                     }
                                 ) {
-                                    Text("Apply")
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                                 }
                             },
                             dismissButton = {
@@ -2136,11 +2150,11 @@ fun EditProfileScreen(
                                             viewModel.updateVaydnsMaxQnameLen(midQname)
                                             showQnameDialog = false
                                         }) {
-                                            Text("Reset")
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76))
                                         }
                                     }
                                     TextButton(onClick = { showQnameDialog = false }) {
-                                        Text("Cancel")
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                                     }
                                 }
                             }
@@ -2173,7 +2187,7 @@ fun EditProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Advanced",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Icon(
@@ -2372,13 +2386,13 @@ fun EditProfileScreen(
                                                 }
                                             }
                                         ) {
-                                            Text("Apply")
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                                         }
                                     }
                                 },
                                 dismissButton = {
                                     TextButton(onClick = { showMtuDialog = false }) {
-                                        Text("Cancel")
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                                     }
                                 }
                             )
@@ -2799,7 +2813,7 @@ fun EditProfileScreen(
                     OutlinedTextField(
                         value = uiState.socksUsername,
                         onValueChange = { viewModel.updateSocksUsername(it) },
-                        label = { Text("Username") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_username_e3b89e)) },
                         placeholder = { Text("Enter SOCKS username") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -2809,7 +2823,7 @@ fun EditProfileScreen(
                     OutlinedTextField(
                         value = uiState.socksPassword,
                         onValueChange = { viewModel.updateSocksPassword(it) },
-                        label = { Text("Password") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
                         placeholder = { Text("Enter SOCKS password") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -2871,7 +2885,7 @@ fun EditProfileScreen(
                                 onClick = { },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Password")
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
                             }
                             OutlinedButton(
                                 onClick = { viewModel.updateSshAuthType(SshAuthType.KEY) },
@@ -2884,7 +2898,7 @@ fun EditProfileScreen(
                                 onClick = { viewModel.updateSshAuthType(SshAuthType.PASSWORD) },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Password")
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
                             }
                             Button(
                                 onClick = { },
@@ -3505,7 +3519,7 @@ private fun DohTestDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7))
             }
         }
     )

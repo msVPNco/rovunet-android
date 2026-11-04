@@ -12,9 +12,9 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Slipstream brand colors
-val SlipstreamPrimary = Color(0xFF2196F3)
-val SlipstreamPrimaryDark = Color(0xFF1976D2)
-val SlipstreamPrimaryLight = Color(0xFF64B5F6)
+val SlipstreamPrimary = Color(0xFF087F8C)
+val SlipstreamPrimaryDark = Color(0xFF096473)
+val SlipstreamPrimaryLight = Color(0xFF8DDDD8)
 val SlipstreamSecondary = Color(0xFF03DAC6)
 val SlipstreamSecondaryDark = Color(0xFF00A896)
 
@@ -28,9 +28,9 @@ val ConnectingOrangeDark = Color(0xFFF57C00)
 val WarningYellow = Color(0xFFFFC107)
 
 // Background colors
-val SurfaceLight = Color(0xFFFFFBFE)
+val SurfaceLight = Color(0xFFF5F8FA)
 val SurfaceDark = Color(0xFF1C1B1F)
-val BackgroundLight = Color(0xFFFFFBFE)
+val BackgroundLight = Color(0xFFF5F8FA)
 val BackgroundDark = Color(0xFF1C1B1F)
 
 // AMOLED dark colors (pure black)
@@ -39,5 +39,5 @@ val BackgroundAmoled = Color(0xFF000000)
 val SurfaceVariantAmoled = Color(0xFF1A1A1A)
 
 // Traffic indicator colors
-val UploadBlue = Color(0xFF2196F3)
+val UploadBlue = Color(0xFF087F8C)
 val DownloadGreen = Color(0xFF4CAF50)

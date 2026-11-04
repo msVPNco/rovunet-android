@@ -1,5 +1,6 @@
 package app.slipnet.presentation.scanner
 
+import app.slipnet.presentation.theme.rv
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -232,10 +233,10 @@ fun ScanResultsScreen(
                     prismMinProbes = value
                     prefs.edit().putInt("prism_min_probes", value).apply()
                     showPrismFilterDialog = false
-                }) { Text("Apply") }
+                }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392)) }
             },
             dismissButton = {
-                TextButton(onClick = { showPrismFilterDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showPrismFilterDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -431,7 +432,7 @@ fun ScanResultsScreen(
                                 onDismissRequest = { showOverflowMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Copy") },
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_copy_e21f93)) },
                                     onClick = {
                                         showOverflowMenu = false
                                         when {
@@ -445,7 +446,7 @@ fun ScanResultsScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Share") },
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_share_29887a)) },
                                     onClick = {
                                         showOverflowMenu = false
                                         when {
@@ -481,7 +482,7 @@ fun ScanResultsScreen(
                                 )
                             }
                         ) {
-                            Text("Apply", fontWeight = FontWeight.SemiBold)
+                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 },
@@ -1043,7 +1044,7 @@ fun ScanResultsScreen(
                                 if (probeFilter.isNotEmpty()) {
                                     HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text("Clear") },
+                                        text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_clear_83b12c)) },
                                         onClick = {
                                             probeFilter = emptySet()
                                             prefs.edit().remove("probe_filter").apply()
@@ -1259,7 +1260,7 @@ private fun ResultsProgressSection(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Continue", style = MaterialTheme.typography.labelMedium)
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef), style = MaterialTheme.typography.labelMedium)
                     }
                     OutlinedButton(
                         onClick = onStartE2eFresh,
@@ -1593,7 +1594,7 @@ private fun ResultsSelectionControls(
                     Spacer(modifier = Modifier.weight(1f))
 
                     TextButton(onClick = onClearSelection) {
-                        Text("Clear")
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_clear_83b12c))
                     }
                 }
 
@@ -1649,7 +1650,7 @@ private fun ScanControlButton(
         ) {
             Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Stop", style = MaterialTheme.typography.labelMedium)
+            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5), style = MaterialTheme.typography.labelMedium)
         }
     } else if (canResume) {
         Button(
@@ -1660,7 +1661,7 @@ private fun ScanControlButton(
         ) {
             Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Continue", style = MaterialTheme.typography.labelMedium)
+            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef), style = MaterialTheme.typography.labelMedium)
         }
     }
 }

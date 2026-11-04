@@ -71,7 +71,8 @@ class VpnConnectionManager @Inject constructor(
         return DeviceIdUtil.getScrambledDeviceId(context)
     }
 
-    fun connect(profile: ServerProfile) {
+    fun connect(profile: ServerProfile, profileResolvers: Boolean = false) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.CONNECT_REQUEST)
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting) {
             return
@@ -99,11 +100,17 @@ class VpnConnectionManager @Inject constructor(
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_CONNECT
             putExtra(SlipNetVpnService.EXTRA_PROFILE_ID, profile.id)
+            if (profileResolvers) {
+                putExtra("rovunet_resolver_hosts", profile.resolvers.map { it.host }.toTypedArray())
+                putExtra("rovunet_resolver_ports", profile.resolvers.map { it.port }.toIntArray())
+                putExtra("rovunet_resolver_auth", profile.resolvers.map { it.authoritative }.toBooleanArray())
+            }
         }
         ContextCompat.startForegroundService(context, intent)
     }
 
     fun reconnect(profile: ServerProfile) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.RECONNECT_REQUEST)
         if (profile.isExpired) {
             _connectionState.value = ConnectionState.Error("This profile has expired")
             return
@@ -126,6 +133,7 @@ class VpnConnectionManager @Inject constructor(
         val intent = Intent(context, SlipNetVpnService::class.java).apply {
             action = SlipNetVpnService.ACTION_CONNECT
             putExtra(SlipNetVpnService.EXTRA_PROFILE_ID, profile.id)
+
         }
         ContextCompat.startForegroundService(context, intent)
     }
@@ -149,6 +157,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun disconnect() {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.DISCONNECT_REQUEST)
         if (_connectionState.value is ConnectionState.Disconnected) {
             return
         }
@@ -162,6 +171,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun onVpnEstablished() {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ESTABLISHED)
         val profile = pendingProfile ?: return
 
         // Tunnels are already started by SlipNetVpnService before calling this method.
@@ -173,6 +183,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun onVpnDisconnected() {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_DISCONNECTED)
         // Reset repository state without going through the full disconnect flow
         // (which would redundantly stop tunnels and emit Disconnecting state that
         // can race with a new Connecting state if the user reconnects quickly).
@@ -192,6 +203,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun onVpnError(error: String) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.VPN_ERROR)
         scope.launch {
             _connectionState.value = ConnectionState.Error(friendlyError(error))
         }

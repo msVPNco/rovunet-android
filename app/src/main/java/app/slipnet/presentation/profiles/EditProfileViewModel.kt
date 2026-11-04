@@ -88,6 +88,8 @@ data class EditProfileUiState(
     val socksUsername: String = "",
     val socksPassword: String = "",
     // Tunnel type selection (DNSTT is recommended)
+    val coreForm: app.slipnet.core.CoreForm? = null,
+    val coreAsCopy: Boolean = false,
     val tunnelType: TunnelType = TunnelType.DNSTT,
     // DNSTT-specific fields
     val dnsttPublicKey: String = "",
@@ -297,11 +299,12 @@ class EditProfileViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val profileId: Long? = savedStateHandle.get<Long>("profileId")
+    private val coreMode = savedStateHandle.get<String>("tunnelType")?.takeIf { it in setOf("reality", "xhttp", "hysteria2", "wireguard") }
     private val initialTunnelType: TunnelType = savedStateHandle.get<String>("tunnelType")
-        ?.let { TunnelType.fromValue(it) } ?: TunnelType.DNSTT
+        ?.let { if (coreMode != null) TunnelType.XRAY else TunnelType.fromValue(it) } ?: TunnelType.DNSTT
 
     private val _uiState = MutableStateFlow(
-        EditProfileUiState(profileId = profileId, tunnelType = initialTunnelType)
+        EditProfileUiState(profileId = profileId, tunnelType = initialTunnelType, coreForm = coreMode?.let { app.slipnet.core.CoreForm.fresh(it) })
     )
     val uiState: StateFlow<EditProfileUiState> = _uiState.asStateFlow()
 
@@ -380,6 +383,7 @@ class EditProfileViewModel @Inject constructor(
                     socksUsername = profile.socksUsername ?: "",
                     socksPassword = profile.socksPassword ?: "",
                     tunnelType = profile.tunnelType,
+                    coreForm = if (profile.tunnelType == TunnelType.XRAY) app.slipnet.core.CoreForm.decode(profile.coreLink) else null,
                     dnsttPublicKey = profile.dnsttPublicKey,
                     sshUsername = profile.sshUsername,
                     sshPassword = profile.sshPassword,
@@ -1330,7 +1334,53 @@ class EditProfileViewModel @Inject constructor(
     }
 
 
+    fun updateCoreField(key: String, value: String) {
+        _uiState.value = _uiState.value.copy(coreForm = _uiState.value.coreForm?.with(key, value), error = null)
+    }
+
+    fun openCoreEditor(mode: String) {
+        val state = _uiState.value
+        if (state.isLocked) return
+        val form = app.slipnet.core.CoreForm.fresh(mode)
+            .with("server", state.cdnIp.ifBlank { state.domain })
+            .with("port", state.cdnPort)
+            .with("auth", state.vlessUuid)
+            .with("sni", state.vlessSni.ifBlank { state.domain })
+        _uiState.value = state.copy(tunnelType = TunnelType.XRAY, coreForm = form, coreAsCopy = state.profileId != null, error = null)
+    }
+
+    private fun saveCoreProfile() {
+        val state = _uiState.value
+        if (state.isSaving || state.isLocked) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSaving = true)
+            try {
+                require(state.name.isNotBlank()) { "Profile name is required" }
+                val raw = requireNotNull(state.coreForm) { "Core settings are unavailable" }.encode(state.name.trim())
+                val parsed = app.slipnet.core.CoreLink.parse(raw)
+                val previous = state.profileId?.let { getProfileByIdUseCase(it) }
+                require(previous?.isLocked != true) { "Unlock this profile before editing" }
+                val base = if (state.coreAsCopy) ServerProfile(name = state.name.trim())
+                    else previous ?: ServerProfile(name = state.name.trim())
+                val profile = base.copy(name = state.name.trim(), domain = parsed.host,
+                    tunnelType = TunnelType.XRAY, coreLink = raw, updatedAt = System.currentTimeMillis())
+                val savedId = saveProfileUseCase(profile)
+                if (previous == null || state.coreAsCopy) setActiveProfileUseCase(savedId)
+                val conn = connectionManager.connectionState.value
+                _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true,
+                    showRestartVpnMessage = conn is ConnectionState.Connected || conn is ConnectionState.Connecting)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isSaving = false, error = e.message ?: "Invalid core settings")
+            }
+        }
+    }
+
     fun save() {
+        if (_uiState.value.tunnelType == TunnelType.XRAY) {
+            saveCoreProfile()
+            return
+        }
+
         if (!validateProfile()) return
         persistProfile(forScanner = false)
     }
@@ -1570,7 +1620,10 @@ class EditProfileViewModel @Inject constructor(
                 }
                 val keepAlive = state.keepAliveInterval.toIntOrNull() ?: 5000
 
+                val existing = state.profileId?.let { getProfileByIdUseCase(it) }
                 val profile = ServerProfile(
+                    collectionId = existing?.collectionId.orEmpty(),
+                    collectionName = existing?.collectionName.orEmpty(),
                     id = state.profileId ?: 0,
                     name = state.name.trim(),
                     domain = state.domain.trim(),

@@ -36,10 +36,17 @@ class ProfileRepositoryImpl @Inject constructor(
         return profileDao.insertProfile(entity)
     }
 
+    override suspend fun updateProfiles(profiles: List<ServerProfile>) = profileDao.updateProfiles(profiles.map { profileMapper.toEntity(it) })
+
+    override suspend fun insertCollection(profiles: List<ServerProfile>): List<Long> = profileDao.insertCollection(profiles.map { profileMapper.toEntity(it) })
+
     override suspend fun updateProfile(profile: ServerProfile) {
         val entity = profileMapper.toEntity(profile)
         profileDao.updateProfile(entity)
     }
+
+    override suspend fun deleteReviewedProfiles(expected: List<ServerProfile>, deleteIds: List<Long>): Boolean =
+        profileDao.deleteReviewedProfiles(expected.map { profileMapper.toEntity(it) }, deleteIds)
 
     override suspend fun deleteProfile(id: Long) {
         profileDao.deleteProfile(id)

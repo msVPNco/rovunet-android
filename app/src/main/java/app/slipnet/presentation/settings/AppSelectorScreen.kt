@@ -1,5 +1,6 @@
 package app.slipnet.presentation.settings
 
+import app.slipnet.presentation.theme.rv
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
@@ -152,7 +153,7 @@ fun AppSelectorScreen(
                 FilterChip(
                     selected = uiState.showSelectedOnly,
                     onClick = { viewModel.toggleSelectedOnly() },
-                    label = { Text("Selected") }
+                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_selected_57fd7a)) }
                 )
                 FilterChip(
                     selected = !uiState.showSystemApps,

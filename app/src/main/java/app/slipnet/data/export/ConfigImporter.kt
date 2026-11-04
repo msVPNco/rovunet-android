@@ -146,7 +146,8 @@ class ConfigImporter @Inject constructor() {
         localDeviceId: String = "",
         bundlePassword: String? = null
     ): ImportResult {
-        val trimmedInput = input.trim()
+        if (input.length > 2 * 1024 * 1024) return ImportResult.Error("Input exceeds 2 MiB")
+        val trimmedInput = ConfigSchemes.canonical(input.trim())
 
         // Password-encrypted bundle: the whole input is one base64 blob.
         // We unwrap it here and let the normal line-loop parse the decrypted
@@ -168,7 +169,15 @@ class ConfigImporter @Inject constructor() {
             trimmedInput
         }
 
+        if (expanded.length > 2 * 1024 * 1024) return ImportResult.Error("Bundle exceeds 2 MiB")
+        if (expanded.trimStart().startsWith("[Interface]", true)) {
+            return try {
+                val parsed = app.slipnet.core.CoreLink.parse(expanded)
+                ImportResult.Success(listOf(ServerProfile(name = parsed.name, domain = parsed.host, tunnelType = TunnelType.XRAY, coreLink = expanded)))
+            } catch (_: Exception) { ImportResult.Error("Invalid or unsupported WireGuard configuration") }
+        }
         val lines = expanded.lines().filter { it.isNotBlank() }
+        if (lines.size > 1000) return ImportResult.Error("At most 1000 profiles per import")
 
         if (lines.isEmpty()) {
             return ImportResult.Error("No profiles found in input")
@@ -177,8 +186,51 @@ class ConfigImporter @Inject constructor() {
         val profiles = mutableListOf<ServerProfile>()
         val warnings = mutableListOf<String>()
 
+        val accountHints = mutableListOf<String>()
+        var panelAccountHint = ""
         for ((index, line) in lines.withIndex()) {
-            val trimmedLine = line.trim()
+            // Presentation labels (e.g. Rovunet) are never account identities.
+            val heading = Regex("^\\[([A-Za-z0-9_+.-]+)\\]\\s+user=([A-Za-z0-9_.@-]{1,120})(?:\\s+#.*)?$").matchEntire(line.trim())
+            if (line.trim().startsWith("[")) {
+                panelAccountHint = heading?.groupValues?.get(2).orEmpty()
+                continue
+            }
+            while (accountHints.size <= profiles.size) accountHints += panelAccountHint
+            accountHints[profiles.size] = panelAccountHint
+            val trimmedLine = ConfigSchemes.canonical(line.trim())
+            val externalScheme = trimmedLine.substringBefore("://").lowercase()
+            if (externalScheme in setOf("ssh", "socks5", "naive+https")) {
+                try {
+                    val link = PortableLink.parse(trimmedLine)
+                    val type = when (link.scheme) {
+                        "ssh" -> TunnelType.SSH
+                        "socks5" -> TunnelType.SOCKS5
+                        else -> TunnelType.NAIVE
+                    }
+                    if (type == TunnelType.NAIVE && !app.slipnet.BuildConfig.INCLUDE_NAIVE) {
+                        warnings.add("Line ${index + 1}: Naive requires the full build")
+                    } else {
+                        profiles.add(ServerProfile(name = link.name, domain = link.host,
+                            tunnelType = type, sshHost = link.host, sshPort = link.port,
+                            sshUsername = link.username, sshPassword = link.password,
+                            socks5ServerPort = link.port, socksUsername = link.username,
+                            socksPassword = link.password, naivePort = link.port,
+                            naiveUsername = link.username, naivePassword = link.password))
+                    }
+                } catch (_: Exception) {
+                    warnings.add("Line ${index + 1}: Invalid or unsupported portable URI options")
+                }
+                continue
+            }
+
+            val isCore = runCatching { app.slipnet.core.CoreLink.handles(trimmedLine) }.getOrDefault(false)
+            if (isCore) {
+                try {
+                    val parsed = app.slipnet.core.CoreLink.parse(trimmedLine)
+                    profiles.add(ServerProfile(name = parsed.name, domain = parsed.host, tunnelType = TunnelType.XRAY, coreLink = trimmedLine))
+                } catch (_: Exception) { warnings.add("Line ${index + 1}: Invalid or unsupported core link options") }
+                continue
+            }
 
             // Handle standard vless:// URIs
             if (trimmedLine.startsWith(VLESS_SCHEME, ignoreCase = true)) {
@@ -228,7 +280,7 @@ class ConfigImporter @Inject constructor() {
             }
 
             if (!trimmedLine.startsWith(SCHEME, ignoreCase = true)) {
-                warnings.add("Line ${index + 1}: Invalid format, skipping")
+                warnings.add("Line ${index + 1}: Unsupported URI scheme or malformed profile, skipping")
                 continue
             }
 
@@ -267,7 +319,7 @@ class ConfigImporter @Inject constructor() {
             }
         }
 
-        return ImportResult.Success(profiles, warnings)
+        return ImportResult.Success(profiles.mapIndexed { i, p -> p.copy(importAccountHint = accountHints.getOrNull(i).orEmpty()) }, warnings)
     }
 
     private sealed class ProfileParseResult {
@@ -315,17 +367,42 @@ class ConfigImporter @Inject constructor() {
             "28" -> parseProfileV28(fields, lineNum)
             "29" -> parseProfileV29(fields, lineNum)
             "30" -> parseProfileV30(fields, lineNum)
+            "31" -> parseProfileV31(fields, lineNum)
+            "32" -> parseProfileV32(fields, lineNum)
             else -> {
                 // Forward compatibility: try the highest known parser for newer versions.
                 // Extra trailing fields are safely ignored (parsers only check minimum count).
                 val versionNum = version.toIntOrNull()
-                if (versionNum != null && versionNum > 30) {
-                    parseProfileV30(fields, lineNum)
+                if (versionNum != null && versionNum > 32) {
+                    parseProfileV32(fields, lineNum)
                 } else {
                     ProfileParseResult.Error("Line $lineNum: Unsupported version '$version'")
                 }
             }
         }
+    }
+
+    private fun parseProfileV32(fields: List<String>, lineNum: Int): ProfileParseResult {
+        if (fields.size < 87) return ProfileParseResult.Error("Line $lineNum: Incomplete collection profile")
+        return try {
+            val base = parseProfileV31(fields, lineNum)
+            val id = String(Base64.decode(fields[85], Base64.NO_WRAP), Charsets.UTF_8)
+            val name = String(Base64.decode(fields[86], Base64.NO_WRAP), Charsets.UTF_8)
+            require(id.length <= 128 && name.length <= 120)
+            if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(collectionId = id, collectionName = name)) else base
+        } catch (_: Exception) { ProfileParseResult.Error("Line $lineNum: Invalid collection metadata") }
+    }
+
+    private fun parseProfileV31(fields: List<String>, lineNum: Int): ProfileParseResult {
+        if (fields.size < 85) return ProfileParseResult.Error("Line $lineNum: Incomplete v31 profile")
+        if (fields[1] != "xray") return parseProfileV30(fields, lineNum)
+        return try {
+            val link = String(Base64.decode(fields[84], Base64.NO_WRAP), Charsets.UTF_8)
+            val parsed = app.slipnet.core.CoreLink.parse(link)
+            // Parse common lock/expiry/device fields using a resolver-free base type.
+            val base = parseProfileV30(fields.toMutableList().also { it[1] = "socks5" }, lineNum)
+            if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(tunnelType = TunnelType.XRAY, coreLink = link, domain = parsed.host)) else base
+        } catch (_: Exception) { ProfileParseResult.Error("Line $lineNum: Invalid core profile") }
     }
 
     private fun parseProfileV1(fields: List<String>, lineNum: Int): ProfileParseResult {
@@ -2238,7 +2315,7 @@ class ConfigImporter @Inject constructor() {
     private fun parseVlessUri(uri: String, lineNum: Int): ProfileParseResult {
         try {
             // Strip scheme
-            val withoutScheme = uri.removePrefix("vless://").removePrefix("VLESS://")
+            val withoutScheme = uri.substring(VLESS_SCHEME.length)
 
             // Split fragment (profile name)
             val (mainPart, profileName) = if ('#' in withoutScheme) {
@@ -2266,14 +2343,14 @@ class ConfigImporter @Inject constructor() {
                 if (closeBracket < 0) return ProfileParseResult.Error("Line $lineNum: Invalid IPv6 address in VLESS URI")
                 server = hostPort.substring(1, closeBracket)
                 port = if (closeBracket + 1 < hostPort.length && hostPort[closeBracket + 1] == ':') {
-                    hostPort.substring(closeBracket + 2).toIntOrNull() ?: 443
+                    hostPort.substring(closeBracket + 2).toInt()
                 } else 443
             } else {
                 val colonIdx = hostPort.lastIndexOf(':')
                 if (colonIdx > 0 && hostPort.indexOf(':') == colonIdx) {
                     // Single colon — host:port
                     server = hostPort.substring(0, colonIdx)
-                    port = hostPort.substring(colonIdx + 1).toIntOrNull() ?: 443
+                    port = hostPort.substring(colonIdx + 1).toInt()
                 } else {
                     server = hostPort
                     port = 443
@@ -2293,21 +2370,23 @@ class ConfigImporter @Inject constructor() {
                 }
             }
 
+            if (server.isBlank() || port !in 1..65535) return ProfileParseResult.Error("Line $lineNum: Invalid endpoint")
+            if (!params["flow"].isNullOrEmpty() || params["encryption"]?.let { it != "none" } == true ||
+                params["allowInsecure"] in listOf("1", "true")) {
+                return ProfileParseResult.Error("Line $lineNum: Unsupported VLESS flow, encryption or insecure TLS")
+            }
             val transport = params["type"] ?: "tcp"
             val security = params["security"] ?: "tls"
             val wsPath = params["path"] ?: "/"
             val wsHost = params["host"] ?: server
             val sni = params["sni"] ?: wsHost
             val cdnIp = params["cdn"] ?: server
-            val cdnPort = params["cdn-port"]?.toIntOrNull() ?: port
+            val cdnPort = params["cdn-port"]?.toInt() ?: port
+            if (cdnPort !in 1..65535) return ProfileParseResult.Error("Line $lineNum: Invalid CDN port")
 
-            // Fragment settings from query params (optional). Default ON with
-            // the strong DPI-evasion preset so pasted VLESS URIs are usable on
-            // restrictive networks out of the box. Users can disable or
-            // downgrade in the editor. The URI can override each field
-            // explicitly via `fragment=<delay>,<strategy>`.
+            // Imported standard links opt in to fragmentation explicitly.
             val fragmentParam = params["fragment"]
-            val fragmentEnabled = if (fragmentParam != null) fragmentParam.isNotBlank() else true
+            val fragmentEnabled = !fragmentParam.isNullOrBlank()
             val fragmentParts = (fragmentParam ?: "").split(',')
             val fragmentDelay = fragmentParts.getOrNull(0)?.toIntOrNull() ?: 300
             val fragmentStrategy = fragmentParts.getOrNull(1)?.takeIf { it in listOf("sni_split", "half", "multi", "micro", "fake", "disorder") } ?: "micro"
@@ -2324,9 +2403,9 @@ class ConfigImporter @Inject constructor() {
             }
 
             val normalizedSecurity = when (security) {
-                "tls", "reality" -> "tls"
+                "tls" -> "tls"
                 "none", "" -> "none"
-                else -> "tls"
+                else -> return ProfileParseResult.Error("Line $lineNum: Unsupported VLESS security: $security")
             }
 
             // Validate UUID
@@ -2358,7 +2437,7 @@ class ConfigImporter @Inject constructor() {
 
             return ProfileParseResult.Success(profile)
         } catch (e: Exception) {
-            return ProfileParseResult.Error("Line $lineNum: Failed to parse VLESS URI: ${e.message}")
+            return ProfileParseResult.Error("Line $lineNum: Invalid VLESS URI")
         }
     }
 
@@ -2391,6 +2470,11 @@ class ConfigImporter @Inject constructor() {
         // forward. Only VLESS profiles ever populated position 71, so this is
         // a no-op for other tunnel types.
         val legacyFakeSni = if (fields.size > 71) fields[71] else ""
+
+        if (baseResult.profile.tunnelType == TunnelType.VLESS &&
+            (vlessSecurity !in setOf("tls", "none") || vlessTransport != "ws")) {
+            return ProfileParseResult.Error("Line $lineNum: Unsupported VLESS security or transport")
+        }
 
         val profile = baseResult.profile.copy(
             vlessUuid = vlessUuid,

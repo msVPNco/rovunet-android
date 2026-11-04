@@ -45,6 +45,7 @@ object HevSocks5Tunnel {
         socksUsername: String? = null,
         socksPassword: String? = null,
         enableUdpTunneling: Boolean = false,
+        udpOverTcp: Boolean = true,
         mtu: Int = 1280,
         ipv4Address: String = "10.255.255.1",
         ipv6Address: String = "fd00::1",
@@ -67,6 +68,7 @@ object HevSocks5Tunnel {
             socksUsername = socksUsername,
             socksPassword = socksPassword,
             enableUdpTunneling = enableUdpTunneling,
+            udpOverTcp = udpOverTcp,
             mtu = mtu,
             ipv4Address = ipv4Address,
             ipv6Address = ipv6Address
@@ -176,6 +178,7 @@ object HevSocks5Tunnel {
         socksUsername: String?,
         socksPassword: String?,
         enableUdpTunneling: Boolean,
+        udpOverTcp: Boolean,
         mtu: Int,
         ipv4Address: String,
         ipv6Address: String
@@ -194,7 +197,7 @@ object HevSocks5Tunnel {
         // UDP tunneling via 'tcp' mode sends FWD_UDP (cmd 0x05) to the SOCKS5 proxy.
         // Supported by: SSH SOCKS5, DohBridge, SlipstreamSocksBridge, DNSTT (remote Dante).
         if (enableUdpTunneling) {
-            sb.appendLine("  udp: 'tcp'")
+            sb.appendLine(if (udpOverTcp) "  udp: 'tcp'" else "  udp: 'udp'")
         }
 
         if (!socksUsername.isNullOrBlank() && !socksPassword.isNullOrBlank()) {

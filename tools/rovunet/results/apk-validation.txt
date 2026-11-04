@@ -1,0 +1,6 @@
+Signer #1 certificate SHA-256 digest: 7d9eac2c155ae6c6d57dffa27e325858375016e88f9de1546a1ab97196a1d248
+package: name='app.veyra.client' versionCode='7' versionName='0.3.0-alpha01' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+application-label:'Rovunet'
+SHA256 399fca57f7c5661eae62c20533f48082aec23432132cf13302cfb9fb51933418
+Native payloads: 33
+Build source snapshot matched all Kotlin/XML/build inputs.

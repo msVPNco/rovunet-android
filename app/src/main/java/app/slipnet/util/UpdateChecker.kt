@@ -15,7 +15,7 @@ data class AppUpdate(
 
 object UpdateChecker {
     private const val TAG = "UpdateChecker"
-    private const val GITHUB_API = "https://api.github.com/repos/anonvector/SlipNet/releases/latest"
+    private val GITHUB_API: String = "" // Set only after a Veyra release repository exists.
     private const val TIMEOUT_MS = 10_000
     // Only check once per 12 hours
     const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
@@ -25,6 +25,7 @@ object UpdateChecker {
      * Safe to call from any coroutine — uses Dispatchers.IO, never throws.
      */
     suspend fun check(currentVersionName: String): AppUpdate? = withContext(Dispatchers.IO) {
+        if (GITHUB_API.isBlank()) return@withContext null
         try {
             val conn = URL(GITHUB_API).openConnection() as HttpURLConnection
             conn.requestMethod = "GET"

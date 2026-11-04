@@ -1,0 +1,15 @@
+PASS SQLite migration of actual Room schema 45 to 46: all inserted existing values
+preserved; schema matches generated version 46 by column name, type, nullability,
+default and primary key (column ordinal is intentionally not compared).
+
+Android Room runtime migration, Compose UI rendering, VPN permission lifecycle,
+cancellation during real device service teardown and long-running network/load
+behavior have NOT been exercised on an Android device or emulator.
+
+DNS discovery is bounded preflight followed by serialized real tunnel HTTPS
+verification, not unbounded parallel VPN engines. Four DNS workers; at most 128
+resolver hosts, 180 seconds and three tunnel candidates per profile. Configured
+resolvers are tested before discovery. Original resolver settings are preserved.
+
+Main workflows + core editor have 150 four-language translation entries. Legacy
+advanced instructions and some diagnostic messages still use English fallback.

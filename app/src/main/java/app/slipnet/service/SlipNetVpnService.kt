@@ -41,6 +41,7 @@ import app.slipnet.tunnel.SlipstreamBridge
 import app.slipnet.tunnel.SlipstreamSocksBridge
 import app.slipnet.tunnel.SoarBridge
 import app.slipnet.tunnel.Socks5ProxyBridge
+import app.slipnet.tunnel.XrayBridge
 import app.slipnet.tunnel.VlessBridge
 import app.slipnet.tunnel.SnowflakeBridge
 import app.slipnet.tunnel.SshTunnelBridge
@@ -219,6 +220,11 @@ class SlipNetVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_CONNECT -> {
+                collectionResolvers = intent.getStringArrayExtra("rovunet_resolver_hosts")?.let { hosts ->
+                    val ports = intent.getIntArrayExtra("rovunet_resolver_ports")
+                    val authoritative = intent.getBooleanArrayExtra("rovunet_resolver_auth")
+                    hosts.mapIndexed { i, host -> app.slipnet.domain.model.DnsResolver(host, ports?.getOrNull(i) ?: 53, authoritative?.getOrNull(i) ?: false) }
+                }
                 val chainId = intent.getLongExtra(EXTRA_CHAIN_ID, -1)
                 val profileId = intent.getLongExtra(EXTRA_PROFILE_ID, -1)
                 isBootTriggered = intent.getBooleanExtra(EXTRA_BOOT_TRIGGERED, false)
@@ -295,6 +301,10 @@ class SlipNetVpnService : VpnService() {
         Log.d(TAG, "Cleared connection state")
     }
 
+    private var collectionResolvers: List<app.slipnet.domain.model.DnsResolver>? = null
+    private fun collectionProfile(p: app.slipnet.domain.model.ServerProfile?): app.slipnet.domain.model.ServerProfile? =
+        p?.let { if (collectionResolvers != null) it.copy(resolvers = collectionResolvers!!) else it }
+
     private fun connect(profileId: Long) {
         // Cancel stale state observer from a previous connection to prevent it
         // from calling stopSelf() while the new connection is starting.
@@ -326,6 +336,7 @@ class SlipNetVpnService : VpnService() {
                 try { NaiveSocksBridge.stop() } catch (_: Exception) {}
                 try { TorSocksBridge.stop() } catch (_: Exception) {}
                 try { Socks5ProxyBridge.stopAll() } catch (_: Exception) {}
+                try { XrayBridge.stop() } catch (_: Exception) {}
                 try { DnsttBridge.stopClient() } catch (_: Exception) {}
                 try { VaydnsBridge.stopClient() } catch (_: Exception) {}
                 try { SoarBridge.stopClient() } catch (_: Exception) {}
@@ -341,7 +352,7 @@ class SlipNetVpnService : VpnService() {
                 cleanupConnection()
             }
 
-            val profile = connectionManager.getProfileById(profileId)
+            val profile = collectionProfile(connectionManager.getProfileById(profileId))
             if (profile == null) {
                 connectionManager.onVpnError("Profile not found")
                 stopSelf()
@@ -494,7 +505,7 @@ class SlipNetVpnService : VpnService() {
 
                 // Global resolver override: replace profile resolvers with user's global list
                 val globalResolverOverride: List<app.slipnet.domain.model.DnsResolver>? =
-                    preferencesDataStore.parsedGlobalResolvers().takeIf { it.isNotEmpty() }
+                    (collectionResolvers ?: preferencesDataStore.parsedGlobalResolvers()).takeIf { it.isNotEmpty() }
                         ?.also { Log.i(TAG, "Using global DNS resolver override: ${it.joinToString { r -> "${r.host}:${r.port}" }}") }
 
                 // Extract global DNS IP for hostname resolution (bypasses ISP DNS filtering)
@@ -547,6 +558,7 @@ class SlipNetVpnService : VpnService() {
                     TunnelType.VAYDNS -> connectVaydns(profile, dnsServer, remoteDns, remoteDnsFallback, globalResolverOverride)
                     TunnelType.VAYDNS_SSH -> connectVaydnsSsh(profile, dnsServer, remoteDns, remoteDnsFallback, globalResolverOverride)
                     TunnelType.SOCKS5 -> connectSocks5(profile, dnsServer, remoteDns)
+                    TunnelType.XRAY -> connectXray(profile, dnsServer)
                     TunnelType.VLESS -> connectVless(profile, dnsServer)
                     TunnelType.SOAR -> connectSoar(profile, dnsServer, remoteDns, globalResolverOverride)
                     TunnelType.SOAR_SSH -> connectSoarSsh(profile, dnsServer, remoteDns, remoteDnsFallback, globalResolverOverride)
@@ -1322,6 +1334,7 @@ class SlipNetVpnService : VpnService() {
             }
             TunnelType.DOH -> DohBridge.stop()
             TunnelType.SOCKS5 -> Socks5ProxyBridge.stopAll()
+            TunnelType.XRAY -> XrayBridge.stop()
             TunnelType.VLESS -> VlessBridge.stop()
             else -> {}
         }
@@ -2012,6 +2025,7 @@ class SlipNetVpnService : VpnService() {
      *   -> Chrome TLS/HTTP2 CONNECT -> Caddy Server (forwardproxy) -> SSH:22
      */
     private suspend fun connectNaiveSsh(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String) {
+        vpnRepository.setCurrentTunnelType(TunnelType.NAIVE_SSH)
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val naivePort = proxyPort + 1
@@ -2230,6 +2244,7 @@ class SlipNetVpnService : VpnService() {
      *   DNS FWD_UDP: -> worker pool (SOCKS5 CONNECT through NaiveProxy to DNS) -> DNS-over-TCP
      */
     private suspend fun connectNaive(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String) {
+        vpnRepository.setCurrentTunnelType(TunnelType.NAIVE)
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val naivePort = proxyPort + 1
@@ -3357,6 +3372,31 @@ class SlipNetVpnService : VpnService() {
      *   -> SniFragmentForwarder (proxyPort+1) -> CDN IP:443
      *     -> TLS (fragmented ClientHello) -> WebSocket -> VLESS -> CDN -> Server
      */
+    private suspend fun connectXray(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String) {
+        vpnRepository.setCurrentTunnelType(TunnelType.XRAY)
+        val port = preferencesDataStore.proxyListenPort.first()
+        val auth = preferencesDataStore.proxyAuthEnabled.first()
+        val user = if (auth) preferencesDataStore.proxyAuthUsername.first() else null
+        val password = if (auth) preferencesDataStore.proxyAuthPassword.first() else null
+        try {
+            if (!isProxyOnly) {
+                vpnInterface = establishVpnInterface(dnsServer)
+                check(vpnInterface != null) { "VPN interface unavailable" }
+            }
+            withContext(Dispatchers.IO) { XrayBridge.start(this@SlipNetVpnService, profile.coreLink, port, user, password).getOrThrow() }
+            check(waitForProxyReady(port, maxAttempts = 30, delayMs = 100) && XrayBridge.isRunning()) { "Xray did not start or the proxy port is occupied" }
+            if (isProxyOnly) vpnRepository.setProxyConnected(profile)
+            else vpnRepository.startTun2Socks(profile, vpnInterface!!).getOrThrow()
+            finishConnection()
+        } catch (e: Exception) {
+            withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { XrayBridge.stop() }
+            vpnInterface?.close(); vpnInterface = null
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            connectionManager.onVpnError("Xray startup failed; check core binary and profile settings")
+            stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
+        }
+    }
+
     private suspend fun connectVless(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String) {
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
@@ -3440,6 +3480,7 @@ class SlipNetVpnService : VpnService() {
                 serverDomain = profile.domain,
                 vlessUuid = profile.vlessUuid,
                 transport = profile.vlessTransport,
+                security = profile.vlessSecurity,
                 wsPath = profile.vlessWsPath,
                 fragmentEnabled = profile.sniFragmentEnabled,
                 fragmentStrategy = profile.sniFragmentStrategy,
@@ -3628,6 +3669,7 @@ class SlipNetVpnService : VpnService() {
             TunnelType.NAIVE -> NaiveBridge.isRunning()
             TunnelType.SNOWFLAKE -> SnowflakeBridge.isRunning()
             TunnelType.SOCKS5 -> Socks5ProxyBridge.isRunning()
+            TunnelType.XRAY -> XrayBridge.isRunning()
             TunnelType.VLESS -> VlessBridge.isRunning()
             TunnelType.SOAR, TunnelType.SOAR_SSH -> SoarBridge.isRunning()
         }
@@ -3875,6 +3917,7 @@ class SlipNetVpnService : VpnService() {
                             Socks5ProxyBridge.getInstance("chain-socks5-$it")?.isRunning() == true
                         }
                     }
+                    TunnelType.XRAY -> XrayBridge.isRunning()
                     TunnelType.VLESS -> VlessBridge.isRunning()
                     TunnelType.SOAR, TunnelType.SOAR_SSH -> SoarBridge.isRunning()
                 }
@@ -4401,7 +4444,7 @@ class SlipNetVpnService : VpnService() {
                 healthCheckJob?.cancel()
 
                 // Get the current profile
-                val profile = connectionManager.getProfileById(currentProfileId)
+                val profile = collectionProfile(connectionManager.getProfileById(currentProfileId))
                 if (profile == null) {
                     Log.e(TAG, "Cannot reconnect: profile not found")
                     return@launch
@@ -4624,7 +4667,7 @@ class SlipNetVpnService : VpnService() {
                     // Soar+SSH: restart Soar on internal port, then SSH through its SOCKS5 on proxyPort
                     val soarResult = vpnRepository.startSoarProxy(
                         profile, portOverride = proxyPort + 1, hostOverride = "127.0.0.1",
-                        resolverOverride = preferencesDataStore.parsedGlobalResolvers().takeIf { it.isNotEmpty() }
+                        resolverOverride = (collectionResolvers ?: preferencesDataStore.parsedGlobalResolvers()).takeIf { it.isNotEmpty() }
                     )
                     if (soarResult.isFailure) {
                         Log.e(TAG, "Failed to restart Soar after network change", soarResult.exceptionOrNull())
@@ -4873,7 +4916,7 @@ class SlipNetVpnService : VpnService() {
                     // Soar: restart Soar on internal port + SOCKS5 bridge on proxyPort
                     val soarResult = vpnRepository.startSoarProxy(
                         profile, portOverride = proxyPort + 1, hostOverride = "127.0.0.1",
-                        resolverOverride = preferencesDataStore.parsedGlobalResolvers().takeIf { it.isNotEmpty() }
+                        resolverOverride = (collectionResolvers ?: preferencesDataStore.parsedGlobalResolvers()).takeIf { it.isNotEmpty() }
                     )
                     if (soarResult.isFailure) {
                         Log.e(TAG, "Failed to restart Soar after network change", soarResult.exceptionOrNull())
@@ -5029,6 +5072,14 @@ class SlipNetVpnService : VpnService() {
                     }
                 } else {
                     val proxyResult = when (currentTunnelType) {
+                        TunnelType.XRAY -> {
+                            val auth = preferencesDataStore.proxyAuthEnabled.first()
+                            val user = if (auth) preferencesDataStore.proxyAuthUsername.first() else null
+                            val password = if (auth) preferencesDataStore.proxyAuthPassword.first() else null
+                            withContext(Dispatchers.IO) {
+                                XrayBridge.start(this@SlipNetVpnService, profile.coreLink, proxyPort, user, password)
+                            }
+                        }
                         TunnelType.DOH -> vpnRepository.startDohProxy(profile)
                         TunnelType.SNOWFLAKE -> {
                             val torSocksPort = proxyPort + 1
@@ -5251,6 +5302,7 @@ class SlipNetVpnService : VpnService() {
                 Log.d(TAG, "Stopping SOCKS5 proxy bridge")
                 Socks5ProxyBridge.stop()
             }
+            TunnelType.XRAY -> XrayBridge.stop()
             TunnelType.VLESS -> {
                 Log.d(TAG, "Stopping VLESS bridge")
                 VlessBridge.stop()
@@ -5287,6 +5339,7 @@ class SlipNetVpnService : VpnService() {
             TunnelType.NAIVE -> { /* NaiveProxy standalone: no bridge reference to clear */ }
             TunnelType.SNOWFLAKE -> { /* Snowflake: no bridge reference to clear */ }
             TunnelType.SOCKS5 -> { /* SOCKS5: no bridge reference to clear */ }
+            TunnelType.XRAY -> { /* Child process is stopped by stopCurrentProxy. */ }
             TunnelType.VLESS -> { /* VLESS: no VpnService reference to clear */ }
             TunnelType.SOAR, TunnelType.SOAR_SSH -> { /* Soar: no VpnService reference to clear */ }
         }
@@ -5317,6 +5370,7 @@ class SlipNetVpnService : VpnService() {
             TunnelType.NAIVE -> NaiveBridge.isClientHealthy() && NaiveSocksBridge.isClientHealthy()
             TunnelType.SNOWFLAKE -> SnowflakeBridge.isClientHealthy() && TorSocksBridge.isClientHealthy()
             TunnelType.SOCKS5 -> Socks5ProxyBridge.isRunning() && Socks5ProxyBridge.isClientHealthy()
+            TunnelType.XRAY -> XrayBridge.isRunning()
             TunnelType.VLESS -> VlessBridge.isRunning() && VlessBridge.isClientHealthy()
             TunnelType.SOAR -> SoarBridge.isClientHealthy() && Socks5ProxyBridge.isClientHealthy()
             TunnelType.SOAR_SSH -> SoarBridge.isClientHealthy() && SshTunnelBridge.isClientHealthy()
@@ -5337,7 +5391,7 @@ class SlipNetVpnService : VpnService() {
     private suspend fun establishVpnInterface(dnsServer: String): ParcelFileDescriptor? {
         val mtu = try { preferencesDataStore.vpnMtu.first() } catch (_: Exception) { VPN_MTU }
         val builder = Builder()
-            .setSession("SlipNet VPN")
+            .setSession("Rovunet VPN")
             .setMtu(mtu)
             .addAddress(VPN_ADDRESS, 32)
             .addDnsServer(dnsServer)
@@ -5366,6 +5420,7 @@ class SlipNetVpnService : VpnService() {
                 currentTunnelType == TunnelType.NAIVE ||
                 currentTunnelType == TunnelType.SNOWFLAKE ||
                 currentTunnelType == TunnelType.SOCKS5 ||
+                currentTunnelType == TunnelType.XRAY ||
                 currentTunnelType == TunnelType.VLESS ||
                 currentTunnelType == TunnelType.SOAR ||
                 currentTunnelType == TunnelType.SOAR_SSH
@@ -5764,7 +5819,7 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Update foreground notification to kill switch notification
-        val profile = connectionManager.getProfileById(currentProfileId)
+        val profile = collectionProfile(connectionManager.getProfileById(currentProfileId))
         val profileName = profile?.name ?: "VPN"
         val notification = notificationHelper.createKillSwitchNotification(profileName)
         val notificationManager = getSystemService(NotificationManager::class.java)

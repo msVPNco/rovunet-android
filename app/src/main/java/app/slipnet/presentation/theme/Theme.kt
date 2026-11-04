@@ -32,7 +32,7 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color.White,
     surface = SurfaceDark,
     onSurface = Color.White,
-    surfaceVariant = Color(0xFF49454F),
+    surfaceVariant = Color(0xFF526575),
     onSurfaceVariant = Color(0xFFCAC4D0),
     error = Color(0xFFF2B8B5),
     onError = Color(0xFF601410)
@@ -71,19 +71,19 @@ private val LightColorScheme = lightColorScheme(
     tertiary = Pink40,
     onTertiary = Color.White,
     background = BackgroundLight,
-    onBackground = Color.Black,
+    onBackground = Color(0xFF172C42),
     surface = SurfaceLight,
-    onSurface = Color.Black,
-    surfaceVariant = Color(0xFFE7E0EC),
-    onSurfaceVariant = Color(0xFF49454F),
+    onSurface = Color(0xFF172C42),
+    surfaceVariant = Color(0xFFE6F0F2),
+    onSurfaceVariant = Color(0xFF526575),
     error = Color(0xFFB3261E),
     onError = Color.White
 )
 
 @Composable
 fun SlipstreamTheme(
-    darkMode: DarkMode = DarkMode.SYSTEM,
-    dynamicColor: Boolean = true,
+    darkMode: DarkMode = DarkMode.LIGHT,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (darkMode) {

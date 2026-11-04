@@ -1,5 +1,6 @@
 package app.slipnet.data.local.database
 
+import androidx.room.Transaction
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -23,6 +24,26 @@ interface ProfileDao {
 
     @Update
     suspend fun updateProfile(profile: ProfileEntity)
+
+    @Update
+    suspend fun updateProfiles(profiles: List<ProfileEntity>)
+
+    @Query("UPDATE server_profiles SET sort_order = sort_order + :count")
+    suspend fun shiftSortOrders(count: Int)
+
+    @Transaction
+    suspend fun insertCollection(profiles: List<ProfileEntity>): List<Long> {
+        shiftSortOrders(profiles.size)
+        return profiles.mapIndexed { index, profile -> insertProfile(profile.copy(id = 0, sortOrder = index, isActive = false)) }
+    }
+
+    @Transaction
+    suspend fun deleteReviewedProfiles(expected: List<ProfileEntity>, deleteIds: List<Long>): Boolean {
+        if (!deleteIds.all { id -> expected.any { it.id == id } }) return false
+        for (profile in expected) if (getProfileById(profile.id) != profile) return false
+        deleteIds.forEach { deleteProfile(it) }
+        return true
+    }
 
     @Query("DELETE FROM server_profiles WHERE id = :id")
     suspend fun deleteProfile(id: Long)

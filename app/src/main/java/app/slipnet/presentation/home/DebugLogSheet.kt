@@ -79,6 +79,10 @@ fun DebugLogSheet(onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.surface
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                androidx.compose.material3.TextButton(onClick = {
+                    clipboardManager.setText(AnnotatedString(app.slipnet.util.ConnectionDiagnostics.report()))
+                }) { Text("Copy safe connection report") }
+                Text("Raw debug logs below may contain private server details.", modifier = Modifier.padding(horizontal = 16.dp))
                 // Header
                 Row(
                     modifier = Modifier

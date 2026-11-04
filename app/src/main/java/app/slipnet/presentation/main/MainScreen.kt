@@ -140,6 +140,8 @@ import app.slipnet.domain.model.ServerProfile
 import app.slipnet.domain.model.TrafficStats
 import app.slipnet.presentation.common.components.AboutDialogContent
 import app.slipnet.presentation.common.components.ProfileListItem
+import app.slipnet.presentation.theme.rv
+import app.slipnet.domain.model.ProfileCollections
 import app.slipnet.presentation.common.components.QrCodeDialog
 import app.slipnet.presentation.common.icons.TorIcon
 import app.slipnet.presentation.common.icons.VlessIcon
@@ -175,6 +177,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showConnectionGuide by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -203,6 +206,11 @@ fun MainScreen(
     var pendingChainAfterBatteryPrompt by remember { mutableStateOf<ProfileChain?>(null) }
 
     // Dialog/sheet state
+    var showLanguage by remember { mutableStateOf(false) }
+    var expandedCollection by remember { mutableStateOf<String?>(null) }
+    var moveTarget by remember { mutableStateOf<ServerProfile?>(null) }
+    var renameTarget by remember { mutableStateOf<ServerProfile?>(null) }
+    var renameText by remember { mutableStateOf("") }
     var showShareDialog by remember { mutableStateOf(false) }
     var showLogSheet by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
@@ -212,6 +220,7 @@ fun MainScreen(
     var showAddMenu by remember { mutableStateOf(false) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showDeleteDuplicatesDialog by remember { mutableStateOf(false) }
+    var deleteCollectionTarget by remember { mutableStateOf<List<ServerProfile>?>(null) }
     var profileToDelete by remember { mutableStateOf<ServerProfile?>(null) }
     // Export lock dialog state
     var exportLockProfile by remember { mutableStateOf<ServerProfile?>(null) }
@@ -268,24 +277,57 @@ fun MainScreen(
     ) { result ->
         val contents = result.contents
         if (contents != null) {
-            if (contents.startsWith("slipnet://") || contents.startsWith("slipnet-enc://") || contents.startsWith("vless://")) {
+            if (app.slipnet.data.export.ConfigSchemes.accepts(contents)) {
                 viewModel.parseImportConfig(contents)
             } else {
                 scope.launch {
-                    snackbarHostState.showSnackbar("Invalid QR code: not a SlipNet config")
+                    snackbarHostState.showSnackbar("Unsupported QR code: use a supported link or WireGuard configuration")
                 }
             }
         }
     }
 
+    if (showLanguage) AlertDialog(
+        onDismissRequest = { showLanguage = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_language_a4fe65)) },
+        text = { Column {
+            listOf("en" to "English", "fa" to "فارسی", "zh" to "简体中文", "ru" to "Русский").forEach { (code, label) ->
+                TextButton(onClick = {
+                    context.getSharedPreferences("rovunet_ui", Context.MODE_PRIVATE).edit().putString("language", code).apply()
+                    activity?.recreate()
+                }) { Text(label) }
+            }
+        } }, confirmButton = { TextButton(onClick = { showLanguage = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7)) } }
+    )
+    if (uiState.collectionPrompt) AlertDialog(
+        onDismissRequest = viewModel::dismissCollectionPrompt,
+        title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_try_dns_fallback_a41a7b)) },
+        text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_direct_paths_failed_in_this_collection_test_its_configured_dns_first_then_search_the_bundl_c79e01)) },
+        confirmButton = { TextButton(enabled = !uiState.isPingRunning, onClick = viewModel::acceptCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef)) } },
+        dismissButton = { TextButton(onClick = viewModel::dismissCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } }
+    )
+    moveTarget?.let { source -> AlertDialog(
+        onDismissRequest = { moveTarget = null }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_move_to_collection_b392f3)) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            uiState.profiles.distinctBy { ProfileCollections.key(it) }.filter { ProfileCollections.key(it) != ProfileCollections.key(source) }.forEach { target ->
+                TextButton(enabled = uiState.connectionState.isDisconnected, onClick = { viewModel.moveCollection(source, target); moveTarget = null }) { Text(ProfileCollections.name(target)) }
+            }
+        } }, confirmButton = { TextButton(onClick = { moveTarget = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } }
+    ) }
+    renameTarget?.let { target -> AlertDialog(
+        onDismissRequest = { renameTarget = null }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_collection_name_922214)) },
+        text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it.take(120) }, singleLine = true) },
+        confirmButton = { TextButton(enabled = renameText.isNotBlank(), onClick = { viewModel.renameCollection(target, renameText); renameTarget = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_save_1509f5)) } },
+        dismissButton = { TextButton(onClick = { renameTarget = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } }
+    ) }
+
     // Handle export — show dialog with Copy and Share options
     uiState.exportedJson?.let { json ->
         AlertDialog(
             onDismissRequest = { viewModel.clearExportedJson() },
-            title = { Text("Export") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_export_366489)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Config is ready to share.", style = MaterialTheme.typography.bodyMedium)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_config_is_ready_to_share_39820f), style = MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(
                         value = json,
                         onValueChange = {},
@@ -305,7 +347,7 @@ fun MainScreen(
                     }
                     context.startActivity(Intent.createChooser(sendIntent, "Export Profile"))
                     viewModel.clearExportedJson()
-                }) { Text("Share") }
+                }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_share_29887a)) }
             },
             dismissButton = {
                 Row {
@@ -313,15 +355,16 @@ fun MainScreen(
                         clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(json))
                         viewModel.clearExportedJson()
                         scope.launch { snackbarHostState.showSnackbar("Copied to clipboard") }
-                    }) { Text("Copy") }
-                    TextButton(onClick = { viewModel.clearExportedJson() }) { Text("Cancel") }
+                    }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_copy_e21f93)) }
+                    TextButton(onClick = { viewModel.clearExportedJson() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
                 }
             }
         )
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
+    val localizedError = uiState.error?.let { rv(it) }
+    LaunchedEffect(localizedError) {
+        localizedError?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
@@ -394,6 +437,7 @@ fun MainScreen(
 
     // Helper to request VPN permission and connect
     fun requestConnectOrToggle() {
+        if (uiState.isPingRunning) { viewModel.cancelPing(); return }
         when (uiState.connectionState) {
             is ConnectionState.Connected,
             is ConnectionState.Connecting,
@@ -436,7 +480,7 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "SlipNet",
+                            text = "Rovunet",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -480,18 +524,31 @@ fun MainScreen(
                             onDismissRequest = { showOverflowMenu = false }
                         ) {
                             DropdownMenuItem(
+                            text = { Text("Language · زبان · 语言 · Язык") },
+                            onClick = { showOverflowMenu = false; showLanguage = true }
+                        )
+                        if (uiState.regroupUndoAvailable) DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_undo_regrouping_dbd472)) },
+                            enabled = !uiState.regroupBusy && !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                            onClick = viewModel::undoRegroup)
+                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
+                            enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                            onClick = { viewModel.previewRegroup() })
+                        DropdownMenuItem(text = { Text("Choosing a profile / Test guide") }, onClick = {
+                                showOverflowMenu = false; showConnectionGuide = true
+                            })
+                            DropdownMenuItem(
                                 text = {
-                                    Text(if (uiState.isPingRunning) "Stop Real Ping" else "Real Ping")
+                                    Text(if (uiState.isPingRunning) "Stop HTTPS Test" else "Test selected collection")
                                 },
                                 onClick = {
                                     showOverflowMenu = false
-                                    viewModel.pingAllProfiles()
+                                    mainActivity?.requestVpnPermissionAndConnect { viewModel.pingAllProfiles() } ?: viewModel.pingAllProfiles()
                                 },
                                 enabled = uiState.profiles.isNotEmpty()
                             )
                             DropdownMenuItem(
                                 text = {
-                                    Text(if (uiState.isPingRunning) "Stop Simple Ping" else "Simple Ping")
+                                    Text(if (uiState.isPingRunning) "Stop TCP Check" else "TCP check · selected collection")
                                 },
                                 onClick = {
                                     showOverflowMenu = false
@@ -501,18 +558,23 @@ fun MainScreen(
                             )
                             if (uiState.pingResults.isNotEmpty() && !uiState.isPingRunning) {
                                 DropdownMenuItem(
-                                    text = { Text("Clear Ping Results") },
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_clear_ping_results_ad461f)) },
                                     onClick = {
                                         showOverflowMenu = false
                                         viewModel.clearPingResults()
                                     }
                                 )
                             }
-                            // Only show "Sort by Ping" when at least one profile has a
+                            // Only show "Sort by HTTPS latency" when at least one profile has a
                             // successful measurement — otherwise there's nothing to sort by.
+                            if (uiState.pingResults.values.any { it is PingResult.Success && it.verified }) {
+                                DropdownMenuItem(text = { Text("Sort by short-test reliability") }, onClick = {
+                                    showOverflowMenu = false; viewModel.sortProfilesByPing(reliability = true)
+                                })
+                            }
                             if (uiState.pingResults.values.any { it is PingResult.Success }) {
                                 DropdownMenuItem(
-                                    text = { Text("Sort by Ping") },
+                                    text = { Text("Sort by HTTPS latency") },
                                     onClick = {
                                         showOverflowMenu = false
                                         viewModel.sortProfilesByPing()
@@ -536,19 +598,20 @@ fun MainScreen(
                                 enabled = uiState.profiles.any { !it.isLocked }
                             )
                             DropdownMenuItem(
-                                text = { Text("Import Profiles") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_profiles_d47ce9)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showImportDialog = true
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete Duplicate Profiles") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
                                 onClick = {
                                     showOverflowMenu = false
+                                    viewModel.previewDuplicateProfiles()
                                     showDeleteDuplicatesDialog = true
                                 },
-                                enabled = uiState.profiles.size > 1
+                                enabled = uiState.profiles.size > 1 && !uiState.isPingRunning && uiState.connectionState.isDisconnected
                             )
                             DropdownMenuItem(
                                 text = { Text("Delete All Profiles") },
@@ -619,12 +682,20 @@ fun MainScreen(
                             selected = selectedTab == 0,
                             onClick = { selectedTab = 0 },
                             shape = SegmentedButtonDefaults.itemShape(0, 2)
-                        ) { Text("Profiles") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_profiles_535e52)) }
                         SegmentedButton(
                             selected = selectedTab == 1,
                             onClick = { selectedTab = 1 },
                             shape = SegmentedButtonDefaults.itemShape(1, 2)
-                        ) { Text("Chains") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_chains_79aaa1)) }
+                    }
+                }
+
+                if (uiState.isPingRunning) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text(rv(uiState.collectionProgress), modifier = Modifier.weight(1f).padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { viewModel.cancelPing() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5)) }
                     }
                 }
 
@@ -700,12 +771,12 @@ fun MainScreen(
                                 modifier = Modifier.padding(32.dp)
                             ) {
                                 Text(
-                                    text = "No profiles yet",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_no_profiles_yet_bd4729),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "Tap + to add your first profile",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_tap_to_add_your_first_profile_3bb680),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -762,14 +833,32 @@ fun MainScreen(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(
-                                items = uiState.profiles,
-                                key = { it.id }
-                            ) { profile ->
-                                val isConnected = uiState.connectedProfileId == profile.id
-
-                                ReorderableItem(reorderableLazyListState, key = profile.id) { isDragging ->
-                                    val elevation = if (isDragging) 8.dp else 0.dp
-
+                                    items = uiState.profiles.groupBy { ProfileCollections.key(it) }.values.toList(),
+                                    key = { ProfileCollections.key(it.first()) }
+                                ) { collection ->
+                                    val representative = collection.first()
+                                    val collectionKey = ProfileCollections.key(representative)
+                                    val selected = collectionKey == (uiState.selectedCollection ?: uiState.activeProfile?.let { ProfileCollections.key(it) })
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        CollectionCard(
+                                            profiles = collection, results = uiState.pingResults,
+                                            selected = selected, expanded = expandedCollection == collectionKey,
+                                            connected = collection.any { it.id == uiState.connectedProfileId },
+                                            busy = uiState.isPingRunning || uiState.collectionPrompt,
+                                            onSelect = { viewModel.selectCollection(representative) },
+                                            onDetails = { expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
+                                            onRename = { renameTarget = representative; renameText = ProfileCollections.name(representative) },
+                                            onMove = { moveTarget = representative },
+                                            onExport = { viewModel.exportCollection(representative) },
+                                            onDelete = { deleteCollectionTarget = collection.toList() },
+                                            canDelete = uiState.connectionState.isDisconnected,
+                                            onTest = {
+                                                if (uiState.proxyOnlyMode) viewModel.pingCollection(representative)
+                                                else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative) }
+                                            }
+                                        )
+                                        if (expandedCollection == collectionKey) collection.forEach { profile ->
+                                            val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
                                         isSelected = profile.isActive,
@@ -803,12 +892,10 @@ fun MainScreen(
                                         onPinClick = { viewModel.togglePinProfile(profile) },
                                         onPingClick = { viewModel.pingSingleProfile(profile) },
                                         isPingRunning = uiState.isPingRunning,
-                                        modifier = Modifier
-                                            .longPressDraggableHandle()
-                                            .shadow(elevation, RoundedCornerShape(12.dp))
-                                            .zIndex(if (isDragging) 1f else 0f)
+                                        modifier = Modifier.padding(start = 12.dp)
                                     )
-                                }
+                                        }
+                                    }
                             }
                             }
                         }
@@ -844,8 +931,9 @@ fun MainScreen(
                     sheetState = sheetState,
                     dragHandle = null
                 ) {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text(
-                        text = "New Profile",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_new_profile_cfeed6),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
                     )
@@ -858,110 +946,22 @@ fun MainScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         maxItemsInEachRow = 3
                     ) {
-                        val tileMod = Modifier.weight(1f)
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Dns,
-                            title = "DNSTT",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("dnstt")
-                            }
+                        val groups = listOf(
+                            "Web / TCP paths" to listOf(Triple("REALITY", "reality", Icons.Default.Shield), Triple("XHTTP", "xhttp", Icons.Default.Language), Triple("VLESS WS", "vless", VlessIcon), Triple("SSH", "ssh", Icons.Default.Lock), Triple("SOCKS5", "socks5", Icons.Default.Share)) +
+                                (if (BuildConfig.INCLUDE_NAIVE) listOf(Triple("NaiveProxy", "naive", Icons.Default.Shield)) else emptyList()),
+                            "UDP paths" to listOf(Triple("Hysteria2", "hysteria2", Icons.Default.Waves), Triple("WireGuard", "wireguard", Icons.Default.Lock)),
+                            "DNS / alternative paths" to listOf(Triple("DNSTT", "dnstt", Icons.Default.Dns), Triple("NoizDNS", TunnelType.NOIZDNS.value, Icons.Default.VisibilityOff), Triple("VayDNS", "vaydns", Icons.Default.Air), Triple("Soar", "soar", Icons.Default.FlightTakeoff), Triple("Slipstream", "slipstream", Icons.Default.Waves), Triple("DOH", "doh", Icons.Default.Language)) +
+                                (if (BuildConfig.INCLUDE_TOR) listOf(Triple("Tor", "snowflake", TorIcon)) else emptyList())
                         )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.VisibilityOff,
-                            title = "NoizDNS",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile(TunnelType.NOIZDNS.value)
+                        TextButton(onClick = { showConnectionGuide = true }, modifier = Modifier.fillMaxWidth()) { Text("Which should I use? • Speed is unknown until tested") }
+                        groups.forEach { (heading, entries) ->
+                            Text(heading, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth().padding(12.dp))
+                            entries.forEach { (label, route, tileIcon) ->
+                                AddMenuGridItem(modifier = Modifier.weight(1f), icon = tileIcon, title = label,
+                                    onClick = { showAddMenu = false; onNavigateToAddProfile(route) })
                             }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Air,
-                            title = "VayDNS",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile(TunnelType.VAYDNS.value)
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.FlightTakeoff,
-                            title = "Soar",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile(TunnelType.SOAR.value)
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Waves,
-                            title = "Slipstream",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("slipstream")
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Lock,
-                            title = "SSH",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("ssh")
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Language,
-                            title = "DOH",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("doh")
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = Icons.Default.Share,
-                            title = "SOCKS5",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("socks5")
-                            }
-                        )
-                        AddMenuGridItem(
-                            modifier = tileMod,
-                            icon = VlessIcon,
-                            title = "VLESS",
-                            onClick = {
-                                showAddMenu = false
-                                onNavigateToAddProfile("vless")
-                            }
-                        )
-                        if (BuildConfig.INCLUDE_NAIVE) {
-                            AddMenuGridItem(
-                                modifier = tileMod,
-                                icon = Icons.Default.Shield,
-                                title = "NaiveProxy",
-                                onClick = {
-                                    showAddMenu = false
-                                    onNavigateToAddProfile("naive")
-                                }
-                            )
                         }
-                        if (BuildConfig.INCLUDE_TOR) {
-                            AddMenuGridItem(
-                                modifier = tileMod,
-                                icon = TorIcon,
-                                title = "Tor",
-                                onClick = {
-                                    showAddMenu = false
-                                    onNavigateToAddProfile("snowflake")
-                                }
-                            )
-                        }
+
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     AddMenuOption(
@@ -983,11 +983,17 @@ fun MainScreen(
                         }
                     )
                     Spacer(Modifier.height(24.dp))
+                    }
                 }
             }
         }
     }
 
+    if (showConnectionGuide) {
+        AlertDialog(onDismissRequest = { showConnectionGuide = false }, title = { Text("Choose a connection") },
+            text = { Text(app.slipnet.domain.model.ProfileGuidance.GUIDE, modifier = Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text("OK") } })
+    }
     // ── Dialogs ─────────────────────────────────────────────────────────
 
     // Debug log sheet
@@ -999,10 +1005,10 @@ fun MainScreen(
     if (showLiteInfoDialog) {
         AlertDialog(
             onDismissRequest = { showLiteInfoDialog = false },
-            title = { Text("SlipNet Lite") },
+            title = { Text("Rovunet Lite") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("SlipNet Lite is a lightweight version with a smaller app size.")
+                    Text("Rovunet Lite is a lightweight version with a smaller app size.")
                     Text("Included protocols:", fontWeight = FontWeight.Bold)
                     Text("• Slipstream / Slipstream + SSH")
                     Text("• DNSTT / DNSTT + SSH")
@@ -1027,7 +1033,7 @@ fun MainScreen(
     if (showShareDialog) {
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text("Share SlipNet") },
+            title = { Text("Share Rovunet") },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
@@ -1040,14 +1046,7 @@ fun MainScreen(
                         onClick = { showShareDialog = false; shareApk(context) },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("APK File") }
-                    TextButton(
-                        onClick = { showShareDialog = false; shareGithubLink(context) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("GitHub Link") }
-                    TextButton(
-                        onClick = { showShareDialog = false; shareTelegramLink(context) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Telegram Channel") }
+
                 }
             },
             confirmButton = {}
@@ -1058,7 +1057,7 @@ fun MainScreen(
     profileToDelete?.let { profile ->
         AlertDialog(
             onDismissRequest = { profileToDelete = null },
-            title = { Text("Delete Profile") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_delete_profile_4e5fc6)) },
             text = { Text("Are you sure you want to delete \"${profile.name}\"?") },
             confirmButton = {
                 TextButton(
@@ -1066,10 +1065,10 @@ fun MainScreen(
                         viewModel.deleteProfile(profile)
                         profileToDelete = null
                     }
-                ) { Text("Delete") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_delete_e2d0a5)) }
             },
             dismissButton = {
-                TextButton(onClick = { profileToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { profileToDelete = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1088,32 +1087,49 @@ fun MainScreen(
                         viewModel.deleteAllProfiles()
                         showDeleteAllDialog = false
                     }
-                ) { Text("Delete All") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_delete_all_ef85af)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteAllDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
+    }
+
+    deleteCollectionTarget?.let { reviewed ->
+        AlertDialog(onDismissRequest = { deleteCollectionTarget = null },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_collection)) },
+            text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_collection_confirm, ProfileCollections.name(reviewed.first()), reviewed.size)) },
+            confirmButton = { TextButton(enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                onClick = { viewModel.deleteCollection(reviewed); deleteCollectionTarget = null }) {
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_collection), color = MaterialTheme.colorScheme.error)
+            } },
+            dismissButton = { TextButton(onClick = { deleteCollectionTarget = null }) { Text(rv("Cancel")) } })
     }
 
     // Delete duplicate profiles confirmation dialog
     if (showDeleteDuplicatesDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDuplicatesDialog = false },
-            title = { Text("Delete Duplicate Profiles") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
             text = {
-                Text("This will remove profiles with identical connection settings, keeping one copy of each.")
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_only_exact_duplicates_within_the_same_collection_are_listed_locked_pinned_and_chain_profil_6064c6))
+                    if (uiState.duplicatePreview.isEmpty()) Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_no_exact_duplicates_found_b3a2b7))
+                    uiState.duplicatePreview.forEach { match ->
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.duplicate_review_entry, ProfileCollections.name(match.keep), match.remove.name, match.keep.name))
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deleteDuplicateProfiles()
                         showDeleteDuplicatesDialog = false
-                    }
-                ) { Text("Delete Duplicates") }
+                    }, enabled = uiState.duplicatePreview.isNotEmpty()
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_delete_duplicates_b89a2e)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDuplicatesDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDuplicatesDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1141,7 +1157,7 @@ fun MainScreen(
             },
             title = { Text("Disable Battery Optimization") },
             text = {
-                Text("For reliable VPN operation, disable battery optimization for SlipNet. " +
+                Text("For reliable VPN operation, disable battery optimization for Rovunet. " +
                      "Without this, Android may suspend the VPN when the screen is off.")
             },
             confirmButton = {
@@ -1200,26 +1216,43 @@ fun MainScreen(
         )
     }
 
+    LaunchedEffect(Unit) { viewModel.refreshRegroupUndo() }
+    uiState.regroupPreview?.let { groups ->
+        AlertDialog(onDismissRequest = viewModel::cancelRegroup,
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_only_group_names_and_membership_change_connection_settings_are_preserved_66d347))
+                groups.forEach { group ->
+                    val oldNames = group.profiles.map { ProfileCollections.name(it) }.distinct().joinToString("، ")
+                    Text("$oldNames → ${group.name} · ${group.profiles.size}")
+                }
+            } },
+            confirmButton = { TextButton(onClick = viewModel::confirmRegroup, enabled = !uiState.regroupBusy) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392)) } },
+            dismissButton = { TextButton(onClick = viewModel::cancelRegroup) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } })
+    }
+
     // Import preview dialog
     uiState.importPreview?.let { preview ->
         AlertDialog(
             onDismissRequest = { viewModel.cancelImport() },
-            title = { Text("Import Profiles") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_profiles_d47ce9)) },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "${preview.profiles.size} profile(s) found:",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.import_profile_count, preview.profiles.size),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    preview.profiles.forEach { profile ->
-                        Text(
-                            text = if (profile.isLocked) "\u2022 ${profile.name} (Locked)" else "\u2022 ${profile.name}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (preview.groups.size == 1) OutlinedTextField(value = preview.collectionName, onValueChange = viewModel::setImportCollectionName,
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_collection_name_922214)) }, placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_example_collection_name)) }, singleLine = true)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_grouped_by_account_and_server_speed_and_stability_are_untested_d7280c), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { showConnectionGuide = true }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_which_should_i_use_8e8eed)) }
+                    val omitted = preview.profiles.size - preview.groups.sumOf { it.profiles.size }
+                    if (omitted > 0) Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.import_duplicate_count, omitted))
+                    preview.groups.forEach { group ->
+                        Text("${group.name} · ${group.profiles.size}", style = MaterialTheme.typography.titleSmall)
                     }
                     if (preview.warnings.isNotEmpty()) {
                         Text(
@@ -1239,10 +1272,10 @@ fun MainScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmImport() }) { Text("Import") }
+                TextButton(onClick = { viewModel.confirmImport() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_2cff9b)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelImport() }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.cancelImport() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1452,7 +1485,7 @@ fun MainScreen(
                     ) { Text(if (exportLockMode == "qr") "Share" else "Export") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { exportLockProfile = null }) { Text("Cancel") }
+                    TextButton(onClick = { exportLockProfile = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
                 }
             )
         }
@@ -1592,10 +1625,10 @@ fun MainScreen(
                         showExportAllEncryptedDialog = false
                     },
                     enabled = pw.isNotBlank()
-                ) { Text("Export") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_export_366489)) }
             },
             dismissButton = {
-                TextButton(onClick = { showExportAllEncryptedDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showExportAllEncryptedDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1616,7 +1649,7 @@ fun MainScreen(
                     OutlinedTextField(
                         value = pw,
                         onValueChange = { pw = it },
-                        label = { Text("Password") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
                         singleLine = true,
                         visualTransformation = if (pwVisible) {
                             androidx.compose.ui.text.input.VisualTransformation.None
@@ -1642,7 +1675,7 @@ fun MainScreen(
                 ) { Text("Decrypt") }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelEncryptedImport() }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.cancelEncryptedImport() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1654,15 +1687,19 @@ fun MainScreen(
                 showImportDialog = false
                 importText = ""
             },
-            title = { Text("Import Profiles") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_profiles_d47ce9)) },
             text = {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Paste the config below:",
+                        text = "Paste a link or WireGuard configuration. Speed is unknown until tested:",
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "VLESS: REALITY / XHTTP / WebSocket • Hysteria2 • WireGuard (.conf)\nLegacy slipnet:// profiles are also supported.",
+                        style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
                         value = importText,
@@ -1670,7 +1707,7 @@ fun MainScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        placeholder = { Text("slipnet://...") },
+                        placeholder = { Text("rovunet://...  vless://...\nhysteria2://...  hy2://...\n[Interface] (WireGuard)") },
                         singleLine = false,
                         maxLines = 5
                     )
@@ -1684,14 +1721,14 @@ fun MainScreen(
                                     if (clip.isNotBlank()) importText = clip
                                 }
                             }
-                        ) { Text("Paste") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_paste_f3380f)) }
                         TextButton(
                             onClick = {
                                 importFileLauncher.launch(arrayOf("text/plain", "*/*"))
                                 showImportDialog = false
                                 importText = ""
                             }
-                        ) { Text("File") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_file_50009c)) }
                         TextButton(
                             onClick = {
                                 showImportDialog = false
@@ -1703,7 +1740,7 @@ fun MainScreen(
                                     setCaptureActivity(QrScannerActivity::class.java)
                                 })
                             }
-                        ) { Text("QR Code") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_qr_code_5a7791)) }
                     }
                 }
             },
@@ -1717,7 +1754,7 @@ fun MainScreen(
                         }
                     },
                     enabled = importText.isNotBlank()
-                ) { Text("Import") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_2cff9b)) }
             },
             dismissButton = {
                 TextButton(
@@ -1725,7 +1762,7 @@ fun MainScreen(
                         showImportDialog = false
                         importText = ""
                     }
-                ) { Text("Cancel") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
             }
         )
     }
@@ -1734,11 +1771,11 @@ fun MainScreen(
     if (uiState.showFirstLaunchAbout) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissFirstLaunchAbout() },
-            title = { Text("Welcome to SlipNet") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_welcome_to_rovunet_20056d)) },
             text = { AboutDialogContent() },
             confirmButton = {
                 TextButton(onClick = { viewModel.dismissFirstLaunchAbout() }) {
-                    Text("Get Started")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_get_started_983f31))
                 }
             }
         )
@@ -1843,7 +1880,7 @@ private fun ChainListItem(
                     if (isConnected) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Connected",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655),
                             style = MaterialTheme.typography.labelSmall,
                             color = ConnectedGreen,
                             modifier = Modifier
@@ -1856,7 +1893,7 @@ private fun ChainListItem(
                     } else if (isSelected) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Selected",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_selected_57fd7a),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
@@ -1982,12 +2019,12 @@ private fun ConnectionStatusStrip(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = when {
-                            isConnected && isProxyOnly -> "Proxy Active"
-                            isConnected -> "Connected"
-                            connectionState is ConnectionState.Connecting -> "Connecting..."
-                            connectionState is ConnectionState.Disconnecting -> "Disconnecting..."
-                            isError -> "Connection Failed"
-                            else -> "Not Connected"
+                            isConnected && isProxyOnly -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_proxy_active_26396f)
+                            isConnected -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655)
+                            connectionState is ConnectionState.Connecting -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connecting_5f04ae)
+                            connectionState is ConnectionState.Disconnecting -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_disconnecting_cb5a85)
+                            isError -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connection_failed_42aa4e)
+                            else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_not_connected_87d82c)
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -1997,12 +2034,12 @@ private fun ConnectionStatusStrip(
                     Text(
                         text = when {
                             isConnected && connectionState is ConnectionState.Connected ->
-                                connectionState.chainName ?: connectionState.profile.name
+                                connectionState.chainName ?: ProfileCollections.name(connectionState.profile)
                             isError && connectionState is ConnectionState.Error ->
                                 connectionState.message
                             activeChain != null -> activeChain.name
-                            activeProfile != null -> activeProfile.name
-                            else -> "No profile selected"
+                            activeProfile != null -> ProfileCollections.name(activeProfile)
+                            else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_no_profile_selected_d87214)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isError) DisconnectedRed
@@ -2097,7 +2134,7 @@ private fun ConnectionStatusStrip(
                             modifier = Modifier.height(28.dp)
                         ) {
                             Text(
-                                text = "Cancel",
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e),
                                 style = MaterialTheme.typography.labelSmall
                             )
                         }
@@ -2272,12 +2309,12 @@ private fun AddMenuOption(
         Spacer(Modifier.width(16.dp))
         Column {
             Text(
-                text = title,
+                text = rv(title),
                 style = MaterialTheme.typography.titleSmall
             )
             if (description.isNotEmpty()) {
                 Text(
-                    text = description,
+                    text = rv(description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2308,7 +2345,7 @@ private fun AddMenuGridItem(
             modifier = Modifier.size(28.dp)
         )
         Text(
-            text = title,
+            text = rv(title),
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1
         )
@@ -2316,24 +2353,6 @@ private fun AddMenuGridItem(
 }
 
 // ── Share helpers ────────────────────────────────────────────────────────
-
-private fun shareGithubLink(context: Context) {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, "SlipNet VPN")
-        putExtra(Intent.EXTRA_TEXT, "Download SlipNet VPN:\nhttps://github.com/anonvector/SlipNet/releases/latest")
-    }
-    context.startActivity(Intent.createChooser(intent, "Share SlipNet"))
-}
-
-private fun shareTelegramLink(context: Context) {
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, "SlipNet VPN")
-        putExtra(Intent.EXTRA_TEXT, "Join SlipNet VPN on Telegram:\nhttps://t.me/SlipNet_app")
-    }
-    context.startActivity(Intent.createChooser(intent, "Share SlipNet"))
-}
 
 private fun shareApk(context: Context) {
     try {
@@ -2344,7 +2363,7 @@ private fun shareApk(context: Context) {
         val splits = appInfo.splitSourceDirs
         if (splits.isNullOrEmpty()) {
             val sourceApk = java.io.File(appInfo.sourceDir)
-            val sharedApk = java.io.File(sharedDir, "SlipNet-v${app.slipnet.BuildConfig.VERSION_NAME}.apk")
+            val sharedApk = java.io.File(sharedDir, "Rovunet-v${app.slipnet.BuildConfig.VERSION_NAME}.apk")
             sourceApk.copyTo(sharedApk, overwrite = true)
 
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", sharedApk)
@@ -2353,9 +2372,9 @@ private fun shareApk(context: Context) {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Share SlipNet"))
+            context.startActivity(Intent.createChooser(intent, "Share Rovunet"))
         } else {
-            val apksFile = java.io.File(sharedDir, "SlipNet-v${app.slipnet.BuildConfig.VERSION_NAME}.apks")
+            val apksFile = java.io.File(sharedDir, "Rovunet-v${app.slipnet.BuildConfig.VERSION_NAME}.apks")
             java.util.zip.ZipOutputStream(apksFile.outputStream().buffered()).use { zip ->
                 val allApks = listOf(appInfo.sourceDir) + splits
                 for (path in allApks) {
@@ -2372,7 +2391,7 @@ private fun shareApk(context: Context) {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Share SlipNet"))
+            context.startActivity(Intent.createChooser(intent, "Share Rovunet"))
         }
     } catch (_: Exception) { }
 }
