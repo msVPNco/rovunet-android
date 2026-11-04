@@ -4,6 +4,8 @@
 
 # Rovunet
 
+[English](README.md) · [فارسی](README.fa.md) · [Downloads](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06) · [Telegram](https://t.me/RovunetVPN)
+
 An independent Android multi-protocol VPN client based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full. Not affiliated with the SlipNet project.
 
 Rovunet groups imported connection paths into named collections, verifies HTTPS
@@ -14,7 +16,11 @@ some inherited advanced text still falls back to English.
 ## Current build
 
 0.3.0-alpha06 Full, versionCode 12. Experimental and debug-signed; real-device
-testing is still in progress. No store listing or public release exists yet.
+testing remains incomplete. [Alpha06 is published as a public prerelease](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06). No store listing is available.
+
+Download the Full APK, Android source package and Persian guide from the release's Assets. The release is pinned to commit `bb8d78b82fba44188add499d5984996747379eec`; later documentation changes do not rebuild that APK.
+
+APK SHA-256: `0ec8ecfced19bcce40f39933c89ad4a01d1c0e2ef88cfb3022d780da7482b590`.
 
 Telegram group: [t.me/RovunetVPN](https://t.me/RovunetVPN)
 
@@ -38,6 +44,9 @@ Build Full Android with Gradle and the prepared native dependencies. Do not
 publish the debug signing key as a production release key.
 
 ## Documentation
+
+- [Current status and roadmap](docs/STATUS.md): verified scope and remaining work
+- [Alpha06 release record](docs/releases/alpha06.md)
 
 - [Guide](docs/GUIDE.md): tunnel types, building, CLI client and configuration
 - [User guide](docs/USER_GUIDE.md) (English and Persian)
