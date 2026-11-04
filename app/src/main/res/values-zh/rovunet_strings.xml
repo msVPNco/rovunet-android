@@ -203,4 +203,7 @@
     
 <string name="community_open_failed">请安装 Telegram 或浏览器以打开此链接。</string>
 
+    <string name="donation_title">支持 Rovunet 开发</string>
+    <string name="donation_description">如果您愿意帮助改进 Rovunet，可以自愿捐款。</string>
+    <string name="donation_network_notice">请仅通过 Tron（TRC20）网络向此地址发送 USDT。</string>
 </resources>

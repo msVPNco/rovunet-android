@@ -206,4 +206,7 @@
     
 <string name="community_open_failed">Установите Telegram или браузер, чтобы открыть ссылку.</string>
 
+    <string name="donation_title">Поддержать разработку Rovunet</string>
+    <string name="donation_description">Если вы хотите помочь развитию Rovunet, вы можете сделать добровольное пожертвование.</string>
+    <string name="donation_network_notice">Отправляйте на этот адрес только USDT в сети Tron (TRC20).</string>
 </resources>

@@ -13,7 +13,7 @@ some inherited advanced text still falls back to English.
 
 ## Current build
 
-0.3.0-alpha04 Full, versionCode 10. Experimental and debug-signed; real-device
+0.3.0-alpha06 Full, versionCode 12. Experimental and debug-signed; real-device
 testing is still in progress. No store listing or public release exists yet.
 
 Telegram group: [t.me/RovunetVPN](https://t.me/RovunetVPN)
@@ -42,6 +42,17 @@ publish the debug signing key as a production release key.
 - [Guide](docs/GUIDE.md): tunnel types, building, CLI client and configuration
 - [User guide](docs/USER_GUIDE.md) (English and Persian)
 - [Security policy](SECURITY.md)
+
+## Optional support
+
+If you would like to help improve Rovunet, you can make a voluntary donation.
+The app also provides this address with a copy button in Settings and About.
+
+- Asset: **USDT**
+- Network: **Tron (TRC20)**
+- Address: `TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ`
+
+Send only USDT on Tron (TRC20) to this address.
 
 ## License
 

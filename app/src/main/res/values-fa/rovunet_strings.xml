@@ -204,4 +204,7 @@
     
 <string name="community_open_failed">برای باز کردن لینک، تلگرام یا یک مرورگر نصب کنید.</string>
 
+    <string name="donation_title">حمایت از توسعهٔ Rovunet</string>
+    <string name="donation_description">اگر تمایل دارید به پیشرفت Rovunet کمک کنید، می‌توانید به‌صورت اختیاری حمایت مالی کنید.</string>
+    <string name="donation_network_notice">فقط USDT روی شبکهٔ Tron (TRC20) به این آدرس ارسال کنید.</string>
 </resources>
