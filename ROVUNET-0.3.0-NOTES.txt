@@ -1,9 +1,22 @@
-Rovunet 0.3.0-alpha06 Full — versionCode 12
+Rovunet 0.3.0-alpha11 Full — versionCode 17
 
-راهنمای جاری: README.fa.md
+راهنمای جاری: README.fa.md و docs/USER_GUIDE.md
 وضعیت و محدودیت‌ها: docs/STATUS.md
-گزارش نسخه و هش APK: docs/releases/alpha06.md
-دانلود: https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06
+گزارش این انتشار: docs/releases/alpha11.md
+دانلود: https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha11
 تلگرام: https://t.me/RovunetVPN
 
-این فایل جایگزین یادداشت قدیمی آلفا ۱ شده است. آلفا ۶ آزمایشی و با امضای debug است؛ انتشار به معنی تأیید پایداری روی همهٔ دستگاه‌ها نیست.
+اتصال عادی مستقیماً مسیر انتخاب‌شده را راه‌اندازی می‌کند و منتظر تست پینگ/HTTPS یا اسکن رزولورها نمی‌ماند. آزمایش مجموعه جداگانه و فقط برای مجموعهٔ انتخاب‌شده است. نتیجهٔ قبلی تست، وضعیت زندهٔ اتصال نیست.
+
+انتظار پایان سرویس قبلی حداکثر ۱۰ ثانیه است. درخواست منقضی یا لغوشده دیرتر اجرا نمی‌شود. پایش سلامت پس از راه‌اندازی ادامه دارد؛ مصرف صفر در حالت بیکار به‌تنهایی خطا نیست.
+
+مهلت راه‌اندازی فنی: مسیرهای مستقیم ۹۰ ثانیه، DNS برابر ۱۲۰ ثانیه و Tor یا شروع بازیابی‌شدهٔ ناشناخته ۱۸۰ ثانیه. مهلت زنجیره از لایهٔ اول آن پیروی می‌کند. این اعداد مهلت خطا هستند، نه زمان اتصال مورد انتظار.
+
+آزمون‌های خودکار کامیت دقیق و ساخت Full Release موفق‌اند. تأیید روی گوشی و شبکهٔ گزارش‌دهنده هنوز لازم است. امضای تولید و انتشار فروشگاهی انجام نشده‌اند؛ هویت امضای قبلی برای ارتقا حفظ شده است.
+
+Application source: 91f2c0e9a9fd94eb72e30236bc965293b5303762
+APK SHA-256: 0640b684cf1f07e6645aa536698a4b3820f2973b19e17fe5083017d80b825e98
+Source provenance: SOURCE-MANIFEST.json in release source assets; one pinned upstream dnstt-mobile tree was unavailable. Existing native binaries were reused.
+
+حمایت اختیاری از توسعه — USDT فقط روی شبکهٔ Tron/TRC20:
+TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ

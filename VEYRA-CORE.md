@@ -1,4 +1,6 @@
-# Veyra 0.2.0-alpha01 — protocol integration
+# Rovunet — core protocol integration
+
+Current release: [alpha11](docs/releases/alpha11.md). This document retains the original integration history; current install, test and release behavior is documented in [the user guide](docs/USER_GUIDE.md) and [build notes](docs/BUILDING.md). Native export is now v33; references to v31 below describe the initial integration.
 
 Base: SlipNet 2.5.6 Full, commit 2ed00fd0072ad0b558e30ec6b5e8b30948f98894.
 Includes the earlier Veyra foundation. This file supersedes the earlier foundation's
@@ -43,7 +45,7 @@ safe by this app; issue one profile per device. The manager now has `core-plan`
 for offline generation of server configs and unique device profiles; it does not
 install or supervise new live server services yet.
 
-## Reproducible build
+## Build using verified upstream native assets
 
 Linux: JDK21, SDK platform36, build-tools35, NDK29.0.14206865, Git, Python3 and Go
 with automatic toolchain download. Set JAVA_HOME, ANDROID_HOME and optionally
@@ -60,7 +62,7 @@ that declaration from the existing Go method and verified release JNI symbol.
 No old native engine is substituted with a stub or removed.
 
 The build's `veyraPrebuiltNative` switch skips rebuilding the unchanged upstream
-Rust/C engines. Normal source-native builds remain available without this flag.
+Rust/C engines. Source-native builds additionally require every original source tree, including the currently unavailable pinned dnstt-mobile revision; a complete independent native rebuild is not claimed.
 The upstream x86_64 Full release lacks the optional Naive/Tor binaries; ARM32 and ARM64 contain them. This inherited limitation remains; 32-bit x86 is excluded.
 The Full AAR and native binaries are generated; do not manually copy the old
 `golibs.aar` as the Full AAR (its bindings are incomplete).

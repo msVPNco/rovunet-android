@@ -1,4 +1,4 @@
-# Rovunet 0.3.0-alpha11 — connection repair candidate
+# Rovunet 0.3.0-alpha11 — Full release
 
 Version code **17**, based on alpha10 commit `a032e3178811348ff4042b225528d93d529766bd`.
 
@@ -22,4 +22,18 @@ The same scenario on the repaired production manager ends in a specific Error af
 
 Production-manager regressions cover protocol readiness, unacknowledged destruction, late callbacks, canceled queued starts, timeout isolation, retry and an orphaned-stop regression. Choice tests cover direct selection without measurements, failed historical measurements and the DNS consent boundary. Watchdog tests cover expiration, cancellation, replacement and completed-attempt isolation. Existing JVM, real TLS/proxy, generated routing and four-protocol loopback coverage remains enabled.
 
-The APK is built as Full Release with the existing signer and unchanged native engines. Physical phone/Android service scheduling and the reported network are not available here. This remains a device-validation candidate; no claim is made that every physical-device connection issue is resolved. Alpha10 localization and live language switching are retained. Deferred update-message wording and reset-button alignment are not part of this repair.
+The APK is built as Full Release with the existing signer and unchanged native engines. Physical phone/Android service scheduling and the reported network are not available here. Published for public download by request; physical-device validation remains pending. No claim is made that every physical-device connection issue is resolved. Alpha10 localization and live language switching are retained. Deferred update-message wording and reset-button alignment are not part of this repair.
+
+## Publication and artifact identity
+
+Published version: **0.3.0-alpha11 Full**, code **17**, replacing the alpha09 public release. Alpha10 was an intermediate device-validation build; its changes are included here.
+
+Application source: `91f2c0e9a9fd94eb72e30236bc965293b5303762`. The release tag also includes later documentation/workflow changes, which do not rebuild the APK. [Exact application-commit CI](https://github.com/msVPNco/rovunet-android/actions/runs/41984862024) passed verification; its Android build job was skipped. Full Release compilation was completed locally.
+
+APK SHA-256: `0640b684cf1f07e6645aa536698a4b3820f2973b19e17fe5083017d80b825e98`.
+
+Signer certificate SHA-256: `7d9eac2c155ae6c6d57dffa27e325858375016e88f9de1546a1ab97196a1d248`.
+
+Assets include the Full APK, expanded available-source ZIP, lightweight source ZIP, Persian guide, verification report and checksums. Existing 33 native libraries are byte-identical to alpha10. One pinned upstream dnstt-mobile source tree remains unavailable; see SOURCE-MANIFEST.json. The APK is non-debuggable but retains the existing debug signing identity for upgrade compatibility. No store release or production-key migration is claimed.
+
+[Download](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha11) · [User guide](../USER_GUIDE.md) · [Status](../STATUS.md) · [Telegram](https://t.me/RovunetVPN)

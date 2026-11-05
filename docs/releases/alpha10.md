@@ -1,6 +1,6 @@
 # Rovunet 0.3.0-alpha10 — device-validation candidate
 
-Version code **16**. The public release remains alpha09 until this candidate is published.
+Version code **16**. Historical intermediate build, superseded by [alpha11](alpha11.md); its localization and stability changes are included in that public release.
 
 ## Reported symptoms and evidence
 
