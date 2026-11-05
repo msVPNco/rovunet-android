@@ -309,7 +309,7 @@ class VpnConnectionManager @Inject constructor(
         _dnsWarning.value = message
     }
 
-    fun refreshTrafficStats() {
+    suspend fun refreshTrafficStats() = kotlinx.coroutines.withContext(Dispatchers.IO) {
         vpnRepository.refreshTrafficStats()
     }
 

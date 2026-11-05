@@ -1323,7 +1323,11 @@ class VpnRepositoryImpl @Inject constructor(
         _trafficStats.value = stats
     }
 
-    fun resetSpeedTracking() {
+    private val trafficStatsLock = Any()
+    private var trafficStatsEpoch = 0L
+
+    fun resetSpeedTracking() = synchronized(trafficStatsLock) {
+        trafficStatsEpoch++
         prevBytesSent = 0L
         prevBytesReceived = 0L
         prevTimestamp = 0L
@@ -1331,6 +1335,7 @@ class VpnRepositoryImpl @Inject constructor(
     }
 
     fun refreshTrafficStats() {
+        val epoch = synchronized(trafficStatsLock) { trafficStatsEpoch }
         // For SOCKS-bridged tunnel types, use tunnel-level byte counters
         // instead of TUN-level stats (which include local retries/health checks)
         var sent = 0L
@@ -1386,29 +1391,33 @@ class VpnRepositoryImpl @Inject constructor(
             }
         }
 
-        // Compute speed normalized by actual elapsed time
-        val now = System.currentTimeMillis()
-        val elapsedMs = now - prevTimestamp
-        val upSpeed: Long
-        val downSpeed: Long
-        if (prevTimestamp == 0L || elapsedMs <= 0) {
-            upSpeed = 0L
-            downSpeed = 0L
-        } else {
-            upSpeed = ((sent - prevBytesSent).coerceAtLeast(0) * 1000 / elapsedMs)
-            downSpeed = ((received - prevBytesReceived).coerceAtLeast(0) * 1000 / elapsedMs)
-        }
-        prevBytesSent = sent
-        prevBytesReceived = received
-        prevTimestamp = now
+        // Native calls above never hold this lock. UI reset cannot wait for JNI.
+        synchronized(trafficStatsLock) {
+            if (epoch != trafficStatsEpoch) return
+            // Compute speed normalized by actual elapsed time
+            val now = System.currentTimeMillis()
+            val elapsedMs = now - prevTimestamp
+            val upSpeed: Long
+            val downSpeed: Long
+            if (prevTimestamp == 0L || elapsedMs <= 0) {
+                upSpeed = 0L
+                downSpeed = 0L
+            } else {
+                upSpeed = ((sent - prevBytesSent).coerceAtLeast(0) * 1000 / elapsedMs)
+                downSpeed = ((received - prevBytesReceived).coerceAtLeast(0) * 1000 / elapsedMs)
+            }
+            prevBytesSent = sent
+            prevBytesReceived = received
+            prevTimestamp = now
 
-        _trafficStats.value = TrafficStats(
-            bytesSent = sent,
-            bytesReceived = received,
-            packetsSent = pktSent,
-            packetsReceived = pktReceived,
-            uploadSpeed = upSpeed,
-            downloadSpeed = downSpeed
-        )
+            _trafficStats.value = TrafficStats(
+                bytesSent = sent,
+                bytesReceived = received,
+                packetsSent = pktSent,
+                packetsReceived = pktReceived,
+                uploadSpeed = upSpeed,
+                downloadSpeed = downSpeed
+            )
+        }
     }
 }

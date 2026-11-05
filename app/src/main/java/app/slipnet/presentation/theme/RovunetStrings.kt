@@ -3,7 +3,6 @@ package app.slipnet.presentation.theme
 import android.content.Context
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import app.slipnet.R
 
 object RovunetStrings {
@@ -184,12 +183,22 @@ object RovunetStrings {
         "Traffic blocked — Kill switch active" to R.string.rv_traffic_blocked_kill_switch_active_1b0a8a,
         "Waiting for network…" to R.string.rv_waiting_for_network_d1c557
     )
-    fun localizedContext(context: Context): Context {
-        val language = context.getSharedPreferences("rovunet_ui", Context.MODE_PRIVATE).getString("language", "system")
-        if (language.isNullOrEmpty() || language == "system") return context
+    private data class Localized(val language: String, val configuration: Configuration, val context: Context)
+    @Volatile private var cached: Localized? = null
+    @Synchronized fun localizedContext(context: Context): Context {
+        // Notification updates can format several labels per second. Cache one
+        // application context; never retain an Activity or recreate a context per label.
+        val application = context.applicationContext
+        val language = application.getSharedPreferences("rovunet_ui", Context.MODE_PRIVATE).getString("language", "system") ?: "system"
+        if (language !in setOf("en", "fa", "zh", "ru")) return application
+        val configuration = Configuration(application.resources.configuration)
+        cached?.takeIf { it.language == language && it.configuration == configuration }?.let { return it.context }
         val locale = java.util.Locale.forLanguageTag(if (language == "zh") "zh-Hans" else language)
-        return context.createConfigurationContext(Configuration(context.resources.configuration).apply { setLocale(locale); setLayoutDirection(locale) })
+        val localized = application.createConfigurationContext(Configuration(configuration).apply { setLocale(locale); setLayoutDirection(locale) })
+        cached = Localized(language, configuration, localized)
+        return localized
     }
     fun text(context: Context, english: String): String = resources[english]?.let { localizedContext(context).getString(it) } ?: english
+    @Composable fun composed(english: String): String = resources[english]?.let { androidx.compose.ui.res.stringResource(it) } ?: english
 }
-@Composable fun rv(english: String): String = RovunetStrings.text(LocalContext.current, english)
+@Composable fun rv(english: String): String = RovunetStrings.composed(english)

@@ -8,6 +8,7 @@ if [[ "${CI:-}" == true ]]; then
   : "${TEST_TLS_STORE:?CI requires HTTPS tests}" "${XRAY:?CI requires core lifecycle tests}" "${CORE_LAUNCHER:?CI requires supervisor}"
   test -s "$ROVUNET_ANDROID_FIXTURE"
 fi
+python3 tools/veyra/check-settings-localization.py
 source_root=app/src/main/java/app/slipnet
 output_dir=$(mktemp -d)
 trap 'rm -rf "$output_dir"' EXIT
@@ -43,3 +44,4 @@ bash tools/veyra/run-session-regression.sh
 if [[ -n "${TEST_TLS_STORE:-}" ]]; then bash tools/veyra/run-network-regression.sh; fi
 
 java -cp "$output_dir/tests.jar:$KOTLIN_JARS/kotlin-stdlib-2.2.21.jar:$KOTLIN_JARS/json.jar:$KOTLIN_JARS/kotlinx-coroutines-core-jvm-1.8.0.jar" CoreReadinessTestKt
+java -cp "$output_dir/tests.jar:$KOTLIN_JARS/kotlin-stdlib-2.2.21.jar:$KOTLIN_JARS/json.jar:$KOTLIN_JARS/kotlinx-coroutines-core-jvm-1.8.0.jar" StabilityTestKt

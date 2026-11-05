@@ -300,8 +300,8 @@ fun MainScreen(
         text = { Column {
             listOf("en" to "English", "fa" to "فارسی", "zh" to "简体中文", "ru" to "Русский").forEach { (code, label) ->
                 TextButton(onClick = {
+                    showLanguage = false
                     context.getSharedPreferences("rovunet_ui", Context.MODE_PRIVATE).edit().putString("language", code).apply()
-                    activity?.recreate()
                 }) { Text(label) }
             }
         } }, confirmButton = { TextButton(onClick = { showLanguage = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7)) } }

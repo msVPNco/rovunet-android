@@ -1,6 +1,6 @@
 package app.slipnet.presentation.settings
 
-import app.slipnet.presentation.theme.rv
+import app.slipnet.R
 import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
@@ -140,9 +140,11 @@ fun SettingsScreen(
     onNavigateToAppSelector: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
+    var showStabilityReport by remember { mutableStateOf(false) }
     var showTrustResetDialog by remember { mutableStateOf(false) }
     var showDarkModeDialog by remember { mutableStateOf(false) }
     var showSshCipherDialog by remember { mutableStateOf(false) }
@@ -204,12 +206,12 @@ fun SettingsScreen(
                 title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_settings_74a883)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = resources.getString(R.string.rv_back_76900f))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAboutDialog = true }) {
-                        Icon(Icons.Default.Help, contentDescription = "About")
+                        Icon(Icons.Default.Help, contentDescription = resources.getString(R.string.rv_about_4efca0))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -238,11 +240,11 @@ fun SettingsScreen(
             app.slipnet.presentation.common.components.SupportRovunetCard()
 
             // Connection Settings
-            SettingsSection(title = "Connection") {
+            SettingsSection(title = resources.getString(R.string.settings_connection_6512ee)) {
                 SwitchSettingItem(
                     icon = Icons.Default.PowerSettingsNew,
-                    title = "Auto-connect on boot",
-                    description = "Automatically connect when device starts",
+                    title = resources.getString(R.string.settings_auto_connect_on_boot_26ee01),
+                    description = resources.getString(R.string.settings_automatically_connect_when_device_starts_27c102),
                     checked = uiState.autoConnectOnBoot,
                     onCheckedChange = { viewModel.setAutoConnectOnBoot(it) }
                 )
@@ -251,8 +253,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.SettingsEthernet,
-                    title = "Proxy-only mode",
-                    description = "Expose SOCKS5 proxy without creating VPN tunnel",
+                    title = resources.getString(R.string.settings_proxy_only_mode_a0147a),
+                    description = resources.getString(R.string.settings_expose_socks5_proxy_without_creating_vpn_tunnel_d648ca),
                     checked = uiState.proxyOnlyMode,
                     onCheckedChange = { viewModel.setProxyOnlyMode(it) }
                 )
@@ -261,8 +263,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Shield,
-                    title = "Kill switch",
-                    description = "Block all traffic if VPN connection drops",
+                    title = resources.getString(R.string.settings_kill_switch_889a13),
+                    description = resources.getString(R.string.settings_block_all_traffic_if_vpn_connection_drops_93874d),
                     checked = uiState.killSwitch,
                     onCheckedChange = { viewModel.setKillSwitch(it) }
                 )
@@ -271,8 +273,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Sync,
-                    title = "Auto-reconnect",
-                    description = "Automatically reconnect if VPN drops unexpectedly",
+                    title = resources.getString(R.string.settings_auto_reconnect_9202fa),
+                    description = resources.getString(R.string.settings_automatically_reconnect_if_vpn_drops_unexpectedly_8fae83),
                     checked = uiState.autoReconnect,
                     onCheckedChange = { viewModel.setAutoReconnect(it) }
                 )
@@ -281,8 +283,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Notifications,
-                    title = "Notification traffic counter",
-                    description = "Show upload/download speed and data usage in notification",
+                    title = resources.getString(R.string.settings_notification_traffic_counter_9114b0),
+                    description = resources.getString(R.string.settings_show_upload_download_speed_and_data_usage_in_notification_fabedd),
                     checked = uiState.showNotificationTraffic,
                     onCheckedChange = { viewModel.setShowNotificationTraffic(it) }
                 )
@@ -291,12 +293,12 @@ fun SettingsScreen(
 
                 StepperSettingItem(
                     icon = Icons.Default.Timer,
-                    title = "Sleep timer",
-                    description = "Auto-disconnect after a set time",
+                    title = resources.getString(R.string.settings_sleep_timer_e90613),
+                    description = resources.getString(R.string.settings_auto_disconnect_after_a_set_time_238066),
                     value = uiState.sleepTimerMinutes,
                     step = 5,
                     range = 0..120,
-                    valueFormatter = { if (it == 0) "Off" else "$it min" },
+                    valueFormatter = { if (it == 0) resources.getString(R.string.settings_off_e3de5a) else resources.getString(R.string.settings_1_d_min_32b259, it) },
                     onValueChange = { viewModel.setSleepTimerMinutes(it) }
                 )
 
@@ -304,9 +306,9 @@ fun SettingsScreen(
 
                 ClickableSettingItem(
                     icon = Icons.Default.BatteryAlert,
-                    title = "Battery optimization",
-                    description = if (isBatteryOptimized) "Not exempted — VPN may disconnect in background"
-                                  else "Exempted — VPN will run reliably in background",
+                    title = resources.getString(R.string.settings_battery_optimization_54d1a1),
+                    description = if (isBatteryOptimized) resources.getString(R.string.settings_not_exempted_vpn_may_disconnect_in_background_4011b8)
+                                  else resources.getString(R.string.settings_exempted_vpn_will_run_reliably_in_background_884ac3),
                     onClick = {
                         if (isBatteryOptimized) {
                             try {
@@ -329,11 +331,11 @@ fun SettingsScreen(
 
             // Tools Section
             if (onNavigateToScanner != null) {
-                SettingsSection(title = "Tools") {
+                SettingsSection(title = resources.getString(R.string.settings_tools_4fa8cc)) {
                     ClickableSettingItem(
                         icon = Icons.Default.Search,
-                        title = "DNS Resolver Scanner",
-                        description = "Find working DNS resolvers for your profiles",
+                        title = resources.getString(R.string.settings_dns_resolver_scanner_f68178),
+                        description = resources.getString(R.string.settings_find_working_dns_resolvers_for_your_profiles_c0f246),
                         onClick = onNavigateToScanner
                     )
                 }
@@ -341,8 +343,8 @@ fun SettingsScreen(
 
             // Proxy Settings
             SettingsSection(
-                title = "Proxy Settings",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.settings_proxy_settings_44f84e),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 AddressSettingItem(
                     value = uiState.proxyListenAddress,
@@ -358,10 +360,10 @@ fun SettingsScreen(
 
                 TextFieldSettingItem(
                     icon = Icons.Default.Numbers,
-                    title = "Listen Port",
+                    title = resources.getString(R.string.settings_listen_port_f56d6c),
                     value = proxyPort,
                     placeholder = "10880",
-                    supportingText = if (portsConflict) "Must differ from HTTP proxy port" else "Local SOCKS5 proxy port",
+                    supportingText = if (portsConflict) resources.getString(R.string.settings_must_differ_from_http_proxy_port_c94839) else resources.getString(R.string.settings_local_socks5_proxy_port_3a3531),
                     isError = portsConflict,
                     keyboardType = KeyboardType.Number,
                     onValueChange = { text ->
@@ -374,9 +376,9 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Lock,
-                    title = "Proxy Authentication",
-                    description = if (uiState.proxyAuthEnabled) "Username/password required to use the proxy"
-                        else "Any app can use the local proxy without credentials",
+                    title = resources.getString(R.string.settings_proxy_authentication_8c6941),
+                    description = if (uiState.proxyAuthEnabled) resources.getString(R.string.settings_username_password_required_to_use_the_proxy_f95aab)
+                        else resources.getString(R.string.settings_any_app_can_use_the_local_proxy_without_credentials_5a4d43),
                     checked = uiState.proxyAuthEnabled,
                     onCheckedChange = { viewModel.setProxyAuthEnabled(it) }
                 )
@@ -389,6 +391,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                             value = proxyAuthUsername,
                             onValueChange = { text ->
                                 proxyAuthUsername = text
@@ -400,6 +403,7 @@ fun SettingsScreen(
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                             value = proxyAuthPassword,
                             onValueChange = { text ->
                                 proxyAuthPassword = text
@@ -413,7 +417,7 @@ fun SettingsScreen(
                     }
                 } else {
                     Text(
-                        text = "Keeping authentication enabled is recommended for security.",
+                        text = resources.getString(R.string.settings_keeping_authentication_enabled_is_recommended_for_security_758c1c),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -424,8 +428,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Lan,
-                    title = "HTTP proxy",
-                    description = "Enable HTTP proxy for devices that don't support SOCKS5",
+                    title = resources.getString(R.string.settings_http_proxy_d87f38),
+                    description = resources.getString(R.string.settings_enable_http_proxy_for_devices_that_don_t_support_socks5_fa1708),
                     checked = uiState.httpProxyEnabled,
                     onCheckedChange = { viewModel.setHttpProxyEnabled(it) }
                 )
@@ -435,10 +439,10 @@ fun SettingsScreen(
 
                     TextFieldSettingItem(
                         icon = Icons.Default.Numbers,
-                        title = "HTTP Proxy Port",
+                        title = resources.getString(R.string.settings_http_proxy_port_39cdba),
                         value = httpProxyPort,
                         placeholder = "8080",
-                        supportingText = if (portsConflict) "Must differ from SOCKS5 listen port" else "Local HTTP proxy port",
+                        supportingText = if (portsConflict) resources.getString(R.string.settings_must_differ_from_socks5_listen_port_12e622) else resources.getString(R.string.settings_local_http_proxy_port_b86325),
                         isError = portsConflict,
                         keyboardType = KeyboardType.Number,
                         onValueChange = { text ->
@@ -467,7 +471,7 @@ fun SettingsScreen(
             // DNS Settings
             SettingsSection(
                 title = "DNS",
-                subtitle = "Changes apply on next connection"
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 // The override only actually applies when the toggle is on AND
                 // the IP list is non-empty (matches SlipNetVpnService's
@@ -479,11 +483,11 @@ fun SettingsScreen(
                 // Global resolver override
                 SwitchSettingItem(
                     icon = Icons.Default.AltRoute,
-                    title = "Global resolver override",
+                    title = resources.getString(R.string.settings_global_resolver_override_f17d7e),
                     description = if (uiState.globalResolverEnabled) {
-                        uiState.globalResolverList.ifBlank { "No IPs set — tap Edit IPs below" }
+                        uiState.globalResolverList.ifBlank { resources.getString(R.string.settings_no_ips_set_tap_edit_ips_below_e8c619) }
                     } else {
-                        "Force a fixed resolver list across all profiles"
+                        resources.getString(R.string.settings_force_a_fixed_resolver_list_across_all_profiles_d261d8)
                     },
                     checked = uiState.globalResolverEnabled,
                     onCheckedChange = { viewModel.setGlobalResolverEnabled(it) }
@@ -491,8 +495,8 @@ fun SettingsScreen(
                 if (uiState.globalResolverEnabled) {
                     IndentedSettingItem(
                         icon = Icons.Default.Edit,
-                        title = "Edit IPs",
-                        description = uiState.globalResolverList.ifBlank { "Tap to set resolver IPs" },
+                        title = resources.getString(R.string.settings_edit_ips_d3241d),
+                        description = uiState.globalResolverList.ifBlank { resources.getString(R.string.settings_tap_to_set_resolver_ips_c8fb52) },
                         onClick = { showGlobalResolverDialog = true }
                     )
                 }
@@ -500,8 +504,8 @@ fun SettingsScreen(
                 // DNS pool — muted when the override is actually active
                 SwitchSettingItem(
                     icon = Icons.Default.AutoAwesome,
-                    title = "DNS pool",
-                    description = "Auto-pick the fastest resolvers on each connect",
+                    title = resources.getString(R.string.settings_dns_pool_348ea2),
+                    description = resources.getString(R.string.settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d),
                     checked = uiState.dnsPoolEnabled,
                     onCheckedChange = { viewModel.setDnsPoolEnabled(it) },
                     inactive = overrideActive
@@ -509,18 +513,18 @@ fun SettingsScreen(
                 if (uiState.dnsPoolEnabled) {
                     IndentedSettingItem(
                         icon = Icons.Default.Edit,
-                        title = "Edit pool",
-                        description = "Tap to manage the candidate list",
+                        title = resources.getString(R.string.settings_edit_pool_40a09a),
+                        description = resources.getString(R.string.settings_tap_to_manage_the_candidate_list_e307d1),
                         onClick = { showDnsPoolDialog = true },
                         inactive = overrideActive
                     )
                     SwitchSettingItem(
                         icon = Icons.Default.VerifiedUser,
-                        title = "HTTP/SSH verification",
+                        title = resources.getString(R.string.settings_http_ssh_verification_f2924f),
                         description = if (uiState.dnsPoolFullVerification)
-                            "Verifies real traffic through tunnel — 18s timeout per resolver"
+                            resources.getString(R.string.settings_verifies_real_traffic_through_tunnel_18s_timeout_per_resolver_62e86e)
                         else
-                            "Handshake-only — faster scan, 10s timeout per resolver",
+                            resources.getString(R.string.settings_handshake_only_faster_scan_10s_timeout_per_resolver_20d485),
                         checked = uiState.dnsPoolFullVerification,
                         onCheckedChange = { viewModel.setDnsPoolFullVerification(it) },
                         inactive = overrideActive
@@ -530,20 +534,20 @@ fun SettingsScreen(
                 // Conflict notice — only when override is *actually* active
                 if (overrideActive && uiState.dnsPoolEnabled) {
                     InfoNoticeRow(
-                        text = "Override active — pool is ignored."
+                        text = resources.getString(R.string.settings_override_active_pool_is_ignored_5f6790)
                     )
                 }
 
                 // Remote DNS server (always shown — system-level fallback)
                 ClickableSettingItem(
                     icon = Icons.Default.Dns,
-                    title = "Remote DNS server",
+                    title = resources.getString(R.string.settings_remote_dns_server_ded223),
                     description = if (uiState.remoteDnsMode == "custom") {
                         val primary = uiState.customRemoteDns.ifBlank { "8.8.8.8" }
                         val fallback = uiState.customRemoteDnsFallback.ifBlank { "1.1.1.1" }
-                        "Custom ($primary, $fallback)"
+                        resources.getString(R.string.settings_custom_1_s_2_s_0600b2, primary, fallback)
                     } else {
-                        "Default (8.8.8.8, 1.1.1.1)"
+                        resources.getString(R.string.settings_default_8_8_8_8_1_1_1_1_d8be7c)
                     },
                     onClick = { showRemoteDnsDialog = true }
                 )
@@ -552,10 +556,10 @@ fun SettingsScreen(
 
                 ClickableSettingItem(
                     icon = Icons.Default.Hub,
-                    title = "DNS workers",
+                    title = resources.getString(R.string.settings_dns_workers_5d7ce3),
                     description = buildString {
-                        append("${uiState.dnsWorkerMode.displayName} (DNSTT/Slipstream, SSH always uses 5)")
-                        if (uiState.dnsWorkerMode.poolSize >= 3) append(" — may increase data usage")
+                        append(resources.getString(R.string.settings_1_s_dnstt_slipstream_ssh_always_uses_5_0f6c3e, dnsWorkerName(resources, uiState.dnsWorkerMode)))
+                        if (uiState.dnsWorkerMode.poolSize >= 3) append(resources.getString(R.string.settings_may_increase_data_usage_28e00b))
                     },
                     onClick = { showDnsWorkerDialog = true }
                 )
@@ -563,13 +567,13 @@ fun SettingsScreen(
 
             // Network Settings
             SettingsSection(
-                title = "Network",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.rv_network_1744b9),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 SwitchSettingItem(
                     icon = Icons.Default.Block,
-                    title = "Disable QUIC",
-                    description = "Block QUIC protocol to force TCP (faster page loads over tunnels)",
+                    title = resources.getString(R.string.settings_disable_quic_5d846d),
+                    description = resources.getString(R.string.settings_block_quic_protocol_to_force_tcp_faster_page_loads_over_tunnels_2ff978),
                     checked = uiState.disableQuic,
                     onCheckedChange = { viewModel.setDisableQuic(it) }
                 )
@@ -578,8 +582,8 @@ fun SettingsScreen(
 
                 ClickableSettingItem(
                     icon = Icons.Default.SettingsEthernet,
-                    title = "VPN MTU",
-                    description = "VPN packet size: ${uiState.vpnMtu}. Lower values improve compatibility on mobile networks.",
+                    title = resources.getString(R.string.settings_vpn_mtu_ea6cc3),
+                    description = resources.getString(R.string.settings_vpn_packet_size_1_d_lower_values_improve_compatibility_on_mobile__e6c041, uiState.vpnMtu),
                     onClick = { showMtuDialog = true }
                 )
 
@@ -587,11 +591,11 @@ fun SettingsScreen(
 
                 ClickableSettingItem(
                     icon = Icons.Default.Speed,
-                    title = "Bandwidth Limit",
+                    title = resources.getString(R.string.settings_bandwidth_limit_b0796c),
                     description = run {
-                        val ul = if (uiState.uploadLimitKbps > 0) "${uiState.uploadLimitKbps} KB/s" else "Unlimited"
-                        val dl = if (uiState.downloadLimitKbps > 0) "${uiState.downloadLimitKbps} KB/s" else "Unlimited"
-                        "Upload: $ul / Download: $dl"
+                        val ul = if (uiState.uploadLimitKbps > 0) resources.getString(R.string.settings_1_d_kb_s_c9c342, uiState.uploadLimitKbps) else resources.getString(R.string.settings_unlimited_b8bef3)
+                        val dl = if (uiState.downloadLimitKbps > 0) resources.getString(R.string.settings_1_d_kb_s_c9c342, uiState.downloadLimitKbps) else resources.getString(R.string.settings_unlimited_b8bef3)
+                        resources.getString(R.string.settings_upload_1_s_download_2_s_a14e32, ul, dl)
                     },
                     onClick = { showBandwidthLimitDialog = true }
                 )
@@ -600,15 +604,15 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Lan,
-                    title = "Append HTTP Proxy to VPN",
-                    description = "Route app traffic through HTTP proxy directly, bypassing TUN for better speeds (Android 10+)",
+                    title = resources.getString(R.string.settings_append_http_proxy_to_vpn_b08207),
+                    description = resources.getString(R.string.settings_route_app_traffic_through_http_proxy_directly_bypassing_tun_for_b_739608),
                     checked = uiState.appendHttpProxyToVpn,
                     onCheckedChange = { viewModel.setAppendHttpProxyToVpn(it) }
                 )
 
                 if (uiState.appendHttpProxyToVpn && !uiState.httpProxyEnabled) {
                     Text(
-                        text = "To also share the HTTP proxy with other devices, enable \"HTTP proxy\" in Proxy Settings above.",
+                        text = resources.getString(R.string.settings_to_also_share_the_http_proxy_with_other_devices_enable_http_proxy_fdab24),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
@@ -618,13 +622,13 @@ fun SettingsScreen(
 
             // Split Tunneling Settings
             SettingsSection(
-                title = "Split Tunneling",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.settings_split_tunneling_0073fb),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 SwitchSettingItem(
                     icon = Icons.Default.CallSplit,
-                    title = "Enable split tunneling",
-                    description = "Choose which apps use the VPN",
+                    title = resources.getString(R.string.settings_enable_split_tunneling_ccd14f),
+                    description = resources.getString(R.string.settings_choose_which_apps_use_the_vpn_8a7aec),
                     checked = uiState.splitTunnelingEnabled,
                     onCheckedChange = { viewModel.setSplitTunnelingEnabled(it) }
                 )
@@ -634,10 +638,10 @@ fun SettingsScreen(
 
                     ClickableSettingItem(
                         icon = Icons.Default.FilterList,
-                        title = "Mode",
+                        title = resources.getString(R.string.settings_mode_a7b93d),
                         description = when (uiState.splitTunnelingMode) {
-                            SplitTunnelingMode.DISALLOW -> "Selected apps bypass VPN"
-                            SplitTunnelingMode.ALLOW -> "Only selected apps use VPN"
+                            SplitTunnelingMode.DISALLOW -> resources.getString(R.string.settings_selected_apps_bypass_vpn_cd2a1b)
+                            SplitTunnelingMode.ALLOW -> resources.getString(R.string.settings_only_selected_apps_use_vpn_e2368b)
                         },
                         onClick = { showSplitModeDialog = true }
                     )
@@ -646,8 +650,8 @@ fun SettingsScreen(
 
                     ClickableSettingItem(
                         icon = Icons.Default.Apps,
-                        title = "Select apps",
-                        description = "${uiState.splitTunnelingApps.size} apps selected",
+                        title = resources.getString(R.string.settings_select_apps_6b5084),
+                        description = resources.getQuantityString(R.plurals.settings_selected_apps_count, uiState.splitTunnelingApps.size, uiState.splitTunnelingApps.size),
                         onClick = onNavigateToAppSelector
                     )
                 }
@@ -655,13 +659,13 @@ fun SettingsScreen(
 
             // Domain Routing Settings
             SettingsSection(
-                title = "Domain Routing",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.settings_domain_routing_712de8),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 SwitchSettingItem(
                     icon = Icons.Default.Language,
-                    title = "Enable domain routing",
-                    description = "Route specific domains through or around the VPN",
+                    title = resources.getString(R.string.settings_enable_domain_routing_4fc3fc),
+                    description = resources.getString(R.string.settings_route_specific_domains_through_or_around_the_vpn_7ea6a3),
                     checked = uiState.domainRoutingEnabled,
                     onCheckedChange = { viewModel.setDomainRoutingEnabled(it) }
                 )
@@ -671,10 +675,10 @@ fun SettingsScreen(
 
                     ClickableSettingItem(
                         icon = Icons.Default.FilterList,
-                        title = "Routing mode",
+                        title = resources.getString(R.string.settings_routing_mode_91ad15),
                         description = when (uiState.domainRoutingMode) {
-                            DomainRoutingMode.BYPASS -> "Listed domains bypass VPN"
-                            DomainRoutingMode.ONLY_VPN -> "Only listed domains use VPN"
+                            DomainRoutingMode.BYPASS -> resources.getString(R.string.settings_listed_domains_bypass_vpn_c18132)
+                            DomainRoutingMode.ONLY_VPN -> resources.getString(R.string.settings_only_listed_domains_use_vpn_cb5f22)
                         },
                         onClick = { showDomainRoutingModeDialog = true }
                     )
@@ -683,8 +687,8 @@ fun SettingsScreen(
 
                     ClickableSettingItem(
                         icon = Icons.Default.TravelExplore,
-                        title = "Manage domains",
-                        description = "${uiState.domainRoutingDomains.size} domains configured",
+                        title = resources.getString(R.string.settings_manage_domains_2ca69b),
+                        description = resources.getQuantityString(R.plurals.settings_domains_count, uiState.domainRoutingDomains.size, uiState.domainRoutingDomains.size),
                         onClick = { showDomainManagementDialog = true }
                     )
                 }
@@ -692,13 +696,13 @@ fun SettingsScreen(
 
             // Geo-Bypass Settings
             SettingsSection(
-                title = "Geo-Bypass",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.settings_geo_bypass_15bba2),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 SwitchSettingItem(
                     icon = Icons.Default.Public,
-                    title = "Enable geo-bypass",
-                    description = "Route domestic traffic directly, bypass VPN for local sites",
+                    title = resources.getString(R.string.settings_enable_geo_bypass_63858e),
+                    description = resources.getString(R.string.settings_route_domestic_traffic_directly_bypass_vpn_for_local_sites_c49b23),
                     checked = uiState.geoBypassEnabled,
                     onCheckedChange = { viewModel.setGeoBypassEnabled(it) }
                 )
@@ -708,8 +712,8 @@ fun SettingsScreen(
 
                     ClickableSettingItem(
                         icon = Icons.Default.Language,
-                        title = "Country",
-                        description = uiState.geoBypassCountry.displayName,
+                        title = resources.getString(R.string.settings_country_d523eb),
+                        description = countryName(resources, uiState.geoBypassCountry),
                         onClick = { showGeoBypassCountryDialog = true }
                     )
                 }
@@ -717,17 +721,17 @@ fun SettingsScreen(
 
             // SSH Tunnel Settings
             SettingsSection(
-                title = "SSH Tunnel",
-                subtitle = "Changes apply on next connection"
+                title = resources.getString(R.string.settings_ssh_tunnel_1177ce),
+                subtitle = resources.getString(R.string.settings_changes_apply_on_next_connection_30e26f)
             ) {
                 ClickableSettingItem(
                     icon = Icons.Default.Lock,
-                    title = "Cipher",
+                    title = resources.getString(R.string.settings_cipher_0ad179),
                     description = when (uiState.sshCipher) {
-                        SshCipher.AUTO -> "Auto (Fastest)"
+                        SshCipher.AUTO -> resources.getString(R.string.settings_auto_fastest_a3066d)
                         SshCipher.AES_128_GCM -> "AES-128-GCM"
                         SshCipher.CHACHA20 -> "ChaCha20-Poly1305"
-                        SshCipher.AES_128_CTR -> "AES-128-CTR (Legacy)"
+                        SshCipher.AES_128_CTR -> resources.getString(R.string.settings_aes_128_ctr_legacy_086a2b)
                     },
                     onClick = { showSshCipherDialog = true }
                 )
@@ -736,8 +740,8 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Compress,
-                    title = "Compression",
-                    description = "Compress data through SSH (helps on slow links, hurts with HTTPS)",
+                    title = resources.getString(R.string.settings_compression_46ead4),
+                    description = resources.getString(R.string.settings_compress_data_through_ssh_helps_on_slow_links_hurts_with_https_b2be2a),
                     checked = uiState.sshCompression,
                     onCheckedChange = { viewModel.setSshCompression(it) }
                 )
@@ -746,10 +750,10 @@ fun SettingsScreen(
 
                 SliderSettingItem(
                     icon = Icons.Default.Hub,
-                    title = "Max Channels",
+                    title = resources.getString(R.string.settings_max_channels_5f3cb0),
                     subtitle = when {
-                        !uiState.sshMaxChannelsIsCustom -> "Auto (adapts per tunnel type)"
-                        uiState.sshMaxChannels > 12 -> "High values may cause instability on DNS tunnels"
+                        !uiState.sshMaxChannelsIsCustom -> resources.getString(R.string.settings_auto_adapts_per_tunnel_type_5c4385)
+                        uiState.sshMaxChannels > 12 -> resources.getString(R.string.settings_high_values_may_cause_instability_on_dns_tunnels_1a0e87)
                         else -> null
                     },
                     subtitleColor = if (uiState.sshMaxChannelsIsCustom && uiState.sshMaxChannels > 12) Color(0xFFFF9800) else null,
@@ -765,48 +769,54 @@ fun SettingsScreen(
 
                 SwitchSettingItem(
                     icon = Icons.Default.Shield,
-                    title = "Prevent DNS Fallback",
+                    title = resources.getString(R.string.settings_prevent_dns_fallback_348572),
                     description = if (uiState.preventDnsFallback)
-                        "DNS queries fail if SSH tunnel is down (no leak)"
+                        resources.getString(R.string.settings_dns_queries_fail_if_ssh_tunnel_is_down_no_leak_8f5089)
                     else
-                        "Falls back to direct DNS if SSH fails (may expose queries)",
+                        resources.getString(R.string.settings_falls_back_to_direct_dns_if_ssh_fails_may_expose_queries_02cda7),
                     checked = uiState.preventDnsFallback,
                     onCheckedChange = { viewModel.setPreventDnsFallback(it) }
                 )
             }
 
             // Appearance Settings
-            SettingsSection(title = "Appearance") {
+            SettingsSection(title = resources.getString(R.string.rv_appearance_3907fa)) {
                 ClickableSettingItem(
                     icon = Icons.Default.DarkMode,
-                    title = "Dark mode",
+                    title = resources.getString(R.string.rv_dark_mode_9b7878),
                     description = when (uiState.darkMode) {
-                        DarkMode.LIGHT -> "Light"
-                        DarkMode.DARK -> "Dark"
-                        DarkMode.AMOLED -> "AMOLED Dark"
-                        DarkMode.SYSTEM -> "Follow system"
+                        DarkMode.LIGHT -> resources.getString(R.string.rv_light_dbcd5e)
+                        DarkMode.DARK -> resources.getString(R.string.rv_dark_60acc5)
+                        DarkMode.AMOLED -> resources.getString(R.string.settings_amoled_dark_73f346)
+                        DarkMode.SYSTEM -> resources.getString(R.string.rv_follow_system_48b4e3)
                     },
                     onClick = { showDarkModeDialog = true }
                 )
             }
 
             // Debug Settings
-            SettingsSection(title = "Debug") {
+            SettingsSection(title = resources.getString(R.string.rv_debug_1a03bd)) {
                 SwitchSettingItem(
                     icon = Icons.Default.BugReport,
-                    title = "Debug logging",
-                    description = "Enable verbose logging for troubleshooting",
+                    title = resources.getString(R.string.rv_debug_logging_13bc63),
+                    description = resources.getString(R.string.rv_enable_verbose_logging_for_troubleshooting_9719c9),
                     checked = uiState.debugLogging,
                     onCheckedChange = { viewModel.setDebugLogging(it) }
                 )
             }
 
+            SettingsSection(title = resources.getString(R.string.settings_stability_report_5f8404)) {
+                ClickableSettingItem(icon = Icons.Default.BugReport, title = resources.getString(R.string.settings_stability_report_5f8404),
+                    description = resources.getString(R.string.settings_view_or_share_a_private_report_without_connection_addresses_or_pa_60a0d8),
+                    onClick = { showStabilityReport = true })
+            }
+
             // Reset Settings
-            SettingsSection(title = "Reset") {
+            SettingsSection(title = resources.getString(R.string.rv_reset_daee76)) {
                 ClickableSettingItem(
                     icon = Icons.Default.RestartAlt,
-                    title = "Reset all settings",
-                    description = "Restore all settings to their default values",
+                    title = resources.getString(R.string.rv_reset_all_settings_ef4d26),
+                    description = resources.getString(R.string.rv_restore_all_settings_to_their_default_values_d1929e),
                     onClick = { showResetSettingsDialog = true }
                 )
             }
@@ -825,20 +835,20 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Device ID: $deviceId",
+                    text = resources.getString(R.string.settings_device_id_1_s_e076ae, deviceId),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 IconButton(
                     onClick = {
                         val clipboardManager = context.getSystemService(android.content.ClipboardManager::class.java)
-                        clipboardManager?.setPrimaryClip(android.content.ClipData.newPlainText("Device ID", deviceId))
+                        clipboardManager?.setPrimaryClip(android.content.ClipData.newPlainText(resources.getString(R.string.settings_device_id_7c9f0f), deviceId))
                     },
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         Icons.Default.ContentCopy,
-                        contentDescription = "Copy device ID",
+                        contentDescription = resources.getString(R.string.settings_copy_device_id_6db03d),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -875,20 +885,22 @@ fun SettingsScreen(
         }
     }
 
+    if (showStabilityReport) StabilityReportDialog(onDismiss = { showStabilityReport = false })
+
     // Dark Mode Dialog
     if (showMtuDialog) {
         val mtuPresets = listOf(
-            1500 to "Best throughput on clean networks",
-            1400 to "Recommended for most mobile networks",
-            1350 to "Conservative, for double-NAT or PPPoE",
-            1280 to "Maximum compatibility"
+            1500 to resources.getString(R.string.settings_best_throughput_on_clean_networks_b37fa0),
+            1400 to resources.getString(R.string.settings_recommended_for_most_mobile_networks_3779b5),
+            1350 to resources.getString(R.string.settings_conservative_for_double_nat_or_pppoe_e76285),
+            1280 to resources.getString(R.string.settings_maximum_compatibility_60541c)
         )
         val isCustom = mtuPresets.none { it.first == uiState.vpnMtu }
         var customMtuText by remember { mutableStateOf(if (isCustom) uiState.vpnMtu.toString() else "") }
         var useCustom by remember { mutableStateOf(isCustom) }
         AlertDialog(
             onDismissRequest = { showMtuDialog = false },
-            title = { Text("VPN MTU") },
+            title = { Text(resources.getString(R.string.settings_vpn_mtu_ea6cc3)) },
             text = {
                 Column {
                     mtuPresets.forEach { (mtu, desc) ->
@@ -935,10 +947,11 @@ fun SettingsScreen(
                             onClick = { useCustom = true }
                         )
                         OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                             value = customMtuText,
                             onValueChange = { customMtuText = it.filter { c -> c.isDigit() }.take(5) },
                             enabled = useCustom,
-                            label = { Text("Custom") },
+                            label = { Text(resources.getString(R.string.settings_custom_081ae3)) },
                             placeholder = { Text("512–1500") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
@@ -988,11 +1001,11 @@ fun SettingsScreen(
     if (showDnsWorkerDialog) {
         AlertDialog(
             onDismissRequest = { showDnsWorkerDialog = false },
-            title = { Text("DNS Workers") },
+            title = { Text(resources.getString(R.string.settings_dns_workers_62a5b4)) },
             text = {
                 Column {
                     Text(
-                        text = "Controls how DNS is resolved through the tunnel. Fewer workers = more stable on restricted networks. Per-query creates a fresh connection for each DNS lookup.",
+                        text = resources.getString(R.string.settings_controls_how_dns_is_resolved_through_the_tunnel_fewer_workers_mor_3c2587),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 12.dp)
@@ -1017,14 +1030,14 @@ fun SettingsScreen(
                                 }
                             )
                             Text(
-                                text = mode.displayName,
+                                text = dnsWorkerName(resources, mode),
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }
                     }
                     if (uiState.dnsWorkerMode.poolSize >= 3) {
                         Text(
-                            text = "Higher worker counts increase background data usage due to keepalive traffic on each connection. Use 2 or per-query if data usage is a concern.",
+                            text = resources.getString(R.string.settings_higher_worker_counts_increase_background_data_usage_due_to_keepal_0efd92),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(top = 8.dp)
@@ -1043,7 +1056,7 @@ fun SettingsScreen(
     if (showDarkModeDialog) {
         AlertDialog(
             onDismissRequest = { showDarkModeDialog = false },
-            title = { Text("Dark Mode") },
+            title = { Text(resources.getString(R.string.settings_dark_mode_e7f8b9)) },
             text = {
                 Column {
                     DarkMode.entries.forEach { mode ->
@@ -1067,10 +1080,10 @@ fun SettingsScreen(
                             )
                             Text(
                                 text = when (mode) {
-                                    DarkMode.LIGHT -> "Light"
-                                    DarkMode.DARK -> "Dark"
-                                    DarkMode.AMOLED -> "AMOLED Dark"
-                                    DarkMode.SYSTEM -> "Follow system"
+                                    DarkMode.LIGHT -> resources.getString(R.string.rv_light_dbcd5e)
+                                    DarkMode.DARK -> resources.getString(R.string.rv_dark_60acc5)
+                                    DarkMode.AMOLED -> resources.getString(R.string.settings_amoled_dark_73f346)
+                                    DarkMode.SYSTEM -> resources.getString(R.string.rv_follow_system_48b4e3)
                                 },
                                 modifier = Modifier.padding(start = 8.dp)
                             )
@@ -1090,7 +1103,7 @@ fun SettingsScreen(
     if (showSplitModeDialog) {
         AlertDialog(
             onDismissRequest = { showSplitModeDialog = false },
-            title = { Text("Split Tunneling Mode") },
+            title = { Text(resources.getString(R.string.settings_split_tunneling_mode_71325a)) },
             text = {
                 Column {
                     SplitTunnelingMode.entries.forEach { mode ->
@@ -1115,14 +1128,14 @@ fun SettingsScreen(
                             Column(modifier = Modifier.padding(start = 8.dp)) {
                                 Text(
                                     text = when (mode) {
-                                        SplitTunnelingMode.DISALLOW -> "Bypass"
-                                        SplitTunnelingMode.ALLOW -> "Only"
+                                        SplitTunnelingMode.DISALLOW -> resources.getString(R.string.settings_bypass_497852)
+                                        SplitTunnelingMode.ALLOW -> resources.getString(R.string.settings_only_8737f0)
                                     }
                                 )
                                 Text(
                                     text = when (mode) {
-                                        SplitTunnelingMode.DISALLOW -> "Selected apps bypass VPN"
-                                        SplitTunnelingMode.ALLOW -> "Only selected apps use VPN"
+                                        SplitTunnelingMode.DISALLOW -> resources.getString(R.string.settings_selected_apps_bypass_vpn_cd2a1b)
+                                        SplitTunnelingMode.ALLOW -> resources.getString(R.string.settings_only_selected_apps_use_vpn_e2368b)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1144,7 +1157,7 @@ fun SettingsScreen(
     if (showDomainRoutingModeDialog) {
         AlertDialog(
             onDismissRequest = { showDomainRoutingModeDialog = false },
-            title = { Text("Domain Routing Mode") },
+            title = { Text(resources.getString(R.string.settings_domain_routing_mode_fea5c7)) },
             text = {
                 Column {
                     DomainRoutingMode.entries.forEach { mode ->
@@ -1169,14 +1182,14 @@ fun SettingsScreen(
                             Column(modifier = Modifier.padding(start = 8.dp)) {
                                 Text(
                                     text = when (mode) {
-                                        DomainRoutingMode.BYPASS -> "Bypass VPN"
-                                        DomainRoutingMode.ONLY_VPN -> "Only VPN"
+                                        DomainRoutingMode.BYPASS -> resources.getString(R.string.settings_bypass_vpn_8dda37)
+                                        DomainRoutingMode.ONLY_VPN -> resources.getString(R.string.settings_only_vpn_e2e1e6)
                                     }
                                 )
                                 Text(
                                     text = when (mode) {
-                                        DomainRoutingMode.BYPASS -> "Listed domains connect directly"
-                                        DomainRoutingMode.ONLY_VPN -> "Only listed domains use the VPN"
+                                        DomainRoutingMode.BYPASS -> resources.getString(R.string.settings_listed_domains_connect_directly_c5310d)
+                                        DomainRoutingMode.ONLY_VPN -> resources.getString(R.string.settings_only_listed_domains_use_the_vpn_aaf1ab)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1208,7 +1221,7 @@ fun SettingsScreen(
     if (showGeoBypassCountryDialog) {
         AlertDialog(
             onDismissRequest = { showGeoBypassCountryDialog = false },
-            title = { Text("Select Country") },
+            title = { Text(resources.getString(R.string.settings_select_country_434b36)) },
             text = {
                 Column {
                     GeoBypassCountry.entries.forEach { country ->
@@ -1231,7 +1244,7 @@ fun SettingsScreen(
                                 }
                             )
                             Text(
-                                text = country.displayName,
+                                text = countryName(resources, country),
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }
@@ -1257,37 +1270,38 @@ fun SettingsScreen(
         val hasInvalid = invalidEntries.isNotEmpty()
         AlertDialog(
             onDismissRequest = { showGlobalResolverDialog = false },
-            title = { Text("Global DNS Resolvers") },
+            title = { Text(resources.getString(R.string.settings_global_dns_resolvers_dabf90)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Enter DNS resolver IPs, one per line or comma-separated (max 10). These override the resolvers in all DNS tunnel profiles and are used to resolve SSH hostnames.",
+                        resources.getString(R.string.settings_enter_dns_resolver_ips_one_per_line_or_comma_separated_max_10_the_75f679),
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                         value = resolverText,
                         onValueChange = { resolverText = it },
                         modifier = Modifier.fillMaxWidth().height(120.dp),
-                        placeholder = { Text("e.g. 8.8.8.8, 1.1.1.1") },
+                        placeholder = { Text(resources.getString(R.string.settings_e_g_8_8_8_8_1_1_1_1_f6c505)) },
                         singleLine = false,
                         maxLines = 8,
                         isError = tooMany || hasInvalid
                     )
                     if (tooMany) {
                         Text(
-                            "Maximum 10 resolvers ($resolverCount entered)",
+                            resources.getString(R.string.settings_maximum_10_resolvers_1_d_entered_3cac6d, resolverCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     } else if (hasInvalid) {
                         Text(
-                            "Invalid IP: ${invalidEntries.first()}",
+                            resources.getString(R.string.settings_invalid_ip_1_s_7a824a, invalidEntries.first()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     } else if (resolverCount > 0) {
                         Text(
-                            "$resolverCount resolver${if (resolverCount > 1) "s" else ""}",
+                            resources.getQuantityString(R.plurals.settings_resolvers_count, resolverCount, resolverCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1347,7 +1361,7 @@ fun SettingsScreen(
     if (showSshCipherDialog) {
         AlertDialog(
             onDismissRequest = { showSshCipherDialog = false },
-            title = { Text("SSH Cipher") },
+            title = { Text(resources.getString(R.string.settings_ssh_cipher_b5c323)) },
             text = {
                 Column {
                     SshCipher.entries.forEach { cipher ->
@@ -1370,7 +1384,7 @@ fun SettingsScreen(
                                 }
                             )
                             Text(
-                                text = cipher.displayName,
+                                text = sshCipherName(resources, cipher),
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }
@@ -1389,9 +1403,9 @@ fun SettingsScreen(
     if (showResetSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showResetSettingsDialog = false },
-            title = { Text("Reset all settings?") },
+            title = { Text(resources.getString(R.string.settings_reset_all_settings_bbfe66)) },
             text = {
-                Text("This will restore all settings to their default values. Your profiles and connection stats will not be affected.")
+                Text(resources.getString(R.string.settings_this_will_restore_all_settings_to_their_default_values_your_profi_a087f6))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -1413,7 +1427,7 @@ fun SettingsScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("About Rovunet") },
+            title = { Text(resources.getString(R.string.settings_about_rovunet_ec746c)) },
             text = { AboutDialogContent() },
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
@@ -1448,6 +1462,7 @@ private fun DomainManagementDialog(
     onRemoveDomain: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var newDomain by remember { mutableStateOf("") }
     val sortedDomains = remember(domains) { domains.sorted() }
 
@@ -1461,7 +1476,7 @@ private fun DomainManagementDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Manage Domains") },
+        title = { Text(resources.getString(R.string.settings_manage_domains_2f51ef)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -1473,16 +1488,17 @@ private fun DomainManagementDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                         value = newDomain,
                         onValueChange = { newDomain = it },
-                        placeholder = { Text("e.g., google.com") },
+                        placeholder = { Text(resources.getString(R.string.settings_e_g_google_com_c1dd6e)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions.Default,
                         keyboardActions = KeyboardActions(onDone = { addDomain() }),
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { addDomain() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add domain")
+                        Icon(Icons.Default.Add, contentDescription = resources.getString(R.string.settings_add_domain_76d740))
                     }
                 }
 
@@ -1490,7 +1506,7 @@ private fun DomainManagementDialog(
 
                 if (sortedDomains.isEmpty()) {
                     Text(
-                        text = "No domains configured",
+                        text = resources.getString(R.string.settings_no_domains_configured_59613e),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -1519,7 +1535,7 @@ private fun DomainManagementDialog(
                                 ) {
                                     Icon(
                                         Icons.Default.Delete,
-                                        contentDescription = "Remove $domain",
+                                        contentDescription = resources.getString(R.string.settings_remove_1_s_4d28b5, domain),
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -1547,17 +1563,18 @@ private fun RemoteDnsDialog(
     onSelectCustom: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var selectedMode by remember { mutableStateOf(currentMode) }
     var customDns by remember { mutableStateOf(currentCustomDns) }
     var customDnsFallback by remember { mutableStateOf(currentCustomDnsFallback) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Remote DNS Server") },
+        title = { Text(resources.getString(R.string.settings_remote_dns_server_f2f414)) },
         text = {
             Column {
                 Text(
-                    text = "DNS servers used on the remote side of the tunnel for resolving domain names.",
+                    text = resources.getString(R.string.settings_dns_servers_used_on_the_remote_side_of_the_tunnel_for_resolving_d_107df7),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -1577,9 +1594,9 @@ private fun RemoteDnsDialog(
                         onClick = { selectedMode = "default" }
                     )
                     Column(modifier = Modifier.padding(start = 8.dp)) {
-                        Text("Default (8.8.8.8, 1.1.1.1)")
+                        Text(resources.getString(R.string.settings_default_8_8_8_8_1_1_1_1_d8be7c))
                         Text(
-                            text = "Google primary, Cloudflare fallback",
+                            text = resources.getString(R.string.settings_google_primary_cloudflare_fallback_1d930c),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1600,17 +1617,18 @@ private fun RemoteDnsDialog(
                         onClick = { selectedMode = "custom" }
                     )
                     Text(
-                        text = "Custom",
+                        text = resources.getString(R.string.settings_custom_081ae3),
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
 
                 if (selectedMode == "custom") {
                     OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                         value = customDns,
                         onValueChange = { customDns = it },
-                        placeholder = { Text("e.g., 9.9.9.9") },
-                        supportingText = { Text("Primary DNS server") },
+                        placeholder = { Text(resources.getString(R.string.settings_e_g_9_9_9_9_fa7540)) },
+                        supportingText = { Text(resources.getString(R.string.settings_primary_dns_server_99c8e7)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier
@@ -1619,10 +1637,11 @@ private fun RemoteDnsDialog(
                     )
 
                     OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                         value = customDnsFallback,
                         onValueChange = { customDnsFallback = it },
-                        placeholder = { Text("e.g., 8.8.8.8") },
-                        supportingText = { Text("Fallback DNS server") },
+                        placeholder = { Text(resources.getString(R.string.settings_e_g_8_8_8_8_447b12)) },
+                        supportingText = { Text(resources.getString(R.string.settings_fallback_dns_server_86893a)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier
@@ -1642,7 +1661,7 @@ private fun RemoteDnsDialog(
                     }
                 }
             ) {
-                Text("OK")
+                Text(resources.getString(R.string.settings_ok_9ce3bd))
             }
         },
         dismissButton = {
@@ -1665,7 +1684,7 @@ private fun SettingsSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -1730,12 +1749,12 @@ private fun SwitchSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = rv(description),
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1774,12 +1793,12 @@ private fun ClickableSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = rv(description),
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1817,11 +1836,11 @@ private fun IndentedSettingItem(
                 .padding(horizontal = 12.dp)
         ) {
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = rv(description),
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1871,6 +1890,7 @@ private fun SliderSettingItem(
     onValueChange: (Float) -> Unit,
     onReset: (() -> Unit)? = null
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1892,7 +1912,7 @@ private fun SliderSettingItem(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = rv(title),
+                    text = title,
                     style = MaterialTheme.typography.bodyLarge
                 )
                 if (subtitle != null) {
@@ -1905,7 +1925,7 @@ private fun SliderSettingItem(
             }
             if (onReset != null) {
                 TextButton(onClick = onReset) {
-                    Text("Auto", style = MaterialTheme.typography.labelSmall)
+                    Text(resources.getString(R.string.settings_auto_c614ba), style = MaterialTheme.typography.labelSmall)
                 }
             }
             Text(
@@ -1938,6 +1958,7 @@ private fun StepperSettingItem(
     valueFormatter: (Int) -> String,
     onValueChange: (Int) -> Unit
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1956,12 +1977,12 @@ private fun StepperSettingItem(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = rv(description),
+                text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1976,7 +1997,7 @@ private fun StepperSettingItem(
             ) {
                 Icon(
                     Icons.Default.Remove,
-                    contentDescription = "Decrease",
+                    contentDescription = resources.getString(R.string.settings_decrease_67e19d),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -1994,7 +2015,7 @@ private fun StepperSettingItem(
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Increase",
+                    contentDescription = resources.getString(R.string.settings_increase_5a7fec),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -2008,9 +2029,10 @@ private fun StepperSettingItem(
  * Returns list of (label, ip) pairs.
  */
 private fun getAddressOptions(): List<Pair<String, String>> {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     return listOf(
-        "Localhost" to "127.0.0.1",
-        "All interfaces" to "0.0.0.0"
+        resources.getString(R.string.settings_localhost_298087) to "127.0.0.1",
+        resources.getString(R.string.settings_all_interfaces_8d0587) to "0.0.0.0"
     )
 }
 
@@ -2064,6 +2086,7 @@ private fun HotspotInfoCard(
     httpProxyEnabled: Boolean = false,
     httpProxyPort: Int = 8080
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val shareableIp = remember { detectShareableIp() }
     if (shareableIp == null) return
 
@@ -2106,7 +2129,7 @@ private fun HotspotInfoCard(
                     .padding(horizontal = 12.dp)
             ) {
                 Text(
-                    text = if (isHotspot) "Hotspot proxy address" else "Device IP",
+                    text = if (isHotspot) resources.getString(R.string.settings_hotspot_proxy_address_588ac2) else resources.getString(R.string.settings_device_ip_bb795b),
                     style = MaterialTheme.typography.labelMedium,
                     color = if (isHotspot)
                         MaterialTheme.colorScheme.onPrimaryContainer
@@ -2133,13 +2156,13 @@ private fun HotspotInfoCard(
                 }
                 if (isHotspot) {
                     Text(
-                        text = "Use as proxy on connected devices",
+                        text = resources.getString(R.string.settings_use_as_proxy_on_connected_devices_0b53ab),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 } else {
                     Text(
-                        text = "Enable hotspot to share with other devices",
+                        text = resources.getString(R.string.settings_enable_hotspot_to_share_with_other_devices_1540b6),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2151,7 +2174,7 @@ private fun HotspotInfoCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy address",
+                    contentDescription = resources.getString(R.string.rv_copy_address_7c4e52),
                     tint = if (isHotspot)
                         MaterialTheme.colorScheme.onPrimaryContainer
                     else
@@ -2170,6 +2193,7 @@ private fun LocalProxyInfoCard(
     httpProxyEnabled: Boolean = false,
     httpProxyPort: Int = 8080
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val socksAddress = "$listenAddress:$socksPort"
     val httpAddress = "$listenAddress:$httpProxyPort"
     val copyText = if (httpProxyEnabled) "SOCKS5: $socksAddress | HTTP: $httpAddress" else socksAddress
@@ -2202,7 +2226,7 @@ private fun LocalProxyInfoCard(
                     .padding(horizontal = 12.dp)
             ) {
                 Text(
-                    text = "Proxy address",
+                    text = resources.getString(R.string.settings_proxy_address_da7c90),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2217,7 +2241,7 @@ private fun LocalProxyInfoCard(
                     )
                 }
                 Text(
-                    text = "Configure this in your app's proxy settings",
+                    text = resources.getString(R.string.settings_configure_this_in_your_app_s_proxy_settings_39db39),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2228,7 +2252,7 @@ private fun LocalProxyInfoCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy address",
+                    contentDescription = resources.getString(R.string.rv_copy_address_7c4e52),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
@@ -2244,11 +2268,12 @@ private fun AddressSettingItem(
     options: List<Pair<String, String>>,
     onValueChange: (String) -> Unit
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var expanded by remember { mutableStateOf(false) }
 
     // Find the label for the current value, if it matches a known option
     val displayText = options.find { it.second == value }?.let { (label, ip) ->
-        if (label == "All interfaces" || label == "Localhost") "$label ($ip)" else "$label: $ip"
+        if (label == resources.getString(R.string.settings_all_interfaces_8d0587) || label == resources.getString(R.string.settings_localhost_298087)) "$label ($ip)" else "$label: $ip"
     } ?: value
 
     Column(
@@ -2267,7 +2292,7 @@ private fun AddressSettingItem(
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = "Listen Address",
+                text = resources.getString(R.string.settings_listen_address_633c69),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(start = 16.dp)
             )
@@ -2279,6 +2304,7 @@ private fun AddressSettingItem(
             modifier = Modifier.padding(start = 40.dp)
         ) {
             OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                 value = displayText,
                 onValueChange = { },
                 readOnly = true,
@@ -2339,13 +2365,14 @@ private fun TextFieldSettingItem(
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = rv(title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(start = 16.dp)
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(placeholder) },
@@ -2368,33 +2395,36 @@ private fun BandwidthLimitDialog(
     onDismiss: () -> Unit,
     onApply: (uploadKbps: Int, downloadKbps: Int) -> Unit
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var uploadText by remember { mutableStateOf(if (currentUploadKbps > 0) currentUploadKbps.toString() else "") }
     var downloadText by remember { mutableStateOf(if (currentDownloadKbps > 0) currentDownloadKbps.toString() else "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Bandwidth Limit") },
+        title = { Text(resources.getString(R.string.settings_bandwidth_limit_b0796c)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Set speed limits in KB/s. Leave empty or 0 for unlimited. Applies on next connection.",
+                    text = resources.getString(R.string.settings_set_speed_limits_in_kb_s_leave_empty_or_0_for_unlimited_applies_o_69a450),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                     value = uploadText,
                     onValueChange = { uploadText = it.filter { c -> c.isDigit() }.take(6) },
-                    label = { Text("Upload (KB/s)") },
-                    placeholder = { Text("Unlimited") },
+                    label = { Text(resources.getString(R.string.settings_upload_kb_s_741344)) },
+                    placeholder = { Text(resources.getString(R.string.settings_unlimited_b8bef3)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
+                            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                     value = downloadText,
                     onValueChange = { downloadText = it.filter { c -> c.isDigit() }.take(6) },
-                    label = { Text("Download (KB/s)") },
-                    placeholder = { Text("Unlimited") },
+                    label = { Text(resources.getString(R.string.settings_download_kb_s_a32131)) },
+                    placeholder = { Text(resources.getString(R.string.settings_unlimited_b8bef3)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -2427,6 +2457,7 @@ private fun DnsPoolDialog(
     onSave: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     val max = app.slipnet.tunnel.DnsPoolScanner.MAX_POOL_SIZE
     var text by remember { mutableStateOf(initialText) }
@@ -2454,7 +2485,7 @@ private fun DnsPoolDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "DNS Resolver Pool",
+                    text = resources.getString(R.string.settings_dns_resolver_pool_993c79),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.weight(1f)
                 )
@@ -2464,7 +2495,7 @@ private fun DnsPoolDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Candidates scanned on each connect — top 10 lowest-latency win.",
+                    resources.getString(R.string.settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -2474,13 +2505,13 @@ private fun DnsPoolDialog(
                 ) {
                     PoolActionButton(
                         icon = Icons.Default.UploadFile,
-                        label = "Import",
+                        label = resources.getString(R.string.rv_import_2cff9b),
                         onClick = { importLauncher.launch(arrayOf("text/plain", "*/*")) },
                         modifier = Modifier.weight(1f)
                     )
                     PoolActionButton(
                         icon = Icons.Default.Shuffle,
-                        label = "Random",
+                        label = resources.getString(R.string.settings_random_58d888),
                         onClick = {
                             val sampled = sampleRandomResolversFromBuiltIn(context, count = max)
                             if (sampled.isNotBlank()) text = sampled
@@ -2489,7 +2520,7 @@ private fun DnsPoolDialog(
                     )
                     PoolActionButton(
                         icon = Icons.Default.Delete,
-                        label = "Clear",
+                        label = resources.getString(R.string.rv_clear_83b12c),
                         onClick = { text = "" },
                         modifier = Modifier.weight(1f),
                         enabled = text.isNotEmpty()
@@ -2498,10 +2529,10 @@ private fun DnsPoolDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = capPoolText(it, max) },
-                    placeholder = { Text("One IP or host[:port] per line or comma-separated.\nLines starting with # are comments.") },
+                    placeholder = { Text(resources.getString(R.string.settings_one_ip_or_host_port_per_line_or_comma_separated_lines_starting_wi_628aae)) },
                     minLines = 8,
                     maxLines = 12,
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -2619,4 +2650,23 @@ private fun sampleRandomResolversFromBuiltIn(
     result.joinToString("\n")
 } catch (_: Exception) {
     ""
+}
+
+private fun dnsWorkerName(resources: android.content.res.Resources, mode: DnsWorkerMode): String = when (mode) {
+    DnsWorkerMode.PER_QUERY -> resources.getString(R.string.settings_per_query_default_4f9b01)
+    DnsWorkerMode.TWO -> resources.getString(R.string.settings_2_workers_f6611e)
+    DnsWorkerMode.THREE -> resources.getString(R.string.settings_3_workers_56c416)
+    DnsWorkerMode.FIVE -> resources.getString(R.string.settings_5_workers_fastest_205969)
+}
+
+private fun sshCipherName(resources: android.content.res.Resources, cipher: SshCipher): String = when (cipher) {
+    SshCipher.AUTO -> resources.getString(R.string.settings_auto_fastest_a3066d)
+    SshCipher.AES_128_CTR -> resources.getString(R.string.settings_aes_128_ctr_legacy_086a2b)
+    else -> cipher.displayName
+}
+
+private fun countryName(resources: android.content.res.Resources, country: GeoBypassCountry): String = when (country) {
+    GeoBypassCountry.IR -> resources.getString(R.string.settings_iran_889224)
+    GeoBypassCountry.CN -> resources.getString(R.string.settings_china_d2eaf2)
+    GeoBypassCountry.RU -> resources.getString(R.string.settings_russia_6754fe)
 }

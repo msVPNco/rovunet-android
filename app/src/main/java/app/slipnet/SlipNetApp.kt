@@ -21,6 +21,7 @@ class SlipNetApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        app.slipnet.util.StabilityDiagnostics.initialize(this)
         app.slipnet.tunnel.TransportTrust.initialize(this)
         createNotificationChannels()
         appScope.launch { preferencesDataStore.ensureProxyPortInitialized() }
@@ -29,14 +30,15 @@ class SlipNetApp : Application() {
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NotificationManager::class.java)
+            val resources = app.slipnet.presentation.theme.RovunetStrings.localizedContext(this).resources
 
             // VPN Status Channel
             val vpnChannel = NotificationChannel(
                 CHANNEL_VPN_STATUS,
-                "VPN Status",
+                resources.getString(R.string.settings_vpn_status_848bdf),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows current VPN connection status"
+                description = resources.getString(R.string.settings_shows_current_vpn_connection_status_502795)
                 setShowBadge(true)
             }
             notificationManager.createNotificationChannel(vpnChannel)
@@ -44,20 +46,20 @@ class SlipNetApp : Application() {
             // Connection Events Channel
             val eventsChannel = NotificationChannel(
                 CHANNEL_CONNECTION_EVENTS,
-                "Connection Events",
+                resources.getString(R.string.settings_connection_events_5313dd),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Notifications for VPN connection events"
+                description = resources.getString(R.string.settings_notifications_for_vpn_connection_events_120e7d)
             }
             notificationManager.createNotificationChannel(eventsChannel)
 
             // DNS Scan Status Channel
             val scanChannel = NotificationChannel(
                 CHANNEL_SCAN_STATUS,
-                "DNS Scan",
+                resources.getString(R.string.settings_dns_scan_33ff80),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows DNS resolver scan progress"
+                description = resources.getString(R.string.settings_shows_dns_resolver_scan_progress_744073)
                 setShowBadge(false)
             }
             notificationManager.createNotificationChannel(scanChannel)
