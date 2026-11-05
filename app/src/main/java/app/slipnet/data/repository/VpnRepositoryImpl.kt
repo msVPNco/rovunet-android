@@ -233,6 +233,8 @@ class VpnRepositoryImpl @Inject constructor(
      * [applyDnsPoolIfEnabled] skips the scan and reuses the resolvers
      * already in the profile.
      */
+    @Volatile private var preConnectionScanAllowed: Boolean = false
+    fun setPreConnectionScanAllowed(allowed: Boolean) { preConnectionScanAllowed = allowed }
     @Volatile private var isAutoReconnect: Boolean = false
     fun setAutoReconnect(active: Boolean) { isAutoReconnect = active }
 
@@ -626,6 +628,7 @@ class VpnRepositoryImpl @Inject constructor(
         profile: ServerProfile,
         explicitOverride: List<DnsResolver>?
     ): Result<List<DnsResolver>?> {
+        if (!preConnectionScanAllowed) return Result.success(null)
         if (explicitOverride != null) return Result.success(null)
         if (!preferencesDataStore.dnsPoolEnabled.first()) return Result.success(null)
         if (isAutoReconnect) {

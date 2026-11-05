@@ -40,7 +40,7 @@
     <string name="settings_edit_ips_d3241d">ویرایش IPها</string>
     <string name="settings_tap_to_set_resolver_ips_c8fb52">برای تعیین IP رزولورها لمس کنید</string>
     <string name="settings_dns_pool_348ea2">مجموعهٔ رزولورهای DNS</string>
-    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">در هر اتصال، سریع‌ترین رزولورها خودکار انتخاب شوند</string>
+    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">نامزدهای رزولور برای تست اتصال؛ اتصال عادی از رزولورهای خود کانفیگ استفاده می‌کند</string>
     <string name="settings_edit_pool_40a09a">ویرایش فهرست رزولورها</string>
     <string name="settings_tap_to_manage_the_candidate_list_e307d1">برای مدیریت فهرست نامزدها لمس کنید</string>
     <string name="settings_http_ssh_verification_f2924f">تأیید با HTTP/SSH</string>
@@ -144,7 +144,7 @@
     <string name="settings_upload_kb_s_741344">ارسال (کیلوبایت/ثانیه)</string>
     <string name="settings_download_kb_s_a32131">دریافت (کیلوبایت/ثانیه)</string>
     <string name="settings_dns_resolver_pool_993c79">فهرست رزولورهای DNS</string>
-    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">نامزدها در هر اتصال بررسی می‌شوند؛ ۱۰ مورد با کمترین تأخیر انتخاب می‌شوند.</string>
+    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">نامزدهای آزمایش رزولور؛ اتصال عادی ابتدا از رزولورهای خود کانفیگ استفاده می‌کند.</string>
     <string name="settings_random_58d888">تصادفی</string>
     <string name="settings_one_ip_or_host_port_per_line_or_comma_separated_lines_starting_wi_628aae">در هر خط یک IP یا host[:port] وارد کنید یا با کاما جدا کنید.\nخطوطی که با # شروع می‌شوند توضیح‌اند.</string>
     <string name="settings_per_query_default_4f9b01">به‌ازای هر درخواست (پیش‌فرض)</string>
@@ -190,4 +190,8 @@
     <plurals name="settings_resolvers_count">
         <item quantity="other">%1$d رزولور</item>
     </plurals>
+    <string name="connection_setup_timeout">مهلت راه‌اندازی اتصال تمام شد؛ گزارش اتصال را بررسی کنید.</string>
+    <string name="connection_cleanup_pending">تونل قبلی هنوز در حال توقف است؛ اتصال جدید شروع نشد.</string>
+    <string name="connection_service_stop_failed">اندروید نتوانست سرویس VPN را متوقف کند.</string>
+    <string name="connection_service_start_failed">اندروید نتوانست سرویس اتصال VPN را راه‌اندازی کند.</string>
 </resources>

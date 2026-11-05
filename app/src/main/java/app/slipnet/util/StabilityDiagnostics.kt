@@ -96,6 +96,6 @@ object StabilityDiagnostics {
         if (!initialized) return "No stability report recorded."
         return listOf("stall.txt", "crash.txt", "exits.txt").mapNotNull { name ->
             File(directory, name).takeIf { it.isFile }?.let { it.readText().take(17_000) }
-        }.joinToString("\n\n").ifBlank { "No stability report recorded." }
+        }.joinToString("\n\n").let { it + "\n\n" + ConnectionDiagnostics.report() }
     }
 }

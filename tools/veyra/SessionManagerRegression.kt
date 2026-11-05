@@ -4,6 +4,7 @@ import app.slipnet.domain.repository.*
 import app.slipnet.data.repository.VpnRepositoryImpl
 import app.slipnet.data.local.datastore.PreferencesDataStore
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 
 fun main() = runBlocking {
  val context=android.content.Context(); val repo=VpnRepositoryImpl()
@@ -62,5 +63,39 @@ fun main() = runBlocking {
  check(fifth>fourth && context.started.count { it.action=="CONNECT" }==count+1)
  repo.emit(fifth,ConnectionState.Connected(profile))
  check(manager.connectionState.value is ConnectionState.Connected)
+ // The service's protocol-ready callback itself completes the UI state.
+ val callbackContext=android.content.Context(); val callbackRepo=VpnRepositoryImpl()
+ val callbackManager=VpnConnectionManager(callbackContext,callbackRepo,ProfileRepository(),ChainRepository(),PreferencesDataStore())
+ val callbackId=callbackManager.connect(profile)
+ callbackManager.onVpnEstablished(callbackId)
+ check(callbackManager.connectionState.value is ConnectionState.Connected)
+ // Reproduce an old service whose destruction never arrives. Queue wait must
+ // terminate with Error and a late destruction must not dispatch the timed-out start.
+ callbackManager.disconnect(expectedSessionId=callbackId)
+ callbackManager.onVpnDisconnected(callbackId)
+ val beforeTimeout=callbackContext.started.count { it.action=="CONNECT" }
+ val timedOut=callbackManager.connect(profile)
+ withTimeout(12_000) { callbackManager.connectionState.first { it is ConnectionState.Error } }
+ check(callbackContext.started.count { it.action=="CONNECT" }==beforeTimeout)
+ check(!callbackManager.acceptsStart(timedOut))
+ callbackManager.onServiceDestroyed(callbackId)
+ check(callbackContext.started.count { it.action=="CONNECT" }==beforeTimeout)
+ callbackRepo.emit(timedOut,ConnectionState.Connected(profile))
+ callbackManager.onVpnEstablished(timedOut)
+ check(callbackManager.connectionState.value is ConnectionState.Error)
+ val recovered=callbackManager.connect(profile)
+ callbackManager.onVpnEstablished(recovered)
+ check(callbackManager.connectionState.value is ConnectionState.Connected)
+ // A repeated stop announcement after destruction must not create a new,
+ // unfulfillable barrier for a service that no longer exists.
+ callbackManager.expectServiceStop(callbackId)
+ callbackManager.disconnect(keepServiceAlive=true,expectedSessionId=recovered)
+ callbackManager.onVpnDisconnected(recovered)
+ val retryCount=callbackContext.started.count { it.action=="CONNECT" }
+ val afterLateStop=callbackManager.connect(profile)
+ check(afterLateStop>recovered && callbackContext.started.count { it.action=="CONNECT" }==retryCount+1)
+ callbackManager.onVpnEstablished(afterLateStop)
+ check(callbackManager.connectionState.value is ConnectionState.Connected)
+ println("PASS real manager: protocol readiness updates UI, stuck cleanup becomes Error, timed-out starts never run later and retry recovers")
  println("PASS real manager: stale disconnect/error/onDestroy isolation, scoped stop, delayed-stop delivery, queued connect barrier, queued cancellation and stale teardown isolation")
 }

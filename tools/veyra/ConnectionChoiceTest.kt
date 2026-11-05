@@ -12,5 +12,11 @@ fun main() {
     check(ConnectionChoice.summaryProfileId(profiles,results,null,null) == 2L)
     check(ConnectionChoice.summaryProfileId(profiles,results,3,null) == null)
     check(ConnectionChoice.summaryProfileId(profiles,mapOf(1L to PingResult.Success(1)),null,null) == null)
-    println("PASS manual selection, deleted target, and active-path measurement isolation")
+    val dns = ssh.copy(id=4, tunnelType=TunnelType.DNSTT)
+    val vlessPath = ssh.copy(id=5, tunnelType=TunnelType.VLESS)
+    check(ConnectionChoice.initialPath(listOf(dns,ssh,vlessPath), emptyMap())?.id == 5L)
+    check(ConnectionChoice.initialPath(listOf(dns), emptyMap()) == null)
+    check(ConnectionChoice.initialPath(listOf(ssh,vlessPath), mapOf(1L to PingResult.Success(20,verified=true)))?.id == 1L)
+    check(ConnectionChoice.initialPath(listOf(ssh), mapOf(1L to PingResult.Error("old HTTPS failure")))?.id == 1L)
+    println("PASS direct initial connection without ping, DNS consent boundary, explicit selection and historical measurement isolation")
 }

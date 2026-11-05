@@ -91,8 +91,6 @@ class SlipNetVpnService : VpnService() {
         private const val TUNNEL_STALL_CHECK_INTERVAL_SOCKS = 2 // Faster stall check for SOCKS profiles (~30s)
         private const val TUNNEL_STALL_THRESHOLD = 2 // Reconnect after 2 consecutive stalls
         private const val TUNNEL_STALL_THRESHOLD_SOCKS = 1 // Faster reconnect for SOCKS profiles (~30s)
-        private const val ZERO_THROUGHPUT_WARNING_SECONDS = 30L // Warn after 30s of zero relayed bytes
-        private const val ZERO_THROUGHPUT_DISCONNECT_SECONDS = 60L // Disconnect after 60s of zero relayed bytes
 
         // Persistence keys for auto-restart
         private const val PREFS_NAME = "vpn_service_state"
@@ -157,6 +155,7 @@ class SlipNetVpnService : VpnService() {
     private var serviceStartId: Int = 0
     private var requestedSessionId: Long = 0
     private var requestAllowTrustPrompt: Boolean = false
+    private var requestIsConnectionTest: Boolean = false
     private fun reportConnectionError(error: String) = connectionManager.onVpnError(error, serviceSessionId)
     private fun reportDisconnected() = connectionManager.onVpnDisconnected(serviceSessionId)
     private fun reportEstablished() = connectionManager.onVpnEstablished(serviceSessionId)
@@ -169,13 +168,28 @@ class SlipNetVpnService : VpnService() {
         }
     }
 
+    private fun announceConnecting(session: Long): Boolean {
+        if (!connectionManager.acceptsStart(session)) return false
+        connectionManager.onServiceStarting(session)
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SERVICE_CONNECT_RECEIVED)
+        return try {
+            startForeground(NotificationHelper.VPN_NOTIFICATION_ID,
+                notificationHelper.createVpnNotification(ConnectionState.Connecting))
+            true
+        } catch (_: Exception) {
+            connectionManager.onVpnError("Android could not start the VPN foreground service", session)
+            stopSelfResult(serviceStartId)
+            false
+        }
+    }
+
     private var connectJob: Job? = null
     private var disconnectJob: Job? = null
     private var stateObserverJob: Job? = null
     @Volatile
     private var isReconnecting = false
     @Volatile
-    private var resetZeroThroughputCounter = false
+    private var resetTrafficBaseline = false
     @Volatile
     private var isKillSwitchActive = false
     private var isProxyOnly = false
@@ -252,9 +266,13 @@ class SlipNetVpnService : VpnService() {
                 val requestId = intent.getLongExtra(EXTRA_SESSION_ID, 0).let {
                     if (it > 0) it else connectionManager.claimServiceStart()
                 }
-                if (!connectionManager.ownsSession(requestId)) return START_NOT_STICKY
+                if (!connectionManager.acceptsStart(requestId)) {
+                    if (serviceSessionId == 0L && requestedSessionId == 0L) stopSelfResult(startId)
+                    return START_NOT_STICKY
+                }
                 requestedSessionId = requestId
-                requestAllowTrustPrompt = !intent.getBooleanExtra("rovunet_test_mode", false)
+                requestIsConnectionTest = intent.getBooleanExtra("rovunet_test_mode", false)
+                requestAllowTrustPrompt = !requestIsConnectionTest
                 serviceStartId = startId
                 collectionResolvers = intent.getStringArrayExtra("rovunet_resolver_hosts")?.let { hosts ->
                     val ports = intent.getIntArrayExtra("rovunet_resolver_ports")
@@ -358,47 +376,29 @@ class SlipNetVpnService : VpnService() {
         previousConnect?.cancel()
         val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart().also { requestedSessionId = it }
         val allowTrustPrompt = requestAllowTrustPrompt
+        val isTest = requestIsConnectionTest
+        if (!announceConnecting(session)) return
         connectJob = serviceScope.launch {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_SETUP)
             previousConnect?.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_RUNTIME)
             previousRuntime.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_TEARDOWN)
             disconnectJob?.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_NATIVE_OWNER)
             TunnelOperations.mutex.withLock {
-            if (!connectionManager.ownsSession(session)) return@launch
+            if (!connectionManager.acceptsStart(session)) return@launch
+            val hadNativeOwner = TunnelOperations.owner != 0L || currentProfileId != -1L
             serviceSessionId = session
             TunnelOperations.owner = session
             app.slipnet.tunnel.TransportTrust.allowPrompt = allowTrustPrompt
-            vpnRepository.beginSession(session)
-            resetRuntimeScope()
-            // Always stop previous proxies to ensure ports are freed.
-            // This handles the case where onDestroy() sent stop signals but
-            // didn't wait for native code to release ports (e.g. abandoned Rust threads).
-            withContext(Dispatchers.IO) {
-                try { stopCurrentProxy() } catch (_: Exception) {}
-                // Process-level singletons — a previous service instance may have left
-                // listeners alive even though currentTunnelType has been reset.
-                // Stop ALL bridge types to ensure ports are freed.
-                try { HevSocks5Tunnel.stop() } catch (_: Exception) {}
-                try { DnsttSocksBridge.stop() } catch (_: Exception) {}
-                try { SshTunnelBridge.stopAll() } catch (_: Exception) {}
-                try { SlipstreamSocksBridge.stop() } catch (_: Exception) {}
-                try { NaiveSocksBridge.stop() } catch (_: Exception) {}
-                try { TorSocksBridge.stop() } catch (_: Exception) {}
-                try { Socks5ProxyBridge.stopAll() } catch (_: Exception) {}
-                try { XrayBridge.stop() } catch (_: Exception) {}
-                try { DnsttBridge.stopClient() } catch (_: Exception) {}
-                try { VaydnsBridge.stopClient() } catch (_: Exception) {}
-                try { SoarBridge.stopClient() } catch (_: Exception) {}
-                try { SlipstreamBridge.stopClient() } catch (_: Exception) {}
-                // Give native threads extra time to fully release ports after stop.
-                // Both Go (DNSTT/VayDNS) and Rust (Slipstream) may take a moment to close listeners.
-                delay(300)
-            }
-
-            // Clean up previous connection resources if switching profiles
-            if (currentProfileId != -1L) {
-                Log.i(TAG, "Switching profile: cleaning up previous connection")
+            if (hadNativeOwner) {
+                app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.NATIVE_CLEANUP)
                 cleanupConnection()
             }
+            resetRuntimeScope()
+            vpnRepository.beginSession(session)
+            vpnRepository.setPreConnectionScanAllowed(isTest)
 
             val profile = collectionProfile(connectionManager.getProfileById(profileId))
             if (profile == null) {
@@ -418,6 +418,7 @@ class SlipNetVpnService : VpnService() {
                 return@launch
             }
 
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROFILE_LOADED)
             currentProfileId = profileId
             currentProfileName = profile.name
             isUserInitiatedDisconnect = false
@@ -595,6 +596,7 @@ class SlipNetVpnService : VpnService() {
                 // The startup order differs between tunnel types:
                 // - Slipstream: Start proxy first (Rust uses protect_socket JNI callback)
                 // - DNSTT: Establish VPN first (uses addDisallowedApplication for socket protection)
+                app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.TRANSPORT_START)
                 when (currentTunnelType) {
                     TunnelType.SLIPSTREAM -> connectSlipstream(profile, dnsServer, remoteDns, remoteDnsFallback, globalResolverOverride)
                     TunnelType.SLIPSTREAM_SSH -> connectSlipstreamSsh(profile, dnsServer, remoteDns, remoteDnsFallback, globalResolverOverride)
@@ -660,21 +662,29 @@ class SlipNetVpnService : VpnService() {
         previousConnect?.cancel()
         val session = requestedSessionId.takeIf { it > 0 } ?: connectionManager.claimServiceStart().also { requestedSessionId = it }
         val allowTrustPrompt = requestAllowTrustPrompt
+        val isTest = requestIsConnectionTest
+        if (!announceConnecting(session)) return
         connectJob = serviceScope.launch {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_SETUP)
             previousConnect?.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_RUNTIME)
             previousRuntime.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_TEARDOWN)
             disconnectJob?.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_NATIVE_OWNER)
             TunnelOperations.mutex.withLock {
-            if (!connectionManager.ownsSession(session)) return@launch
+            if (!connectionManager.acceptsStart(session)) return@launch
+            val hadNativeOwner = TunnelOperations.owner != 0L || currentProfileId != -1L
             serviceSessionId = session
             TunnelOperations.owner = session
             app.slipnet.tunnel.TransportTrust.allowPrompt = allowTrustPrompt
-            vpnRepository.beginSession(session)
-            resetRuntimeScope()
-            withContext(Dispatchers.IO) {
-                try { stopCurrentProxy() } catch (_: Exception) {}
-                delay(300)
+            if (hadNativeOwner) {
+                app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.NATIVE_CLEANUP)
+                cleanupConnection()
             }
+            resetRuntimeScope()
+            vpnRepository.beginSession(session)
+            vpnRepository.setPreConnectionScanAllowed(isTest)
 
             val chain = chainRepository.getChainById(chainId)
             if (chain == null) {
@@ -5293,7 +5303,7 @@ class SlipNetVpnService : VpnService() {
                 }
 
                 Log.i(TAG, "Successfully reconnected after network change (tunnel type: $currentTunnelType)")
-                resetZeroThroughputCounter = true
+                resetTrafficBaseline = true
             } finally {
                 isReconnecting = false
                 vpnRepository.setAutoReconnect(false)
@@ -5665,8 +5675,6 @@ class SlipNetVpnService : VpnService() {
         trafficNotificationJob = runtimeScope.launch {
             val showTrafficInNotification = preferencesDataStore.showNotificationTraffic.first()
             var idleCount = 0
-            var zeroThroughputSeconds = 0L
-            var tunnelHealthWarningShown = false
             while (isActive) {
                 // Adaptive interval: 1s when active, 5s when idle, 10s when screen off.
                 val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -5693,39 +5701,15 @@ class SlipNetVpnService : VpnService() {
                 }
 
                 // After a reconnect, bridge byte counters are reset to 0.
-                // Reset the watchdog so an idle phone doesn't get disconnected.
-                if (resetZeroThroughputCounter) {
-                    resetZeroThroughputCounter = false
-                    zeroThroughputSeconds = 0L
-                    tunnelHealthWarningShown = false
+                // Reset the rate baseline after recovery.
+                if (resetTrafficBaseline) {
+                    resetTrafficBaseline = false
                     connectionManager.setDnsWarning(null)
                     vpnRepository.resetSpeedTracking()
                 }
 
-                // Tunnel health: warn if zero cumulative throughput for too long.
-                // This detects broken tunnels that show "Connected" but relay no data
-                // (e.g. overloaded servers, wrong auth) while DNS overhead drains SIM data.
-                // Skip in proxy-only mode: no TUN = no DNS overhead, and apps may be idle.
-                // Skip for DoH: only DNS is routed through VPN (/32 route), so idle
-                // periods with zero tun2socks traffic are normal (especially on TV).
-                if (!isProxyOnly && currentTunnelType != TunnelType.DOH && current.totalBytes == 0L) {
-                    zeroThroughputSeconds += interval / 1000
-                    if (!tunnelHealthWarningShown && zeroThroughputSeconds >= ZERO_THROUGHPUT_WARNING_SECONDS) {
-                        tunnelHealthWarningShown = true
-                        connectionManager.setDnsWarning("No data flowing — server may be unreachable or overloaded")
-                    }
-                    if (zeroThroughputSeconds >= ZERO_THROUGHPUT_DISCONNECT_SECONDS) {
-                        Log.w(TAG, "Zero throughput for ${zeroThroughputSeconds}s — disconnecting")
-                        reportConnectionError("Disconnected — no data received from server")
-                        disconnect()
-                        return@launch
-                    }
-                } else if (tunnelHealthWarningShown) {
-                    // Data started flowing — clear the warning
-                    tunnelHealthWarningShown = false
-                    zeroThroughputSeconds = 0L
-                    connectionManager.setDnsWarning(null)
-                }
+                // Idle counters are not a failed connection. Protocol health
+                // and TUN TX-without-RX monitoring run after establishment.
 
                 // Skip notification updates while screen is off — nobody can see them,
                 // and they waste IPC / cause MIUI reordering issues.
@@ -5814,7 +5798,7 @@ class SlipNetVpnService : VpnService() {
         networkLostJob?.cancel()
         networkLostJob = null
         isReconnecting = false
-        resetZeroThroughputCounter = false
+        resetTrafficBaseline = false
 
         // Cancel state observer to prevent stale stopOwnedService() calls
         stateObserverJob?.cancel()
@@ -5838,6 +5822,7 @@ class SlipNetVpnService : VpnService() {
             // Clear saved state so we don't auto-reconnect on restart
             clearConnectionState()
             cleanupConnection()
+            TunnelOperations.owner = 0
             reportDisconnected()
             if (!keepServiceAlive) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -6254,7 +6239,7 @@ class SlipNetVpnService : VpnService() {
                 runtime.join()
                 teardown?.join()
                 TunnelOperations.mutex.withLock {
-                    if (TunnelOperations.owner == session) cleanupConnectionSync()
+                    if (TunnelOperations.owner == session) { cleanupConnectionSync(); TunnelOperations.owner = 0 }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Service teardown failed", e)

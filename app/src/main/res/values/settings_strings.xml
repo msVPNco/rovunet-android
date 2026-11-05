@@ -40,7 +40,7 @@
     <string name="settings_edit_ips_d3241d">Edit IPs</string>
     <string name="settings_tap_to_set_resolver_ips_c8fb52">Tap to set resolver IPs</string>
     <string name="settings_dns_pool_348ea2">DNS pool</string>
-    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">Auto-pick the fastest resolvers on each connect</string>
+    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">Resolver candidates for explicit connection tests; Connect uses the configured resolvers</string>
     <string name="settings_edit_pool_40a09a">Edit pool</string>
     <string name="settings_tap_to_manage_the_candidate_list_e307d1">Tap to manage the candidate list</string>
     <string name="settings_http_ssh_verification_f2924f">HTTP/SSH verification</string>
@@ -144,7 +144,7 @@
     <string name="settings_upload_kb_s_741344">Upload (KB/s)</string>
     <string name="settings_download_kb_s_a32131">Download (KB/s)</string>
     <string name="settings_dns_resolver_pool_993c79">DNS Resolver Pool</string>
-    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">Candidates scanned on each connect — top 10 lowest-latency win.</string>
+    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">Candidates for resolver tests; manual connection starts with its configured resolvers.</string>
     <string name="settings_random_58d888">Random</string>
     <string name="settings_one_ip_or_host_port_per_line_or_comma_separated_lines_starting_wi_628aae">One IP or host[:port] per line or comma-separated.\nLines starting with # are comments.</string>
     <string name="settings_per_query_default_4f9b01">Per-query (default)</string>
@@ -193,4 +193,8 @@
         <item quantity="one">%1$d resolver</item>
         <item quantity="other">%1$d resolvers</item>
     </plurals>
+    <string name="connection_setup_timeout">Connection setup timed out; see connection diagnostics</string>
+    <string name="connection_cleanup_pending">Previous tunnel is still stopping; connection was not started</string>
+    <string name="connection_service_stop_failed">Android could not stop the VPN service</string>
+    <string name="connection_service_start_failed">Android could not start the VPN foreground service</string>
 </resources>

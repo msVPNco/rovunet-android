@@ -40,7 +40,7 @@
     <string name="settings_edit_ips_d3241d">Изменить IP</string>
     <string name="settings_tap_to_set_resolver_ips_c8fb52">Нажмите, чтобы задать IP резолверов</string>
     <string name="settings_dns_pool_348ea2">Пул DNS-резолверов</string>
-    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">Автоматически выбирать самые быстрые резолверы при подключении</string>
+    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">Кандидаты для явных проверок; обычное подключение использует заданные резолверы</string>
     <string name="settings_edit_pool_40a09a">Изменить пул</string>
     <string name="settings_tap_to_manage_the_candidate_list_e307d1">Нажмите для управления списком кандидатов</string>
     <string name="settings_http_ssh_verification_f2924f">Проверка HTTP/SSH</string>
@@ -144,7 +144,7 @@
     <string name="settings_upload_kb_s_741344">Отдача (КБ/с)</string>
     <string name="settings_download_kb_s_a32131">Загрузка (КБ/с)</string>
     <string name="settings_dns_resolver_pool_993c79">Пул DNS-резолверов</string>
-    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">Кандидаты проверяются при каждом подключении; выбираются 10 с наименьшей задержкой.</string>
+    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">Кандидаты для проверки резолверов; обычное подключение использует заданные резолверы.</string>
     <string name="settings_random_58d888">Случайные</string>
     <string name="settings_one_ip_or_host_port_per_line_or_comma_separated_lines_starting_wi_628aae">Один IP или host[:port] на строку либо через запятую.\nСтроки с # считаются комментариями.</string>
     <string name="settings_per_query_default_4f9b01">Для каждого запроса (по умолчанию)</string>
@@ -199,4 +199,8 @@
         <item quantity="many">%1$d резолверов</item>
         <item quantity="other">%1$d резолвера</item>
     </plurals>
+    <string name="connection_setup_timeout">Время запуска подключения истекло; откройте диагностику подключения.</string>
+    <string name="connection_cleanup_pending">Предыдущий туннель ещё останавливается; новое подключение не запущено.</string>
+    <string name="connection_service_stop_failed">Android не удалось остановить службу VPN.</string>
+    <string name="connection_service_start_failed">Android не удалось запустить службу VPN переднего плана.</string>
 </resources>

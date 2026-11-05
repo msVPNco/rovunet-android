@@ -40,7 +40,7 @@
     <string name="settings_edit_ips_d3241d">编辑 IP</string>
     <string name="settings_tap_to_set_resolver_ips_c8fb52">点击设置解析器 IP</string>
     <string name="settings_dns_pool_348ea2">DNS 解析器池</string>
-    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">每次连接时自动选择最快的解析器</string>
+    <string name="settings_auto_pick_the_fastest_resolvers_on_each_connect_3e7a2d">显式连接测试的候选解析器；普通连接使用配置中的解析器</string>
     <string name="settings_edit_pool_40a09a">编辑解析器池</string>
     <string name="settings_tap_to_manage_the_candidate_list_e307d1">点击管理候选列表</string>
     <string name="settings_http_ssh_verification_f2924f">HTTP/SSH 验证</string>
@@ -144,7 +144,7 @@
     <string name="settings_upload_kb_s_741344">上传（KB/s）</string>
     <string name="settings_download_kb_s_a32131">下载（KB/s）</string>
     <string name="settings_dns_resolver_pool_993c79">DNS 解析器池</string>
-    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">每次连接时扫描候选解析器，选择延迟最低的 10 个。</string>
+    <string name="settings_candidates_scanned_on_each_connect_top_10_lowest_latency_win_1869aa">解析器测试候选列表；手动连接先使用配置中的解析器。</string>
     <string name="settings_random_58d888">随机</string>
     <string name="settings_one_ip_or_host_port_per_line_or_comma_separated_lines_starting_wi_628aae">每行一个 IP 或 host[:port]，也可用逗号分隔。\n以 # 开头的行为注释。</string>
     <string name="settings_per_query_default_4f9b01">每次查询（默认）</string>
@@ -190,4 +190,8 @@
     <plurals name="settings_resolvers_count">
         <item quantity="other">%1$d 个解析器</item>
     </plurals>
+    <string name="connection_setup_timeout">连接启动超时，请查看连接诊断。</string>
+    <string name="connection_cleanup_pending">上一个隧道仍在停止，新连接尚未启动。</string>
+    <string name="connection_service_stop_failed">Android 无法停止 VPN 服务。</string>
+    <string name="connection_service_start_failed">Android 无法启动 VPN 前台服务。</string>
 </resources>
