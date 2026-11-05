@@ -1,3 +1,5 @@
+> Inherited advanced engineering reference. For current alpha11 installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
+
 # Rovunet — Guide
 
 > Based on [SlipNet](https://github.com/anonvector/SlipNet), Copyright (C) 2026 Anonvector; not affiliated. See [NOTICE](../NOTICE.md).

@@ -2,7 +2,7 @@ package app.slipnet.util
 
 /** Bounded, in-memory diagnostic events. Never accepts credentials or free-form errors. */
 object ConnectionDiagnostics {
-    enum class Event { CONNECT_REQUEST, RECONNECT_REQUEST, DISCONNECT_REQUEST, VPN_ESTABLISHED, VPN_DISCONNECTED, VPN_ERROR, CORE_START, CORE_READY, CORE_STOP }
+    enum class Event { CONNECT_REQUEST, RECONNECT_REQUEST, DISCONNECT_REQUEST, VPN_ESTABLISHED, VPN_DISCONNECTED, VPN_ERROR, CORE_START, CORE_READY, CORE_STOP, SERVICE_CONNECT_RECEIVED, WAIT_PREVIOUS_SETUP, WAIT_PREVIOUS_RUNTIME, WAIT_PREVIOUS_TEARDOWN, WAIT_NATIVE_OWNER, NATIVE_CLEANUP, PROFILE_LOADED, TRANSPORT_START, STARTUP_TIMEOUT, SERVICE_STOP_TIMEOUT }
     private val started = System.nanoTime()
     private val events = java.util.ArrayDeque<String>()
     @Synchronized fun record(event: Event) {

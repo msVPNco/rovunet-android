@@ -414,7 +414,17 @@ class MainViewModel @Inject constructor(
         if (_uiState.value.isPingRunning) { _uiState.value = _uiState.value.copy(error = "Stop the connection test first"); return }
         val targetProfile = profile ?: when (val choice = app.slipnet.domain.model.ConnectionChoice.resolve(
             _uiState.value.manualProfileId, _uiState.value.profiles)) {
-            app.slipnet.domain.model.ConnectionChoice.Target.Automatic -> { runCollection(connectAfter = true); return }
+            app.slipnet.domain.model.ConnectionChoice.Target.Automatic -> {
+                val members = selectedMembers().filter { !it.isExpired && it.tunnelType.isAvailable() }
+                val candidate = app.slipnet.domain.model.ConnectionChoice.initialPath(members, _uiState.value.pingResults)
+                if (candidate == null) {
+                    if (members.any { ProfileCollections.isDns(it) }) {
+                        _uiState.value = _uiState.value.copy(collectionPrompt = true, collectionConnect = true)
+                    } else _uiState.value = _uiState.value.copy(error = "No profile available to connect")
+                    return
+                }
+                candidate
+            }
             app.slipnet.domain.model.ConnectionChoice.Target.Missing -> {
                 _uiState.value = _uiState.value.copy(error = "No profile available to connect")
                 return
@@ -442,8 +452,8 @@ class MainViewModel @Inject constructor(
     fun toggleConnection() {
         when (_uiState.value.connectionState) {
             is ConnectionState.Connected,
-            is ConnectionState.Connecting,
-            is ConnectionState.Error -> disconnect()
+            is ConnectionState.Connecting -> disconnect()
+            is ConnectionState.Error -> connect()
             is ConnectionState.Disconnecting -> { /* ignore — already disconnecting */ }
             else -> connect()
         }
@@ -977,7 +987,12 @@ class MainViewModel @Inject constructor(
         if (_uiState.value.isPingRunning) return
         val connect = _uiState.value.collectionConnect
         _uiState.value = _uiState.value.copy(collectionPrompt = false)
-        runCollection(connectAfter = connect, dnsOnly = true)
+        if (connect) {
+            val paths = selectedMembers().filter { !it.isExpired && it.tunnelType.isAvailable() && ProfileCollections.isDns(it) }
+            val target = ProfileCollections.ordered(paths, _uiState.value.pingResults).firstOrNull()
+            if (target == null) _uiState.value = _uiState.value.copy(error = "No profile available to connect")
+            else connectionManager.connect(target, profileResolvers = true)
+        } else runCollection(connectAfter = false, dnsOnly = true)
     }
 
     private fun runCollection(connectAfter: Boolean, dnsOnly: Boolean = false) {

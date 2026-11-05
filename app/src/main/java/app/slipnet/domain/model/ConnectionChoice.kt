@@ -12,6 +12,11 @@ object ConnectionChoice {
         if (manualId == null) Target.Automatic
         else profiles.firstOrNull { it.id == manualId }?.let { Target.Direct(it) } ?: Target.Missing
 
+    /** Choosing a collection is not a request to start a ping/HTTPS scan. */
+    fun initialPath(profiles: List<ServerProfile>, results: Map<Long, PingResult>): ServerProfile? =
+        ProfileCollections.ordered(profiles.filter { !it.isExpired }, results)
+            .firstOrNull { !ProfileCollections.isDns(it) }
+
     /** While connected, never substitute another path's historical measurement. */
     fun summaryProfileId(profiles: List<ServerProfile>, results: Map<Long, PingResult>,
                          connectedId: Long?, manualId: Long?): Long? {

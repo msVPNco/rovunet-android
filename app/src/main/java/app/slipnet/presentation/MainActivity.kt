@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: android.content.Context) {
         val lang = newBase.getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", null)
-        if (lang == null) { super.attachBaseContext(newBase); return }
+        if (lang !in setOf("en", "fa", "zh", "ru")) { super.attachBaseContext(newBase); return }
         val locale = java.util.Locale.forLanguageTag(if (lang == "zh") "zh-Hans" else lang)
         val configuration = android.content.res.Configuration(newBase.resources.configuration)
         configuration.setLocale(locale)
@@ -82,13 +82,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.LIGHT)
 
-            SlipstreamTheme(darkMode = darkMode) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    NavGraph(navController = navController)
+            app.slipnet.presentation.theme.RovunetLocale {
+                SlipstreamTheme(darkMode = darkMode) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        val navController = rememberNavController()
+                        NavGraph(navController = navController)
+                    }
                 }
             }
         }
