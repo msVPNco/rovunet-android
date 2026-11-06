@@ -30,7 +30,9 @@ jobs:
       - name: Build private client and device tests
         run: |
           python3 tools/veyra/prepare-native.py
-          bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true
+          df -h "$GITHUB_WORKSPACE"
+          bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
+          bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
       - name: Verify instrumented VPN and scanner behaviour
         run: |
           test -c /dev/kvm
@@ -49,7 +51,7 @@ jobs:
       - name: Prepare the verified public APK for offline signing
         run: |
           cp app/build/outputs/apk/full/release/*-full-release-universal.apk "$RUNNER_TEMP/Rovunet-minified-private.apk"
-          bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=false -ProvunetUnsignedPublication=true
+          bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=false -ProvunetUnsignedPublication=true --stacktrace
           python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
       - name: Retain verified minified APKs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -59,5 +61,6 @@ jobs:
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
             app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
+            app/build/outputs/mapping/fullRelease/mapping.txt
           if-no-files-found: error
           retention-days: 5
