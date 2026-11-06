@@ -10,7 +10,7 @@
 
 ## 发布状态
 
-本源码准备 **0.3.0-alpha14 Full，版本代码 25**。上一公开版本为 alpha11。签名文件正式发布前，alpha14 不是已发布的公开 APK；生产签名和升级/迁移方案仍须确定。[发布记录](docs/releases/alpha14-final.md) · [状态](docs/STATUS.md)。
+本源码为 **0.3.0-alpha14 Full，版本代码 25**，采用固定的[生产签名](docs/SIGNING-IDENTITY.md)。项目所有者已在用户部署前批准替换旧 alpha11 签名。因此 alpha14 相对 alpha11 需要全新安装，后续直接 APK 更新将复用新密钥。请下载发行附件中的已签名 Full APK。[发布记录](docs/releases/alpha14-final.md) · [状态](docs/STATUS.md)。
 
 需要 Android 7.0/API 24 或更新版本。目标架构为 ARM32、ARM64、x86_64；继承的 Naive/Tor 二进制不提供 x86_64。不承诺 32 位 x86 或新的 Lite 包。尚无 Google Play、App Store 或 Rovunet 桌面图形版本。
 

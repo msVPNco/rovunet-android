@@ -177,9 +177,15 @@ android {
 
 val verifyPublicationSigning = tasks.register("verifyPublicationSigning") {
     doLast {
-        val expected = providers.gradleProperty("rovunetReleaseCertSha256")
-            .orElse(providers.environmentVariable("ROVUNET_RELEASE_CERT_SHA256")).orNull?.lowercase()
-        require(expected?.matches(Regex("[0-9a-f]{64}")) == true) { "Set the intended production signing certificate SHA-256" }
+        val pinnedCertificate = rootProject.file("config/release-signing-certificate.sha256")
+            .readText().trim().lowercase()
+        require(pinnedCertificate.matches(Regex("[0-9a-f]{64}"))) { "Invalid pinned production signing certificate" }
+        val configuredCertificate = providers.gradleProperty("rovunetReleaseCertSha256")
+            .orElse(providers.environmentVariable("ROVUNET_RELEASE_CERT_SHA256")).orNull
+            ?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        require(configuredCertificate == null || configuredCertificate == pinnedCertificate) {
+            "Configured production certificate differs from the repository pin; do not rotate the release key implicitly"
+        }
         val store = KeyStore.getInstance(KeyStore.getDefaultType())
         val storeFile = file(requiredSigningProperty("storeFile"))
         val alias = requiredSigningProperty("keyAlias")
@@ -188,7 +194,7 @@ val verifyPublicationSigning = tasks.register("verifyPublicationSigning") {
         val cert = store.getCertificate(alias) as? X509Certificate
             ?: throw GradleException("No X.509 signing certificate for keyAlias in the configured keystore")
         val digest = MessageDigest.getInstance("SHA-256").digest(cert.encoded).joinToString("") { "%02x".format(it) }
-        require(digest == expected && !cert.subjectX500Principal.name.contains("CN=Android Debug", ignoreCase = true)) {
+        require(digest == pinnedCertificate && !cert.subjectX500Principal.name.contains("CN=Android Debug", ignoreCase = true)) {
             "The release key must match the approved production signing identity"
         }
     }

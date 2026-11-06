@@ -10,7 +10,7 @@
 
 ## Release status
 
-This tree prepares **0.3.0-alpha14 Full, version code 25**. Alpha11 is the previous public release. Alpha14 is not a published signed APK until its release assets are finalized. Production signing and the upgrade/migration decision remain required. [Release record](docs/releases/alpha14-final.md) · [Current status](docs/STATUS.md).
+This tree is **0.3.0-alpha14 Full, version code 25**, using the managed [production signing identity](docs/SIGNING-IDENTITY.md). The owner authorized replacing the historical alpha11 signer before user deployment. Alpha14 is a fresh installation relative to alpha11, not an in-place upgrade; future direct APK updates will reuse the new key. Download the signed Full APK from the published release assets. [Release record](docs/releases/alpha14-final.md) · [Current status](docs/STATUS.md).
 
 Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inherited Naive/Tor binaries are unavailable on x86_64. No 32-bit x86 or new Lite asset is promised. No Rovunet Google Play, App Store or desktop GUI release is available.
 

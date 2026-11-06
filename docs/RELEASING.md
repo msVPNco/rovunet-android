@@ -11,13 +11,13 @@ keytool -exportcert -keystore /secure/path/release.jks -alias release -file rele
 sha256sum release-cert.der
 ```
 
-Set the 64 hexadecimal characters as the GitHub Actions repository variable `ROVUNET_RELEASE_CERT_SHA256`. Local builds can use that environment variable or `-ProvunetReleaseCertSha256=…`. Compare it with the certificate digest from `apksigner verify --print-certs` on the distribution APK. For a signer change, plan and verify the Android update path for existing installations before changing this value. The emulator job uses the independently signed candidate package and does not use these credentials.
+The authoritative digest is versioned in `config/release-signing-certificate.sha256` and documented in [SIGNING-IDENTITY](SIGNING-IDENTITY.md). Optional repository variable `ROVUNET_RELEASE_CERT_SHA256`, local environment or `-ProvunetReleaseCertSha256=…` must match that pin; they cannot silently approve a new key. Recover the existing production key after a workspace reset; never generate a replacement merely because the local keystore is missing. Compare it with the certificate digest from `apksigner verify --print-certs` on the distribution APK. For a signer change, plan and verify the Android update path for existing installations before changing this value. The emulator job uses the independently signed candidate package and does not use these credentials.
 
 ## Artifact identity
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
-Alpha14 preparation uses versionCode 25; private validation is alpha14-review02 and is not a public update.
+Alpha14 uses the managed production identity from SIGNING-IDENTITY.md and versionCode 25; private validation is alpha14-review02 and is not a public update.
 
 For a new application version, update its version code/name, complete relevant checks, record the exact source revision, and verify package, version, signer, native payload and personal-data scan. Do not replace an existing published APK with a different binary under the same version.
 
@@ -51,7 +51,7 @@ ends in `-unsigned.apk`; private-candidate mode is mutually exclusive. Never
 rename or publish it as the final Full APK. Ordinary public signed builds keep
 the production certificate gate and never substitute a debug signer.
 
-The public alpha11 private key is not in the current workspace. If it cannot be
-provided, settle a production identity and explicit migration; do not imply an
-in-place upgrade. Preserve locked/device-bound profiles and retain the readable
+The historical alpha11 private key is not in the workspace. The owner explicitly
+authorized a new production identity before deployment on 2026-11-06; it does not
+provide an in-place alpha11 upgrade. Preserve locked/device-bound profiles and retain the readable
 old installation until authorized exports/reissue are verified. See UPGRADE.md.

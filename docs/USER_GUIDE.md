@@ -6,7 +6,7 @@
 
 ### Installation and updates
 
-The prepared version is **0.3.0-alpha14 Full, code 25**. Download installable files only from the actual published [release](https://github.com/msVPNco/rovunet-android/releases). The signing/migration decision is not yet complete; an unsigned preparation artifact cannot be installed. A private `Rovunet Test` package is separate from public `app.veyra.client` and is not its in-place update.
+The version is **0.3.0-alpha14 Full, code 25**. Download installable files only from the actual published [release](https://github.com/msVPNco/rovunet-android/releases). The owner authorized the new managed production signer before deployment; alpha14 requires a fresh installation relative to old alpha11. Later direct APK updates reuse this production identity. Unsigned preparation artifacts cannot be installed. A private `Rovunet Test` package is separate from public `app.veyra.client` and is not its in-place update.
 
 Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
@@ -52,7 +52,7 @@ Remote SOCKS data flow, Soar auto/on differences and counters in the reported ne
 
 ### نصب و به‌روزرسانی
 
-نسخهٔ آماده‌شونده **آلفا۱۴ Full، کد ۲۵** است. فایل نصب را از [انتشار واقعی گیت‌هاب](https://github.com/msVPNco/rovunet-android/releases) بگیرید. تصمیم امضا/مهاجرت هنوز کامل نشده؛ فایل بدون امضای مرحلهٔ آماده‌سازی قابل نصب نیست. بستهٔ خصوصی **Rovunet Test** مستقل است و روی آلفا۱۱ عمومی به‌عنوان آپدیت نصب نمی‌شود.
+نسخه **آلفا۱۴ Full، کد ۲۵** است. فایل نصب را از [انتشار واقعی گیت‌هاب](https://github.com/msVPNco/rovunet-android/releases) بگیرید. تعویض امضای تولیدی با تأیید مالک و پیش از استقرار کاربران انجام شد؛ نسبت به آلفا۱۱ نصب تازه لازم است و نسخه‌های بعدی همین هویت را حفظ می‌کنند. فایل بدون امضای مرحلهٔ آماده‌سازی قابل نصب نیست. بستهٔ خصوصی **Rovunet Test** مستقل است و روی آلفا۱۱ عمومی به‌عنوان آپدیت نصب نمی‌شود.
 
 اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 

@@ -1,21 +1,21 @@
 # Rovunet 0.3.0-alpha14 — Full
 
-Prepared public version: **0.3.0-alpha14**, code **25**, package `app.veyra.client`.
+Public version: **0.3.0-alpha14**, code **25**, package `app.veyra.client`.
 Private validation: `0.3.0-alpha14-review02`, code 25, package `app.veyra.client.candidate`.
 
-**Publication state: preparation.** Managed public signing and the migration decision are not yet provided. A private/debug-signed candidate is not the public update. An unsigned Release artifact is not installable. The previous public alpha11 remains a separate historical artifact. No final signed APK or successful public upgrade is claimed here.
+**Signing decision: accepted on 2026-11-06.** The owner confirmed no deployed users and authorized a new managed production identity before publication. The signed alpha14 Full APK uses the pinned certificate in [SIGNING-IDENTITY](../SIGNING-IDENTITY.md). It is a fresh installation relative to alpha11, not an in-place upgrade. Later direct APK updates must reuse the same key. Private/debug candidates and unsigned preparation artifacts are not the public release.
 
 ## Verification / بررسی / 验证 / Проверка
 
-- Application build commit: `852c6014af1d16d03deb7693007216c17e8369b3`; later archive changes affect CI/docs only. Both identities are recorded in SOURCE-MANIFEST.json.
+- Behavioural-test code: `852c6014af1d16d03deb7693007216c17e8369b3`; passing CI: `10c9b250a1fcc8e3af2f4cd55493a88189a71a8b`. Final production preparation changes signing pin/guard, CI and documentation only; Kotlin/native logic is unchanged. Final build/archive identities are recorded in SOURCE-MANIFEST.json and VERIFICATION.json.
 - Local Gradle and real transport-fixture checks: **50 JUnit contracts**, zero failures/errors/skips (the same contracts run by two harnesses, not 100 distinct tests).
 - Local API 30/x86_64 emulator gate: **29 tests**, zero failures/skips/missing tests; actual VPN/MTU data, SSH cancellation/trust, scanner lifecycle, credentials/migration and UI/RTL/history.
 - Release R8/Lint and unsigned packaging passed. A locally validation-signed Release copy launched without a crash; it is not a publication artifact or production-signer test.
 - Original local APK ZIP packaging was repaired without changing compiled payloads; all 33 native libraries are unchanged and all 21 ELF64 libraries retain 16 KB alignment. This is packaging correction, not a native rebuild.
 - GitHub verification is recorded separately by run and commit in VERIFICATION.json. An earlier device job failed before app tests because the AVD home differed; setup was corrected. No failed/skipped job is counted as a pass.
-- امضای عمومی/مهاجرت باز است؛ آزمون شبیه‌ساز تضمین شبکهٔ واقعی نیست.
-- 生产签名/迁移仍未确定；模拟器不保证真实网络。
-- Производственная подпись/миграция не определены; эмулятор не гарантирует реальную сеть.
+- هویت تولیدی ثابت با تأیید مالک جایگزین امضای قدیمی شد؛ آزمون شبیه‌ساز تضمین شبکهٔ واقعی نیست.
+- 固定生产签名已获所有者批准；模拟器不保证真实网络。
+- Постоянная производственная подпись одобрена владельцем; эмулятор не гарантирует реальную сеть.
 
 ## فارسی
 
@@ -53,7 +53,7 @@ Main/settings/editor resources and introductory documentation are coordinated ac
 
 Protocols include supported SSH wrappers, DNS families and SSH combinations, NaiveProxy, SOCKS5, DoH, VLESS WS, REALITY, XHTTP, Hysteria2, single-peer WireGuard and Full-package Tor bridges. Availability depends on server/backend/ABI; inherited Naive/Tor are absent on x86_64. DoH alone encrypts DNS, and plain SOCKS5 is not an encrypted transport.
 
-Managed production signing/migration remain unresolved. The unsigned Release cannot be installed; private candidates do not update the public alpha11. Bulk encrypted backup excludes locked profiles and signing changes may affect device binding. See [migration](../UPGRADE.md), final VERIFICATION.json and checksums. Real-network SOCKS/Soar differences and counters remain open. No subscription refresh, automatic collection failover, throughput benchmark or store/desktop release is added.
+A fixed production identity was authorized before deployment; see the signing record. The unsigned Release cannot be installed; private candidates do not update the public alpha11. Bulk encrypted backup excludes locked profiles and signing changes may affect device binding. See [migration](../UPGRADE.md), final VERIFICATION.json and checksums. Real-network SOCKS/Soar differences and counters remain open. No subscription refresh, automatic collection failover, throughput benchmark or store/desktop release is added.
 
 ## 简体中文
 
@@ -65,7 +65,7 @@ Rovunet 将自有服务器的多种路径归入集合，支持直接连接、独
 
 支持的协议包括 SSH、DNS 家族及 SSH 组合、NaiveProxy、SOCKS5、DoH、VLESS WS、REALITY、XHTTP、Hysteria2、单对端 WireGuard 与 Full Tor 网桥，取决于服务器/后端/架构。x86_64 缺少继承 Naive/Tor；DoH 单独只加密 DNS，普通 SOCKS5 不加密传输。
 
-生产签名/迁移尚未确定，未签名 Release 不能安装，私有包不能原位升级公开 alpha11。密码批量备份排除锁定配置，签名变化可能影响设备绑定。以最终验证与哈希记录为准，真实 SOCKS/Soar 差异与计数仍需实测。没有新增定期订阅刷新、自动路径切换、吞吐量测试、商店或桌面版本。
+所有者已批准固定生产签名，相对旧 alpha11 需要全新安装。未签名 Release 不能安装，私有包不能原位升级公开 alpha11。密码批量备份排除锁定配置，签名变化可能影响设备绑定。以最终验证与哈希记录为准，真实 SOCKS/Soar 差异与计数仍需实测。没有新增定期订阅刷新、自动路径切换、吞吐量测试、商店或桌面版本。
 
 ## Русский
 
@@ -77,7 +77,7 @@ Rovunet объединяет пути к собственному серверу
 
 Протоколы включают SSH, DNS-семейства и SSH-комбинации, NaiveProxy, SOCKS5, DoH, VLESS WS, REALITY, XHTTP, Hysteria2, WireGuard с одним peer и мосты Tor Full. Возможности зависят от сервера/движка/ABI, для x86_64 нет унаследованных Naive/Tor. DoH отдельно шифрует DNS, обычный SOCKS5 не шифрует транспорт.
 
-Производственная подпись/миграция не определены; неподписанный Release не устанавливается, приватный пакет не обновляет публичную alpha11. Массовая копия с паролем исключает заблокированные профили, смена подписи может изменить привязку. Ориентируйтесь на финальные проверки/хеши; реальные SOCKS/Soar и счётчики ещё требуют данных. Нет обновления подписок, автопереключения пути, теста пропускной способности, магазина или настольного выпуска.
+Постоянная производственная подпись одобрена; относительно старой alpha11 нужна новая установка; неподписанный Release не устанавливается, приватный пакет не обновляет публичную alpha11. Массовая копия с паролем исключает заблокированные профили, смена подписи может изменить привязку. Ориентируйтесь на финальные проверки/хеши; реальные SOCKS/Soar и счётчики ещё требуют данных. Нет обновления подписок, автопереключения пути, теста пропускной способности, магазина или настольного выпуска.
 
 ## Community / حمایت / 支持 / Поддержка
 

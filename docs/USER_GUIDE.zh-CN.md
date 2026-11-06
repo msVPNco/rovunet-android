@@ -4,7 +4,7 @@
 
 ## 安装与更新
 
-准备版本为 alpha14 Full，代码 25；只有[正式发布](https://github.com/msVPNco/rovunet-android/releases)中的可安装 APK 才用于安装。生产签名/迁移尚未确定，未签名构建不能安装。独立的 Rovunet Test 不是公开 alpha11 的原位更新。
+版本为 alpha14 Full，代码 25；只有[正式发布](https://github.com/msVPNco/rovunet-android/releases)中的可安装 APK 才用于安装。所有者已在部署前批准固定的新生产签名；相对旧 alpha11 需要全新安装，后续直接更新复用此密钥。未签名构建不能安装。独立的 Rovunet Test 不是公开 alpha11 的原位更新。
 
 需要 Android 7.0/API 24，支持目标 ARM32/ARM64/x86_64，继承的 Naive/Tor 不提供 x86_64。没有承诺新的 Lite 或商店/桌面版本。
 

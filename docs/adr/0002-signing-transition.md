@@ -1,6 +1,6 @@
 # ADR 0002: private candidates and production signing
 
-Status: private-candidate separation accepted; production identity not yet provisioned.
+Status: production identity accepted and provisioned on 2026-11-06; private-candidate separation retained. See ../SIGNING-IDENTITY.md for the pinned certificate and private recovery policy.
 
 Private APKs use app.veyra.client.candidate and the existing candidate certificate, so review03/code 21 updates review02/code 20. These packages remain separate from existing public app.veyra.client installations. Production build verification rejects the Android Debug identity and checks the configured production certificate digest.
 
@@ -36,3 +36,14 @@ Android Keystore secrets do not provide a portable backup after uninstall.
 References: [Android signing](https://developer.android.com/studio/publish/app-signing),
 [ANDROID_ID contract](https://developer.android.com/reference/android/provider/Settings.Secure#ANDROID_ID),
 [APK signing lineage](https://source.android.com/docs/security/features/apksigning/v3).
+
+## Superseding decision: authorized production identity
+
+On 2026-11-06 the owner confirmed no deployed installations and authorized replacing
+the historical public signer. Alpha14/code25 uses RSA-3072 production certificate
+`1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416`. Both encrypted key and
+private recovery instructions are backed up privately; no key is committed or
+attached to a public release. Future direct APK releases MUST reuse the exact key.
+The versioned certificate pin and signing guard reject an accidental replacement.
+The historical discussion above describes constraints, not an outstanding approval.
+Alpha11 in-place upgrade is not claimed. Play App Signing remains undecided.
