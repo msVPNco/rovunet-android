@@ -14,8 +14,6 @@ jobs:
       ANDROID_SERIAL: emulator-5554
       GOTOOLCHAIN: auto
       IMAGE: 'system-images;android-30;google_apis;x86_64'
-      ANDROID_USER_HOME: ${{ runner.temp }}/rovunet-android
-      ANDROID_AVD_HOME: ${{ runner.temp }}/rovunet-android/avd
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -26,6 +24,8 @@ jobs:
           echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
           echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+          echo "ANDROID_USER_HOME=$RUNNER_TEMP/rovunet-android" >> "$GITHUB_ENV"
+          echo "ANDROID_AVD_HOME=$RUNNER_TEMP/rovunet-android/avd" >> "$GITHUB_ENV"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0' 'ndk;29.0.14206865' emulator "$IMAGE"
       - name: Build private client and device tests
         run: |
