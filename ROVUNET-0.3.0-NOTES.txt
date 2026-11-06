@@ -1,21 +1,18 @@
-Rovunet — یادداشت فعلی آلفا۱۴ / Current alpha14 notes
+Rovunet — آلفا۱۵ / alpha15 / 版本 alpha15 / выпуск alpha15
 
-هدف ساخت: 0.3.0-alpha14 Full، کد نسخهٔ ۲۵.
-از آلفا۱۴ هویت تولیدی ثابت جدید با تأیید مالک پیش از استقرار کاربران استفاده می‌شود؛ روی آلفا۱۱ قدیمی ارتقای مستقیم نیست. هویت و روش بازیابی در docs/SIGNING-IDENTITY.md ثبت است.
-بستهٔ خصوصی Rovunet Test مستقل است؛ فایل Release بدون امضا قابل نصب نیست.
+Full · versionCode 26 · app.veyra.client
+Same production signer as public alpha14; install over it without uninstalling.
+Release shrinking preserves the required gomobile Go/JNI ABI. Manual connection, MTU, trust and stored/imported choices are unchanged.
+CI application source: 908253b42082bbd80007677f0369792d324a378f
+50 JVM cases, 31 private Debug device cases, 2 minified private Release JNI cases; API30/x86_64, no skips.
+Production APK, hashes, source identity and native provenance: final release assets.
 
-معرفی و قابلیت‌ها در README.md / README.fa.md / README.zh-CN.md / README.ru.md
-راهنمای کاربر در docs/USER_GUIDE.md و ترجمه‌های چینی/روسی کنار آن.
-وضعیت واقعی و محدودیت‌ها در docs/STATUS.md
-ثبت انتشار و نتیجهٔ نهایی در docs/releases/alpha14-final.md و VERIFICATION.json همراه فایل‌ها.
-هویت APK/سورس و هش باید از همان دارایی‌ها خوانده شود؛ این یادداشت انتشار را اثبات نمی‌کند.
+آلفا۱۵ با همان امضای تولیدی روی آلفا۱۴ نصب می‌شود. نقص حفظ رابط Go/JNI در Release اصلاح شده است. آزمون شبیه‌ساز تضمین شبکهٔ واقعی نیست.
+alpha15 沿用 alpha14 的生产签名，修复 Release 的 Go/JNI 保留问题；模拟器不保证真实网络。
+Alpha15 сохраняет подпись alpha14 и исправляет сохранение Go/JNI в Release; эмулятор не гарантирует реальную сеть.
 
-اتصال دستی بدون پینگ اجباری، انتخاب مسیر و مجموعه، تست HTTPS واقعی، منابع چهارزبانه، ظاهر متمایز مجموعه/مسیر، توقف SSH و دیباگ امن تکمیل شده‌اند.
-Soar و Soar+SSH جدید هر دو UDP + TCP را پیش‌فرض دارند؛ تنظیم موجود حفظ می‌شود.
-اشتراک دوره‌ای، تعویض خودکار مسیر و نسخهٔ فروشگاهی/دسکتاپ اضافه نشده‌اند.
-
-پشتیبانی: https://t.me/RovunetVPN
-کمک به توسعه اختیاری است؛ USDT فقط روی شبکهٔ Tron/TRC20:
-TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ
-
-AGPL-3.0؛ LICENSE و NOTICE.md را ببینید. Xray-core تحت MPL-2.0 است.
+Current notes: docs/releases/alpha15.md
+Features: README.md / README.fa.md / README.zh-CN.md / README.ru.md
+User guide: docs/USER_GUIDE.md and adjacent Chinese/Russian translations.
+Signing and migration: docs/SIGNING-IDENTITY.md / docs/UPGRADE.md
+Historical alpha02/alpha03/alpha14 records remain labelled by version.

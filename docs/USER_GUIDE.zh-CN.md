@@ -1,10 +1,10 @@
-# Rovunet 用户指南 — alpha14
+# Rovunet 用户指南 — alpha15
 
 [English / فارسی](USER_GUIDE.md) · [简体中文](USER_GUIDE.zh-CN.md) · [Русский](USER_GUIDE.ru.md)
 
 ## 安装与更新
 
-版本为 alpha14 Full，代码 25；只有[正式发布](https://github.com/msVPNco/rovunet-android/releases)中的可安装 APK 才用于安装。所有者已在部署前批准固定的新生产签名；相对旧 alpha11 需要全新安装，后续直接更新复用此密钥。未签名构建不能安装。独立的 Rovunet Test 不是公开 alpha11 的原位更新。
+版本为 **alpha15 Full，代码 26**。从[公开发布](https://github.com/msVPNco/rovunet-android/releases/latest)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
 
 需要 Android 7.0/API 24，支持目标 ARM32/ARM64/x86_64，继承的 Naive/Tor 不提供 x86_64。没有承诺新的 Lite 或商店/桌面版本。
 
@@ -36,4 +36,6 @@
 
 反馈提供版本、协议、步骤与网页实际表现。安全报告只包含类型化阶段/代码、Soar 配置模式和 UI 计数快照，不含端点/账号/凭据字段；不自动发送。继承的详细调试日志可能敏感，请先审阅脱敏，不公开真实配置、密码、私钥或设备 ID。
 
-远程 SOCKS 数据路径、Soar auto/on 差异和所报告网络计数仍需实测。CONNECT 成功不证明数据通过，DNS 错误不证明审查或 ACL。DoH 单独只加密 DNS，普通 SOCKS5 不加密传输。未包含订阅定期刷新、自动路径切换与吞吐量基准。[状态](STATUS.md) · [Telegram](https://t.me/RovunetVPN)。
+远程 SOCKS 数据路径和 Soar auto/on 差异仍需实测。CONNECT 成功不证明数据通过，DNS 错误不证明审查或 ACL。DoH 单独只加密 DNS，普通 SOCKS5 不加密传输。未包含订阅定期刷新、自动路径切换与吞吐量基准。[状态](STATUS.md) · [Telegram](https://t.me/RovunetVPN)。
+
+alpha15 修复 Release 打包时 Go/JNI 成员被删除的问题。更新后如再次退出，请重新打开应用，附上新事件的时间与安全报告；旧退出记录可能在升级后仍保留。

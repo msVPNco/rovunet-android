@@ -1,6 +1,6 @@
 # Security policy
 
-Rovunet is a multi-protocol Android VPN client. Current supported-release information and known limitations are recorded in [STATUS](docs/STATUS.md). The previous public alpha11 uses its historical debug signing identity. Alpha14/code 25 introduces the managed production identity, explicitly authorized by the owner before deployment. The pinned certificate and recovery policy are in [SIGNING-IDENTITY](docs/SIGNING-IDENTITY.md). This is not an in-place alpha11 upgrade. Private candidate packages have a different identity. See [upgrade constraints](docs/UPGRADE.md).
+Rovunet is a multi-protocol Android VPN client. Current supported-release information and known limitations are recorded in [STATUS](docs/STATUS.md). The historical public alpha11 uses its historical debug signing identity. Alpha14/code 25 introduces the managed production identity, explicitly authorized by the owner before deployment. The pinned certificate and recovery policy are in [SIGNING-IDENTITY](docs/SIGNING-IDENTITY.md). This is not an in-place alpha11 upgrade. Alpha15/code 26 retains the alpha14 production identity. Private candidate packages have a different identity. See [upgrade constraints](docs/UPGRADE.md).
 
 ## Report a vulnerability privately
 

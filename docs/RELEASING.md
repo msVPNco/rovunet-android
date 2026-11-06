@@ -17,7 +17,7 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
-Alpha14 uses the managed production identity from SIGNING-IDENTITY.md and versionCode 25; private validation is alpha14-review02 and is not a public update.
+Alpha15 uses the same managed production identity as alpha14 and versionCode 26. Its application build commit is `908253b42082bbd80007677f0369792d324a378f`; [CI run 42215030490](https://github.com/msVPNco/rovunet-android/actions/runs/42215030490) passed verify, 50 JVM tests, 31 private Debug device cases and two minified private Release JNI cases. Source/archive and release documentation revisions are recorded separately; the approved signed APK is not rebuilt for documentation changes.
 
 For a new application version, update its version code/name, complete relevant checks, record the exact source revision, and verify package, version, signer, native payload and personal-data scan. Do not replace an existing published APK with a different binary under the same version.
 
@@ -55,3 +55,5 @@ The historical alpha11 private key is not in the workspace. The owner explicitly
 authorized a new production identity before deployment on 2026-11-06; it does not
 provide an in-place alpha11 upgrade. Preserve locked/device-bound profiles and retain the readable
 old installation until authorized exports/reissue are verified. See UPGRADE.md.
+
+For alpha15, the publication commit changes documentation only. Its application/build/test inputs must compare byte-identically with verified application commit `908253b42082bbd80007677f0369792d324a378f`. A documentation-only `[skip ci]` commit is recorded as not rerun, never as a passing new device run; the binary evidence remains run 42215030490. Run the local documentation/link checks before publication.

@@ -1,4 +1,4 @@
-> Inherited advanced engineering reference. For current alpha14 preparation, signing and installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
+> Inherited advanced engineering reference. For current alpha15 release, signing and installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
 
 # Rovunet — Guide
 

@@ -1,6 +1,6 @@
 # Alpha15: preserve the gomobile JNI ABI in minified APKs
 
-Status: correction under validation; not a published release.
+Status: verified application correction; publication authorized by the owner; exact APK and test identities are recorded in docs/releases/alpha15.md and the release assets.
 
 The uploaded alpha14/code25 stability report contains three
 `REASON_CRASH_NATIVE` exits with signal/status 6. Its previous-process connection
@@ -57,3 +57,5 @@ traffic-total symptom resolved; no counter or formatting change is included.
 
 Sources: [gomobile buildAAR](https://github.com/golang/mobile/blob/master/cmd/gomobile/bind_androidapp.go),
 [Android native exits](https://developer.android.com/reference/android/app/ApplicationExitInfo).
+
+Final application CI on 908253b42082bbd80007677f0369792d324a378f passed 50 JVM cases, 31 private Debug device cases and both minified private Release JNI checks. The public APK was signed with the pinned alpha14 production key and structurally verified; no new phone test is claimed.

@@ -1,6 +1,20 @@
 # Signing and upgrade guide / راهنمای امضا و ارتقا
 
-## Alpha14 signing decision — 2026-11-06
+## Alpha15 from public alpha14
+
+Alpha15 Full (code 26) keeps `app.veyra.client` and exactly the production certificate introduced by alpha14 (code 25). Install the signed Full APK over alpha14; do not uninstall or clear data. Package/version/signer compatibility is verified. This release does not claim a new on-device upgrade-preservation test. Historical alpha11 and private candidate rules below are separate.
+
+<div dir="rtl">
+
+آلفا۱۵ کامل، کد ۲۶، بسته و امضای تولیدی آلفا۱۴ عمومی، کد ۲۵، را حفظ می‌کند. فایل Full امضاشده را روی همان نصب کنید؛ برنامه یا داده‌هایش را حذف نکنید. تطابق بسته، نسخه و امضا بررسی شده است؛ آزمون تازهٔ حفظ داده در ارتقا روی گوشی ادعا نمی‌شود. قواعد تاریخی آلفا۱۱ و بسته‌های خصوصی در پایین جدا هستند.
+
+</div>
+
+alpha15/代码 26 沿用公开 alpha14 的包名与生产签名，直接覆盖安装，不卸载/清数据。已核对身份，不宣称新增真机升级测试。
+
+Alpha15/код 26 сохраняет пакет и производственную подпись публичной alpha14. Устанавливайте поверх, без удаления/очистки данных; совместимость идентичности проверена, новый тест обновления на телефоне не заявляется.
+
+## Historical alpha14 signing decision — 2026-11-06
 
 The owner confirmed no deployed users and authorized a new production identity:
 
@@ -35,7 +49,7 @@ The public alpha11 package is `app.veyra.client`, code 17, signer SHA-256:
 7d9eac2c155ae6c6d57dffa27e325858375016e88f9de1546a1ab97196a1d248
 ```
 
-Private candidates use `app.veyra.client.candidate`; their signer is:
+Historical private review candidates used `app.veyra.client.candidate` and this signer (ephemeral CI candidates may use another test key):
 
 ```text
 6a0fd4885b0c01a4d36410b5c6d1e20eab2ea10549753672ac1a9269bd8193e3

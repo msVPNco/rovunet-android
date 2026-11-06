@@ -10,7 +10,9 @@
 
 ## Release status
 
-This tree is **0.3.0-alpha14 Full, version code 25**, using the managed [production signing identity](docs/SIGNING-IDENTITY.md). The owner authorized replacing the historical alpha11 signer before user deployment. Alpha14 is a fresh installation relative to alpha11, not an in-place upgrade; future direct APK updates will reuse the new key. Download the signed Full APK from the published release assets. [Release record](docs/releases/alpha14-final.md) · [Current status](docs/STATUS.md).
+The current release is **0.3.0-alpha15 Full, version code 26**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15-Full.apk) · [Release record](docs/releases/alpha15.md) · [Current status](docs/STATUS.md).
+
+Alpha15 repairs the Release/R8 packaging of gomobile: required Go/JNI classes, constructors, fields and callbacks are preserved. CI passed 50 JVM tests, 31 private Debug device tests and two additional JNI checks on minified private Release. The final public APK also passes DEX ABI, signature and native-alignment checks. Device evidence is API 30/x86_64; it is not a guarantee for every real network.
 
 Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inherited Naive/Tor binaries are unavailable on x86_64. No 32-bit x86 or new Lite asset is promised. No Rovunet Google Play, App Store or desktop GUI release is available.
 
@@ -56,7 +58,7 @@ The in-app updater downloads compatible GitHub release APKs and checks checksum,
 
 [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) manages supported Linux services and exports configs. Client support does not imply automatic panel installation; some `core-plan` paths require manual deployment. A server and valid credentials are needed; the app does not provide free accounts.
 
-Subscription refresh, automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences, remote SOCKS data flow and counters on the reported real network still require field evidence. No protocol guarantees access through every network.
+Subscription refresh, automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
 
 ## Source, verification and support
 

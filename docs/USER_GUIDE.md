@@ -1,4 +1,4 @@
-# Rovunet user guide — alpha14 / راهنمای کاربر
+# Rovunet user guide — alpha15 / راهنمای کاربر
 
 [English](#english) · [فارسی](#فارسی) · [简体中文](USER_GUIDE.zh-CN.md) · [Русский](USER_GUIDE.ru.md)
 
@@ -6,7 +6,7 @@
 
 ### Installation and updates
 
-The version is **0.3.0-alpha14 Full, code 25**. Download installable files only from the actual published [release](https://github.com/msVPNco/rovunet-android/releases). The owner authorized the new managed production signer before deployment; alpha14 requires a fresh installation relative to old alpha11. Later direct APK updates reuse this production identity. Unsigned preparation artifacts cannot be installed. A private `Rovunet Test` package is separate from public `app.veyra.client` and is not its in-place update.
+The version is **0.3.0-alpha15 Full, code 26**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-android/releases/latest). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
 
 Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
@@ -44,15 +44,17 @@ Choose Persian/English/Simplified Chinese/Russian and light/dark/AMOLED in Setti
 
 ### Troubleshooting and limits
 
+Alpha15 fixes Go/JNI members removed by Release shrinking. If a fresh crash occurs after updating, reopen the app and share the safe report with its timestamp; historical exit records can remain visible after an update.
+
 Include app/Android versions, protocol, reproduction steps and whether ordinary pages open. The safe connection report records typed stages/codes, configured Soar mode and UI traffic snapshots without address/account/credential fields. It is local and shared only by user action. Detailed inherited debug logs can contain sensitive data; review/redact them before sharing. Do not post real config links, passwords, private keys or device IDs in public Telegram/issues.
 
-Remote SOCKS data flow, Soar auto/on differences and counters in the reported network still need field diagnosis. SOCKS CONNECT success is not proof of payload transfer; DNS failure does not prove censorship or server ACL. DoH alone encrypts DNS; ordinary SOCKS5 does not encrypt transport. Subscription refresh, automatic path failover and throughput benchmarks are not included. [Status](STATUS.md) · [Telegram](https://t.me/RovunetVPN).
+Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. SOCKS CONNECT success is not proof of payload transfer; DNS failure does not prove censorship or server ACL. DoH alone encrypts DNS; ordinary SOCKS5 does not encrypt transport. Subscription refresh, automatic path failover and throughput benchmarks are not included. [Status](STATUS.md) · [Telegram](https://t.me/RovunetVPN).
 
 ## فارسی
 
 ### نصب و به‌روزرسانی
 
-نسخه **آلفا۱۴ Full، کد ۲۵** است. فایل نصب را از [انتشار واقعی گیت‌هاب](https://github.com/msVPNco/rovunet-android/releases) بگیرید. تعویض امضای تولیدی با تأیید مالک و پیش از استقرار کاربران انجام شد؛ نسبت به آلفا۱۱ نصب تازه لازم است و نسخه‌های بعدی همین هویت را حفظ می‌کنند. فایل بدون امضای مرحلهٔ آماده‌سازی قابل نصب نیست. بستهٔ خصوصی **Rovunet Test** مستقل است و روی آلفا۱۱ عمومی به‌عنوان آپدیت نصب نمی‌شود.
+نسخه **آلفا۱۵ Full، کد ۲۶** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-android/releases/latest) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
 
 اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 
@@ -89,6 +91,8 @@ Remote SOCKS data flow, Soar auto/on differences and counters in the reported ne
 زبان فارسی/انگلیسی/چینی ساده/روسی و تم روشن/تیره/AMOLED در تنظیمات انتخاب می‌شوند. منابع اصلی تنظیمات و ویرایشگر ترجمه شده‌اند؛ بعضی متن‌های پیشرفتهٔ اسکنر و خطاهای backend ممکن است انگلیسی باشند. نام پروتکل و آدرس تغییر نمی‌کنند. کنترل اعلان، ویجت و تنظیمات سریع به مجوز اندروید و رفتار لانچر وابسته است.
 
 ### عیب‌یابی و محدودیت
+
+آلفا۱۵ حذف‌شدن اعضای لازم رابط Go/JNI در Release را اصلاح می‌کند. اگر پس از ارتقا خروج تازه رخ داد، اپ را دوباره باز کنید و گزارش امن را با زمان رخداد بفرستید؛ وجود سابقهٔ قدیمی خروج پس از به‌روزرسانی به‌تنهایی نشانهٔ کرش تازه نیست.
 
 نسخهٔ اپ/اندروید، پروتکل، مراحل تکرار و بازشدن یا بازنشدن صفحهٔ عادی را گزارش کنید. گزارش امن اتصال، مرحله/کد نوع‌دار، سیاست Soar و نمونهٔ آمار رابط را بدون فیلد آدرس/حساب/اعتبارنامه ثبت می‌کند؛ محلی و اشتراک آن اختیاری است. لاگ دیباگ تفصیلیِ به‌ارث‌رسیده ممکن است حساس باشد؛ قبل از ارسال مرور و پاک‌سازی کنید. لینک واقعی، رمز، کلید خصوصی و شناسهٔ دستگاه را در تلگرام یا issue عمومی نگذارید.
 

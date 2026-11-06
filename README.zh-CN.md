@@ -10,7 +10,9 @@
 
 ## 发布状态
 
-本源码为 **0.3.0-alpha14 Full，版本代码 25**，采用固定的[生产签名](docs/SIGNING-IDENTITY.md)。项目所有者已在用户部署前批准替换旧 alpha11 签名。因此 alpha14 相对 alpha11 需要全新安装，后续直接 APK 更新将复用新密钥。请下载发行附件中的已签名 Full APK。[发布记录](docs/releases/alpha14-final.md) · [状态](docs/STATUS.md)。
+当前版本为 **0.3.0-alpha15 Full，版本代码 26**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15-Full.apk) · [发布记录](docs/releases/alpha15.md) · [状态](docs/STATUS.md)。
+
+alpha15 修复 Release/R8 的 gomobile 打包问题，保留 Go/JNI 必需的类、构造函数、字段与回调。CI 通过 50 项 JVM 测试、31 项私有 Debug 设备测试，以及在精简私有 Release 上执行的两项 JNI 检查。最终公开 APK 另经 DEX 接口、签名及原生库对齐检查。设备证据仅覆盖 API 30/x86_64，不保证所有真实网络。
 
 需要 Android 7.0/API 24 或更新版本。目标架构为 ARM32、ARM64、x86_64；继承的 Naive/Tor 二进制不提供 x86_64。不承诺 32 位 x86 或新的 Lite 包。尚无 Google Play、App Store 或 Rovunet 桌面图形版本。
 
@@ -55,7 +57,7 @@
 
 [面板](https://github.com/msVPNco/rovunet-panel)管理支持的 Linux 服务并导出配置；客户端支持不等于面板自动安装，部分 `core-plan` 路径须手动部署。需自有服务器和有效凭据，不提供免费账号。
 
-尚无订阅定期刷新、集合自动故障切换、下载吞吐量测试或桌面/商店版本。Soar 自动模式差异、远程 SOCKS 数据路径和所报告网络上的计数仍需实测。任何协议均不保证在所有网络可用。
+尚无订阅定期刷新、集合自动故障切换、下载吞吐量测试或桌面/商店版本。Soar 自动模式差异和远程 SOCKS 数据路径仍需实测。任何协议均不保证在所有网络可用。
 
 ## 源码与支持
 
