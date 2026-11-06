@@ -46,12 +46,18 @@ jobs:
           timeout 360 bash -c 'until [[ $(adb -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d "\r") == 1 ]]; do sleep 2; done' || { tail -60 "$RUNNER_TEMP/emulator.log"; exit 1; }
           adb -s "$ANDROID_SERIAL" shell wm dismiss-keyguard
           python3 tools/veyra/run-device-gate.py
-      - name: Retain verified minified private APK
+      - name: Prepare the verified public APK for offline signing
+        run: |
+          cp app/build/outputs/apk/full/release/*-full-release-universal.apk "$RUNNER_TEMP/Rovunet-minified-private.apk"
+          bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=false -ProvunetUnsignedPublication=true
+          python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
+      - name: Retain verified minified APKs
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: alpha15-minified-private-validation
           path: |
-            app/build/outputs/apk/full/release/*-full-release-universal.apk
+            ${{ runner.temp }}/Rovunet-minified-private.apk
+            app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
             app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
           if-no-files-found: error
           retention-days: 5
