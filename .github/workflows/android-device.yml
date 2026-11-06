@@ -14,6 +14,8 @@ jobs:
       ANDROID_SERIAL: emulator-5554
       GOTOOLCHAIN: auto
       IMAGE: 'system-images;android-30;google_apis;x86_64'
+      ANDROID_USER_HOME: ${{ runner.temp }}/rovunet-android
+      ANDROID_AVD_HOME: ${{ runner.temp }}/rovunet-android/avd
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -34,7 +36,10 @@ jobs:
           test -c /dev/kvm
           sudo chgrp "$(id -gn)" /dev/kvm
           sudo chmod g+rw /dev/kvm
-          "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name rovunet-ci --package "$IMAGE" --device pixel <<< no
+          mkdir -p "$ANDROID_USER_HOME" "$ANDROID_AVD_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name rovunet-ci --path "$ANDROID_AVD_HOME/rovunet-ci.avd" --package "$IMAGE" --device pixel <<< no
+          test -s "$ANDROID_AVD_HOME/rovunet-ci.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx rovunet-ci
           "$ANDROID_HOME/emulator/emulator" -avd rovunet-ci -accel on -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
           trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
