@@ -101,7 +101,9 @@ android {
         versionCode = appVersionCode
         versionName = appVersionName
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = if (minifiedBindingTests)
+            "app.slipnet.core.GomobileBindingInstrumentation"
+        else "androidx.test.runner.AndroidJUnitRunner"
 
     }
 
@@ -137,9 +139,11 @@ android {
 
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
     sourceSets["androidTest"].java.apply {
-        if (minifiedBindingTests) setSrcDirs(listOf("src/gomobileTest/java"))
+        if (minifiedBindingTests) setSrcDirs(listOf("src/gomobileReleaseTest/java"))
         else srcDir("src/gomobileTest/java")
+        srcDir("src/gomobileChecks/java")
     }
+    if (minifiedBindingTests) sourceSets["androidTest"].manifest.srcFile("src/gomobileReleaseTest/AndroidManifest.xml")
 
     buildFeatures {
         compose = true
@@ -457,9 +461,11 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    if (!minifiedBindingTests) {
+        androidTestImplementation("androidx.test:runner:1.7.0")
+        androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+        androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    }
 }
 
 ksp {

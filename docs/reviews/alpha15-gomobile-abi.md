@@ -41,6 +41,15 @@ in the test APK; application R8 remains enabled. Failed device runs retain their
 private APK, matching test APK, mapping and crash buffer for diagnosis. Artifact
 presence alone never constitutes a passing gate.
 
+The retained crash buffer subsequently identified `AndroidJUnitRunner.onCreate`
+failing to resolve `androidx.tracing.Trace` before either Release case started.
+The final Release driver therefore uses Android's framework `Instrumentation`
+and Java-only shared assertions, without AndroidX/JUnit/Kotlin dependencies in
+that test APK. Debug JUnit calls the same assertions. Status codes, exact required
+case counts, failures and native process deaths remain fail-closed; production
+minifier rules are not loosened to accommodate the test runner. CI also uses a
+6 GiB heap and two workers after a separate APK-packaging Java heap exhaustion.
+
 Alpha15 is code26 and retains the pinned production identity for any eventual
 public APK. Private CI artifacts remain a separate package and are not published
 as a public update. Alpha14 assets/tags are immutable. The owner reported the

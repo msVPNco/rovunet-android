@@ -31,6 +31,16 @@ def result(cases):
 
 valid = result(required)
 assert verify(valid) == required
+release_required = {("app.slipnet.core.GomobileBindingChecks", method)
+                    for classname, method in required if classname.endswith("GomobileBindingDeviceTest")}
+assert len(release_required) == 2
+assert verify(result(release_required), required=release_required) == release_required
+for output in (result(set()), result(release_required).replace("STATUS_CODE: 0", "STATUS_CODE: -2", 1)):
+    try:
+        verify(output, required=release_required)
+    except ValueError:
+        continue
+    raise AssertionError("Framework Release gate accepted missing/failed JNI cases")
 invalid_runs = {
     "skipped": valid.replace("STATUS_CODE: 0", "STATUS_CODE: -3", 1),
     "failed": valid.replace("STATUS_CODE: 0", "STATUS_CODE: -2", 1),

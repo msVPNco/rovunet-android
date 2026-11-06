@@ -122,11 +122,11 @@ def main():
     for apk in (release, release_tests):
         if "Success" not in adb("install", "-r", "-t", "-g", str(apk), timeout=300).splitlines():
             raise RuntimeError(f"Could not install the minified binding fixture: {apk.name}")
-    result = adb("shell", "am", "instrument", "-w", "-r", "-e", "class",
-                 "app.slipnet.core.GomobileBindingDeviceTest",
-                 f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=180)
+    result = adb("shell", "am", "instrument", "-w", "-r",
+                 f"{PACKAGE}.test/app.slipnet.core.GomobileBindingInstrumentation", timeout=180)
     print(result, flush=True)
-    required = {case for case in REQUIRED if case[0] == "app.slipnet.core.GomobileBindingDeviceTest"}
+    required = {("app.slipnet.core.GomobileBindingChecks", case[1]) for case in REQUIRED
+                if case[0] == "app.slipnet.core.GomobileBindingDeviceTest"}
     if verified_tests(result, required=required) != required:
         raise ValueError("Unexpected minified gomobile test set")
     print("PASS: 2 minified-Release JNI tests; constructors, callbacks and native errors.")
