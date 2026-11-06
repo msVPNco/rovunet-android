@@ -609,17 +609,19 @@ private fun ScanModeToggle(
             val linkColor = MaterialTheme.colorScheme.primary
             val textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             val textStyle = MaterialTheme.typography.bodySmall
+            val verificationIntro = androidx.compose.ui.res.stringResource(app.slipnet.R.string.prism_server_verification_intro)
+            val verificationSuffix = androidx.compose.ui.res.stringResource(app.slipnet.R.string.prism_server_verification_suffix)
             val annotated = buildAnnotatedString {
                 withStyle(SpanStyle(color = textColor, fontSize = textStyle.fontSize)) {
-                    append("Server-verified scan: only resolvers that cryptographically prove they reach your specific server are shown. Requires ")
+                    append(verificationIntro)
                 }
-                pushStringAnnotation(tag = "URL", annotation = "https://github.com/anonvector/slipgate")
+                pushStringAnnotation(tag = "URL", annotation = "https://github.com/msVPNco/rovunet-panel")
                 withStyle(SpanStyle(color = linkColor, fontSize = textStyle.fontSize)) {
-                    append("SlipGate")
+                    append("Rovunet Panel")
                 }
                 pop()
                 withStyle(SpanStyle(color = textColor, fontSize = textStyle.fontSize)) {
-                    append(" installed on your server.")
+                    append(verificationSuffix)
                 }
             }
             ClickableText(

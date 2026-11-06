@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prism_server_verification_intro" formatted="false">"اسکن تأییدشده توسط سرور: فقط دی‌ان‌اس‌هایی نمایش داده می‌شوند که دسترسی آن‌ها به سرور شما به روش رمزنگاری تأیید شده باشد. نیازمند نصب "</string>
+    <string name="prism_server_verification_suffix" formatted="false">" روی سرور شماست."</string>
+</resources>

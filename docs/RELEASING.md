@@ -1,5 +1,16 @@
 # Release procedure
 
+## Mandatory phone review
+
+The owner requires an installable APK for phone testing before public release.
+CI, emulator success and delivery of that APK are not publication approval.
+Preserve the production package/signer for an owner test intended to update the
+installed public app; identify it as an unpublished review build in its notes.
+Keep private instrumentation candidates separate. After explicit acceptance,
+publish the exact accepted APK and update current README variants, STATUS,
+user/upgrade/build guides, release notes and provenance together. Historical
+records remain historical; never relabel an untested binary as accepted.
+
 ## Production signing certificate
 
 For a public build, provide `storeFile`, `storePassword`, `keyAlias` and `keyPassword` in the private root `keystore.properties`. A relative store path is resolved from the Android app module. Keep the keystore and its passwords outside version control.
