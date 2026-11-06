@@ -5,6 +5,18 @@ Private validation: `0.3.0-alpha14-review02`, code 25, package `app.veyra.client
 
 **Publication state: preparation.** Managed public signing and the migration decision are not yet provided. A private/debug-signed candidate is not the public update. An unsigned Release artifact is not installable. The previous public alpha11 remains a separate historical artifact. No final signed APK or successful public upgrade is claimed here.
 
+## Verification / بررسی / 验证 / Проверка
+
+- Application build commit: `852c6014af1d16d03deb7693007216c17e8369b3`; later archive changes affect CI/docs only. Both identities are recorded in SOURCE-MANIFEST.json.
+- Local Gradle and real transport-fixture checks: **50 JUnit contracts**, zero failures/errors/skips (the same contracts run by two harnesses, not 100 distinct tests).
+- Local API 30/x86_64 emulator gate: **29 tests**, zero failures/skips/missing tests; actual VPN/MTU data, SSH cancellation/trust, scanner lifecycle, credentials/migration and UI/RTL/history.
+- Release R8/Lint and unsigned packaging passed. A locally validation-signed Release copy launched without a crash; it is not a publication artifact or production-signer test.
+- Original local APK ZIP packaging was repaired without changing compiled payloads; all 33 native libraries are unchanged and all 21 ELF64 libraries retain 16 KB alignment. This is packaging correction, not a native rebuild.
+- GitHub verification is recorded separately by run and commit in VERIFICATION.json. An earlier device job failed before app tests because the AVD home differed; setup was corrected. No failed/skipped job is counted as a pass.
+- امضای عمومی/مهاجرت باز است؛ آزمون شبیه‌ساز تضمین شبکهٔ واقعی نیست.
+- 生产签名/迁移仍未确定；模拟器不保证真实网络。
+- Производственная подпись/миграция не определены; эмулятор не гарантирует реальную сеть.
+
 ## فارسی
 
 رووُنت یک کلاینت چندپروتکلی اندروید برای سرور شخصی است. کانفیگ‌های مرتبط را در مجموعه نگه می‌دارد، مسیر انتخاب‌شده را مستقیم وصل می‌کند و امکان مقایسهٔ جداگانهٔ HTTPS از داخل تونل واقعی را می‌دهد.
