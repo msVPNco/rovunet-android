@@ -32,6 +32,9 @@ with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
   for p in classes.rglob('*.class'):z.write(p,str(p.relative_to(classes)))
  with zipfile.ZipFile(ROOT/'app/libs/golibs-full.aar','w',zipfile.ZIP_DEFLATED) as z:
   z.write(jar,'classes.jar');z.writestr('AndroidManifest.xml','<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="go.golibs"/>')
+  # Reconstructed AARs must retain gomobile's JNI consumer rules. R8 cannot
+  # infer the non-native constructors/fields/callbacks referenced from C.
+  z.writestr('proguard.txt',(ROOT/'app/gomobile-consumer-rules.pro').read_bytes())
  core=temp/'xray';run(['git','clone','https://github.com/XTLS/Xray-core.git',core]);run(['git','checkout',PIN],cwd=core)
  for abi,arch,target in [('arm64-v8a','arm64','aarch64-linux-android24'),('armeabi-v7a','arm','armv7a-linux-androideabi24'),('x86_64','amd64','x86_64-linux-android24')]:
   cc=NDK/'toolchains/llvm/prebuilt/linux-x86_64/bin'/(target+'-clang');dest=ROOT/'app/src/main/jniLibs'/abi

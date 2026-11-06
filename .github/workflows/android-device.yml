@@ -30,7 +30,7 @@ jobs:
       - name: Build private client and device tests
         run: |
           python3 tools/veyra/prepare-native.py
-          bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true
+          bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true
       - name: Verify instrumented VPN and scanner behaviour
         run: |
           test -c /dev/kvm
@@ -46,3 +46,12 @@ jobs:
           timeout 360 bash -c 'until [[ $(adb -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d "\r") == 1 ]]; do sleep 2; done' || { tail -60 "$RUNNER_TEMP/emulator.log"; exit 1; }
           adb -s "$ANDROID_SERIAL" shell wm dismiss-keyguard
           python3 tools/veyra/run-device-gate.py
+      - name: Retain verified minified private APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: alpha15-minified-private-validation
+          path: |
+            app/build/outputs/apk/full/release/*-full-release-universal.apk
+            app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
+          if-no-files-found: error
+          retention-days: 5

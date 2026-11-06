@@ -14,6 +14,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.core.GomobileBindingDeviceTest", "nativeConstructorsAndReferenceCallbacksSurviveMinification"),
+    ("app.slipnet.core.GomobileBindingDeviceTest", "nativeErrorConstructorSurvivesMinification"),
     ("app.slipnet.presentation.CardInteractionDeviceTest", "lockedPathDoesNotRevealTheRestoredDestinationLine"),
     ("app.slipnet.presentation.CardInteractionDeviceTest", "persianCollectionCountUsesCurrentResourcesWhileActivityContextStaysAlive"),
     ("app.slipnet.service.ServiceStartupCancellationDeviceTest", "disconnectIntentAbortsPendingSshBeforeJoiningStartup"),
@@ -59,7 +61,7 @@ def ssh_fixture(adb):
                 process.communicate(timeout=10)
 
 
-def verified_tests(output):
+def verified_tests(output, required=REQUIRED):
     status = {}
     passed = set()
     for line in output.splitlines():
@@ -77,8 +79,8 @@ def verified_tests(output):
     summary = re.search(r"^OK \((\d+) tests?\)$", output, re.M)
     if not summary or int(summary[1]) != len(passed) or "INSTRUMENTATION_CODE: -1" not in output.splitlines():
         raise ValueError("Incomplete instrumentation run")
-    if REQUIRED - passed:
-        raise ValueError(f"Required device tests missing: {sorted(REQUIRED - passed)}")
+    if required - passed:
+        raise ValueError(f"Required device tests missing: {sorted(required - passed)}")
     return passed
 
 
@@ -109,6 +111,22 @@ def main():
                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=900)
     print(result, flush=True)
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")
+
+    # Debug tests cannot detect JNI members removed by R8. Install the minified
+    # private candidate with the same test signer and start a fresh test process.
+    release, = (outputs / "full/release").glob("*-full-release-universal.apk")
+    subprocess.run([sys.executable, str(ROOT / "tools/quality/check-gomobile-apk.py"), str(release)], check=True)
+    adb("shell", "am", "force-stop", PACKAGE)
+    if "Success" not in adb("install", "-r", "-t", "-g", str(release), timeout=300).splitlines():
+        raise RuntimeError("Could not install the minified private candidate")
+    result = adb("shell", "am", "instrument", "-w", "-r", "-e", "class",
+                 "app.slipnet.core.GomobileBindingDeviceTest",
+                 f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=180)
+    print(result, flush=True)
+    required = {case for case in REQUIRED if case[0] == "app.slipnet.core.GomobileBindingDeviceTest"}
+    if verified_tests(result, required=required) != required:
+        raise ValueError("Unexpected minified gomobile test set")
+    print("PASS: 2 minified-Release JNI tests; constructors, callbacks and native errors.")
 
 
 if __name__ == "__main__":
