@@ -229,4 +229,19 @@
     <string name="update_failed">دانلود یا بررسی فایل ناموفق بود. اتصال را بررسی و دوباره تلاش کنید.</string>
     <string name="update_check_failed">بررسی به‌روزرسانی انجام نشد. دوباره تلاش کنید.</string>
     <string name="update_current">آخرین نسخه نصب است.</string>
+    <string name="scan_service_start_failed">اسکنر DNS راه‌اندازی نشد.</string>
+    <string name="vpn_tun_unavailable">اندروید نتوانست رابط VPN را باز کند.</string>
+    <string name="mtu_preference_with_ipv6">مقدار ذخیره‌شده %1$d است. با IPv6 فعال، اتصال بعدی از %2$d استفاده می‌کند.</string>
+    <string name="profile_credentials_unavailable">اطلاعات محرمانهٔ این کانفیگ قابل خواندن نیست</string>
+    <string name="profile_restore_help">دوباره خواندن کانفیگ را امتحان کنید یا اطلاعات محرمانه را با لینک اصلی همین حساب و سرور بازیابی کنید.</string>
+    <string name="profile_restore_locked">خواندن این کانفیگ قفل‌شده را دوباره امتحان کنید. اگر مشکل ادامه داشت، لینک اصلی قفل‌شده را از پنل بگیرید و به‌عنوان کانفیگ جدید وارد کنید.</string>
+    <string name="profile_restore_retry">تلاش دوباره برای خواندن</string>
+    <string name="profile_restore_link">لینک اصلی کانفیگ</string>
+    <string name="profile_restore_action">جایگزینی اطلاعات محرمانه</string>
+    <string name="profile_restore_confirm">اطلاعات محرمانهٔ ناخوانا با اطلاعات داخل این لینک جایگزین شود؟</string>
+    <string name="profile_restore_mismatch">لینک اصلی و قفل‌نشدهٔ همین پروتکل، سرور و حساب را وارد کنید. اگر کانفیگ تغییر کرده است، خواندن آن را دوباره امتحان کنید.</string>
+    <string name="profile_restore_failed">ذخیرهٔ اطلاعات جایگزین انجام نشد. دادهٔ رمز‌شدهٔ قبلی محفوظ است.</string>
+    <string name="recovery_back">بازگشت</string>
+    <string name="proxy_password_unavailable">خواندن رمز پراکسی محلی ممکن نشد. برای استفاده از احراز هویت پراکسی، در تنظیمات رمز جدید تعیین کنید.</string>
+    <string name="collection_needs_credentials">برای بررسی کانفیگ‌های نیازمند بازیابی، این مجموعه را باز کنید.</string>
 </resources>

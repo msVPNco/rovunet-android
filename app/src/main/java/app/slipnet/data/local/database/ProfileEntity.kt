@@ -288,5 +288,8 @@ data class ProfileEntity(
 
     // Soar: TCP/53 paths — "auto", "on", "only" or "off"
     @ColumnInfo(name = "soar_tcp_mode", defaultValue = "auto")
-    val soarTcpMode: String = "auto"
+    val soarTcpMode: String = "auto",
+
+    @ColumnInfo(defaultValue = "''")
+    val secretEnvelope: String = ""
 )

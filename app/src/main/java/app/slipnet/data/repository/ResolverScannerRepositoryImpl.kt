@@ -1,5 +1,7 @@
 package app.slipnet.data.repository
 
+import app.slipnet.domain.model.SAVED_CREDENTIALS_UNAVAILABLE
+
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
@@ -1001,6 +1003,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         fullVerification: Boolean,
         onPhaseUpdate: (String) -> Unit
     ): E2eTestResult = withContext(Dispatchers.IO) {
+        if (profile.needsCredentials) return@withContext E2eTestResult(errorMessage = SAVED_CREDENTIALS_UNAVAILABLE)
         when (profile.tunnelType) {
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH ->
                 testResolverSlipstream(resolverHost, resolverPort, profile, testUrl, timeoutMs, onPhaseUpdate, fullVerification)
@@ -1040,6 +1043,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         fullVerification: Boolean,
         onPhaseUpdate: (String) -> Unit
     ): E2eTestResult = withContext(Dispatchers.IO) {
+        if (profile.needsCredentials) return@withContext E2eTestResult(errorMessage = SAVED_CREDENTIALS_UNAVAILABLE)
         when (profile.tunnelType) {
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH ->
                 // Slipstream native lib is singleton — fall back to shared bridge
@@ -2088,9 +2092,11 @@ class ResolverScannerRepositoryImpl @Inject constructor(
             } else {
                 newSession.setPassword(profile.sshPassword)
             }
-            newSession.setConfig("StrictHostKeyChecking", "no")
-            newSession.connect(timeoutMs.toInt().coerceAtLeast(1))
             session = newSession
+            newSession.setHostKeyAlias(profile.sshTrustIdentity)
+            newSession.setHostKeyRepository(app.slipnet.tunnel.TransportTrust.scannerSshKeys)
+            newSession.setConfig("StrictHostKeyChecking", "yes")
+            newSession.connect(timeoutMs.toInt().coerceAtLeast(1))
 
             val latencyMs = SystemClock.elapsedRealtime() - start
             if (newSession.isConnected) {
@@ -2099,7 +2105,12 @@ class ResolverScannerRepositoryImpl @Inject constructor(
                 SshBannerResult(latencyMs = latencyMs, errorMessage = "SSH session not connected")
             }
         } catch (e: Exception) {
-            SshBannerResult(errorMessage = "SSH connect: ${e.message}")
+            val reason = when {
+                e.message?.contains("changed", ignoreCase = true) == true -> "SSH server identity changed"
+                e.message?.contains("HostKey", ignoreCase = true) == true -> "SSH server identity needs manual approval"
+                else -> "SSH handshake or authentication failed"
+            }
+            SshBannerResult(errorMessage = reason)
         } finally {
             try { session?.disconnect() } catch (_: Exception) {}
         }

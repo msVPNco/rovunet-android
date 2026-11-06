@@ -203,4 +203,8 @@
     <string name="connection_cleanup_pending">Предыдущий туннель ещё останавливается; новое подключение не запущено.</string>
     <string name="connection_service_stop_failed">Android не удалось остановить службу VPN.</string>
     <string name="connection_service_start_failed">Android не удалось запустить службу VPN переднего плана.</string>
+    <string name="preview_release_channel">Получать публичные предварительные выпуски</string>
+    <string name="private_test_channel">Закрытая тестовая версия · обновления предоставляются отдельно</string>
+    <string name="block_ipv6_traffic">Блокировать IPv6</string>
+    <string name="block_ipv6_traffic_hint">При следующем подключении трафик IPv6 приложений, использующих VPN, будет заблокирован.</string>
 </resources>

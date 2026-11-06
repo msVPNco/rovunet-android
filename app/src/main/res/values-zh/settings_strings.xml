@@ -194,4 +194,8 @@
     <string name="connection_cleanup_pending">上一个隧道仍在停止，新连接尚未启动。</string>
     <string name="connection_service_stop_failed">Android 无法停止 VPN 服务。</string>
     <string name="connection_service_start_failed">Android 无法启动 VPN 前台服务。</string>
+    <string name="preview_release_channel">包含公开预览版本</string>
+    <string name="private_test_channel">内部测试版本 · 更新单独提供</string>
+    <string name="block_ipv6_traffic">阻止 IPv6</string>
+    <string name="block_ipv6_traffic_hint">下次连接时，阻止 VPN 覆盖的应用使用 IPv6。</string>
 </resources>

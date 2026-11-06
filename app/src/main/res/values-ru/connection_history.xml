@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_no_recent_path">Все доступные пути не прошли недавнюю проверку. Выберите конкретную конфигурацию для прямого повторного подключения.</string>
+    <string name="probe_previous_network">Сохранённый результат · повторите проверку текущей сети</string>
+    <string name="probe_collection_results">Результаты: %1$d подтверждено · %2$d ошибок · %3$d не завершено</string>
+    <string name="probe_quick_details">Корректный HTTPS 204 · запуск %1$d мс · проверено %2$s · стабильность не измерялась</string>
+    <string name="probe_stability_details">HTTPS 204: %1$d/%2$d · разброс %3$d мс · запуск %4$d мс · проверено %5$s</string>
+    <string name="probe_204_requirement">Проверка HTTPS требует ответ HTTP 204 и действительный сертификат. Другой статус означает, что цель проверки не подтверждена; сам по себе он не доказывает, что туннель не передаёт трафик.</string>
+    <string name="connection_history_warning">Не удалось сохранить историю подключений на этом устройстве. Конфигурации не изменены.</string>
+    <string name="app_name">Rovunet</string>
+    <string name="widget_description">Переключение VPN на главном экране</string>
+    <string name="widget_compact_description">Компактная кнопка VPN (1×1)</string>
+    <string name="profiles_preparing">Подготовка сохранённых конфигураций…</string>
+</resources>

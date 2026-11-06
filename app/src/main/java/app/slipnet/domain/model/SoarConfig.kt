@@ -36,6 +36,14 @@ object SoarConfig {
     fun normalizeTcpMode(mode: String): String =
         mode.trim().lowercase().takeIf { it in TCP_MODES } ?: TCP_AUTO
 
+    /** Editor defaults only. Stored/imported profiles keep their explicit transport policy. */
+    fun newProfileTcpMode(type: TunnelType): String =
+        if (type == TunnelType.SOAR || type == TunnelType.SOAR_SSH) TCP_ON else TCP_AUTO
+
+    fun tcpModeAfterSshChange(current: String, type: TunnelType, isNew: Boolean, explicitlyChosen: Boolean): String =
+        if (isNew && !explicitlyChosen && type in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH))
+            newProfileTcpMode(type) else current
+
     fun normalizeCountry(country: String): String =
         country.trim().uppercase().takeIf { it.length == 2 && it.all { c -> c in 'A'..'Z' } } ?: ""
 
@@ -49,17 +57,22 @@ object SoarConfig {
     /** Stored form of a custom discovery list: distinct entries, comma-separated. */
     fun normalizeCandidates(text: String): String = splitCandidates(text).joinToString(",")
 
-    /** Returns an error message, or null if [text] is a usable custom discovery list. */
-    fun validateCandidates(text: String): String? {
+    enum class CandidateError { EMPTY, TOO_MANY, INVALID }
+    data class CandidateIssue(val kind: CandidateError, val entry: String = "")
+    fun candidateIssue(text: String): CandidateIssue? {
         val entries = splitCandidates(text)
-        if (entries.isEmpty()) return "Add at least one resolver to the custom list"
-        if (entries.size > MAX_CUSTOM_CANDIDATES) {
-            return "Custom list can hold at most $MAX_CUSTOM_CANDIDATES resolvers"
+        if (entries.isEmpty()) return CandidateIssue(CandidateError.EMPTY)
+        if (entries.size > MAX_CUSTOM_CANDIDATES) return CandidateIssue(CandidateError.TOO_MANY)
+        return entries.firstOrNull { !isIpCandidate(it) }?.let { CandidateIssue(CandidateError.INVALID, it) }
+    }
+
+    /** Legacy textual API retained for importers; UI uses typed issues and resource IDs. */
+    fun validateCandidates(text: String): String? = candidateIssue(text)?.let { issue ->
+        when (issue.kind) {
+            CandidateError.EMPTY -> "Add at least one resolver to the custom list"
+            CandidateError.TOO_MANY -> "Custom list can hold at most $MAX_CUSTOM_CANDIDATES resolvers"
+            CandidateError.INVALID -> "\"${issue.entry}\" is not an IP address (use IP or IP:port)"
         }
-        entries.firstOrNull { !isIpCandidate(it) }?.let {
-            return "\"$it\" is not an IP address (use IP or IP:port)"
-        }
-        return null
     }
 
     /**
@@ -92,14 +105,17 @@ object SoarConfig {
 
     private fun isPort(s: String): Boolean = s.toIntOrNull()?.let { it in 1..65535 } ?: false
 
-    /** Returns an error message, or null if [key] is a valid Soar server public key. */
-    fun validatePublicKey(key: String): String? {
-        val trimmed = key.trim()
-        if (trimmed.isEmpty()) return "Soar profiles require the server public key"
-        if (decodePublicKey(trimmed) == null) {
-            return "Public key must be the 32-byte Ed25519 key from `soar-server pubkey` (base64 or hex)"
-        }
-        return null
+    enum class PublicKeyIssue { MISSING, INVALID }
+    fun publicKeyIssue(key: String): PublicKeyIssue? = when {
+        key.trim().isEmpty() -> PublicKeyIssue.MISSING
+        decodePublicKey(key.trim()) == null -> PublicKeyIssue.INVALID
+        else -> null
+    }
+
+    fun validatePublicKey(key: String): String? = when (publicKeyIssue(key)) {
+        PublicKeyIssue.MISSING -> "Soar profiles require the server public key"
+        PublicKeyIssue.INVALID -> "Public key must be the 32-byte Ed25519 key from `soar-server pubkey` (base64 or hex)"
+        null -> null
     }
 
     private fun decodePublicKey(key: String): ByteArray? {

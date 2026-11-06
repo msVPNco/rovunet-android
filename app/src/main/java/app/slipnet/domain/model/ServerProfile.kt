@@ -2,6 +2,8 @@ package app.slipnet.domain.model
 
 import app.slipnet.BuildConfig
 
+const val SAVED_CREDENTIALS_UNAVAILABLE = "Saved credentials unavailable"
+
 data class ServerProfile(
     val id: Long = 0,
     val name: String,
@@ -179,10 +181,18 @@ data class ServerProfile(
     // "on" (TCP alongside UDP), "only" (TCP alone), "off"
     val soarTcpMode: String = "auto",
     // Ephemeral panel heading hint; never persisted or exported as credentials.
-    val importAccountHint: String = ""
+    val importAccountHint: String = "",
+    // Read-time guard for one sealed row. Never serialized into links, backups or Room.
+    @Transient val unreadableEnvelopeToken: String? = null,
+    // Full stored-row and canonical in-memory digests for atomic reviewed deletion. Never exported.
+    @Transient val deletionReview: ProfileDeletionReview? = null
 ) {
+    val needsCredentials: Boolean get() = unreadableEnvelopeToken != null
+    val sshTrustIdentity: String get() = "${domain}:${sshPort}/${sshHost}"
     val isExpired: Boolean get() = expirationDate > 0 && System.currentTimeMillis() > expirationDate
 }
+
+data class ProfileDeletionReview(val storedDigest: String, val contentDigest: String)
 
 data class DnsResolver(
     val host: String,

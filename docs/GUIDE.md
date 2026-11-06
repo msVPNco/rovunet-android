@@ -1,4 +1,4 @@
-> Inherited advanced engineering reference. For current alpha11 installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
+> Inherited advanced engineering reference. For current alpha14 preparation, signing and installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
 
 # Rovunet — Guide
 
@@ -69,7 +69,7 @@ Rovunet supports multiple tunnel types with optional SSH chaining:
 
 ## Server Setup
 
-To use this client, you must run a compatible server. The official, supported way is **Rovunet Panel** — a one-command Linux installer that sets up every protocol Rovunet supports (DNSTT, NoizDNS, VayDNS, Slipstream, SSH, NaiveProxy, VLESS).
+To use this client, you must run a compatible server. The official, supported way is **Rovunet Panel** — a Linux installer for its managed server protocols. Client support is broader than automatic panel deployment; some core-plan paths require manual setup.
 
 [**Rovunet Panel**](https://github.com/msVPNco/rovunet-panel) — one-command server installer with interactive management menu
 
@@ -116,12 +116,12 @@ By default `soar-server` only lets streams reach public addresses on ports 80 an
 
 3. **Set up OpenSSL for Android**
 
-   OpenSSL will be automatically downloaded when you build for the first time. You can also set it up manually:
+   OpenSSL can be built from the versioned source-build script when rebuilding inherited engines. You can also set it up manually:
    ```bash
    ./gradlew setupOpenSsl
    ```
 
-   This will download pre-built OpenSSL libraries or build from source if the download fails. OpenSSL files will be installed to `~/android-openssl/android-ssl/`.
+   This builds OpenSSL from its pinned source release and verifies the archive checksum. OpenSSL files will be installed to `~/android-openssl/android-ssl/`.
 
    To verify your OpenSSL setup:
    ```bash

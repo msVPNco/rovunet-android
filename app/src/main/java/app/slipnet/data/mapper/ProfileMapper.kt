@@ -3,6 +3,9 @@ package app.slipnet.data.mapper
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import app.slipnet.data.local.database.ProfileEntity
+import app.slipnet.data.local.database.ProfileSecrets
+import app.slipnet.data.local.database.ProfileSnapshots
+import app.slipnet.domain.model.ProfileDeletionReview
 import app.slipnet.domain.model.CongestionControl
 import app.slipnet.domain.model.DnsResolver
 import app.slipnet.domain.model.DnsTransport
@@ -17,7 +20,9 @@ import javax.inject.Singleton
 class ProfileMapper @Inject constructor(
     private val gson: Gson
 ) {
-    fun toDomain(entity: ProfileEntity): ServerProfile {
+    fun toDomain(stored: ProfileEntity): ServerProfile {
+        val opened = ProfileSecrets.open(stored)
+        val entity = opened.getOrElse { ProfileSecrets.withoutSecrets(stored) }
         val resolversType = object : TypeToken<List<DnsResolver>>() {}.type
         val resolvers: List<DnsResolver> = try {
             gson.fromJson(entity.resolversJson, resolversType) ?: emptyList()
@@ -30,8 +35,9 @@ class ProfileMapper @Inject constructor(
             emptyList()
         }
 
-        return ServerProfile(
+        val profile = ServerProfile(
             id = entity.id,
+            unreadableEnvelopeToken = if (opened.isFailure) ProfileSecrets.token(stored) else null,
             name = entity.name,
             domain = entity.domain,
             resolvers = resolvers,
@@ -122,9 +128,17 @@ class ProfileMapper @Inject constructor(
             soarDiscoveryCustom = entity.soarDiscoveryCustom,
             soarTcpMode = entity.soarTcpMode
         )
+        return profile.copy(deletionReview = ProfileDeletionReview(
+            ProfileSnapshots.digest(stored), ProfileSnapshots.digest(toSnapshot(profile))))
     }
 
     fun toEntity(profile: ServerProfile): ProfileEntity {
+        require(!profile.needsCredentials) { "Saved credentials unavailable" }
+        return ProfileSecrets.seal(toSnapshot(profile))
+    }
+
+    /** Plain in-memory comparison/write input. The DAO seals it before persistence. */
+    internal fun toSnapshot(profile: ServerProfile): ProfileEntity {
         val resolversJson = gson.toJson(profile.resolvers)
         val defaultResolversJson = gson.toJson(profile.defaultResolvers)
 

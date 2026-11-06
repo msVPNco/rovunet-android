@@ -231,4 +231,19 @@
     <string name="update_failed">Не удалось загрузить или проверить файл. Проверьте соединение и повторите попытку.</string>
     <string name="update_check_failed">Не удалось проверить обновления. Повторите попытку.</string>
     <string name="update_current">Установлена последняя версия.</string>
+    <string name="scan_service_start_failed">Не удалось запустить сканер DNS.</string>
+    <string name="vpn_tun_unavailable">Android не удалось открыть интерфейс VPN.</string>
+    <string name="mtu_preference_with_ipv6">Сохранённое значение: %1$d. При включённом IPv6 следующее подключение использует %2$d.</string>
+    <string name="profile_credentials_unavailable">Не удалось прочитать сохранённые учётные данные конфигурации</string>
+    <string name="profile_restore_help">Повторите попытку чтения или восстановите учётные данные по исходной ссылке для этой учётной записи и сервера.</string>
+    <string name="profile_restore_locked">Повторите попытку чтения заблокированной конфигурации. Если ошибка сохранится, импортируйте исходную заблокированную ссылку провайдера как новую конфигурацию.</string>
+    <string name="profile_restore_retry">Прочитать снова</string>
+    <string name="profile_restore_link">Исходная ссылка на конфигурацию</string>
+    <string name="profile_restore_action">Заменить учётные данные</string>
+    <string name="profile_restore_confirm">Заменить недоступные учётные данные данными из этой ссылки?</string>
+    <string name="profile_restore_mismatch">Используйте исходную незаблокированную ссылку для этого протокола, сервера и учётной записи. Если конфигурация изменилась, попробуйте прочитать её снова.</string>
+    <string name="profile_restore_failed">Не удалось сохранить новые учётные данные. Исходные зашифрованные данные сохранены.</string>
+    <string name="recovery_back">Назад</string>
+    <string name="proxy_password_unavailable">Не удалось прочитать пароль локального прокси. Чтобы использовать аутентификацию прокси, задайте новый пароль в настройках.</string>
+    <string name="collection_needs_credentials">Откройте группу, чтобы проверить конфигурации с недоступными учётными данными.</string>
 </resources>

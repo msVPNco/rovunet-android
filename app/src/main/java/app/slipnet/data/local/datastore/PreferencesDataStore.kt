@@ -1,5 +1,6 @@
 package app.slipnet.data.local.datastore
 
+import app.slipnet.data.local.DeviceSecrets
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -10,30 +11,50 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.slipnet.domain.model.DnsResolver
+import app.slipnet.domain.model.VpnMtu
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "slipstream_preferences")
+private val oldProxyPassword = stringPreferencesKey("proxy_auth_password")
+private val sealedProxyPassword = stringPreferencesKey("proxy_auth_password_sealed_v1")
+private const val PROXY_SECRET_PURPOSE = "local-proxy-password-v1"
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "slipstream_preferences",
+    produceMigrations = { listOf(object : androidx.datastore.core.DataMigration<Preferences> {
+        override suspend fun shouldMigrate(currentData: Preferences) = currentData.contains(oldProxyPassword)
+        override suspend fun migrate(currentData: Preferences): Preferences = currentData.toMutablePreferences().apply {
+            val old = remove(oldProxyPassword)
+            if (old != null && !contains(sealedProxyPassword)) {
+                this[sealedProxyPassword] = DeviceSecrets.seal(old, PROXY_SECRET_PURPOSE)
+            }
+        }
+        override suspend fun cleanUp() = Unit
+    }) }
+)
 
 @Singleton
-class PreferencesDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+class PreferencesDataStore internal constructor(
+    private val context: Context,
+    private val dataStore: DataStore<Preferences>
 ) {
-    private val dataStore = context.dataStore
+    @Inject constructor(@ApplicationContext context: Context) : this(context, context.dataStore)
 
     // Preference Keys
     private object Keys {
         val AUTO_CONNECT_ON_BOOT = booleanPreferencesKey("auto_connect_on_boot")
         val ACTIVE_PROFILE_ID = longPreferencesKey("active_profile_id")
+        val CONNECTION_HISTORY = stringPreferencesKey("connection_history_sealed_v1")
         val DARK_MODE = stringPreferencesKey("dark_mode")
+        val PREVIEW_UPDATES = booleanPreferencesKey("preview_release_channel")
         val DEBUG_LOGGING = booleanPreferencesKey("debug_logging")
         val TOTAL_BYTES_SENT = longPreferencesKey("total_bytes_sent")
         val TOTAL_BYTES_RECEIVED = longPreferencesKey("total_bytes_received")
@@ -45,7 +66,7 @@ class PreferencesDataStore @Inject constructor(
         // Proxy Auth Keys
         val PROXY_AUTH_ENABLED = booleanPreferencesKey("proxy_auth_enabled")
         val PROXY_AUTH_USERNAME = stringPreferencesKey("proxy_auth_username")
-        val PROXY_AUTH_PASSWORD = stringPreferencesKey("proxy_auth_password")
+        val PROXY_AUTH_PASSWORD = sealedProxyPassword
         // Network Settings Keys
         val DISABLE_QUIC = booleanPreferencesKey("disable_quic")
         val BLOCK_IPV6 = booleanPreferencesKey("block_ipv6")
@@ -158,6 +179,16 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
+    val connectionHistory: Flow<String> = dataStore.data.map { prefs ->
+        runCatching { DeviceSecrets.open(prefs[Keys.CONNECTION_HISTORY].orEmpty(), "connection-history-v1") }.getOrDefault("")
+    }.flowOn(Dispatchers.IO)
+
+    suspend fun saveConnectionHistory(value: String) = withContext(Dispatchers.IO) {
+        val sealed = DeviceSecrets.seal(value, "connection-history-v1")
+        dataStore.edit { it[Keys.CONNECTION_HISTORY] = sealed }
+        Unit
+    }
+
     // Dark mode
     val darkMode: Flow<DarkMode> = dataStore.data.map { prefs ->
         DarkMode.fromValue(prefs[Keys.DARK_MODE] ?: DarkMode.LIGHT.value)
@@ -266,14 +297,61 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    val proxyAuthPassword: Flow<String> = dataStore.data.map { prefs ->
-        prefs[Keys.PROXY_AUTH_PASSWORD] ?: ""
+    suspend fun configuredSocksEndpoint(): app.slipnet.core.LocalSocksEndpoint = withContext(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        val enabled = prefs[Keys.PROXY_AUTH_ENABLED] == true
+        app.slipnet.core.LocalSocksEndpoint(
+            prefs[Keys.PROXY_LISTEN_PORT] ?: DEFAULT_PROXY_PORT,
+            if (enabled) prefs[Keys.PROXY_AUTH_USERNAME] else null,
+            if (enabled) readProxyPassword(prefs).getOrThrow() else null
+        )
     }
 
-    suspend fun setProxyAuthPassword(password: String) {
-        dataStore.edit { prefs ->
-            prefs[Keys.PROXY_AUTH_PASSWORD] = password
+    val previewUpdates: Flow<Boolean> = dataStore.data.map { it[Keys.PREVIEW_UPDATES] ?: false }
+    suspend fun setPreviewUpdates(enabled: Boolean) {
+        dataStore.edit { it[Keys.PREVIEW_UPDATES] = enabled }
+    }
+
+    private fun readProxyPassword(prefs: Preferences): Result<String> {
+        return try {
+            Result.success(DeviceSecrets.open(prefs[Keys.PROXY_AUTH_PASSWORD].orEmpty(), PROXY_SECRET_PURPOSE))
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Result.failure(error)
         }
+    }
+
+    val proxyPasswordState: Flow<Result<String>> = dataStore.data.map(::readProxyPassword).flowOn(Dispatchers.IO)
+    val proxyAuthPassword: Flow<String> = proxyPasswordState.map { it.getOrThrow() }
+
+    suspend fun proxyCredentialsReadable(): Boolean = withContext(Dispatchers.IO) {
+        val prefs = dataStore.data.first()
+        prefs[Keys.PROXY_AUTH_ENABLED] != true || readProxyPassword(prefs).isSuccess
+    }
+
+    suspend fun replaceUnreadableProxyPassword(password: String): Boolean {
+        if (password.isBlank()) return false
+        var replaced = false
+        withContext(Dispatchers.IO) {
+            dataStore.edit { prefs ->
+                if (readProxyPassword(prefs).isFailure) {
+                    val sealed = DeviceSecrets.seal(password, PROXY_SECRET_PURPOSE)
+                    check(DeviceSecrets.open(sealed, PROXY_SECRET_PURPOSE) == password)
+                    prefs[Keys.PROXY_AUTH_PASSWORD] = sealed
+                    replaced = true
+                }
+            }
+        }
+        return replaced
+    }
+
+    suspend fun setProxyAuthPassword(password: String) = withContext(Dispatchers.IO) {
+        dataStore.edit { prefs ->
+            check(readProxyPassword(prefs).isSuccess) { "Local proxy password unavailable" }
+            prefs[Keys.PROXY_AUTH_PASSWORD] = DeviceSecrets.seal(password, PROXY_SECRET_PURPOSE)
+        }
+        Unit
     }
 
     /**
@@ -292,7 +370,7 @@ class PreferencesDataStore @Inject constructor(
                 val random = java.security.SecureRandom()
                 val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
                 prefs[Keys.PROXY_AUTH_USERNAME] = (1..8).map { chars[random.nextInt(chars.length)] }.joinToString("")
-                prefs[Keys.PROXY_AUTH_PASSWORD] = (1..12).map { chars[random.nextInt(chars.length)] }.joinToString("")
+                prefs[Keys.PROXY_AUTH_PASSWORD] = DeviceSecrets.seal((1..12).map { chars[random.nextInt(chars.length)] }.joinToString(""), PROXY_SECRET_PURPOSE)
                 prefs[Keys.PROXY_AUTH_ENABLED] = false
             }
         }
@@ -326,7 +404,7 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun setVpnMtu(mtu: Int) {
         dataStore.edit { prefs ->
-            prefs[Keys.VPN_MTU] = mtu.coerceIn(512, 1500)
+            prefs[Keys.VPN_MTU] = mtu.coerceIn(VpnMtu.preferenceRange)
         }
     }
 
@@ -716,7 +794,7 @@ class PreferencesDataStore @Inject constructor(
     companion object {
         const val DEFAULT_REMOTE_DNS = "8.8.8.8"
         const val DEFAULT_REMOTE_DNS_FALLBACK = "1.1.1.1"
-        const val DEFAULT_MTU = 1280
+        const val DEFAULT_MTU = VpnMtu.DEFAULT
         /** Fallback only — [ensureProxyPortInitialized] assigns a random port on first launch. */
         const val DEFAULT_PROXY_PORT = 10880
     }

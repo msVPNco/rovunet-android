@@ -31,7 +31,8 @@ class PayloadSocketFactory(
     private val payload: String,
     private val tlsEnabled: Boolean = false,
     private val tlsSni: String = "",
-    private val connectTimeoutMs: Int = 30_000
+    private val connectTimeoutMs: Int = 30_000,
+    private val tcpSocketFactory: SocketFactory? = null
 ) : SocketFactory {
 
     private val TAG = "PayloadSocketFactory"
@@ -40,8 +41,9 @@ class PayloadSocketFactory(
         Log.i(TAG, "Creating socket to $host:$port (payload: ${payload.length} chars, TLS: $tlsEnabled)")
 
         // 1. Open a plain TCP socket
-        val rawSocket = Socket()
-        rawSocket.connect(InetSocketAddress(host, port), connectTimeoutMs)
+        val rawSocket = tcpSocketFactory?.createSocket(host, port) ?: Socket().apply {
+            connect(InetSocketAddress(host, port), connectTimeoutMs)
+        }
 
         // 2. Send raw payload before anything else
         val resolvedPayload = resolvePayload(payload, host, port)

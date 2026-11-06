@@ -194,4 +194,8 @@
     <string name="connection_cleanup_pending">تونل قبلی هنوز در حال توقف است؛ اتصال جدید شروع نشد.</string>
     <string name="connection_service_stop_failed">اندروید نتوانست سرویس VPN را متوقف کند.</string>
     <string name="connection_service_start_failed">اندروید نتوانست سرویس اتصال VPN را راه‌اندازی کند.</string>
+    <string name="preview_release_channel">دریافت نسخه‌های پیش‌نمایش عمومی</string>
+    <string name="private_test_channel">نسخهٔ تست خصوصی · به‌روزرسانی جداگانه تحویل داده می‌شود</string>
+    <string name="block_ipv6_traffic">مسدود کردن IPv6</string>
+    <string name="block_ipv6_traffic_hint">در اتصال بعدی، ترافیک IPv6 برنامه‌های تحت پوشش VPN مسدود می‌شود.</string>
 </resources>

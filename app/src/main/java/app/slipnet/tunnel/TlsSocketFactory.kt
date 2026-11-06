@@ -19,7 +19,8 @@ import java.net.Socket
  */
 class TlsSocketFactory(
     private val sniHost: String,
-    private val connectTimeoutMs: Int = 30_000
+    private val connectTimeoutMs: Int = 30_000,
+    private val tcpSocketFactory: SocketFactory? = null
 ) : SocketFactory {
 
     private val TAG = "TlsSocketFactory"
@@ -28,8 +29,9 @@ class TlsSocketFactory(
         Log.i(TAG, "Creating TLS socket to $host:$port (SNI: $sniHost)")
 
         // 1. Open a plain TCP socket
-        val rawSocket = Socket()
-        rawSocket.connect(InetSocketAddress(host, port), connectTimeoutMs)
+        val rawSocket = tcpSocketFactory?.createSocket(host, port) ?: Socket().apply {
+            connect(InetSocketAddress(host, port), connectTimeoutMs)
+        }
 
         val sslSocket = ValidatedTls.wrap(rawSocket, sniHost, port, connectTimeoutMs)
 

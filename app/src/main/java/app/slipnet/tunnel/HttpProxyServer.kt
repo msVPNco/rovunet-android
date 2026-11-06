@@ -35,6 +35,8 @@ object HttpProxyServer {
 
     private var socksHost: String = "127.0.0.1"
     private var socksPort: Int = 1080
+    private var clientUsername: String? = null
+    private var clientPassword: String? = null
     private var socksAuthUsername: String? = null
     private var socksAuthPassword: String? = null
     private var serverSocket: ServerSocket? = null
@@ -51,7 +53,9 @@ object HttpProxyServer {
         listenHost: String = "127.0.0.1",
         listenPort: Int = 8080,
         socksAuthUsername: String? = null,
-        socksAuthPassword: String? = null
+        socksAuthPassword: String? = null,
+        clientUsername: String? = socksAuthUsername,
+        clientPassword: String? = socksAuthPassword
     ): Result<Unit> {
         Log.i(TAG, "========================================")
         Log.i(TAG, "Starting HTTP proxy")
@@ -65,6 +69,8 @@ object HttpProxyServer {
         this.socksPort = socksPort
         this.socksAuthUsername = socksAuthUsername
         this.socksAuthPassword = socksAuthPassword
+        this.clientUsername = clientUsername
+        this.clientPassword = clientPassword
 
         return try {
             val ss = bindServerSocket(listenHost, listenPort)
@@ -456,8 +462,16 @@ object HttpProxyServer {
     }
 
     private fun authenticate(header: String?, socket: Socket): Boolean {
-        val user = socksAuthUsername
-        val pass = socksAuthPassword
+        if (clientUsername == null && clientPassword == null) return true
+        return ProxyAuthLimiter.shared.check(socket.inetAddress,
+            blocked = { sendError(socket, 429, "Too many proxy authentication attempts") }) {
+            authenticateUnchecked(header, socket)
+        }
+    }
+
+    private fun authenticateUnchecked(header: String?, socket: Socket): Boolean {
+        val user = clientUsername
+        val pass = clientPassword
         if (user == null && pass == null) return true
         if (user.isNullOrEmpty() || pass.isNullOrEmpty()) { sendError(socket, 503, "Proxy authentication is not configured"); return false }
         val supplied = runCatching {

@@ -199,8 +199,8 @@ fun ScanResultsScreen(
     val scope = rememberCoroutineScope()
 
     BackHandler {
-        onNavigateBack()
         viewModel.stopAll()
+        onNavigateBack()
     }
 
     if (showPrismFilterDialog) {
@@ -399,7 +399,7 @@ fun ScanResultsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { onNavigateBack(); viewModel.stopAll() }) {
+                    IconButton(onClick = { viewModel.stopAll(); onNavigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -476,10 +476,10 @@ fun ScanResultsScreen(
                         TextButton(
                             onClick = {
                                 viewModel.saveRecentDns()
-                                onResolversSelected(
-                                    viewModel.getSelectedResolversString(),
-                                    viewModel.getRecommendedTransportHint()
-                                )
+                                val resolvers = viewModel.getSelectedResolversString()
+                                val hint = viewModel.getRecommendedTransportHint()
+                                viewModel.stopAll()
+                                onResolversSelected(resolvers, hint)
                             }
                         ) {
                             Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392), fontWeight = FontWeight.SemiBold)

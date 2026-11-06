@@ -1,5 +1,6 @@
 package app.slipnet.presentation.settings
 
+import app.slipnet.domain.model.VpnMtu
 import app.slipnet.R
 import android.content.Intent
 import android.net.Uri
@@ -142,6 +143,7 @@ fun SettingsScreen(
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val uiState by viewModel.uiState.collectAsState()
+    val effectiveMtu = VpnMtu.effective(uiState.vpnMtu, uiState.blockIpv6)
     val scrollState = rememberScrollState()
 
     var showStabilityReport by remember { mutableStateOf(false) }
@@ -165,6 +167,8 @@ fun SettingsScreen(
     var proxyPort by remember { mutableStateOf(uiState.proxyListenPort.toString()) }
     var httpProxyPort by remember { mutableStateOf(uiState.httpProxyPort.toString()) }
     var proxyAuthUsername by remember { mutableStateOf(uiState.proxyAuthUsername) }
+    var replacingProxyPassword by remember { mutableStateOf(false) }
+    var proxyReplacementFailed by remember { mutableStateOf(false) }
     var proxyAuthPassword by remember { mutableStateOf(uiState.proxyAuthPassword) }
 
     // Sync local state when DataStore values load (initial default → actual saved value)
@@ -407,13 +411,26 @@ fun SettingsScreen(
                             value = proxyAuthPassword,
                             onValueChange = { text ->
                                 proxyAuthPassword = text
-                                viewModel.setProxyAuthPassword(text)
+                                proxyReplacementFailed = false
+                                if (!uiState.proxyPasswordUnavailable) viewModel.setProxyAuthPassword(text) { proxyReplacementFailed = !it }
                             },
                             label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                    if (uiState.proxyPasswordUnavailable || proxyReplacementFailed) {
+                        Column(Modifier.padding(horizontal = 16.dp)) {
+                            Text(resources.getString(if (proxyReplacementFailed) R.string.profile_restore_failed else R.string.proxy_password_unavailable))
+                            TextButton(enabled = !replacingProxyPassword && proxyAuthPassword.isNotBlank(), onClick = {
+                                replacingProxyPassword = true
+                                viewModel.replaceUnreadableProxyPassword(proxyAuthPassword) {
+                                    proxyReplacementFailed = !it
+                                    replacingProxyPassword = false
+                                }
+                            }) { Text(resources.getString(R.string.profile_restore_action)) }
+                        }
                     }
                 } else {
                     Text(
@@ -580,10 +597,21 @@ fun SettingsScreen(
 
                 SettingsDivider()
 
+                SwitchSettingItem(
+                    icon = Icons.Default.Block,
+                    title = resources.getString(R.string.block_ipv6_traffic),
+                    description = resources.getString(R.string.block_ipv6_traffic_hint),
+                    checked = uiState.blockIpv6,
+                    onCheckedChange = { viewModel.setBlockIpv6(it) }
+                )
+                SettingsDivider()
+
                 ClickableSettingItem(
                     icon = Icons.Default.SettingsEthernet,
                     title = resources.getString(R.string.settings_vpn_mtu_ea6cc3),
-                    description = resources.getString(R.string.settings_vpn_packet_size_1_d_lower_values_improve_compatibility_on_mobile__e6c041, uiState.vpnMtu),
+                    description = if (uiState.vpnMtu != effectiveMtu) {
+                        resources.getString(R.string.mtu_preference_with_ipv6, uiState.vpnMtu, effectiveMtu)
+                    } else resources.getString(R.string.settings_vpn_packet_size_1_d_lower_values_improve_compatibility_on_mobile__e6c041, effectiveMtu),
                     onClick = { showMtuDialog = true }
                 )
 
@@ -870,8 +898,18 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                TextButton(onClick = { viewModel.checkForUpdate() }, enabled = uiState.updateCheckResult != UpdateCheckResult.CHECKING) {
-                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_check))
+                if (BuildConfig.PRIVATE_CANDIDATE) {
+                    Text(androidx.compose.ui.res.stringResource(R.string.private_test_channel))
+                } else {
+                    val preview by viewModel.previewUpdates.collectAsState(initial = false)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(androidx.compose.ui.res.stringResource(R.string.preview_release_channel))
+                        Switch(checked = preview, onCheckedChange = { viewModel.setPreviewUpdates(it) },
+                            enabled = uiState.updateCheckResult != UpdateCheckResult.CHECKING)
+                    }
+                    TextButton(onClick = { viewModel.checkForUpdate() }, enabled = uiState.updateCheckResult != UpdateCheckResult.CHECKING) {
+                        Text(androidx.compose.ui.res.stringResource(R.string.update_check))
+                    }
                 }
                 when (uiState.updateCheckResult) {
                     UpdateCheckResult.CHECKING -> CircularProgressIndicator()
@@ -895,9 +933,10 @@ fun SettingsScreen(
             1350 to resources.getString(R.string.settings_conservative_for_double_nat_or_pppoe_e76285),
             1280 to resources.getString(R.string.settings_maximum_compatibility_60541c)
         )
-        val isCustom = mtuPresets.none { it.first == uiState.vpnMtu }
-        var customMtuText by remember { mutableStateOf(if (isCustom) uiState.vpnMtu.toString() else "") }
-        var useCustom by remember { mutableStateOf(isCustom) }
+        val isCustom = mtuPresets.none { it.first == effectiveMtu }
+        var customMtuText by remember(effectiveMtu) { mutableStateOf(if (isCustom) effectiveMtu.toString() else "") }
+        val range = VpnMtu.range(uiState.blockIpv6)
+        var useCustom by remember(effectiveMtu) { mutableStateOf(isCustom) }
         AlertDialog(
             onDismissRequest = { showMtuDialog = false },
             title = { Text(resources.getString(R.string.settings_vpn_mtu_ea6cc3)) },
@@ -917,7 +956,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = !useCustom && uiState.vpnMtu == mtu,
+                                selected = !useCustom && effectiveMtu == mtu,
                                 onClick = {
                                     useCustom = false
                                     viewModel.setVpnMtu(mtu)
@@ -952,7 +991,7 @@ fun SettingsScreen(
                             onValueChange = { customMtuText = it.filter { c -> c.isDigit() }.take(5) },
                             enabled = useCustom,
                             label = { Text(resources.getString(R.string.settings_custom_081ae3)) },
-                            placeholder = { Text("512–1500") },
+                            placeholder = { Text("${range.first}–${range.last}") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier
@@ -964,13 +1003,12 @@ fun SettingsScreen(
             },
             confirmButton = {
                 if (useCustom) {
+                    val value = customMtuText.toIntOrNull()
                     TextButton(
+                        enabled = value != null && value in range,
                         onClick = {
-                            val value = customMtuText.toIntOrNull()
-                            if (value != null && value in 512..1500) {
-                                viewModel.setVpnMtu(value)
-                                showMtuDialog = false
-                            }
+                            value?.let(viewModel::setVpnMtu)
+                            showMtuDialog = false
                         }
                     ) {
                         Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))

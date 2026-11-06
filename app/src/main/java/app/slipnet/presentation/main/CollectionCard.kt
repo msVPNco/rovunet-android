@@ -6,62 +6,109 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.zIndex
+import app.slipnet.presentation.theme.collectionTones
+import app.slipnet.R
 import app.slipnet.domain.model.*
-import app.slipnet.presentation.theme.rv
 
+/** Browsing a collection never starts, selects or stops a connection. */
 @Composable
 fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>, selected: Boolean,
-    expanded: Boolean, connectedProfileId: Long?, manualProfileId: Long?, busy: Boolean, onSelect: () -> Unit, onDetails: () -> Unit, onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
+    expanded: Boolean, connectedProfileId: Long?, manualProfileId: Long?, connecting: Boolean,
+    busy: Boolean, canConnect: Boolean, onConnect: () -> Unit, onDetails: () -> Unit,
+    onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
+    onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
+    if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
-    val summaryId = ConnectionChoice.summaryProfileId(profiles, results, connectedProfileId, manualProfileId)
-    val measurement = (results[summaryId] as? PingResult.Success)?.takeIf { it.verified }
-    val summaryProfile = profiles.firstOrNull { it.id == summaryId }
-    Card(onClick = onSelect, enabled = !busy, shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = .35f) else MaterialTheme.colorScheme.surface)) {
-        var menuOpen by remember { mutableStateOf(false) }
-        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp)) {
+    val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
+    val completed = profiles.mapNotNull { results[it.id] }
+    val verified = completed.count { it is PingResult.Success && it.verified }
+    val failed = completed.count { it is PingResult.Error }
+    var menuOpen by remember { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
+    val tones = collectionTones
+    val raised = expanded || selected
+    val surface = if (raised) tones.raisedHeader else tones.header
+    Card(onClick = onDetails, modifier = Modifier.fillMaxWidth().testTag("collection-${ProfileCollections.key(profiles.first())}"), shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 10.dp else 2.dp),
+        border = BorderStroke(if (selected || connected) 2.dp else 1.dp,
+            if (connected) app.slipnet.presentation.theme.ConnectionSuccessColor else if (raised) colors.primary else colors.primary.copy(alpha = .25f)),
+        colors = CardDefaults.cardColors(containerColor = surface, contentColor = tones.headerText)) {
+        Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(
+            if (expanded) Color.White.copy(alpha = .12f) else Color.Transparent, Color.Transparent)))
+            .padding(start = 14.dp, end = 4.dp, top = 5.dp, bottom = 7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(ProfileCollections.name(profiles.first()), Modifier.weight(1f), maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                if (connected) Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655), style = MaterialTheme.typography.labelSmall)
+                Column(Modifier.weight(1f)) {
+                    Text(ProfileCollections.name(profiles.first()), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    val count = androidx.compose.ui.platform.LocalResources.current.getQuantityString(R.plurals.connection_paths, profiles.size, profiles.size)
+                    Text(if (path != null) "${path.name} · $count" else count,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                        color = tones.headerText.copy(alpha = .8f))
+                }
+                IconButton(onClick = onDetails) {
+                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        stringResource(if (expanded) R.string.ui_hide_paths else R.string.ui_show_paths))
+                }
+                IconButton(onClick = onConnect, modifier = Modifier.testTag("collection-connect-${ProfileCollections.key(profiles.first())}"), enabled = !busy && canConnect) {
+                    Icon(if (connecting) Icons.Default.Close else Icons.Default.PowerSettingsNew,
+                        if (connecting) stringResource(R.string.ui_cancel_connection)
+                        else if (connected) stringResource(R.string.ui_disconnect)
+                        else if (path != null) stringResource(R.string.ui_connect_named, path.name)
+                        else stringResource(R.string.ui_choose_path),
+                        tint = if (connected) app.slipnet.presentation.theme.ConnectionSuccessColor else colors.primary)
+                }
                 Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_collection_actions_06a9e8)) }
+                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.rv_collection_actions_06a9e8)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
                             onClick = { menuOpen = false; onTest() })
-                        DropdownMenuItem(text = { Text(rv(if (expanded) "Hide paths" else "Show paths")) },
-                            onClick = { menuOpen = false; onDetails() })
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_export_share_collection_82ddc2)) }, enabled = !busy,
+                        DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !busy,
+                            onClick = { menuOpen = false; onStabilityTest() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_share_collection_82ddc2)) }, enabled = !busy,
                             onClick = { menuOpen = false; onExport() })
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_rename_3064d7)) }, enabled = !busy,
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_rename_3064d7)) }, enabled = !busy,
                             onClick = { menuOpen = false; onRename() })
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_collection), color = MaterialTheme.colorScheme.error) },
-                            enabled = canDelete && !busy,
-                            onClick = { menuOpen = false; onDelete() })
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_move_to_collection_b392f3)) }, enabled = !busy && !connected,
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_move_to_collection_b392f3)) }, enabled = !busy && !connected,
                             onClick = { menuOpen = false; onMove() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.delete_collection), color = colors.error) }, enabled = canDelete && !busy,
+                            onClick = { menuOpen = false; onDelete() })
                     }
                 }
             }
-            Text(androidx.compose.ui.res.stringResource(
-                if (connected) app.slipnet.R.string.connection_active_path
-                else if (manualProfileId != null) app.slipnet.R.string.connection_manual_path
-                else app.slipnet.R.string.connection_mode_auto) +
-                (if (connected || manualProfileId != null) " · ${summaryProfile?.name.orEmpty()}" else ""),
-                style = MaterialTheme.typography.bodySmall)
-            Text(androidx.compose.ui.platform.LocalContext.current.resources.getQuantityString(app.slipnet.R.plurals.connection_paths, profiles.size, profiles.size) + " · " +
-                (measurement?.let {
-                    androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_last_https, it.latencyMs, it.successes, it.attempts)
-                } ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_not_tested_on_this_network_38ef7b)),
-                modifier = Modifier.padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),
+                color = colors.error, style = MaterialTheme.typography.bodySmall)
+            if (completed.isNotEmpty()) Text(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
+                style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
         }
+    }
+}
+
+/** The header casts its shadow over a quieter, inset surface containing its paths. */
+@Composable
+fun CollectionStack(expanded: Boolean, header: @Composable () -> Unit, paths: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.zIndex(1f)) { header() }
+        if (expanded) Column(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp).offset(y = (-6).dp)
+                .background(collectionTones.tray, RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                .padding(start = 10.dp, end = 10.dp, top = 20.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp), content = paths
+        )
     }
 }

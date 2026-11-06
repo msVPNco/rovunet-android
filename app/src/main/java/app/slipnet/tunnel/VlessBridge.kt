@@ -309,7 +309,7 @@ object VlessBridge {
             val nMethods = input.read()
             val methods = ByteArray(nMethods)
             readFully(input, methods)
-            if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword)) return
+            if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword, client.inetAddress)) return
 
             // SOCKS5 request: ver(1) + cmd(1) + rsv(1) + atyp(1) + addr + port(2)
             val reqVer = input.read()

@@ -1,6 +1,7 @@
 package app.slipnet.data.export
 
-import android.util.Base64
+import app.slipnet.domain.model.SAVED_CREDENTIALS_UNAVAILABLE
+
 import app.slipnet.domain.model.ServerProfile
 import app.slipnet.domain.model.SshAuthType
 import app.slipnet.domain.model.TunnelType
@@ -78,7 +79,7 @@ class ConfigExporter @Inject constructor() {
         )
         val data = buildProfileData(lockedProfile, hideResolvers)
         val encrypted = LockPasswordUtil.encryptConfig(data)
-        val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
+        val encoded = WireBase64.encode(encrypted)
         return "$ENCRYPTED_SCHEME$encoded"
     }
 
@@ -87,7 +88,7 @@ class ConfigExporter @Inject constructor() {
         if (!profile.allowSharing) throw IllegalStateException("Profile does not allow re-sharing")
         val data = buildProfileData(profile, profile.resolversHidden)
         val encrypted = LockPasswordUtil.encryptConfig(data)
-        val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
+        val encoded = WireBase64.encode(encrypted)
         return "$ENCRYPTED_SCHEME$encoded"
     }
 
@@ -154,7 +155,7 @@ class ConfigExporter @Inject constructor() {
         }
         val bundle = prepared.joinToString("\n") { encodeProfile(it, hideResolvers) }
         val encrypted = BundleCrypto.encrypt(bundle, bundlePassword)
-        val encoded = Base64.encodeToString(encrypted, Base64.NO_WRAP)
+        val encoded = WireBase64.encode(encrypted)
         return "$BUNDLE_ENCRYPTED_SCHEME$encoded"
     }
 
@@ -162,6 +163,7 @@ class ConfigExporter @Inject constructor() {
     private fun sanitize(value: String): String = value.replace(FIELD_DELIMITER, "")
 
     private fun buildProfileData(profile: ServerProfile, hideResolvers: Boolean = profile.resolversHidden): String {
+        check(!profile.needsCredentials) { SAVED_CREDENTIALS_UNAVAILABLE }
         val resolversStr = profile.resolvers.joinToString(RESOLVER_DELIMITER) { resolver ->
             "${resolver.host}${RESOLVER_PART_DELIMITER}${resolver.port}${RESOLVER_PART_DELIMITER}${if (resolver.authoritative) "1" else "0"}"
         }
@@ -223,13 +225,13 @@ class ConfigExporter @Inject constructor() {
             sanitize(profile.dohUrl),
             profile.dnsTransport.value,
             profile.sshAuthType.value,
-            Base64.encodeToString(profile.sshPrivateKey.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
-            Base64.encodeToString(profile.sshKeyPassphrase.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
-            Base64.encodeToString(profile.torBridgeLines.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            WireBase64.encode(profile.sshPrivateKey.toByteArray(Charsets.UTF_8)),
+            WireBase64.encode(profile.sshKeyPassphrase.toByteArray(Charsets.UTF_8)),
+            WireBase64.encode(profile.torBridgeLines.toByteArray(Charsets.UTF_8)),
             if (profile.dnsttAuthoritative) "1" else "0",
             profile.naivePort.toString(),
             sanitize(profile.naiveUsername),
-            Base64.encodeToString(profile.naivePassword.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            WireBase64.encode(profile.naivePassword.toByteArray(Charsets.UTF_8)),
             if (profile.isLocked) "1" else "0",
             sanitize(profile.lockPasswordHash),
             profile.expirationDate.toString(),
@@ -261,7 +263,7 @@ class ConfigExporter @Inject constructor() {
             if (profile.sshWsUseTls) "1" else "0",
             sanitize(profile.sshWsCustomHost),
             // v22: SSH payload (raw prefix for DPI bypass)
-            Base64.encodeToString(profile.sshPayload.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            WireBase64.encode(profile.sshPayload.toByteArray(Charsets.UTF_8)),
             // v23: Multi-resolver mode
             profile.resolverMode.value,
             // v24: Round-robin spread count
@@ -302,19 +304,19 @@ class ConfigExporter @Inject constructor() {
             // v30: Soar discovery list ("soar", "app" or "custom") and the custom list
             sanitize(profile.soarDiscoveryList),
             sanitize(profile.soarDiscoveryCustom),
-            Base64.encodeToString(profile.coreLink.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
-            Base64.encodeToString(profile.collectionId.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
-            Base64.encodeToString(profile.collectionName.toByteArray(Charsets.UTF_8), Base64.NO_WRAP),
+            WireBase64.encode(profile.coreLink.toByteArray(Charsets.UTF_8)),
+            WireBase64.encode(profile.collectionId.toByteArray(Charsets.UTF_8)),
+            WireBase64.encode(profile.collectionName.toByteArray(Charsets.UTF_8)),
             // v33: lossless credentials; earlier positional fields remain readable by old clients.
-            Base64.encodeToString(org.json.JSONObject().put("sshUser", profile.sshUsername)
+            WireBase64.encode(org.json.JSONObject().put("sshUser", profile.sshUsername)
                 .put("sshPass", profile.sshPassword).put("socksUser", profile.socksUsername ?: "")
-                .put("socksPass", profile.socksPassword ?: "").toString().toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+                .put("socksPass", profile.socksPassword ?: "").toString().toByteArray(Charsets.UTF_8))
         ).joinToString(FIELD_DELIMITER)
     }
 
     private fun encodeProfile(profile: ServerProfile, hideResolvers: Boolean = false): String {
         val data = buildProfileData(profile, hideResolvers || profile.resolversHidden)
-        val encoded = Base64.encodeToString(data.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+        val encoded = WireBase64.encode(data.toByteArray(Charsets.UTF_8))
         return "$SCHEME$encoded"
     }
 }

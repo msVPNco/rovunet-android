@@ -33,7 +33,16 @@ object LocalProxyAuth {
         input: InputStream,
         output: OutputStream,
         username: String?,
-        password: String?
+        password: String?,
+        peer: java.net.InetAddress? = null
+    ): Boolean {
+        if (username == null && password == null) return authenticate(methods, input, output, username, password)
+        return ProxyAuthLimiter.shared.check(peer, blocked = {
+            output.write(byteArrayOf(0x05, 0xFF.toByte())); output.flush()
+        }) { authenticate(methods, input, output, username, password) }
+    }
+
+    private fun authenticate(methods: ByteArray, input: InputStream, output: OutputStream, username: String?, password: String?
     ): Boolean {
         val authRequired = username != null || password != null
 

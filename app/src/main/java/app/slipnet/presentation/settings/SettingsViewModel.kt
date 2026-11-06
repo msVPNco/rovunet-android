@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -28,6 +29,7 @@ data class SettingsUiState(
     val proxyAuthEnabled: Boolean = false,
     val proxyAuthUsername: String = "",
     val proxyAuthPassword: String = "",
+    val proxyPasswordUnavailable: Boolean = false,
     val proxyOnlyMode: Boolean = false,
     val killSwitch: Boolean = false,
     val autoReconnect: Boolean = false,
@@ -131,11 +133,11 @@ class SettingsViewModel @Inject constructor(
                 Triple(enabled, mode, apps)
             }
 
-            data class ProxyAuthSettings(val enabled: Boolean, val username: String, val password: String)
+            data class ProxyAuthSettings(val enabled: Boolean, val username: String, val password: Result<String>)
             val proxyAuthFlow = combine(
                 preferencesDataStore.proxyAuthEnabled,
                 preferencesDataStore.proxyAuthUsername,
-                preferencesDataStore.proxyAuthPassword
+                preferencesDataStore.proxyPasswordState
             ) { enabled, username, password ->
                 ProxyAuthSettings(enabled, username, password)
             }
@@ -261,7 +263,8 @@ class SettingsViewModel @Inject constructor(
                 state.copy(
                     proxyAuthEnabled = proxyAuth.enabled,
                     proxyAuthUsername = proxyAuth.username,
-                    proxyAuthPassword = proxyAuth.password
+                    proxyAuthPassword = proxyAuth.password.getOrDefault(""),
+                    proxyPasswordUnavailable = proxyAuth.password.isFailure
                 )
             }.combine(dnsPoolFlow) { state, pool ->
                 state.copy(
@@ -395,9 +398,34 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setProxyAuthPassword(password: String) {
+    fun setProxyAuthPassword(password: String, finished: (Boolean) -> Unit) {
         viewModelScope.launch {
-            preferencesDataStore.setProxyAuthPassword(password)
+            try {
+                preferencesDataStore.setProxyAuthPassword(password)
+                finished(true)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                finished(false)
+            }
+        }
+    }
+
+    private var replacingProxyPassword = false
+
+    fun replaceUnreadableProxyPassword(password: String, finished: (Boolean) -> Unit) {
+        if (replacingProxyPassword) return
+        replacingProxyPassword = true
+        viewModelScope.launch {
+            try {
+                finished(preferencesDataStore.replaceUnreadableProxyPassword(password))
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                finished(false)
+            } finally {
+                replacingProxyPassword = false
+            }
         }
     }
 
@@ -569,12 +597,20 @@ class SettingsViewModel @Inject constructor(
     var availableUpdate: app.slipnet.util.AppUpdate? = null
         private set
 
+    val previewUpdates = preferencesDataStore.previewUpdates
+    fun setPreviewUpdates(enabled: Boolean) = viewModelScope.launch {
+        preferencesDataStore.setPreviewUpdates(enabled)
+        availableUpdate = null
+        clearUpdateCheck()
+    }
+
     fun checkForUpdate() {
+        if (app.slipnet.BuildConfig.PRIVATE_CANDIDATE) return
         if (_uiState.value.updateCheckResult == UpdateCheckResult.CHECKING) return
         _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.CHECKING)
         viewModelScope.launch {
             val current = app.slipnet.BuildConfig.VERSION_NAME
-            val update = try { app.slipnet.util.UpdateChecker.check(current) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
+            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
                 _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.ERROR)
                 return@launch
             }

@@ -164,21 +164,7 @@ fun NavGraph(
                     navController.navigate(NavRoutes.ScanResults.createRoute(profileId, fromProfile))
                 },
                 onResolversSelected = { resolvers, transportHint ->
-                    val profileRoute = if (profileId != null) {
-                        NavRoutes.EditProfile.createRoute(profileId)
-                    } else if (fromProfile) {
-                        NavRoutes.AddProfile.route
-                    } else {
-                        null
-                    }
-                    if (profileRoute != null) {
-                        val handle = navController.getBackStackEntry(profileRoute).savedStateHandle
-                        handle["selected_resolvers"] = resolvers
-                        handle["selected_resolvers_transport"] = transportHint
-                        navController.popBackStack(profileRoute, inclusive = false)
-                    } else {
-                        navController.popBackStack()
-                    }
+                    navController.returnScanSelection(resolvers, transportHint, fromProfile)
                 }
             )
         }
@@ -207,17 +193,21 @@ fun NavGraph(
                     navController.popBackStack()
                 },
                 onResolversSelected = { resolvers, transportHint ->
-                    val profileRoute = if (profileId != null) {
-                        NavRoutes.EditProfile.createRoute(profileId)
-                    } else {
-                        NavRoutes.AddProfile.route
-                    }
-                    val handle = navController.getBackStackEntry(profileRoute).savedStateHandle
-                    handle["selected_resolvers"] = resolvers
-                    handle["selected_resolvers_transport"] = transportHint
-                    navController.popBackStack(profileRoute, inclusive = false)
+                    navController.popBackStack() // Results -> scanner
+                    navController.returnScanSelection(resolvers, transportHint, fromProfile)
                 }
             )
         }
     }
+}
+
+private fun NavHostController.returnScanSelection(resolvers: String, hint: String?, fromProfile: Boolean) {
+    val form = previousBackStackEntry
+    if (fromProfile && form?.destination?.route in setOf(NavRoutes.AddProfile.route, NavRoutes.EditProfile.route)) {
+        form?.savedStateHandle?.apply {
+            set("selected_resolvers", resolvers)
+            set("selected_resolvers_transport", hint)
+        }
+    }
+    popBackStack()
 }

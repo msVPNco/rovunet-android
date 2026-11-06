@@ -92,10 +92,20 @@ class SshTunnelInstance(val instanceId: String = "default") {
     private var configCipher: String? = null       // null = auto
     private var configCompression: Boolean = false
     private var configMaxChannels: Int = DEFAULT_MAX_CHANNELS
+    @Volatile var startupCancellation: StartupCancellation? = null
     var trustIdentity: String = ""
     var localAuthUsername: String? = null
     var localAuthPassword: String? = null
-    private var session: Session? = null
+    @Volatile private var session: Session? = null
+    private val lifecycleLock = Any()
+    private data class Startup(
+        val resources: SshStartup,
+        val identity: String,
+        val cipher: String?,
+        val compression: Boolean,
+        val diagnosticSessionId: Long
+    )
+    private var pendingStartup: Startup? = null
     private var serverSocket: ServerSocket? = null
     private var acceptorThread: Thread? = null
     private var executor: ExecutorService? = null
@@ -169,18 +179,44 @@ class SshTunnelInstance(val instanceId: String = "default") {
         Log.i(TAG, "Configured: cipher=${cipher ?: "auto"}, compression=$compression, maxChannels=$configMaxChannels")
     }
 
+    private fun beginStartup(configure: () -> Unit): Startup = synchronized(lifecycleLock) {
+        stopLocked()
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SSH_START, startupCancellation?.diagnosticSessionId ?: 0)
+        configure()
+        Startup(SshStartup(startupCancellation), trustIdentity, configCipher, configCompression, startupCancellation?.diagnosticSessionId ?: 0).also { pendingStartup = it }
+    }
+
+    private fun publishStartup(
+        attempt: Startup, candidate: Session, host: String, port: Int, warmDns: Boolean
+    ) = synchronized(lifecycleLock) {
+        check(pendingStartup === attempt) { "SSH startup was cancelled or replaced" }
+        attempt.resources.requireActive()
+        check(candidate.isConnected) { "SSH session is not connected" }
+        session = candidate
+        startSocksServer(host, port)
+        if (warmDns) prewarmDnsChannels()
+        attempt.resources.transfer()
+        pendingStartup = null
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SSH_CONNECTED, attempt.diagnosticSessionId)
+    }
+
+    private fun failStartup(attempt: Startup) = synchronized(lifecycleLock) {
+        // A late failure from a cancelled/replaced start must never stop a newer connection.
+        if (pendingStartup === attempt) stopLocked() else attempt.resources.cancel()
+    }
+
     /**
      * Apply cipher and compression settings to a JSch session.
      */
-    private fun applySessionConfig(session: Session) {
-        if (trustIdentity.isNotBlank()) session.setHostKeyAlias(trustIdentity)
+    private fun applySessionConfig(session: Session, attempt: Startup) {
+        if (attempt.identity.isNotBlank()) session.setHostKeyAlias(attempt.identity)
         session.setHostKeyRepository(TransportTrust.sshKeys)
         session.setConfig("StrictHostKeyChecking", "yes")
         session.setServerAliveInterval(KEEPALIVE_INTERVAL_MS)
         session.setServerAliveCountMax(3)
 
         // Cipher
-        val cipher = configCipher
+        val cipher = attempt.cipher
         if (cipher != null) {
             session.setConfig("cipher.s2c", cipher)
             session.setConfig("cipher.c2s", cipher)
@@ -190,7 +226,7 @@ class SshTunnelInstance(val instanceId: String = "default") {
         }
 
         // Compression
-        if (configCompression) {
+        if (attempt.compression) {
             session.setConfig("compression.s2c", "zlib@openssh.com,zlib,none")
             session.setConfig("compression.c2s", "zlib@openssh.com,zlib,none")
         } else {
@@ -238,11 +274,12 @@ class SshTunnelInstance(val instanceId: String = "default") {
         if (sshPayload.isNotBlank()) Log.i(TAG, "  SSH Payload: ${sshPayload.length} chars")
         Log.i(TAG, "========================================")
 
-        stop()
-        directDns = !forwardDnsThroughSsh
-        dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
-        dnsServerIndex.set(0)
-        dnsSshFailCount.set(0)
+        val attempt = beginStartup {
+            directDns = !forwardDnsThroughSsh
+            dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
+            dnsServerIndex.set(0)
+            dnsSshFailCount.set(0)
+        }
 
         return try {
             // Connect SSH directly through the tunnel port
@@ -257,6 +294,9 @@ class SshTunnelInstance(val instanceId: String = "default") {
                 )
             }
             val newSession = jsch.getSession(sshUsername, tunnelHost, tunnelPort)
+            attempt.resources.ownSession(newSession)
+            val tcpSocketFactory = attempt.resources.socketFactory(CONNECT_TIMEOUT_MS)
+            newSession.setSocketFactory(tcpSocketFactory)
             if (sshAuthType == SshAuthType.KEY) {
                 newSession.setConfig("PreferredAuthentications", "publickey")
             } else {
@@ -264,37 +304,37 @@ class SshTunnelInstance(val instanceId: String = "default") {
             }
             // Wrap connection: payload + optional TLS, or TLS-only, or plain
             if (sshPayload.isNotBlank()) {
-                newSession.setSocketFactory(PayloadSocketFactory(
+                newSession.setSocketFactory(attempt.resources.decorate(PayloadSocketFactory(
                     payload = sshPayload,
                     tlsEnabled = tlsEnabled,
                     tlsSni = tlsSni.ifBlank { tunnelHost },
-                    connectTimeoutMs = CONNECT_TIMEOUT_MS
-                ))
+                    connectTimeoutMs = CONNECT_TIMEOUT_MS,
+                    tcpSocketFactory = tcpSocketFactory
+                )))
             } else if (tlsEnabled) {
                 val sniHost = tlsSni.ifBlank { tunnelHost }
-                newSession.setSocketFactory(TlsSocketFactory(sniHost, CONNECT_TIMEOUT_MS))
+                newSession.setSocketFactory(attempt.resources.decorate(
+                    TlsSocketFactory(sniHost, CONNECT_TIMEOUT_MS, tcpSocketFactory)))
             }
-            applySessionConfig(newSession)
+            applySessionConfig(newSession, attempt)
             newSession.connect(CONNECT_TIMEOUT_MS)
 
-            if (!newSession.isConnected) {
-                return Result.failure(RuntimeException("SSH session failed to connect"))
-            }
+            check(newSession.isConnected) { "SSH session failed to connect" }
 
-            session = newSession
+            publishStartup(attempt, newSession, listenHost, listenPort, warmDns = forwardDnsThroughSsh)
             Log.i(TAG, "SSH session connected (direct mode, auth=${sshAuthType.value}${if (tlsEnabled) ", TLS" else ""})")
-
-            startSocksServer(listenHost, listenPort)
 
             Log.i(TAG, "SSH SOCKS5 proxy started on $listenHost:$listenPort")
 
-            // Pre-warm DNS channel pool in background
-            if (!directDns) prewarmDnsChannels()
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SSH tunnel", e)
-            stop()
+            app.slipnet.util.ConnectionDiagnostics.record(
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Event.SSH_CANCELLED else app.slipnet.util.ConnectionDiagnostics.Event.SSH_FAILED,
+                attempt.diagnosticSessionId,
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Failure.CANCELLED else app.slipnet.util.ConnectionDiagnostics.failure(e))
+            failStartup(attempt)
             Result.failure(e)
         }
     }
@@ -335,12 +375,13 @@ class SshTunnelInstance(val instanceId: String = "default") {
         Log.i(TAG, "  Remote DNS: $remoteDnsHost (fallback: $remoteDnsFallback)")
         Log.i(TAG, "========================================")
 
-        stop()
-        directDns = false
-        preventDnsFallback = blockDirectDns
-        dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
-        dnsServerIndex.set(0)
-        dnsSshFailCount.set(0)
+        val attempt = beginStartup {
+            directDns = false
+            preventDnsFallback = blockDirectDns
+            dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
+            dnsServerIndex.set(0)
+            dnsSshFailCount.set(0)
+        }
 
         return try {
             val jsch = JSch()
@@ -354,6 +395,9 @@ class SshTunnelInstance(val instanceId: String = "default") {
             }
             // Create session targeting the real SSH server
             val newSession = jsch.getSession(sshUsername, sshHost, sshPort)
+            attempt.resources.ownSession(newSession)
+            val tcpSocketFactory = attempt.resources.socketFactory(CONNECT_TIMEOUT_MS)
+            newSession.setSocketFactory(tcpSocketFactory)
             if (sshAuthType == SshAuthType.KEY) {
                 newSession.setConfig("PreferredAuthentications", "publickey")
             } else {
@@ -368,28 +412,26 @@ class SshTunnelInstance(val instanceId: String = "default") {
                 tlsEnabled = tlsEnabled,
                 tlsSni = tlsSni.ifBlank { sshHost }
             )
-            newSession.setProxy(proxy)
-            applySessionConfig(newSession)
+            newSession.setProxy(attempt.resources.ownProxy(proxy))
+            applySessionConfig(newSession, attempt)
             newSession.connect(CONNECT_TIMEOUT_MS)
 
-            if (!newSession.isConnected) {
-                return Result.failure(RuntimeException("SSH session failed to connect through HTTP proxy"))
-            }
+            check(newSession.isConnected) { "SSH session failed to connect through HTTP proxy" }
 
-            session = newSession
+            publishStartup(attempt, newSession, listenHost, listenPort, warmDns = true)
             Log.i(TAG, "SSH session connected (over HTTP proxy, auth=${sshAuthType.value}${if (tlsEnabled) ", TLS" else ""})")
-
-            startSocksServer(listenHost, listenPort)
 
             Log.i(TAG, "SSH SOCKS5 proxy started on $listenHost:$listenPort (over HTTP proxy)")
 
-            // Pre-warm DNS channel pool in background (DNS goes through SSH)
-            prewarmDnsChannels()
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SSH tunnel over HTTP proxy", e)
-            stop()
+            app.slipnet.util.ConnectionDiagnostics.record(
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Event.SSH_CANCELLED else app.slipnet.util.ConnectionDiagnostics.Event.SSH_FAILED,
+                attempt.diagnosticSessionId,
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Failure.CANCELLED else app.slipnet.util.ConnectionDiagnostics.failure(e))
+            failStartup(attempt)
             Result.failure(e)
         }
     }
@@ -430,12 +472,13 @@ class SshTunnelInstance(val instanceId: String = "default") {
         Log.i(TAG, "  Remote DNS: $remoteDnsHost (fallback: $remoteDnsFallback)")
         Log.i(TAG, "========================================")
 
-        stop()
-        directDns = false
-        preventDnsFallback = blockDirectDns
-        dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
-        dnsServerIndex.set(0)
-        dnsSshFailCount.set(0)
+        val attempt = beginStartup {
+            directDns = false
+            preventDnsFallback = blockDirectDns
+            dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
+            dnsServerIndex.set(0)
+            dnsSshFailCount.set(0)
+        }
 
         return try {
             val jsch = JSch()
@@ -448,6 +491,9 @@ class SshTunnelInstance(val instanceId: String = "default") {
                 )
             }
             val newSession = jsch.getSession(sshUsername, sshHost, sshPort)
+            attempt.resources.ownSession(newSession)
+            val tcpSocketFactory = attempt.resources.socketFactory(CONNECT_TIMEOUT_MS)
+            newSession.setSocketFactory(tcpSocketFactory)
             if (sshAuthType == SshAuthType.KEY) {
                 newSession.setConfig("PreferredAuthentications", "publickey")
             } else {
@@ -462,27 +508,26 @@ class SshTunnelInstance(val instanceId: String = "default") {
                 tlsSni = wsTlsSni,
                 customHost = wsCustomHost
             )
-            newSession.setProxy(proxy)
-            applySessionConfig(newSession)
+            newSession.setProxy(attempt.resources.ownProxy(proxy))
+            applySessionConfig(newSession, attempt)
             newSession.connect(CONNECT_TIMEOUT_MS)
 
-            if (!newSession.isConnected) {
-                return Result.failure(RuntimeException("SSH session failed to connect through WebSocket"))
-            }
+            check(newSession.isConnected) { "SSH session failed to connect through WebSocket" }
 
-            session = newSession
+            publishStartup(attempt, newSession, listenHost, listenPort, warmDns = true)
             Log.i(TAG, "SSH session connected (over WebSocket, auth=${sshAuthType.value})")
-
-            startSocksServer(listenHost, listenPort)
 
             Log.i(TAG, "SSH SOCKS5 proxy started on $listenHost:$listenPort (over WebSocket)")
 
-            prewarmDnsChannels()
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SSH tunnel over WebSocket", e)
-            stop()
+            app.slipnet.util.ConnectionDiagnostics.record(
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Event.SSH_CANCELLED else app.slipnet.util.ConnectionDiagnostics.Event.SSH_FAILED,
+                attempt.diagnosticSessionId,
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Failure.CANCELLED else app.slipnet.util.ConnectionDiagnostics.failure(e))
+            failStartup(attempt)
             Result.failure(e)
         }
     }
@@ -532,12 +577,13 @@ class SshTunnelInstance(val instanceId: String = "default") {
         Log.i(TAG, "  Remote DNS: $remoteDnsHost (fallback: $remoteDnsFallback)")
         Log.i(TAG, "========================================")
 
-        stop()
-        directDns = false
-        preventDnsFallback = blockDirectDns
-        dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
-        dnsServerIndex.set(0)
-        dnsSshFailCount.set(0)
+        val attempt = beginStartup {
+            directDns = false
+            preventDnsFallback = blockDirectDns
+            dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
+            dnsServerIndex.set(0)
+            dnsSshFailCount.set(0)
+        }
 
         return try {
             val jsch = JSch()
@@ -552,32 +598,33 @@ class SshTunnelInstance(val instanceId: String = "default") {
             // Connect directly to the tunnel's local port. The tunnel (DNSTT/Slipstream)
             // forwards raw TCP to the SSH server. No SOCKS5 handshake is needed.
             val newSession = jsch.getSession(sshUsername, proxyHost, proxyPort)
+            attempt.resources.ownSession(newSession)
+            val tcpSocketFactory = attempt.resources.socketFactory(TUNNEL_CONNECT_TIMEOUT_MS)
+            newSession.setSocketFactory(tcpSocketFactory)
             if (sshAuthType == SshAuthType.KEY) {
                 newSession.setConfig("PreferredAuthentications", "publickey")
             } else {
                 newSession.setPassword(sshPassword)
             }
-            applySessionConfig(newSession)
+            applySessionConfig(newSession, attempt)
             newSession.connect(TUNNEL_CONNECT_TIMEOUT_MS)
 
-            if (!newSession.isConnected) {
-                return Result.failure(RuntimeException("SSH session failed to connect through DNSTT"))
-            }
+            check(newSession.isConnected) { "SSH session failed to connect through DNSTT" }
 
-            session = newSession
+            publishStartup(attempt, newSession, listenHost, listenPort, warmDns = true)
             Log.i(TAG, "SSH session connected (over DNSTT tunnel, auth=${sshAuthType.value})")
-
-            startSocksServer(listenHost, listenPort)
 
             Log.i(TAG, "SSH SOCKS5 proxy started on $listenHost:$listenPort (over DNSTT)")
 
-            // Pre-warm DNS channel pool in background
-            prewarmDnsChannels()
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SSH tunnel over DNSTT", e)
-            stop()
+            app.slipnet.util.ConnectionDiagnostics.record(
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Event.SSH_CANCELLED else app.slipnet.util.ConnectionDiagnostics.Event.SSH_FAILED,
+                attempt.diagnosticSessionId,
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Failure.CANCELLED else app.slipnet.util.ConnectionDiagnostics.failure(e))
+            failStartup(attempt)
             Result.failure(e)
         }
     }
@@ -632,12 +679,13 @@ class SshTunnelInstance(val instanceId: String = "default") {
         Log.i(TAG, "  Remote DNS: $remoteDnsHost (fallback: $remoteDnsFallback)")
         Log.i(TAG, "========================================")
 
-        stop()
-        directDns = false
-        preventDnsFallback = blockDirectDns
-        dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
-        dnsServerIndex.set(0)
-        dnsSshFailCount.set(0)
+        val attempt = beginStartup {
+            directDns = false
+            preventDnsFallback = blockDirectDns
+            dnsServers = buildDnsServerList(remoteDnsHost, remoteDnsFallback)
+            dnsServerIndex.set(0)
+            dnsSshFailCount.set(0)
+        }
 
         return try {
             val jsch = JSch()
@@ -651,6 +699,9 @@ class SshTunnelInstance(val instanceId: String = "default") {
             }
             // Create session targeting the real SSH server
             val newSession = jsch.getSession(sshUsername, sshHost, sshPort)
+            attempt.resources.ownSession(newSession)
+            val tcpSocketFactory = attempt.resources.socketFactory(CONNECT_TIMEOUT_MS)
+            newSession.setSocketFactory(tcpSocketFactory)
             if (sshAuthType == SshAuthType.KEY) {
                 newSession.setConfig("PreferredAuthentications", "publickey")
             } else {
@@ -669,28 +720,26 @@ class SshTunnelInstance(val instanceId: String = "default") {
                     }
                 }
             }
-            newSession.setProxy(proxy)
-            applySessionConfig(newSession)
+            newSession.setProxy(attempt.resources.ownProxy(proxy))
+            applySessionConfig(newSession, attempt)
             newSession.connect(CONNECT_TIMEOUT_MS)
 
-            if (!newSession.isConnected) {
-                return Result.failure(RuntimeException("SSH session failed to connect through $proxyLabel"))
-            }
+            check(newSession.isConnected) { "SSH session failed to connect through $proxyLabel" }
 
-            session = newSession
+            publishStartup(attempt, newSession, listenHost, listenPort, warmDns = true)
             Log.i(TAG, "SSH session connected (over $proxyLabel SOCKS5 proxy, auth=${sshAuthType.value})")
-
-            startSocksServer(listenHost, listenPort)
 
             Log.i(TAG, "SSH SOCKS5 proxy started on $listenHost:$listenPort (over $proxyLabel)")
 
-            // Pre-warm DNS channel pool in background (DNS goes through SSH)
-            prewarmDnsChannels()
 
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start SSH tunnel over $proxyLabel", e)
-            stop()
+            app.slipnet.util.ConnectionDiagnostics.record(
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Event.SSH_CANCELLED else app.slipnet.util.ConnectionDiagnostics.Event.SSH_FAILED,
+                attempt.diagnosticSessionId,
+                if (attempt.resources.isCancelled) app.slipnet.util.ConnectionDiagnostics.Failure.CANCELLED else app.slipnet.util.ConnectionDiagnostics.failure(e))
+            failStartup(attempt)
             Result.failure(e)
         }
     }
@@ -698,7 +747,13 @@ class SshTunnelInstance(val instanceId: String = "default") {
     /**
      * Stop the SSH tunnel and SOCKS5 proxy.
      */
-    fun stop() {
+    fun stop() = synchronized(lifecycleLock) { stopLocked() }
+
+    /** Caller holds lifecycleLock; pending sockets must close even before a session is connected. */
+    private fun stopLocked() {
+        val startup = pendingStartup
+        pendingStartup = null
+        startup?.resources?.cancel()
         if (!running.getAndSet(false) && session == null && serverSocket == null) {
             return
         }
@@ -1037,7 +1092,7 @@ class SshTunnelInstance(val instanceId: String = "default") {
                     input.readFully(methods)
 
                     // Authenticate local client
-                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword)) {
+                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword, socket.inetAddress)) {
                         return@submit
                     }
 

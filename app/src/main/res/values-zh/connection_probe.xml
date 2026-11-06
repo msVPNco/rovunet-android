@@ -1,0 +1,9 @@
+<resources>
+    <string name="probe_review_identity">服务器身份尚未获准；请重新测试以核对身份</string>
+    <string name="probe_busy">另一个 VPN 会话正在运行或停止。测试已暂停，未测路径保留原有结果。</string>
+    <string name="probe_changed">VPN 会话已改变，测试已中断。</string>
+    <string name="probe_cleanup">正在释放上一条路径，测试已暂停。</string>
+    <string name="probe_quick_test">快速 HTTPS 测试</string>
+    <string name="probe_stability_test">稳定性测试（3 次采样）</string>
+    <string name="probe_quick_summary">HTTPS 已验证一次 • 建立耗时 %1$d 毫秒 • 尚未评估稳定性</string>
+</resources>

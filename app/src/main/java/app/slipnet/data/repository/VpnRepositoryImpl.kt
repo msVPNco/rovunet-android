@@ -1,6 +1,6 @@
 package app.slipnet.data.repository
 
-import android.os.ParcelFileDescriptor
+import app.slipnet.tunnel.EstablishedTun
 import app.slipnet.util.AppLog as Log
 import app.slipnet.data.local.datastore.PreferencesDataStore
 import app.slipnet.domain.model.ConnectionState
@@ -44,7 +44,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -258,7 +257,6 @@ class VpnRepositoryImpl @Inject constructor(
     private var prevTimestamp = 0L
 
     private var connectedProfile: ServerProfile? = null
-    private var currentTunFd: ParcelFileDescriptor? = null
     private var tunnelStartException: Exception? = null
     private var currentTunnelType: TunnelType? = null
 
@@ -553,52 +551,60 @@ class VpnRepositoryImpl @Inject constructor(
         socksProxyAddr: String? = null,
         socksProxyUser: String? = null,
         socksProxyPass: String? = null
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        connectedProfile = profile
+    ): Result<Unit> {
+        val diagnosticSession = publishingSession
+        return withContext(Dispatchers.IO) {
+            val requestedMode = app.slipnet.util.ConnectionDiagnostics.SoarMode.fromNative(profile.soarTcpMode)
+            app.slipnet.util.ConnectionDiagnostics.soarPolicy(
+                diagnosticSession, requestedMode,
+                if (!socksProxyAddr.isNullOrEmpty()) app.slipnet.util.ConnectionDiagnostics.SoarMode.TCP_ONLY else requestedMode
+            )
+            connectedProfile = profile
 
-        // Resolve hostnames to IPs — Go on Android cannot resolve hostnames.
-        val resolvers = (resolverOverride ?: profile.resolvers).joinToString(",") {
-            val ip = resolveHost(it.host)
-            if (ip.contains(':')) "[$ip]:${it.port}" else "$ip:${it.port}"
-        }
+            // Resolve hostnames to IPs — Go on Android cannot resolve hostnames.
+            val resolvers = (resolverOverride ?: profile.resolvers).joinToString(",") {
+                val ip = resolveHost(it.host)
+                if (ip.contains(':')) "[$ip]:${it.port}" else "$ip:${it.port}"
+            }
 
-        val proxyPort = portOverride ?: preferencesDataStore.proxyListenPort.first()
-        val proxyHost = hostOverride ?: preferencesDataStore.proxyListenAddress.first()
+            val proxyPort = portOverride ?: preferencesDataStore.proxyListenPort.first()
+            val proxyHost = hostOverride ?: preferencesDataStore.proxyListenAddress.first()
 
-        // Discovery candidates are vetted before Soar's bundled global list. Soar's
-        // in-country lists apply only when discovering from its own lists.
-        val (discoveryCountry, discoveryCandidates) = when {
-            !profile.soarDiscovery -> profile.soarCountry to emptyList<String>()
-            profile.soarDiscoveryList == SoarConfig.LIST_APP -> "" to resolverScanner.getDefaultResolversShuffled()
-            profile.soarDiscoveryList == SoarConfig.LIST_CUSTOM -> "" to SoarConfig.splitCandidates(profile.soarDiscoveryCustom)
-            else -> profile.soarCountry to emptyList<String>()
-        }
+            // Discovery candidates are vetted before Soar's bundled global list. Soar's
+            // in-country lists apply only when discovering from its own lists.
+            val (discoveryCountry, discoveryCandidates) = when {
+                !profile.soarDiscovery -> profile.soarCountry to emptyList<String>()
+                profile.soarDiscoveryList == SoarConfig.LIST_APP -> "" to resolverScanner.getDefaultResolversShuffled()
+                profile.soarDiscoveryList == SoarConfig.LIST_CUSTOM -> "" to SoarConfig.splitCandidates(profile.soarDiscoveryCustom)
+                else -> profile.soarCountry to emptyList<String>()
+            }
 
-        val result = SoarBridge.startClient(
-            resolvers = resolvers,
-            zone = profile.domain,
-            publicKey = profile.dnsttPublicKey,
-            listenPort = proxyPort,
-            listenHost = proxyHost,
-            discovery = profile.soarDiscovery,
-            country = discoveryCountry,
-            candidates = discoveryCandidates.joinToString(","),
-            tcpMode = profile.soarTcpMode,
-            verbose = preferencesDataStore.debugLogging.first(),
-            upstreamSocks = socksProxyAddr,
-            upstreamSocksUser = socksProxyUser,
-            upstreamSocksPass = socksProxyPass
-        )
+            val result = SoarBridge.startClient(
+                resolvers = resolvers,
+                zone = profile.domain,
+                publicKey = profile.dnsttPublicKey,
+                listenPort = proxyPort,
+                listenHost = proxyHost,
+                discovery = profile.soarDiscovery,
+                country = discoveryCountry,
+                candidates = discoveryCandidates.joinToString(","),
+                tcpMode = profile.soarTcpMode,
+                verbose = preferencesDataStore.debugLogging.first(),
+                upstreamSocks = socksProxyAddr,
+                upstreamSocksUser = socksProxyUser,
+                upstreamSocksPass = socksProxyPass
+            )
 
-        if (result.isSuccess) {
-            Log.i(TAG, "Soar SOCKS5 proxy started successfully")
-            currentTunnelType = TunnelType.SOAR
-            Result.success(Unit)
-        } else {
-            val error = result.exceptionOrNull()?.message ?: "Failed to start Soar proxy"
-            connectedProfile = null
-            Log.e(TAG, "Failed to start Soar proxy: $error")
-            Result.failure(Exception(error))
+            if (result.isSuccess) {
+                Log.i(TAG, "Soar SOCKS5 proxy started successfully")
+                currentTunnelType = TunnelType.SOAR
+                Result.success(Unit)
+            } else {
+                val error = result.exceptionOrNull()?.message ?: "Failed to start Soar proxy"
+                connectedProfile = null
+                Log.e(TAG, "Failed to start Soar proxy: $error")
+                Result.failure(Exception(error))
+            }
         }
     }
 
@@ -992,22 +998,19 @@ class VpnRepositoryImpl @Inject constructor(
      * DNS resolution works through the VPN's configured DNS servers (via VpnService.addDnsServer())
      * combined with hev-socks5-tunnel's UDP-over-TCP mode that tunnels DNS queries through SOCKS5.
      */
-    suspend fun startTun2Socks(
+    internal suspend fun startTun2Socks(
         profile: ServerProfile,
-        pfd: ParcelFileDescriptor,
+        tun: EstablishedTun,
         socksPortOverride: Int? = null
     ): Result<Unit> {
-        currentTunFd = pfd
-
-        val socksPort = socksPortOverride ?: preferencesDataStore.proxyListenPort.first()
+        val endpoint = if (profile.tunnelType == TunnelType.XRAY) {
+            app.slipnet.tunnel.XrayBridge.activeEndpoint ?: return Result.failure(IllegalStateException("Xray socket unavailable"))
+        } else preferencesDataStore.configuredSocksEndpoint()
+        val socksPort = socksPortOverride ?: endpoint.port
         val disableQuic = preferencesDataStore.disableQuic.first()
-        // Local proxy auth: hev-socks5-tunnel authenticates with the bridge
-        val proxyAuthEnabled = preferencesDataStore.proxyAuthEnabled.first()
         val enableUdpTunneling = true
-        val socksUsername = if (proxyAuthEnabled) preferencesDataStore.proxyAuthUsername.first().ifEmpty { null } else null
-        val socksPassword = if (proxyAuthEnabled) preferencesDataStore.proxyAuthPassword.first().ifEmpty { null } else null
-
-        val mtu = try { preferencesDataStore.vpnMtu.first() } catch (_: Exception) { PreferencesDataStore.DEFAULT_MTU }
+        val socksUsername = endpoint.user
+        val socksPassword = endpoint.password
 
         Log.i(TAG, "========================================")
         Log.i(TAG, "Starting hev-socks5-tunnel")
@@ -1015,7 +1018,7 @@ class VpnRepositoryImpl @Inject constructor(
         Log.i(TAG, "  SOCKS auth: ${if (!socksUsername.isNullOrBlank()) "enabled" else "disabled"}")
         Log.i(TAG, "  Tunnel type: ${profile.tunnelType}")
         Log.i(TAG, "  UDP tunneling: $enableUdpTunneling")
-        Log.i(TAG, "  MTU: $mtu")
+        Log.i(TAG, "  MTU: ${tun.mtu}")
         Log.i(TAG, "========================================")
 
         // Reject non-DNS UDP at TUN level with ICMP Port Unreachable so apps
@@ -1024,20 +1027,20 @@ class VpnRepositoryImpl @Inject constructor(
         // non-DNS UDP directly via DatagramSocket.
         val rejectNonDnsUdp = profile.tunnelType != TunnelType.DOH && profile.tunnelType != TunnelType.XRAY
 
-        val hevResult = HevSocks5Tunnel.start(
-            tunFd = pfd,
+        val hevResult = withContext(Dispatchers.IO) { HevSocks5Tunnel.start(
+            tunFd = tun.descriptor,
             socksAddress = "127.0.0.1",
             socksPort = socksPort,
             socksUsername = socksUsername,
             socksPassword = socksPassword,
             enableUdpTunneling = enableUdpTunneling,
             udpOverTcp = profile.tunnelType != TunnelType.XRAY,
-            mtu = mtu,
+            mtu = tun.mtu,
             ipv4Address = "10.255.255.1",
             ipv6Address = "fd00::1",
             disableQuic = disableQuic,
             rejectNonDnsUdp = rejectNonDnsUdp
-        )
+        ) }
 
         return if (hevResult.isSuccess) {
             publishConnectionState(ConnectionState.Connected(profile))
@@ -1163,93 +1166,6 @@ class VpnRepositoryImpl @Inject constructor(
         currentTunnelType = null
     }
 
-    @Deprecated("Use startSlipstreamProxy() and startTun2Socks() instead for proper startup ordering")
-    fun startWithFd(
-        profile: ServerProfile,
-        pfd: ParcelFileDescriptor,
-        vpnProtect: ((java.net.DatagramSocket) -> Boolean)? = null
-    ): Result<Unit> {
-        connectedProfile = profile
-        currentTunFd = pfd
-
-        val debugLogging = runBlocking { preferencesDataStore.debugLogging.first() }
-
-        // Convert profile to resolver config
-        val resolvers = profile.resolvers.map { resolver ->
-            ResolverConfig(
-                host = resolver.host,
-                port = resolver.port,
-                authoritative = resolver.authoritative
-            )
-        }
-
-        // Start the tunnel in a background coroutine
-        scope.launch(Dispatchers.IO) {
-            try {
-                // Step 1: Start the Slipstream DNS tunnel (SOCKS5 proxy)
-                val proxyPort = runBlocking { preferencesDataStore.proxyListenPort.first() }
-                val proxyHost = runBlocking { preferencesDataStore.proxyListenAddress.first() }
-                val success = startSlipstreamClient(profile.domain, resolvers, profile, debugLogging, proxyPort, proxyHost)
-
-                if (!success) {
-                    val error = tunnelStartException?.message ?: "Failed to start tunnel"
-                    publishConnectionState(ConnectionState.Error(error))
-                    connectedProfile = null
-                    Log.e(TAG, "Failed to start tunnel: $error")
-                    return@launch
-                }
-
-                // Give the SOCKS5 proxy time to start
-                Thread.sleep(500)
-
-                // Step 2: Start hev-socks5-tunnel (tun2socks)
-                // This routes TUN traffic through the SOCKS5 proxy
-                val mtu2 = try { preferencesDataStore.vpnMtu.first() } catch (_: Exception) { PreferencesDataStore.DEFAULT_MTU }
-
-                Log.i(TAG, "========================================")
-                Log.i(TAG, "Starting hev-socks5-tunnel")
-                val localAuthEnabled = runBlocking { preferencesDataStore.proxyAuthEnabled.first() }
-                val localAuthUser = if (localAuthEnabled) runBlocking { preferencesDataStore.proxyAuthUsername.first().ifEmpty { null } } else null
-                val localAuthPass = if (localAuthEnabled) runBlocking { preferencesDataStore.proxyAuthPassword.first().ifEmpty { null } } else null
-
-                Log.i(TAG, "  SOCKS5 proxy: 127.0.0.1:$proxyPort")
-                Log.i(TAG, "  SOCKS auth: ${if (localAuthEnabled) "enabled" else "disabled"}")
-                Log.i(TAG, "  MTU: $mtu2")
-                Log.i(TAG, "========================================")
-
-                val hevResult = HevSocks5Tunnel.start(
-                    tunFd = pfd,
-                    socksAddress = "127.0.0.1",
-                    socksPort = proxyPort,
-                    socksUsername = localAuthUser,
-                    socksPassword = localAuthPass,
-                    mtu = mtu2,
-                    ipv4Address = "10.255.255.1",
-                    ipv6Address = "fd00::1"
-                )
-
-                if (hevResult.isSuccess) {
-                    publishConnectionState(ConnectionState.Connected(profile))
-                    Log.i(TAG, "Tunnel started successfully")
-                } else {
-                    val error = hevResult.exceptionOrNull()?.message ?: "Failed to start tun2socks"
-                    publishConnectionState(ConnectionState.Error(error))
-                    connectedProfile = null
-                    // Stop the SOCKS5 proxy since tun2socks failed
-                    SlipstreamBridge.stopClient()
-                    Log.e(TAG, "Failed to start tunnel: $error")
-                }
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception starting tunnel", e)
-                publishConnectionState(ConnectionState.Error(e.message ?: "Unknown error"))
-                connectedProfile = null
-            }
-        }
-
-        return Result.success(Unit)
-    }
-
     private fun startSlipstreamClient(
         domain: String,
         resolvers: List<ResolverConfig>,
@@ -1289,12 +1205,11 @@ class VpnRepositoryImpl @Inject constructor(
 
         try {
             // Stop hev-socks5-tunnel first
-            HevSocks5Tunnel.stop()
+            withContext(Dispatchers.IO) { HevSocks5Tunnel.stop() }
 
             // Then stop the current proxy (Slipstream or DNSTT)
             stopCurrentProxy()
 
-            currentTunFd = null
             publishConnectionState(ConnectionState.Disconnected)
             connectedProfile = null
             Log.i(TAG, "Tunnel stopped successfully")
@@ -1339,6 +1254,7 @@ class VpnRepositoryImpl @Inject constructor(
 
     fun refreshTrafficStats() {
         val epoch = synchronized(trafficStatsLock) { trafficStatsEpoch }
+        val diagnosticSession = app.slipnet.util.ConnectionDiagnostics.currentSessionId()
         // For SOCKS-bridged tunnel types, use tunnel-level byte counters
         // instead of TUN-level stats (which include local retries/health checks)
         var sent = 0L
@@ -1421,6 +1337,7 @@ class VpnRepositoryImpl @Inject constructor(
                 uploadSpeed = upSpeed,
                 downloadSpeed = downSpeed
             )
+            app.slipnet.util.ConnectionDiagnostics.traffic(diagnosticSession, sent, received)
         }
     }
 }

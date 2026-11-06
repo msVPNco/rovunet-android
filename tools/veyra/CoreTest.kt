@@ -24,6 +24,16 @@ fun main(args: Array<String>) {
         check((importer.parseAndImport(native) as ImportResult.Success).profiles.single().coreLink == link)
         if (args.isNotEmpty()) File(args[0], "core-$i.json").writeText(CoreLink.runtime(link, 10880+i))
     }
+    fun extraLink(key: String, value: String): String {
+        val extra = java.net.URLEncoder.encode("""{"$key":$value}""", "UTF-8")
+        return links[1].substringBefore('#') + "&extra=" + extra
+    }
+    check(CoreLink.parse(extraLink("scMaxEachPostBytes", "65536")).outbound.has("streamSettings"))
+    for (keyName in listOf("downloadSettings", "DownloadSettings", "DOWNLOADSETTINGS", "extra", "unknownOption")) {
+        val unsafe = extraLink(keyName, "{}")
+        check(runCatching { CoreLink.runtime(unsafe, 10880) }.isFailure)
+        check(importer.parseAndImport(unsafe) is ImportResult.Error)
+    }
     val invalid = listOf(links[0].replace("sid=ab", "sid=a"),links[0].substringBefore('#')+"&insecure=1",links[1].substringBefore('#')+"&type=raw",links[2].substringBefore('#')+"&insecure=1",links[3]+"\nPostUp = echo nope",links[3]+"\n[Peer]\nPublicKey = $key")
     invalid.forEach { check(runCatching { CoreLink.parse(it) }.isFailure) }
     println("Core parser: four protocols, native persistence and invalid-option checks passed")

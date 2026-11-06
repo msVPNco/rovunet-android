@@ -12,20 +12,22 @@ fun main() {
  TransportTrust.initialize(android.content.Context())
  val keys=TransportTrust.sshKeys;val key=byteArrayOf(1,2,3)
  TransportTrust.allowPrompt=false
- check(keys.check("server-a",key)!=HostKeyRepository.OK)
- fun approve(action:()->Unit) {
+ check(keys.check("server-a",key)==HostKeyRepository.NOT_INCLUDED)
+ fun approve(waitMs: Long = 0, action:()->Unit) {
   val task=FutureTask { action() };thread(isDaemon=true){task.run()}
   val until=System.nanoTime()+TimeUnit.SECONDS.toNanos(2)
   while(TransportTrust.request.value==null && !task.isDone && System.nanoTime()<until) Thread.yield()
   check(TransportTrust.request.value!=null) { "No identity confirmation" }
-  TransportTrust.answer(true);task.get(5,TimeUnit.SECONDS)
+  val pausedBefore = TransportTrust.decisionWaitNanos
+  if (waitMs > 0) { Thread.sleep(waitMs); check(TransportTrust.decisionWaitNanos - pausedBefore >= TimeUnit.MILLISECONDS.toNanos(waitMs - 20)) }
+  TransportTrust.answer(requireNotNull(TransportTrust.request.value), true);task.get(5,TimeUnit.SECONDS)
  }
  TransportTrust.allowPrompt=true
  approve { check(keys.check("server-a",key)==HostKeyRepository.OK) }
  TransportTrust.allowPrompt=false
  check(keys.check("server-a",key)==HostKeyRepository.OK)
  check(keys.check("server-a",byteArrayOf(9))==HostKeyRepository.CHANGED)
- check(keys.check("server-b",key)!=HostKeyRepository.OK)
+ check(keys.check("server-b",key)==HostKeyRepository.NOT_INCLUDED)
  val store=KeyStore.getInstance("PKCS12").apply{FileInputStream(System.getenv("TEST_TLS_STORE")).use{load(it,"test-only".toCharArray())}}
  val km=KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply{init(store,"test-only".toCharArray())}
  val ctx=SSLContext.getInstance("TLS").apply{init(km.keyManagers,null,null)}
@@ -33,7 +35,7 @@ fun main() {
  thread(isDaemon=true){while(!ssl.isClosed)runCatching { val s=ssl.accept() as SSLSocket;thread(isDaemon=true){runCatching{s.use{it.startHandshake()}}} }}
  check(runCatching { TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort) }.isFailure)
  TransportTrust.allowPrompt=true
- approve { TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort).close() }
+ approve(waitMs = 1200) { TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort).close() }
  approve { check(runCatching { TlsSocketFactory("wrong.invalid",1000).createSocket("127.0.0.1",ssl.localPort) }.isFailure) }
  TransportTrust.allowPrompt=false
  ssl.close()

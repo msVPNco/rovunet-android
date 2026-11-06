@@ -1,50 +1,60 @@
-# Build and verification — alpha11
+# Build and verification — alpha14
 
-The published Full APK is built from application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762, versionCode 17. Release documentation may be newer; it does not change that artifact.
+Target: 0.3.0-alpha14, versionCode 25. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
 
-## Source assets and provenance
+## Source and native provenance
 
-Both source ZIPs expand available pinned Git submodules and record their revisions in SOURCE-MANIFEST.json. The lightweight ZIP omits precompiled .so/.aar files. The larger ZIP retains tracked precompiled assets; generated dependencies and signing material are not a self-contained build environment.
+Explicit source ZIPs expand available pinned trees and record revisions in SOURCE-MANIFEST.json. Light archives omit tracked precompiled .so/.aar files; larger archives retain them. Generated dependencies and signing material are not a self-contained build environment. One original dnstt-mobile tree remains unavailable; no other revision is substituted. Automatic GitHub source archives do not expand submodules.
 
-The original dnstt-mobile tree at b265e04c40835ec1bacd447fff79169e6c2c2233 was unavailable upstream. It has not been replaced with a different revision. See [native source provenance](releases/alpha08-native-sources.md). Automatic GitHub source archives do not expand submodules; use the explicit release assets for available expanded sources.
-
-## Android build
-
-Use Linux, JDK 21, Android SDK platform 36, suitable build tools, NDK 29.0.14206865, Python 3 and Go. Follow [core setup](../VEYRA-CORE.md) for exact native pins.
+Use Linux, JDK 21, SDK platform 36, build tools, NDK 29.0.14206865, Python 3 and module-compatible Go/Rust tooling. The repository Gradle wrapper is authoritative. Prepare pinned dependencies following [core setup](../VEYRA-CORE.md):
 
 ```sh
 python3 tools/veyra/prepare-native.py
-./gradlew :app:assembleFullDebug -PveyraPrebuiltNative=true
 ```
 
-The preparation script validates the upstream Full APK before recovering unchanged native assets and builds the pinned core/launcher. The prebuilt-native flag avoids rebuilding unchanged inherited engines; it is not a claim that the original unavailable source can be rebuilt.
+Preparation validates the inherited Full APK before recovering unchanged engines and builds the pinned core/launcher. `veyraPrebuiltNative=true` avoids rebuilding unchanged engines; it is not a claim of a fresh complete native rebuild. Building OpenSSL from source uses the versioned script, not an unverified downloaded archive.
 
-Release builds require a locally provided keystore.properties and signing key:
+## Private validation package
 
 ```sh
-./gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true
+bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:testFullDebugUnitTest \
+  -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true
 ```
 
-Never add a private signing key, passwords or real user configurations to Git. New signing keys do not upgrade an existing installation automatically. The public alpha11 keeps the previous debug certificate solely for compatibility; production-key migration remains work to plan.
+This produces app.veyra.client.candidate / Rovunet Test, code 25, version 0.3.0-alpha14-review02. It is separate from the public app. Do not publish a private/debug signer as a production update.
 
-## Automated checks
+## Signed public Release
 
-[Exact application-commit CI](https://github.com/msVPNco/rovunet-android/actions/runs/41984862024) passed verification. Its Android build job was skipped; the published APK was compiled and verified locally.
-
-The versioned workflow pins the panel contract revision using tools/veyra/MANAGER_REF. Its preparation step verifies Kotlin JAR hashes and builds the pinned Xray test binary. The same fixture is used by the Go exporter and Kotlin importer.
-
-Entry points:
+Provide private keystore.properties outside Git, a managed keystore and the approved certificate SHA-256. [Signing procedure](RELEASING.md).
 
 ```sh
-tools/veyra/prepare-jvm-ci.sh
-tools/veyra/run-jvm-tests.sh
-python3 tools/veyra/integration.py
+bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true \
+  -ProvunetReleaseCertSha256=APPROVED_64_HEX_CERTIFICATE_SHA256
 ```
 
-These scripts require the workflow's tooling/fixture environment; use [.github/workflows/build.yml](../.github/workflows/build.yml) for exact paths and preparation. See tools/veyra/results/alpha11 for the recorded manager and JVM results.
+`verifyPublicationSigning` rejects absent/mismatched production identity and Android Debug. Never publish key files/passwords or remove this check to make a build pass.
 
-Coverage includes actual connection-manager lifecycle regressions, cancellation/late events, attempt watchdogs, profile choice, settings resource coverage, contract fixtures, real TLS/proxy tests, generated routing and four-protocol TCP/UDP loopback.
+## Unsigned preparation for an offline signer
 
-## Device validation
+```sh
+bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true \
+  -ProvunetUnsignedPublication=true
+```
 
-No Android phone or emulator was connected during this release work. Successful compilation, local traffic and CI are not a substitute for Android foreground-service scheduling, battery policy, network changes, real DPI conditions or long sessions. Physical-device and reported ANR/Connecting verification remains pending.
+This explicit mode leaves Release unsigned and adds `-unsigned` to its filename. It cannot be combined with private-candidate mode and does not fall back to a debug key. It is a non-installable preparation artifact, not a final Full APK. The offline signer must verify source/manifest/native hashes, align/sign with the approved identity, then verify package/version/certificate and installer migration before publication. Ordinary signed builds still enforce the production gate.
+
+## Checks
+
+```sh
+python3 tools/veyra/check-settings-localization.py
+python3 tools/quality/check-editor-localization.py
+python3 tools/quality/check-kotlin-safety.py
+python3 tools/veyra/check-device-gate.py
+bash gradlew :app:testFullDebugUnitTest -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true
+```
+
+`tools/veyra/run-jvm-tests.sh` also executes portable contracts and real network fixtures using the tooling environment described in .github/workflows/build.yml. It needs KOTLIN_JARS and, for network/core checks, XRAY, CORE_LAUNCHER, TEST_TLS_STORE and TLS_TARGET. CI also verifies the pinned panel exporter contract and protocol loopback fixtures. Do not call a skipped job a pass.
+
+For a disposable emulator with VPN consent, build the private application/tests and run `tools/veyra/run-device-gate.py` with ANDROID_SERIAL. The gate rejects skipped, failed, incomplete or missing required tests. It exercises cross-UID VPN traffic/MTU, SSH identity and cancellation, scanner lifecycle, migration/recovery, choices/history and UI/RTL. Local fixture success does not prove real Iranian-network availability or every architecture/backend.
+
+Before delivering an APK, verify ZIP integrity, manifest, apksigner output, all native entries and `tools/quality/check-apk-native.py`. Only record checks actually executed on the final source and distinguish the private validation binary from the unsigned/public Release.

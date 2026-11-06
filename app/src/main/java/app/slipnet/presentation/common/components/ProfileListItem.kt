@@ -1,432 +1,145 @@
 package app.slipnet.presentation.common.components
 
-import app.slipnet.presentation.theme.rv
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.NetworkPing
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.slipnet.domain.model.PingResult
-import app.slipnet.domain.model.ServerProfile
-import app.slipnet.domain.model.TunnelType
-import app.slipnet.domain.model.isAvailable
-import app.slipnet.presentation.profiles.EditProfileViewModel
-import app.slipnet.presentation.theme.ConnectedGreen
-import app.slipnet.presentation.theme.ConnectingOrange
-import app.slipnet.presentation.theme.DisconnectedRed
-import app.slipnet.presentation.theme.WarningYellow
-import app.slipnet.tunnel.DOH_SERVERS
+import app.slipnet.R
+import app.slipnet.domain.model.*
+import app.slipnet.presentation.theme.ConnectionSuccessColor as ConnectedGreen
+import app.slipnet.presentation.theme.collectionTones
+import androidx.compose.ui.text.style.TextDirection
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileListItem(
-    profile: ServerProfile,
-    isSelected: Boolean,
-    isConnected: Boolean,
-    pingResult: PingResult? = null,
-    onClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onExportClick: () -> Unit,
-    onShareQrClick: () -> Unit,
-    onPinClick: () -> Unit,
-    onPingClick: () -> Unit,
-    isPingRunning: Boolean = false,
+    profile: ServerProfile, isSelected: Boolean, isConnected: Boolean,
+    isConnecting: Boolean = false, connectionBusy: Boolean = false,
+    pingResult: PingResult? = null, onClick: () -> Unit, onConnectClick: () -> Unit,
+    onEditClick: () -> Unit, onDeleteClick: () -> Unit, onExportClick: () -> Unit,
+    onShareQrClick: () -> Unit, onPinClick: () -> Unit, onPingClick: () -> Unit,
+    onStabilityTestClick: () -> Unit = onPingClick, isPingRunning: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var showExportMenu by remember { mutableStateOf(false) }
-
-    val cardShape = RoundedCornerShape(12.dp)
-
-    val borderColor = when {
-        isConnected -> ConnectedGreen
-        isSelected -> MaterialTheme.colorScheme.primary
-        else -> null
-    }
-
-    val containerColor = when {
-        isConnected -> ConnectedGreen.copy(alpha = 0.08f)
-        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        else -> MaterialTheme.colorScheme.surface
-    }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (borderColor != null) {
-                    Modifier.border(
-                        width = 2.dp,
-                        color = borderColor,
-                        shape = cardShape
-                    )
-                } else {
-                    Modifier
+    var menu by remember { mutableStateOf(false) }
+    var details by rememberSaveable(profile.id) { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
+    val tones = collectionTones
+    val canStart = !isPingRunning && !connectionBusy && !profile.needsCredentials && !profile.isExpired && profile.tunnelType.isAvailable()
+    val canEdit = !isConnected && !isConnecting && !isPingRunning
+    val border = when { isConnected -> ConnectedGreen; isSelected -> colors.primary; else -> colors.outlineVariant }
+    Card(onClick = {
+        if (!isPingRunning && !connectionBusy) {
+            if (isSelected) { if (!isConnected && canStart) onConnectClick() } else onClick()
+        }
+    }, modifier = modifier.fillMaxWidth().testTag("profile-${profile.id}"), shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(if (isConnected || isSelected) 1.5.dp else 1.dp, if (isConnected || isSelected) border else tones.childOutline),
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) tones.selectedChild else tones.child)) {
+        Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 5.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically) {
+                    Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
+                    if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
+                    if (pingResult is PingResult.Success && pingResult.verified) {
+                        val green = if (pingResult.currentNetwork) ConnectedGreen else colors.onSurfaceVariant
+                        Text("HTTPS ${pingResult.latencyMs} ms", Modifier.testTag("profile-latency-${profile.id}")
+                            .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
+                            color = green, style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
+                            fontWeight = FontWeight.SemiBold)
+                    }
                 }
-            )
-            .clickable { onClick() },
-        shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Profile info
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = profile.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (profile.isPinned) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.PushPin,
-                            contentDescription = "Pinned",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (profile.isLocked) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "Locked",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (profile.isExpired) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Expired",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = DisconnectedRed,
-                            modifier = Modifier
-                                .background(
-                                    DisconnectedRed.copy(alpha = 0.15f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                    if (!profile.tunnelType.isAvailable()) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Not available in Lite",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .background(
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                    if (isConnected) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ConnectedGreen,
-                            modifier = Modifier
-                                .background(
-                                    ConnectedGreen.copy(alpha = 0.15f),
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    } else if (isSelected) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_selected_57fd7a),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .background(
-                                    MaterialTheme.colorScheme.primaryContainer,
-                                    RoundedCornerShape(4.dp)
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-
-                    // Ping result badge
-
+                val status = when {
+                    profile.needsCredentials -> stringResource(R.string.profile_credentials_unavailable)
+                    profile.isExpired -> stringResource(R.string.ui_expired)
+                    !profile.tunnelType.isAvailable() -> stringResource(R.string.ui_unavailable_edition)
+                    isConnected -> stringResource(R.string.rv_connected_229655)
+                    isConnecting -> stringResource(R.string.ui_connecting)
+                    isSelected -> stringResource(R.string.rv_selected_57fd7a)
+                    else -> ""
                 }
-
-                    when (pingResult) {
-                        is PingResult.Pending -> {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                strokeWidth = 1.5.dp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        is PingResult.Testing -> {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(12.dp),
-                                    strokeWidth = 1.5.dp,
-                                    color = ConnectingOrange
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = pingResult.phase,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = ConnectingOrange,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                        is PingResult.Success -> {
-                            val isDnsTunneled = profile.tunnelType in listOf(
-                                TunnelType.DNSTT, TunnelType.DNSTT_SSH,
-                                TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH,
-                                TunnelType.NOIZDNS, TunnelType.NOIZDNS_SSH
-                            )
-                            val latencyColor = if (isDnsTunneled) {
-                                when {
-                                    pingResult.latencyMs < 1000 -> ConnectedGreen
-                                    pingResult.latencyMs < 2000 -> WarningYellow
-                                    else -> DisconnectedRed
-                                }
-                            } else {
-                                when {
-                                    pingResult.latencyMs < 300 -> ConnectedGreen
-                                    pingResult.latencyMs < 1000 -> ConnectingOrange
-                                    else -> DisconnectedRed
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${if (pingResult.verified) "HTTPS" else "TCP"} ${pingResult.latencyMs}ms",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = latencyColor,
-                                modifier = Modifier
-                                    .background(
-                                        latencyColor.copy(alpha = 0.15f),
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                        is PingResult.Error -> {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.last_test_error,
-                                    java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(pingResult.measuredAt)), pingResult.message),
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = DisconnectedRed,
-                                modifier = Modifier
-                                    .background(
-                                        DisconnectedRed.copy(alpha = 0.15f),
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                        is PingResult.Skipped, null -> { /* nothing */ }
+                val test = when (pingResult) {
+                    is PingResult.Success -> if (pingResult.verified) "" else stringResource(R.string.ui_not_verified)
+                    is PingResult.Error -> stringResource(R.string.ui_last_test_failed)
+                    is PingResult.Pending, is PingResult.Testing -> stringResource(R.string.ui_testing)
+                    PingResult.ReviewIdentity -> stringResource(R.string.probe_review_identity)
+                    else -> ""
+                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val destination = if (profile.isLocked) stringResource(R.string.ui_locked) else when (profile.tunnelType) {
+                        TunnelType.SSH -> "${profile.domain}:${profile.sshPort}"
+                        TunnelType.SOCKS5 -> "${profile.domain}:${profile.socks5ServerPort}"
+                        TunnelType.NAIVE, TunnelType.NAIVE_SSH -> "${profile.domain}:${profile.naivePort}"
+                        else -> profile.domain
                     }
-
-                // Subtitle: server/domain info (hidden when locked)
-                Text(
-                    text = if (profile.isLocked) {
-                        "Locked"
-                    } else {
-                        when (profile.tunnelType) {
-                            TunnelType.DOH -> DOH_SERVERS.firstOrNull { it.url == profile.dohUrl }?.name
-                                ?: profile.dohUrl
-                            TunnelType.SSH -> "${profile.domain}:${profile.sshPort}"
-                            TunnelType.DNSTT_SSH -> "${profile.domain} via SSH"
-                            TunnelType.NOIZDNS_SSH -> "${profile.domain} via SSH"
-                            TunnelType.NAIVE_SSH -> "${profile.domain}:${profile.naivePort} via SSH"
-                            TunnelType.NAIVE -> "${profile.domain}:${profile.naivePort}"
-                            TunnelType.SNOWFLAKE -> "Tor Network"
-                            else -> profile.domain
-                        }
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = if (pingResult is PingResult.Success && pingResult.verified)
-                        "${pingResult.successes}/${pingResult.attempts} passed • spread ${pingResult.jitterMs}ms • setup ${pingResult.setupMs}ms\nLast test ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(pingResult.measuredAt))} • short sample only"
-                    else "${app.slipnet.domain.model.ProfileGuidance.category(profile)} • HTTPS not verified",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                // Detail line: tunnel type
-                Text(
-                    text = when (profile.tunnelType) {
-                        TunnelType.SNOWFLAKE -> EditProfileViewModel.detectBridgeType(profile.torBridgeLines).displayName
-                        else -> profile.tunnelType.displayName
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                    Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
+                    Text(listOf(profile.tunnelType.displayName, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                        color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
+                }
+                IconButton(onClick = onEditClick, enabled = canEdit, modifier = Modifier.testTag("profile-edit-${profile.id}")) {
+                    Icon(Icons.Default.Edit, stringResource(R.string.ui_edit), Modifier.size(20.dp))
+                }
+            Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.ui_more_actions)) }
+                DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(if (isConnecting) R.string.ui_cancel_connection else if (isConnected) R.string.ui_disconnect else R.string.rv_connect_1a2303)) },
+                        modifier = Modifier.testTag("profile-connect-${profile.id}"),
+                        enabled = !isPingRunning && (isConnecting || isConnected || canStart),
+                        onClick = { menu = false; onConnectClick() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_edit)) }, enabled = canEdit, onClick = { menu = false; onEditClick() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_test_details)) }, enabled = pingResult != null,
+                        onClick = { menu = false; details = !details })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.probe_quick_test)) }, enabled = !isPingRunning,
+                        onClick = { menu = false; onPingClick() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !isPingRunning,
+                        onClick = { menu = false; onStabilityTestClick() })
+                    DropdownMenuItem(text = { Text(stringResource(if (profile.isPinned) R.string.ui_unpin else R.string.ui_pin)) },
+                        onClick = { menu = false; onPinClick() })
+                    if (!profile.isLocked || profile.allowSharing) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_366489)) }, onClick = { menu = false; onExportClick() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.ui_share_qr)) }, onClick = { menu = false; onShareQrClick() })
+                    }
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_delete), color = colors.error) },
+                        enabled = !isConnected && !isConnecting && !isPingRunning,
+                        onClick = { menu = false; onDeleteClick() })
+                }
             }
-
-            // Action buttons (compact)
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onEditClick,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                IconButton(onClick = onDeleteClick, enabled = canEdit, modifier = Modifier.testTag("profile-delete-${profile.id}")) {
+                    Icon(Icons.Default.Delete, stringResource(R.string.ui_delete), Modifier.size(20.dp))
                 }
-
-                // More menu: pin + export options
-                Box {
-                    IconButton(
-                        onClick = { showExportMenu = true },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = showExportMenu,
-                        onDismissRequest = { showExportMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(if (profile.isPinned) "Unpin" else "Pin to top") },
-                            onClick = {
-                                showExportMenu = false
-                                onPinClick()
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.PushPin,
-                                    contentDescription = null,
-                                    tint = if (profile.isPinned)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        )
-                        if (!profile.isLocked || profile.allowSharing) {
-                            DropdownMenuItem(
-                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_export_366489)) },
-                                onClick = {
-                                    showExportMenu = false
-                                    onExportClick()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Share, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Share QR Code") },
-                                onClick = {
-                                    showExportMenu = false
-                                    onShareQrClick()
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.QrCode2, contentDescription = null)
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text("Real Ping") },
-                            onClick = {
-                                showExportMenu = false
-                                onPingClick()
-                            },
-                            enabled = !isPingRunning,
-                            leadingIcon = {
-                                Icon(Icons.Default.NetworkPing, contentDescription = null)
-                            }
-                        )
-                    }
-                }
-
-                IconButton(
-                    onClick = onDeleteClick,
-                    enabled = !isConnected,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        modifier = Modifier.size(18.dp),
-                        tint = if (!isConnected)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    )
-                }
+            }
+        }
+        if (details) {
+            HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = colors.outlineVariant)
+            val text = when (pingResult) {
+                is PingResult.Success -> if (pingResult.quick) stringResource(R.string.probe_quick_details, pingResult.setupMs,
+                    java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
+                else stringResource(R.string.probe_stability_details, pingResult.successes, pingResult.attempts, pingResult.jitterMs, pingResult.setupMs,
+                    java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
+                is PingResult.Error -> stringResource(R.string.last_test_error,
+                    java.text.DateFormat.getTimeInstance().format(java.util.Date(pingResult.measuredAt)), pingResult.message)
+                else -> stringResource(R.string.ui_not_verified)
+            }
+            Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            if ((pingResult is PingResult.Success && !pingResult.currentNetwork) || (pingResult is PingResult.Error && !pingResult.currentNetwork)) {
+                Text(stringResource(R.string.probe_previous_network), Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
             }
         }
     }

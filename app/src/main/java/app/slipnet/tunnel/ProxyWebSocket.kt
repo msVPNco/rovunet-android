@@ -69,8 +69,9 @@ class ProxyWebSocket(
         val timeoutMs = if (timeout > 0) timeout else CONNECT_TIMEOUT_MS
 
         // Step 1: TCP connect
-        val rawSocket = Socket().apply {
+        val rawSocket = (socketFactory?.createSocket(wsHost, wsPort) ?: Socket().apply {
             connect(InetSocketAddress(wsHost, wsPort), timeoutMs)
+        }).apply {
             tcpNoDelay = true
             soTimeout = 15_000
         }

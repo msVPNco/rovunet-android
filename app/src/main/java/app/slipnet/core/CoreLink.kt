@@ -74,9 +74,8 @@ object CoreLink {
                     require(mode in setOf("auto", "packet-up", "stream-up", "stream-one"))
                     val settings = obj("host" to (q["host"] ?: host), "path" to (q["path"] ?: "/"), "mode" to mode)
                     q["extra"]?.let {
-                        // Preserve options, but forbid an independently configured download endpoint.
                         val extra = JSONObject(it)
-                        require(!extra.has("downloadSettings")) { "Separate XHTTP download endpoints are not supported yet" }
+                        require(extra.keys().asSequence().all { key -> key in xhttpExtraFields }) { "Unsupported XHTTP extra option" }
                         settings.put("extra", extra)
                     }
                     stream.put("xhttpSettings", settings)
@@ -149,6 +148,17 @@ object CoreLink {
         }
         return Parsed("WireGuard", ep.host, obj("protocol" to "wireguard", "settings" to settings))
     }
+
+    // Only the single-endpoint fields understood by the pinned Xray are forwarded.
+    // Xray's Go decoder accepts case variants, so a deny-list of literal spellings is unsafe.
+    private val xhttpExtraFields = setOf(
+        "headers", "xPaddingBytes", "xPaddingObfsMode", "xPaddingKey", "xPaddingHeader",
+        "xPaddingPlacement", "xPaddingMethod", "uplinkHTTPMethod", "sessionIDPlacement",
+        "sessionIDKey", "sessionIDTable", "sessionIDLength", "seqPlacement", "seqKey",
+        "uplinkDataPlacement", "uplinkDataKey", "uplinkChunkSize", "noGRPCHeader", "noSSEHeader",
+        "scMaxEachPostBytes", "scMinPostsIntervalMs", "scMaxBufferedPosts", "scStreamUpServerSecs",
+        "serverMaxHeaderBytes", "xmux", "h2Params"
+    )
 
     fun runtime(text: String, port: Int, username: String? = null, password: String? = null, routing: JSONObject? = null): String {
         require(port in 1..65535)

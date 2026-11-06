@@ -1,6 +1,5 @@
 package app.slipnet.data.export
 
-import android.util.Base64
 import app.slipnet.domain.model.CongestionControl
 import app.slipnet.domain.model.DnsResolver
 import app.slipnet.domain.model.DnsTransport
@@ -136,8 +135,6 @@ class ConfigImporter @Inject constructor() {
         private const val V16_FIELD_COUNT = 36
         private const val V17_FIELD_COUNT = 38
         private const val V18_FIELD_COUNT = 41
-        // Newest format this build reads: the one it exports
-        private val CURRENT_MAX_VERSION = ConfigExporter.VERSION.toInt()
         private const val VLESS_SCHEME = "vless://"
     }
 
@@ -156,7 +153,7 @@ class ConfigImporter @Inject constructor() {
             if (bundlePassword.isNullOrEmpty()) return ImportResult.NeedsPassword
             val encoded = trimmedInput.substring(BUNDLE_ENCRYPTED_SCHEME.length)
             val encryptedBytes = try {
-                Base64.decode(encoded, Base64.NO_WRAP)
+                WireBase64.decode(encoded)
             } catch (e: Exception) {
                 return ImportResult.Error("Failed to decode encrypted bundle")
             }
@@ -248,7 +245,7 @@ class ConfigImporter @Inject constructor() {
             if (trimmedLine.startsWith(ENCRYPTED_SCHEME, ignoreCase = true)) {
                 val encoded = trimmedLine.substring(ENCRYPTED_SCHEME.length)
                 val encryptedBytes = try {
-                    Base64.decode(encoded, Base64.NO_WRAP)
+                    WireBase64.decode(encoded)
                 } catch (e: Exception) {
                     warnings.add("Line ${index + 1}: Failed to decode, skipping")
                     continue
@@ -265,14 +262,10 @@ class ConfigImporter @Inject constructor() {
                 when (parseResult) {
                     is ProfileParseResult.Success -> {
                         val profile = parseResult.profile
-                        if (profile.boundDeviceId.isNotEmpty() && localDeviceId.isNotEmpty() && profile.boundDeviceId != localDeviceId) {
+                        if (profile.boundDeviceId.isNotEmpty() && profile.boundDeviceId != localDeviceId) {
                             warnings.add("Line ${index + 1}: Profile is bound to a different device, skipping")
                         } else {
                             profiles.add(profile)
-                            val version = decoded.split(FIELD_DELIMITER).firstOrNull()?.toIntOrNull()
-                            if (version != null && version > CURRENT_MAX_VERSION) {
-                                warnings.add("Line ${index + 1}: Exported from a newer app version — some settings may be missing")
-                            }
                         }
                     }
                     is ProfileParseResult.Warning -> warnings.add(parseResult.message)
@@ -288,7 +281,7 @@ class ConfigImporter @Inject constructor() {
 
             val encoded = trimmedLine.substring(SCHEME.length)
             val decoded = try {
-                String(Base64.decode(encoded, Base64.NO_WRAP), Charsets.UTF_8)
+                String(WireBase64.decode(encoded), Charsets.UTF_8)
             } catch (e: Exception) {
                 warnings.add("Line ${index + 1}: Failed to decode, skipping")
                 continue
@@ -298,14 +291,10 @@ class ConfigImporter @Inject constructor() {
             when (parseResult) {
                 is ProfileParseResult.Success -> {
                     val profile = parseResult.profile
-                    if (profile.boundDeviceId.isNotEmpty() && localDeviceId.isNotEmpty() && profile.boundDeviceId != localDeviceId) {
+                    if (profile.boundDeviceId.isNotEmpty() && profile.boundDeviceId != localDeviceId) {
                         warnings.add("Line ${index + 1}: Profile is bound to a different device, skipping")
                     } else {
                         profiles.add(profile)
-                        val version = decoded.split(FIELD_DELIMITER).firstOrNull()?.toIntOrNull()
-                        if (version != null && version > CURRENT_MAX_VERSION) {
-                            warnings.add("Line ${index + 1}: Exported from a newer app version — some settings may be missing")
-                        }
                     }
                 }
                 is ProfileParseResult.Warning -> warnings.add(parseResult.message)
@@ -321,6 +310,11 @@ class ConfigImporter @Inject constructor() {
             }
         }
 
+        if (profiles.any { p -> (p.tunnelType == TunnelType.VLESS && p.vlessSecurity == "none") ||
+                (p.tunnelType == TunnelType.XRAY && p.coreLink.startsWith("vless://", true) &&
+                    runCatching { app.slipnet.core.CoreLink.parse(p.coreLink).outbound.optJSONObject("streamSettings")?.optString("security") == "none" }.getOrDefault(false)) }) {
+            warnings += "A VLESS path uses security=none (unencrypted transport)"
+        }
         return ImportResult.Success(profiles.mapIndexed { i, p -> p.copy(importAccountHint = accountHints.getOrNull(i).orEmpty()) }, warnings)
     }
 
@@ -338,7 +332,7 @@ class ConfigImporter @Inject constructor() {
         }
 
         val version = fields[0]
-        return when (version) {
+        val result = when (version) {
             "1" -> parseProfileV1(fields, lineNum)
             "2" -> parseProfileV2(fields, lineNum)
             "3" -> parseProfileV3(fields, lineNum)
@@ -372,23 +366,30 @@ class ConfigImporter @Inject constructor() {
             "31" -> parseProfileV31(fields, lineNum)
             "32" -> parseProfileV32(fields, lineNum)
             "33" -> parseProfileV33(fields, lineNum)
-            else -> {
-                // Forward compatibility: try the highest known parser for newer versions.
-                // Extra trailing fields are safely ignored (parsers only check minimum count).
-                val versionNum = version.toIntOrNull()
-                if (versionNum != null && versionNum > 33) {
-                    parseProfileV33(fields, lineNum)
-                } else {
-                    ProfileParseResult.Error("Line $lineNum: Unsupported version '$version'")
-                }
+            // A newer format may carry mandatory security fields this reader cannot enforce.
+            else -> ProfileParseResult.Error("Line $lineNum: Unsupported version '$version'")
+        }
+        if (result is ProfileParseResult.Success) {
+            val p = result.profile
+            val ports = buildList {
+                add(p.tcpListenPort)
+                if (p.tunnelType == TunnelType.SSH || p.tunnelType.value.endsWith("_ssh")) add(p.sshPort)
+                if (p.tunnelType == TunnelType.SOCKS5) add(p.socks5ServerPort)
+                if (p.tunnelType == TunnelType.NAIVE || p.tunnelType == TunnelType.NAIVE_SSH) add(p.naivePort)
+                if (p.tunnelType == TunnelType.VLESS) add(p.cdnPort)
+                if (p.sshHttpProxyHost.isNotBlank()) add(p.sshHttpProxyPort)
+            }
+            if (ports.any { it !in 1..65535 } || p.dnsPayloadSize !in 0..65535) {
+                return ProfileParseResult.Error("Line $lineNum: Invalid port or DNS payload size")
             }
         }
+        return result
     }
 
     private fun parseProfileV33(fields: List<String>, lineNum: Int): ProfileParseResult {
         if (fields.size < 88) return ProfileParseResult.Error("Line $lineNum: Incomplete v33 credentials")
         return try {
-            val credentials = org.json.JSONObject(String(Base64.decode(fields[87], Base64.NO_WRAP), Charsets.UTF_8))
+            val credentials = org.json.JSONObject(String(WireBase64.decode(fields[87]), Charsets.UTF_8))
             val restored = fields.toMutableList().also {
                 it[12] = credentials.getString("socksUser"); it[13] = credentials.getString("socksPass")
                 it[15] = credentials.getString("sshUser"); it[16] = credentials.getString("sshPass")
@@ -405,8 +406,8 @@ class ConfigImporter @Inject constructor() {
         if (fields.size < 87) return ProfileParseResult.Error("Line $lineNum: Incomplete collection profile")
         return try {
             val base = parseProfileV31(fields, lineNum)
-            val id = String(Base64.decode(fields[85], Base64.NO_WRAP), Charsets.UTF_8)
-            val name = String(Base64.decode(fields[86], Base64.NO_WRAP), Charsets.UTF_8)
+            val id = String(WireBase64.decode(fields[85]), Charsets.UTF_8)
+            val name = String(WireBase64.decode(fields[86]), Charsets.UTF_8)
             require(id.length <= 128 && name.length <= 120)
             if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(collectionId = id, collectionName = name)) else base
         } catch (_: Exception) { ProfileParseResult.Error("Line $lineNum: Invalid collection metadata") }
@@ -416,7 +417,7 @@ class ConfigImporter @Inject constructor() {
         if (fields.size < 85) return ProfileParseResult.Error("Line $lineNum: Incomplete v31 profile")
         if (fields[1] != "xray") return parseProfileV30(fields, lineNum)
         return try {
-            val link = String(Base64.decode(fields[84], Base64.NO_WRAP), Charsets.UTF_8)
+            val link = String(WireBase64.decode(fields[84]), Charsets.UTF_8)
             val parsed = app.slipnet.core.CoreLink.parse(link)
             // Parse common lock/expiry/device fields using a resolver-free base type.
             val base = parseProfileV30(fields.toMutableList().also { it[1] = "socks5" }, lineNum)
@@ -1390,10 +1391,10 @@ class ConfigImporter @Inject constructor() {
         val dnsTransport = DnsTransport.fromValue(fields[22])
         val sshAuthType = SshAuthType.fromValue(fields[23])
         val sshPrivateKey = try {
-            String(Base64.decode(fields[24], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[24]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val sshKeyPassphrase = try {
-            String(Base64.decode(fields[25], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[25]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
 
         if (name.isBlank()) {
@@ -1530,15 +1531,15 @@ class ConfigImporter @Inject constructor() {
         val dnsTransport = DnsTransport.fromValue(fields[22])
         val sshAuthType = SshAuthType.fromValue(fields[23])
         val sshPrivateKey = try {
-            String(Base64.decode(fields[24], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[24]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val sshKeyPassphrase = try {
-            String(Base64.decode(fields[25], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[25]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
 
         // v12 new field: bridge lines (base64-encoded)
         val torBridgeLines = try {
-            String(Base64.decode(fields[26], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[26]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
 
         if (name.isBlank()) {
@@ -1677,13 +1678,13 @@ class ConfigImporter @Inject constructor() {
         val dnsTransport = DnsTransport.fromValue(fields[22])
         val sshAuthType = SshAuthType.fromValue(fields[23])
         val sshPrivateKey = try {
-            String(Base64.decode(fields[24], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[24]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val sshKeyPassphrase = try {
-            String(Base64.decode(fields[25], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[25]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val torBridgeLines = try {
-            String(Base64.decode(fields[26], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[26]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
 
         // v13 new field: DNSTT authoritative mode
@@ -1825,13 +1826,13 @@ class ConfigImporter @Inject constructor() {
         val dnsTransport = DnsTransport.fromValue(fields[22])
         val sshAuthType = SshAuthType.fromValue(fields[23])
         val sshPrivateKey = try {
-            String(Base64.decode(fields[24], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[24]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val sshKeyPassphrase = try {
-            String(Base64.decode(fields[25], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[25]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val torBridgeLines = try {
-            String(Base64.decode(fields[26], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[26]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val dnsttAuthoritative = fields[27] == "1"
 
@@ -1839,7 +1840,7 @@ class ConfigImporter @Inject constructor() {
         val naivePort = fields[28].toIntOrNull() ?: 443
         val naiveUsername = fields[29]
         val naivePassword = try {
-            String(Base64.decode(fields[30], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[30]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         // fields[31] was naiveSni (removed) — ignored if present
 
@@ -1990,25 +1991,25 @@ class ConfigImporter @Inject constructor() {
         val dnsTransport = DnsTransport.fromValue(fields[22])
         val sshAuthType = SshAuthType.fromValue(fields[23])
         val sshPrivateKey = try {
-            String(Base64.decode(fields[24], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[24]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val sshKeyPassphrase = try {
-            String(Base64.decode(fields[25], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[25]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val torBridgeLines = try {
-            String(Base64.decode(fields[26], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[26]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
         val dnsttAuthoritative = fields[27] == "1"
         val naivePort = fields[28].toIntOrNull() ?: 443
         val naiveUsername = fields[29]
         val naivePassword = try {
-            String(Base64.decode(fields[30], Base64.NO_WRAP), Charsets.UTF_8)
+            String(WireBase64.decode(fields[30]), Charsets.UTF_8)
         } catch (_: Exception) { "" }
 
         // v15 new fields: locked profile
         val isLocked = fields[31] == "1"
         val lockPasswordHash = fields[32]
-        if (isLocked && !LockPasswordUtil.isValidHash(lockPasswordHash))
+        if (isLocked && !app.slipnet.core.LockHash.isValid(lockPasswordHash))
             return ProfileParseResult.Error("Line $lineNum: Invalid profile lock")
 
         if (name.isBlank()) {
@@ -2270,7 +2271,7 @@ class ConfigImporter @Inject constructor() {
         // SSH payload (position 59, base64-encoded)
         val sshPayload = if (fields.size > 59) {
             try {
-                String(android.util.Base64.decode(fields[59], android.util.Base64.NO_WRAP), Charsets.UTF_8)
+                String(WireBase64.decode(fields[59]), Charsets.UTF_8)
             } catch (_: Exception) { "" }
         } else ""
 
@@ -2393,7 +2394,7 @@ class ConfigImporter @Inject constructor() {
 
             if (server.isBlank() || port !in 1..65535) return ProfileParseResult.Error("Line $lineNum: Invalid endpoint")
             if (!params["flow"].isNullOrEmpty() || params["encryption"]?.let { it != "none" } == true ||
-                params["allowInsecure"] in listOf("1", "true")) {
+                params.any { (key, value) -> key.equals("allowInsecure", true) && (value == "1" || value.equals("true", true)) }) {
                 return ProfileParseResult.Error("Line $lineNum: Unsupported VLESS flow, encryption or insecure TLS")
             }
             val transport = params["type"] ?: "tcp"
@@ -2644,15 +2645,17 @@ class ConfigImporter @Inject constructor() {
         if (resolversStr.isBlank()) return emptyList()
 
         return resolversStr.split(RESOLVER_DELIMITER).mapNotNull { resolverStr ->
-            val parts = resolverStr.split(RESOLVER_PART_DELIMITER)
-            if (parts.size >= 2) {
-                val host = parts[0]
-                val port = parts[1].toIntOrNull() ?: 53
-                val authoritative = parts.getOrNull(2) == "1"
-                if (host.isNotBlank() && port in 1..65535) {
-                    DnsResolver(host = host, port = port, authoritative = authoritative)
-                } else null
-            } else null
+            val last = resolverStr.lastIndexOf(RESOLVER_PART_DELIMITER)
+            if (last < 1) return@mapNotNull null
+            val tail = resolverStr.substring(last + 1)
+            val prefix = resolverStr.substring(0, last)
+            val flag = tail in setOf("0", "1") && prefix.contains(RESOLVER_PART_DELIMITER)
+            val portText = if (flag) prefix.substringAfterLast(RESOLVER_PART_DELIMITER) else tail
+            val host = (if (flag) prefix.substringBeforeLast(RESOLVER_PART_DELIMITER) else prefix)
+                .removeSurrounding("[", "]")
+            val port = portText.toIntOrNull() ?: return@mapNotNull null
+            if (host.isBlank() || port !in 1..65535) return@mapNotNull null
+            DnsResolver(host = host, port = port, authoritative = flag && tail == "1")
         }
     }
 

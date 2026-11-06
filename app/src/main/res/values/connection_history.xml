@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_no_recent_path">All available paths failed the recent test. Select a specific path to retry it directly.</string>
+    <string name="probe_previous_network">Saved result · run a new test to verify this network</string>
+    <string name="probe_collection_results">Results: %1$d verified · %2$d failed · %3$d not completed</string>
+    <string name="probe_quick_details">Valid HTTPS 204 · setup %1$d ms · tested %2$s · stability not measured</string>
+    <string name="probe_stability_details">HTTPS 204: %1$d/%2$d · spread %3$d ms · setup %4$d ms · tested %5$s</string>
+    <string name="probe_204_requirement">The HTTPS test expects HTTP 204 with a valid certificate. Another status means this test target was not verified; it does not by itself prove that the tunnel cannot carry traffic.</string>
+    <string name="connection_history_warning">Could not save connection history on this device. Your configurations are unchanged.</string>
+    <string name="profiles_preparing">Preparing saved configurations…</string>
+</resources>

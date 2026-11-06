@@ -15,9 +15,9 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -42,12 +42,12 @@ const (
 
 // TunnelTestResult holds detailed DNS tunnel compatibility results.
 type TunnelTestResult struct {
-	NSSupport      bool
-	TXTSupport     bool
-	RandomSub      bool
-	TunnelRealism  bool
-	EDNS0Support   bool
-	EDNSMaxPayload int
+	NSSupport       bool
+	TXTSupport      bool
+	RandomSub       bool
+	TunnelRealism   bool
+	EDNS0Support    bool
+	EDNSMaxPayload  int
 	NXDOMAINCorrect bool
 }
 
@@ -79,12 +79,12 @@ func (t *TunnelTestResult) Details() string {
 
 // ScanResult holds the result of scanning one resolver.
 type ScanResult struct {
-	Host       string
-	Port       int
-	Status     string
-	LatencyMs  int64
-	Error      string
-	Tunnel     *TunnelTestResult
+	Host      string
+	Port      int
+	Status    string
+	LatencyMs int64
+	Error     string
+	Tunnel    *TunnelTestResult
 }
 
 // ScanResolvers scans a list of resolver IPs concurrently.
@@ -147,7 +147,10 @@ func scanResolver(host string, port int, testDomain string, timeoutMs int, query
 	go func() { defer twg.Done(); tunnel.NSSupport = testNS(host, port, parent, timeoutMs) }()
 	go func() { defer twg.Done(); tunnel.TXTSupport = testTXT(host, port, testDomain, timeoutMs) }()
 	go func() { defer twg.Done(); tunnel.RandomSub = testRandomSubdomain(host, port, testDomain, timeoutMs) }()
-	go func() { defer twg.Done(); tunnel.TunnelRealism = testTunnelRealism(host, port, testDomain, timeoutMs, querySize) }()
+	go func() {
+		defer twg.Done()
+		tunnel.TunnelRealism = testTunnelRealism(host, port, testDomain, timeoutMs, querySize)
+	}()
 	go func() {
 		defer twg.Done()
 		tunnel.EDNS0Support, tunnel.EDNSMaxPayload = testEDNS0(host, port, testDomain, timeoutMs)
@@ -323,6 +326,9 @@ func dnsQuery(host string, port int, name string, qtype uint16, timeoutMs int, a
 	if err != nil {
 		return nil, err
 	}
+	if n < 12 || buf[0] != txid[0] || buf[1] != txid[1] || buf[2]&0x80 == 0 {
+		return nil, fmt.Errorf("invalid DNS response header")
+	}
 	return buf[:n], nil
 }
 
@@ -345,11 +351,11 @@ func encodeDNSName(name string) []byte {
 func buildEDNS0OPT(payloadSize int) []byte {
 	// OPT pseudo-RR: name=root(0), type=OPT(41), class=payloadSize, TTL=0, rdlen=0
 	return []byte{
-		0x00,                                      // root name
-		0x00, byte(dnsTypeOPT),                    // type OPT (41)
+		0x00,                   // root name
+		0x00, byte(dnsTypeOPT), // type OPT (41)
 		byte(payloadSize >> 8), byte(payloadSize), // UDP payload size
-		0x00, 0x00, 0x00, 0x00,                    // extended RCODE + version + flags
-		0x00, 0x00,                                // RDLENGTH = 0
+		0x00, 0x00, 0x00, 0x00, // extended RCODE + version + flags
+		0x00, 0x00, // RDLENGTH = 0
 	}
 }
 

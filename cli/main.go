@@ -1453,6 +1453,12 @@ VayDNS options (override config values):
   --version           Show version
   --help              Show this help
 
+SSH host identity:
+  Compare the server host-key fingerprint with the administrator's trusted copy.
+  Use OpenSSH to save the verified host and port in ~/.ssh/known_hosts on first use.
+  Set ROVUNET_SSH_KNOWN_HOSTS to use another verified known_hosts file.
+  A changed key requires verification with the administrator before replacing the entry.
+
 Options (scan):
   --domain DOMAIN     Tunnel domain to test (required unless --config given)
   --ips FILE          File with resolver IPs, one per line (or use --ip for single)

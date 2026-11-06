@@ -1,6 +1,6 @@
 # Security policy
 
-Rovunet is a multi-protocol Android VPN client. Current supported-release information and known limitations are recorded in [STATUS](docs/STATUS.md). The public alpha11 retains the existing debug signing identity for upgrade compatibility; production signing and physical-device validation are pending.
+Rovunet is a multi-protocol Android VPN client. Current supported-release information and known limitations are recorded in [STATUS](docs/STATUS.md). The previous public alpha11 uses its historical debug signing identity. Alpha14/code 25 is being prepared; managed production signing and a validated migration remain publication prerequisites. Private candidate packages have a different identity. See [upgrade constraints](docs/UPGRADE.md).
 
 ## Report a vulnerability privately
 
@@ -17,3 +17,11 @@ Download the APK from the repository's Releases. Compare its SHA-256 with the pu
 Saved SSH/TLS identity approval, encrypted backups and profile sharing controls have different roles. An embedded-key profile lock does not guarantee secrecy against another holder of the app. Existing native binaries and the unavailable pinned upstream source revision are disclosed in [the provenance report](docs/releases/alpha08-native-sources.md).
 
 Do not use a public profile to expose server administration credentials. Server operators remain responsible for server updates and access control; client fixes do not update the server panel or its services.
+
+## Stored credentials and diagnostics
+
+Current stored profile secrets use Android Keystore-backed encryption; unreadable rows require explicit recovery. A password export is a separate portability mechanism and excludes locked profiles in bulk export. Device binding may change with signing identity; do not recommend uninstalling the only readable copy.
+
+Safe connection reports accept typed events/codes, configured Soar policy and UI counter snapshots, not endpoint/account/credential fields. They are local and optional to share. Inherited verbose backend logs have a different scope and may contain sensitive data; review/redact them first.
+
+An explicit unsigned Release preparation artifact cannot be installed and is not a public APK. Production signing checks remain required for ordinary signed releases; unsigned preparation is not a debug-signing fallback.

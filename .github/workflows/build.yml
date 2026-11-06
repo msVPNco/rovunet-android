@@ -34,6 +34,10 @@ jobs:
       CORE_TEST_JAR: ${{ github.workspace }}/../ci/tests.jar
     steps:
       - uses: actions/checkout@v4
+      - name: Verify device-result gate
+        run: python3 tools/veyra/check-device-gate.py
+      - name: Reject new unsafe Kotlin constructs
+        run: python3 tools/quality/check-kotlin-safety.py
       - uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -77,9 +81,14 @@ jobs:
           python3 -m pip install cryptography==46.0.3
           python3 tools/veyra/integration.py
 
+  android-device:
+    uses: ./.github/workflows/android-device.yml
+
   build:
-    needs: verify
+    needs: [verify, android-device]
     if: github.event_name == 'workflow_dispatch' && inputs.build_android
+    env:
+      ROVUNET_RELEASE_CERT_SHA256: ${{ vars.ROVUNET_RELEASE_CERT_SHA256 }}
     runs-on: ubuntu-latest
 
     steps:
@@ -157,7 +166,12 @@ jobs:
           cache-dependency-path: gomobile-build/go.sum
 
       - name: Install gomobile
-        run: go install golang.org/x/mobile/cmd/gomobile@latest && gomobile init
+        working-directory: gomobile-build
+        run: |
+          mobile_version=$(go list -m -f '{{.Version}}' golang.org/x/mobile)
+          [[ "$mobile_version" =~ ^v[0-9][A-Za-z0-9.+-]*$ ]]
+          go install "golang.org/x/mobile/cmd/gomobile@$mobile_version"
+          gomobile init
 
       - name: Build Go mobile libraries
         working-directory: gomobile-build
@@ -201,18 +215,17 @@ jobs:
           # Strip leading whitespace from heredoc indentation
           sed -i 's/^[[:space:]]*//' keystore.properties
 
-      - name: Set up local.properties
-        env:
-          CONFIG_ENCRYPTION_KEY: ${{ secrets.CONFIG_ENCRYPTION_KEY }}
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "CONFIG_ENCRYPTION_KEY=$CONFIG_ENCRYPTION_KEY" >> local.properties
+      - name: Set up Android SDK path for the prebuilt-native build
+        run: printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 
       - name: Prepare verified Full native engines
         run: python3 tools/veyra/prepare-native.py
 
       - name: Build Full Release APK
         run: ./gradlew assembleFullRelease -PveyraPrebuiltNative=true --no-daemon
+
+      - name: Run standard Android JVM unit tests
+        run: ./gradlew :app:testFullDebugUnitTest -PveyraPrebuiltNative=true --no-daemon
 
       - name: Build Lite Release APK
         run: ./gradlew assembleLiteRelease -PveyraPrebuiltNative=true --no-daemon
@@ -222,6 +235,9 @@ jobs:
           mkdir -p release-apks
           cp app/build/outputs/apk/full/release/*.apk release-apks/ 2>/dev/null || true
           cp app/build/outputs/apk/lite/release/*.apk release-apks/ 2>/dev/null || true
+
+      - name: Verify shipped 64-bit ELF alignment
+        run: python3 tools/quality/check-apk-native.py release-apks/*.apk
 
       - name: Upload Release APKs
         uses: actions/upload-artifact@v4

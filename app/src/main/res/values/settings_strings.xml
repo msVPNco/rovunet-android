@@ -197,4 +197,6 @@
     <string name="connection_cleanup_pending">Previous tunnel is still stopping; connection was not started</string>
     <string name="connection_service_stop_failed">Android could not stop the VPN service</string>
     <string name="connection_service_start_failed">Android could not start the VPN foreground service</string>
+    <string name="block_ipv6_traffic">Block IPv6</string>
+    <string name="block_ipv6_traffic_hint">Block IPv6 for apps covered by the VPN on the next connection.</string>
 </resources>

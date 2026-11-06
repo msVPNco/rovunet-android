@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -138,7 +137,6 @@ func connectVless(profile *Profile) {
 	fmt.Printf("  Type:       VLESS (CDN)\n")
 	fmt.Printf("  CDN:        %s:%d\n", profile.VlessCdnIp, profile.VlessCdnPort)
 	fmt.Printf("  Domain:     %s\n", profile.Domain)
-	fmt.Printf("  UUID:       %s...\n", profile.VlessUuid[:8])
 	fmt.Printf("  WS Path:    %s\n", profile.VlessWsPath)
 	if profile.SniFragmentEnabled {
 		fmt.Printf("  Fragment:   %s (delay %dms)\n", profile.SniFragmentStrategy, profile.SniFragmentDelayMs)
@@ -275,8 +273,8 @@ func handleVlessSocks5(client net.Conn, profile *Profile, uuid []byte) {
 		sni = profile.FakeSni
 	}
 	tlsConn := tls.Client(tlsUnderlay, &tls.Config{
-		ServerName:         sni,
-		InsecureSkipVerify: true,
+		ServerName: sni,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err := tlsConn.Handshake(); err != nil {
 		rawConn.Close()
@@ -330,42 +328,50 @@ func handleVlessSocks5(client net.Conn, profile *Profile, uuid []byte) {
 	}
 
 	// Bidirectional relay (client <-> WS-framed VLESS)
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	// client -> VLESS (wrap in WS frames)
+	done := make(chan struct{})
 	go func() {
-		defer wg.Done()
+		defer close(done)
 		buf := make([]byte, 65536)
 		for {
 			n, err := client.Read(buf)
 			if n > 0 {
-				writeWSBinaryFrame(tlsConn, buf[:n])
-			}
-			if err != nil {
-				break
-			}
-		}
-	}()
-
-	// VLESS -> client (unwrap WS frames)
-	go func() {
-		defer wg.Done()
-		for {
-			frame, err := readWSFrame(br)
-			if err != nil {
-				break
-			}
-			if len(frame) > 0 {
-				if _, err := client.Write(frame); err != nil {
-					break
+				tlsConn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+				if writeErr := writeWSBinaryFrame(tlsConn, buf[:n]); writeErr != nil {
+					tlsConn.Close()
+					return
 				}
 			}
+			if err != nil {
+				if err == io.EOF {
+					// Allow the peer to finish a response after the local half-close.
+					tlsConn.SetReadDeadline(time.Now().Add(60 * time.Second))
+				} else {
+					tlsConn.Close()
+				}
+				return
+			}
 		}
 	}()
-
-	wg.Wait()
+	for {
+		frame, err := readWSFrame(br)
+		if err != nil {
+			break
+		}
+		if len(frame) > 0 {
+			client.SetWriteDeadline(time.Now().Add(30 * time.Second))
+			if _, err := client.Write(frame); err != nil {
+				break
+			}
+			select {
+			case <-done:
+				tlsConn.SetReadDeadline(time.Now().Add(60 * time.Second))
+			default:
+			}
+		}
+	}
 	tlsConn.Close()
+	client.Close()
+	<-done
 }
 
 // buildVlessHeader constructs the VLESS request header.
@@ -388,7 +394,7 @@ func buildVlessHeader(uuid []byte, host string, port int) []byte {
 		buf = append(buf, ip6...)
 	} else {
 		// Domain
-		buf = append(buf, 0x02)           // domain
+		buf = append(buf, 0x02)            // domain
 		buf = append(buf, byte(len(host))) // length
 		buf = append(buf, []byte(host)...)
 	}
@@ -398,11 +404,7 @@ func buildVlessHeader(uuid []byte, host string, port int) []byte {
 
 // ── WebSocket framing helpers for VLESS ──────────────────────────────
 
-var vlessWSMu sync.Mutex
-
 func writeWSBinaryFrame(conn net.Conn, payload []byte) error {
-	vlessWSMu.Lock()
-	defer vlessWSMu.Unlock()
 
 	pLen := len(payload)
 	header := []byte{0x82} // FIN + binary

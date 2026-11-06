@@ -14,6 +14,10 @@ object SshTunnelBridge {
 
     private val defaultInstance = SshTunnelInstance("default")
 
+    var startupCancellation: StartupCancellation?
+        get() = defaultInstance.startupCancellation
+        set(value) { defaultInstance.startupCancellation = value }
+
     var trustIdentity: String
         get() = defaultInstance.trustIdentity
         set(value) { defaultInstance.trustIdentity = value }

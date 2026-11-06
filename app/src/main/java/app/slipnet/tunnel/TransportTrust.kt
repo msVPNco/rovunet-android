@@ -20,29 +20,91 @@ object TransportTrust {
     val request = _request.asStateFlow()
     @Volatile var allowPrompt = false
     fun initialize(context: Context) { preferences = context.getSharedPreferences("rovunet_server_trust", Context.MODE_PRIVATE) }
-    fun answer(accepted: Boolean) { _request.value?.answer?.complete(accepted) }
-    fun clear() { preferences.edit().clear().commit() }
-    @Synchronized private fun verify(endpoint: String, encoded: ByteArray): Boolean {
-        val fingerprint = "SHA256:" + android.util.Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(encoded), android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING)
-        val key = MessageDigest.getInstance("SHA-256").digest(endpoint.toByteArray()).joinToString("") { "%02x".format(it) }
-        val known = preferences.getString(key, null)
-        if (known != null) {
-            check(MessageDigest.isEqual(known.toByteArray(), fingerprint.toByteArray())) { "Server identity changed; connection refused" }
-            return true
-        }
-        check(allowPrompt) { "Server identity approval required; connect manually first" }
-        val pending = Request(endpoint, fingerprint)
-        _request.value = pending
-        return try {
-            val accepted = pending.answer.get(60, TimeUnit.SECONDS)
-            if (accepted) check(preferences.edit().putString(key, fingerprint).commit()) { "Could not save server identity" }
-            accepted
-        } finally { _request.value = null }
+    private val pending = linkedMapOf<String, Request>()
+    private var decisionStarted = 0L
+    private var completedDecisionNanos = 0L
+    val decisionWaitNanos: Long get() = synchronized(pending) {
+        completedDecisionNanos + if (pending.isEmpty()) 0L else System.nanoTime() - decisionStarted
     }
-    val sshKeys = object : HostKeyRepository {
+
+    private fun updateRequest() {
+        if (pending.isEmpty() && decisionStarted != 0L) {
+            completedDecisionNanos += System.nanoTime() - decisionStarted
+            decisionStarted = 0L
+        }
+        _request.value = pending.values.firstOrNull()
+    }
+
+    fun answer(request: Request, accepted: Boolean) = synchronized(pending) {
+        if (_request.value === request) request.answer.complete(accepted)
+    }
+
+    fun cancelPending() = synchronized(pending) {
+        pending.values.forEach { it.answer.complete(false) }
+        pending.clear()
+        updateRequest()
+    }
+
+    fun clear() = synchronized(pending) {
+        cancelPending()
+        check(preferences.edit().clear().commit()) { "Could not reset server identities" }
+    }
+
+    private class ApprovalRequired : IllegalStateException("Server identity approval required; connect manually first")
+    private fun storageKey(endpoint: String): String =
+        MessageDigest.getInstance("SHA-256").digest(endpoint.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    private fun fingerprint(encoded: ByteArray): String = "SHA256:" + android.util.Base64.encodeToString(
+        MessageDigest.getInstance("SHA-256").digest(encoded), android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING)
+
+    private fun verify(endpoint: String, encoded: ByteArray, prompt: Boolean = allowPrompt,
+                       storedEndpoint: String = endpoint): Boolean {
+        val fingerprint = fingerprint(encoded)
+        val key = storageKey(storedEndpoint)
+        val request = synchronized(pending) {
+            preferences.getString(key, null)?.let { known ->
+                check(known == fingerprint) { "Server identity changed; connection refused" }
+                return true
+            }
+            if (!prompt) throw ApprovalRequired()
+            pending[endpoint]?.let {
+                check(it.fingerprint == fingerprint) { "Server identity changed; connection refused" }
+                it
+            } ?: Request(endpoint, fingerprint).also {
+                if (pending.isEmpty()) decisionStarted = System.nanoTime()
+                pending[endpoint] = it
+                updateRequest()
+            }
+        }
+        try {
+            val accepted = try { request.answer.get(60, TimeUnit.SECONDS) }
+                catch (_: java.util.concurrent.TimeoutException) { false }
+                catch (_: InterruptedException) { Thread.currentThread().interrupt(); false }
+            if (!accepted) return false
+            synchronized(pending) {
+                val known = preferences.getString(key, null)
+                if (known != null) return known == fingerprint
+                if (pending[endpoint] !== request) return false
+                check(preferences.edit().putString(key, fingerprint).commit()) { "Could not save server identity" }
+                return true
+            }
+        } finally {
+            synchronized(pending) {
+                if (pending[endpoint] === request) {
+                    pending.remove(endpoint)
+                    updateRequest()
+                }
+            }
+        }
+    }
+    val sshKeys = sshRepository(manual = true)
+    val scannerSshKeys = sshRepository(manual = false)
+
+    private fun sshRepository(manual: Boolean): HostKeyRepository = object : HostKeyRepository {
         override fun check(host: String, key: ByteArray): Int = try {
-            if (verify("SSH · $host", key)) HostKeyRepository.OK else HostKeyRepository.NOT_INCLUDED
-        } catch (_: Exception) { HostKeyRepository.CHANGED }
+            if (verify("SSH · $host", key, manual && allowPrompt)) HostKeyRepository.OK else HostKeyRepository.NOT_INCLUDED
+        } catch (_: ApprovalRequired) { HostKeyRepository.NOT_INCLUDED }
+        catch (_: Exception) { HostKeyRepository.CHANGED }
         override fun add(key: HostKey, ui: UserInfo?) = Unit
         override fun remove(host: String, type: String?) = Unit
         override fun remove(host: String, type: String?, key: ByteArray?) = Unit
@@ -56,11 +118,32 @@ object TransportTrust {
             override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) = system.checkClientTrusted(chain, auth)
             override fun getAcceptedIssuers(): Array<X509Certificate> = system.acceptedIssuers
             override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) {
+                val endpoint = "TLS · $host:$port"
+                val spkiEndpoint = "$endpoint · SPKI/v1"
+                require(chain.isNotEmpty())
+                val pinned = synchronized(pending) {
+                    val legacyKey = storageKey(endpoint)
+                    val spkiKey = storageKey(spkiEndpoint)
+                    val legacy = preferences.getString(legacyKey, null)
+                    if (legacy != null && !preferences.contains(spkiKey)) {
+                        // Do not infer an old pin's public key from a different certificate.
+                        chain.forEach { it.checkValidity() }
+                        check(legacy == fingerprint(chain.first().encoded)) { "Server identity changed; connection refused" }
+                        check(preferences.edit().putString(spkiKey, fingerprint(chain.first().publicKey.encoded))
+                            .remove(legacyKey).commit()) { "Could not migrate server identity" }
+                    }
+                    preferences.contains(spkiKey)
+                }
+                if (pinned) {
+                    chain.forEach { it.checkValidity() }
+                    if (!verify(endpoint, chain.first().publicKey.encoded, false, spkiEndpoint)) throw java.security.cert.CertificateException("Server identity changed")
+                    return
+                }
                 try { system.checkServerTrusted(chain, auth) }
                 catch (e: java.security.cert.CertificateException) {
                     require(chain.isNotEmpty())
                     chain.forEach { it.checkValidity() }
-                    if (!verify("TLS · $host:$port", chain.first().encoded)) throw e
+                    if (!verify(endpoint, chain.first().publicKey.encoded, storedEndpoint = spkiEndpoint)) throw e
                 }
             }
         }

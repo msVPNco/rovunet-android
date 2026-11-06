@@ -3,9 +3,6 @@ package app.slipnet.util
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -43,19 +40,11 @@ object AppLog {
     // the UI polls via flushIfDirty() on each collection (every frame).
     private val dirty = AtomicBoolean(false)
 
-    private val dateFormat = object : ThreadLocal<SimpleDateFormat>() {
-        override fun initialValue() = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
-    }
-
     private fun append(level: Char, tag: String, msg: String) {
         val id = nextId.getAndIncrement()
-        val entry = if (observerCount > 0) {
-            val ts = dateFormat.get()!!.format(Date())
-            LogEntry(id, "$ts $level/$tag: $msg", level)
-        } else {
-            // Lightweight entry — no timestamp formatting when nobody is watching
-            LogEntry(id, "$level/$tag: $msg", level)
-        }
+        // Keep timing even when the log viewer is closed; avoid wall-clock formatting on hot paths.
+        val elapsed = android.os.SystemClock.elapsedRealtime()
+        val entry = LogEntry(id, "+${elapsed}ms $level/$tag: $msg", level)
         synchronized(buffer) {
             buffer.addLast(entry)
             while (buffer.size > MAX_LINES) buffer.removeFirst()
@@ -100,7 +89,6 @@ object AppLog {
         "DnsttSocksBridge",
         "SshTunnelBridge",
         "SlipNetVpnService",
-        "KotlinTunnelManager",
         "NaiveSocksBridge",
         "TorSocksBridge",
         "SlipstreamBridge",

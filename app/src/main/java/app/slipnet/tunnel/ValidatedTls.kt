@@ -1,17 +1,24 @@
 package app.slipnet.tunnel
 
 import java.net.Socket
-import java.util.Timer
-import java.util.TimerTask
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLSocket
 
 /** Bounded TLS setup shared by all SSH transports. Live streams have no idle read deadline. */
 object ValidatedTls {
+    private val deadlines = Executors.newSingleThreadScheduledExecutor { task ->
+        Thread(task, "rovunet-tls-deadlines").apply { isDaemon = true }
+    }
     fun wrap(raw: Socket, host: String, port: Int, timeoutMs: Int = 15_000): SSLSocket {
-        val deadline = if (TransportTrust.allowPrompt) maxOf(timeoutMs, 60_000) else timeoutMs.coerceIn(1000, 15_000)
-        val timer = Timer("rovunet-tls-deadline", true)
-        timer.schedule(object : TimerTask() { override fun run() { runCatching { raw.close() } } }, deadline.toLong())
+        val deadline = timeoutMs.coerceIn(1000, 15_000)
+        val started = System.nanoTime()
+        val previouslyPaused = TransportTrust.decisionWaitNanos
+        val timer = deadlines.scheduleAtFixedRate({
+            val elapsed = System.nanoTime() - started - (TransportTrust.decisionWaitNanos - previouslyPaused)
+            if (elapsed >= TimeUnit.MILLISECONDS.toNanos(deadline.toLong())) runCatching { raw.close() }
+        }, 100, 100, TimeUnit.MILLISECONDS)
         try {
             val tls = TransportTrust.tlsFactory(host, port).createSocket(raw, host, port, true) as SSLSocket
             tls.sslParameters = tls.sslParameters.apply {
@@ -23,6 +30,6 @@ object ValidatedTls {
             tls.soTimeout = 0
             return tls
         } catch (e: Exception) { runCatching { raw.close() }; throw e }
-        finally { timer.cancel() }
+        finally { timer.cancel(false) }
     }
 }

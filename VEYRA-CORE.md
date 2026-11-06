@@ -1,3 +1,5 @@
+> Current alpha14 build, signing and source provenance: [BUILDING](docs/BUILDING.md), [STATUS](docs/STATUS.md), [UPGRADE](docs/UPGRADE.md). Older version examples below are engineering history, not the identity of a current release.
+
 # Rovunet — core protocol integration
 
 Current release: [alpha11](docs/releases/alpha11.md). This document retains the original integration history; current install, test and release behavior is documented in [the user guide](docs/USER_GUIDE.md) and [build notes](docs/BUILDING.md). Native export is now v33; references to v31 below describe the initial integration.

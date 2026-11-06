@@ -41,7 +41,17 @@ echo "Working directory: $WORK_DIR"
 
 # Download OpenSSL
 echo "Downloading OpenSSL ${OPENSSL_VERSION}..."
-curl -LO "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz"
+case "$OPENSSL_VERSION" in
+    3.0.15) openssl_sha=23c666d0edf20f14249b3d8f0368acaee9ab585b09e1de82107c66e1f3ec9533 ;;
+    *) echo "Add the verified source checksum before changing the OpenSSL version." >&2; exit 1 ;;
+esac
+archive="openssl-${OPENSSL_VERSION}.tar.gz"
+curl --fail --location --retry 3 --output "$archive" "https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VERSION}/$archive"
+if command -v sha256sum >/dev/null; then
+    printf '%s  %s\n' "$openssl_sha" "$archive" | sha256sum -c -
+else
+    printf '%s  %s\n' "$openssl_sha" "$archive" | shasum -a 256 -c -
+fi
 tar xzf "openssl-${OPENSSL_VERSION}.tar.gz"
 cd "openssl-${OPENSSL_VERSION}"
 

@@ -57,8 +57,9 @@ class ProxyHttpConnect(
 
         // Step 1: TCP connect to the proxy
         val timeoutMs = if (timeout > 0) timeout else CONNECT_TIMEOUT_MS
-        val sock = Socket().apply {
+        val sock = (socketFactory?.createSocket(proxyHost, proxyPort) ?: Socket().apply {
             connect(InetSocketAddress(proxyHost, proxyPort), timeoutMs)
+        }).apply {
             tcpNoDelay = true
             soTimeout = timeoutMs.coerceIn(1000, 15_000)
         }

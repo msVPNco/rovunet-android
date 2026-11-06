@@ -4,11 +4,14 @@ import app.slipnet.util.ConnectionDiagnostics
 import org.json.JSONObject
 import java.io.File
 import java.net.InetSocketAddress
-import java.net.ServerSocket
 import java.net.Socket
 
 /** One owned child. Config stays on stdin; readiness requires a real local SOCKS response. */
 class CoreProcess {
+    private companion object {
+        val STARTED = Regex("""[0-9/]+ [0-9:.]+ \[Warning] core: Xray [0-9]+(?:\.[0-9]+)+ started\r?""")
+    }
+
     @Volatile private var child: Process? = null
     private var outputThread: Thread? = null
 
@@ -33,16 +36,17 @@ class CoreProcess {
         ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
         require(binary.isFile && binary.canExecute()) { "Xray binary missing for this ABI" }
         require(startupTimeoutMs in 100..60_000)
-        val port = try {
-            val inbound = JSONObject(config).getJSONArray("inbounds").getJSONObject(0)
-            require(inbound.getString("listen") == "127.0.0.1" && inbound.getString("protocol") == "socks")
-            inbound.getInt("port").also { require(it in 1..65535) }
-        } catch (_: Exception) { error("Invalid local core configuration") }
-        // Do not attach to an unrelated listener while the child is still starting.
-        ServerSocket().use { socket ->
-            socket.reuseAddress = true
-            socket.bind(InetSocketAddress("127.0.0.1", port))
-        }
+        val settings = JSONObject(config)
+        val inbound = settings.getJSONArray("inbounds").getJSONObject(0)
+        require(inbound.getString("listen") == "127.0.0.1" && inbound.getString("protocol") == "socks")
+        val port = inbound.getInt("port")
+        require(port in 1..65535)
+        val socks = inbound.optJSONObject("settings")
+        val account = if (socks?.optString("auth") == "password") socks.getJSONArray("accounts").getJSONObject(0) else null
+        // The pinned core emits this warning through its own pipe only after every inbound
+        // successfully binds. A reply from a port contender cannot produce that event.
+        settings.put("log", JSONObject().put("loglevel", "warning").put("access", "none"))
+        val listening = java.util.concurrent.CountDownLatch(1)
         val command = mutableListOf<String>()
         launcher?.let {
             require(it.isFile && it.canExecute()) { "Core lifecycle helper missing" }
@@ -53,26 +57,41 @@ class CoreProcess {
         child = process
         outputThread = Thread({
             runCatching {
-                process.inputStream.use { input ->
-                    val bytes = ByteArray(4096)
-                    while (input.read(bytes) >= 0) { /* discard untrusted raw diagnostics */ }
+                process.inputStream.buffered().use { input ->
+                    val line = StringBuilder(160)
+                    var discard = false
+                    while (true) {
+                        val ch = input.read()
+                        if (ch == -1) break
+                        if (ch == 10) {
+                            if (!discard && STARTED.matches(line)) listening.countDown()
+                            line.setLength(0)
+                            discard = false
+                        } else if (line.length < 160) line.append(ch.toChar()) else discard = true
+                    }
                 }
             }
         }, "veyra-core-output").apply { isDaemon = true; start() }
         try {
-            process.outputStream.bufferedWriter().use { it.write(config) }
+            process.outputStream.bufferedWriter().use { it.write(settings.toString()) }
             val deadline = System.nanoTime() + startupTimeoutMs * 1_000_000
             while (true) {
                 check(alive(process)) { "Core rejected configuration or could not bind its port" }
-                val ready = runCatching {
+                val ready = listening.count == 0L && runCatching {
                     Socket().use { socket ->
                         socket.connect(InetSocketAddress("127.0.0.1", port), 100)
                         socket.soTimeout = 200
-                        // Offer both supported methods; a password challenge is readiness,
-                        // not successful authentication or verified Internet connectivity.
-                        socket.getOutputStream().apply { write(byteArrayOf(5, 2, 0, 2)); flush() }
+                        val method = if (account == null) 0 else 2
+                        val output = socket.getOutputStream()
                         val input = socket.getInputStream()
-                        input.read() == 5 && input.read() in setOf(0, 2)
+                        output.write(byteArrayOf(5, 1, method.toByte()))
+                        if (input.read() != 5 || input.read() != method) return@use false
+                        if (account == null) return@use true
+                        val user = account.getString("user").toByteArray(Charsets.UTF_8)
+                        val pass = account.getString("pass").toByteArray(Charsets.UTF_8)
+                        require(user.size in 1..255 && pass.size in 1..255)
+                        output.write(byteArrayOf(1, user.size.toByte()) + user + byteArrayOf(pass.size.toByte()) + pass)
+                        input.read() == 1 && input.read() == 0
                     }
                 }.getOrDefault(false)
                 if (ready && alive(process)) break

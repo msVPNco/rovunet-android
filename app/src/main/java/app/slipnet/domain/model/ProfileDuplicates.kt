@@ -7,7 +7,7 @@ object ProfileDuplicates {
     data class Match(val keep: ServerProfile, val remove: ServerProfile)
     fun key(p: ServerProfile): ServerProfile = p.copy(
         id=0, name="", createdAt=0, updatedAt=0, lastConnectedAt=0,
-        sortOrder=0, isActive=false, isPinned=false, collectionName="", importAccountHint="",
+        sortOrder=0, isActive=false, isPinned=false, collectionName="", importAccountHint="", deletionReview=null,
         coreLink=if (p.coreLink.contains("://") && !p.coreLink.trimStart().startsWith("[Interface]", true)) p.coreLink.substringBefore('#') else p.coreLink
     ).let { normalized ->
         // Native VLESS exports carry legacy SSH-host/resolver placeholders.
@@ -15,7 +15,7 @@ object ProfileDuplicates {
         if (normalized.tunnelType == TunnelType.VLESS) normalized.copy(sshHost="", resolvers=emptyList()) else normalized
     }
     fun plan(profiles: List<ServerProfile>, protectedIds: Set<Long> = emptySet()): List<Match> =
-        profiles.filter { !it.isLocked }.groupBy(::key).values.flatMap { group ->
+        profiles.filter { !it.isLocked && !it.needsCredentials }.groupBy(::key).values.flatMap { group ->
             val keeper = group.firstOrNull { it.id in protectedIds || it.isPinned || it.isActive } ?: group.first()
             group.filter { it.id != keeper.id && it.id !in protectedIds && !it.isPinned && !it.isActive }
                 .map { Match(keeper,it) }

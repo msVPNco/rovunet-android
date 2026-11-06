@@ -1,8 +1,8 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.net.URL
-import java.io.FileOutputStream
-import java.util.zip.ZipInputStream
 import java.util.Properties
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.security.cert.X509Certificate
 
 plugins {
     id("com.android.application")
@@ -15,8 +15,12 @@ plugins {
 
 val veyraPrebuiltNative = providers.gradleProperty("veyraPrebuiltNative").orNull == "true"
 val minSdkVersion = 24
-val appVersionName = "0.3.0-alpha11"
-val appVersionCode = 17
+val deviceCandidate = providers.gradleProperty("rovunetDeviceCandidate").orNull == "true"
+// Prepare a non-installable Release artifact for an offline signer; never a debug-signed public APK.
+val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
+require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
+val appVersionName = if (deviceCandidate) "0.3.0-alpha14-review02" else "0.3.0-alpha14"
+val appVersionCode = 25
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"
@@ -34,8 +38,12 @@ fun abiFromTarget(target: String): String = when {
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(keystorePropertiesFile.inputStream())
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
+
+fun requiredSigningProperty(name: String): String =
+    keystoreProperties.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: throw GradleException("Missing or blank '$name' in keystore.properties")
 
 // Config encryption key from local.properties
 val localPropertiesFile = rootProject.file("local.properties")
@@ -47,7 +55,7 @@ val configEncryptionKey = localProperties.getProperty("CONFIG_ENCRYPTION_KEY", "
 
 // OpenSSL configuration
 val opensslVersion = "3.0.15"
-val opensslBaseDir = file("${System.getenv("HOME")}/android-openssl/android-ssl")
+val opensslBaseDir = file("${System.getProperty("user.home")}/android-openssl/android-ssl")
 val supportedAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
 
 // Check if OpenSSL is available for all ABIs
@@ -73,16 +81,18 @@ android {
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(requiredSigningProperty("storeFile"))
+                storePassword = requiredSigningProperty("storePassword")
+                keyAlias = requiredSigningProperty("keyAlias")
+                keyPassword = requiredSigningProperty("keyPassword")
             }
         }
     }
 
     defaultConfig {
-        applicationId = "app.veyra.client"
+        applicationId = if (deviceCandidate) "app.veyra.client.candidate" else "app.veyra.client"
+        manifestPlaceholders["launcherName"] = if (deviceCandidate) "Rovunet Test" else "@string/app_name"
+        buildConfigField("boolean", "PRIVATE_CANDIDATE", deviceCandidate.toString())
         minSdk = minSdkVersion
         targetSdk = 35
         versionCode = appVersionCode
@@ -113,9 +123,15 @@ android {
             isShrinkResources = true
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = when {
+                unsignedPublication -> null
+                deviceCandidate -> signingConfigs.getByName("debug")
+                else -> signingConfigs.getByName("release")
+            }
         }
     }
+
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
 
     buildFeatures {
         compose = true
@@ -127,7 +143,8 @@ android {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abiFilter = output.getFilter("ABI")
             val abi = abiFilter ?: "universal"
-            output.outputFileName = "Rovunet-v${appVersionName}-${flavorName}-${buildType.name}-${abi}.apk"
+            val unsignedSuffix = if (unsignedPublication && buildType.name == "release") "-unsigned" else ""
+            output.outputFileName = "Rovunet-v${appVersionName}-${flavorName}-${buildType.name}-${abi}${unsignedSuffix}.apk"
         }
     }
 
@@ -158,13 +175,34 @@ android {
 
 }
 
+val verifyPublicationSigning = tasks.register("verifyPublicationSigning") {
+    doLast {
+        val expected = providers.gradleProperty("rovunetReleaseCertSha256")
+            .orElse(providers.environmentVariable("ROVUNET_RELEASE_CERT_SHA256")).orNull?.lowercase()
+        require(expected?.matches(Regex("[0-9a-f]{64}")) == true) { "Set the intended production signing certificate SHA-256" }
+        val store = KeyStore.getInstance(KeyStore.getDefaultType())
+        val storeFile = file(requiredSigningProperty("storeFile"))
+        val alias = requiredSigningProperty("keyAlias")
+        requiredSigningProperty("keyPassword")
+        storeFile.inputStream().use { store.load(it, requiredSigningProperty("storePassword").toCharArray()) }
+        val cert = store.getCertificate(alias) as? X509Certificate
+            ?: throw GradleException("No X.509 signing certificate for keyAlias in the configured keystore")
+        val digest = MessageDigest.getInstance("SHA-256").digest(cert.encoded).joinToString("") { "%02x".format(it) }
+        require(digest == expected && !cert.subjectX500Principal.name.contains("CN=Android Debug", ignoreCase = true)) {
+            "The release key must match the approved production signing identity"
+        }
+    }
+}
+tasks.matching { it.name == "validateSigningFullRelease" || it.name == "validateSigningLiteRelease" }
+    .configureEach { if (!deviceCandidate && !unsignedPublication) dependsOn(verifyPublicationSigning) }
+
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
-val cargoHome = System.getenv("HOME") + "/.cargo"
+val cargoHome = System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo"
 val cargoBin = "$cargoHome/bin"
 
 // Task to setup OpenSSL for Android
@@ -180,93 +218,13 @@ tasks.register("setupOpenSsl") {
 
         println("OpenSSL for Android not found. Setting up...")
 
-        val downloadUrl = "https://github.com/passy/build-openssl-android/releases/download/v${opensslVersion}/openssl-${opensslVersion}-android.zip"
-        val tempZip = file("${buildDir}/tmp/openssl-android.zip")
-        val extractDir = file("${buildDir}/tmp/openssl-extract")
-
-        // Create directories
-        tempZip.parentFile.mkdirs()
-        extractDir.mkdirs()
-        opensslBaseDir.mkdirs()
-
-        println("Downloading OpenSSL from: $downloadUrl")
-
-        try {
-            // Try primary download source
-            downloadFile(downloadUrl, tempZip)
-        } catch (e: Exception) {
-            println("Primary download failed, trying alternative source...")
-            // Alternative: build from source using script
-            val buildScript = file("$projectDir/scripts/build-openssl-android.sh")
-            if (buildScript.exists()) {
-                exec {
-                    commandLine("bash", buildScript.absolutePath)
-                    environment("OPENSSL_VERSION", opensslVersion)
-                    environment("OUTPUT_DIR", opensslBaseDir.absolutePath)
-                    environment("ANDROID_NDK_HOME", android.ndkDirectory.absolutePath)
-                }
-                return@doLast
-            } else {
-                throw GradleException("""
-                    Failed to download OpenSSL for Android.
-
-                    Please manually set up OpenSSL:
-                    1. Download pre-built OpenSSL for Android
-                    2. Extract to: $opensslBaseDir
-                    3. Ensure each ABI folder (arm64-v8a, armeabi-v7a, x86, x86_64) contains:
-                       - lib/libssl.a
-                       - lib/libcrypto.a
-                       - include/openssl/
-
-                    Or run: ./scripts/build-openssl-android.sh
-                """.trimIndent())
-            }
+        exec {
+            commandLine("bash", file("scripts/build-openssl-android.sh").absolutePath)
+            environment("OPENSSL_VERSION", opensslVersion)
+            environment("OUTPUT_DIR", opensslBaseDir.absolutePath)
+            environment("ANDROID_NDK_HOME", android.ndkDirectory.absolutePath)
         }
-
-        println("Extracting OpenSSL...")
-        extractZip(tempZip, extractDir)
-
-        // Copy to final location
-        supportedAbis.forEach { abi ->
-            val srcDir = extractDir.resolve(abi)
-            val dstDir = opensslBaseDir.resolve(abi)
-            if (srcDir.exists()) {
-                srcDir.copyRecursively(dstDir, overwrite = true)
-                println("Installed OpenSSL for $abi")
-            }
-        }
-
-        // Cleanup
-        tempZip.delete()
-        extractDir.deleteRecursively()
-
-        println("OpenSSL setup complete!")
-    }
-}
-
-fun downloadFile(url: String, destination: File) {
-    URL(url).openStream().use { input ->
-        FileOutputStream(destination).use { output ->
-            input.copyTo(output)
-        }
-    }
-}
-
-fun extractZip(zipFile: File, destDir: File) {
-    ZipInputStream(zipFile.inputStream()).use { zis ->
-        var entry = zis.nextEntry
-        while (entry != null) {
-            val destFile = File(destDir, entry.name)
-            if (entry.isDirectory) {
-                destFile.mkdirs()
-            } else {
-                destFile.parentFile?.mkdirs()
-                destFile.outputStream().use { fos ->
-                    zis.copyTo(fos)
-                }
-            }
-            entry = zis.nextEntry
-        }
+        check(isOpenSslAvailable()) { "OpenSSL build did not produce the required architectures" }
     }
 }
 
@@ -362,6 +320,9 @@ cargo {
         spec.environment("OPENSSL_USE_STATIC_LIBS", "1")
 
         // Pass config encryption key to Rust build.rs for obfuscation
+        require(configEncryptionKey.matches(Regex("[A-Fa-f0-9]{64}")) && configEncryptionKey.any { it != '0' }) {
+            "A non-zero, 32-byte CONFIG_ENCRYPTION_KEY is required when rebuilding the native engine"
+        }
         spec.environment("CONFIG_ENCRYPTION_KEY", configEncryptionKey)
 
         // Remap the build-machine home directory out of Rust panic strings.
@@ -481,6 +442,7 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

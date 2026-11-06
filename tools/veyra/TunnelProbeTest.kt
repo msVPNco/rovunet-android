@@ -1,3 +1,4 @@
+import kotlinx.coroutines.launch
 import app.slipnet.core.TunnelProbe
 import app.slipnet.core.ProbeSummary
 import java.io.DataInputStream
@@ -78,6 +79,50 @@ fun main() {
         3L to app.slipnet.domain.model.PingResult.Success(200, true, 3, 3))
     check(app.slipnet.domain.model.ProfileRanking.sort(profiles, results).map { it.id } == listOf(2L,3L,1L,4L))
     check(app.slipnet.domain.model.ProfileRanking.sort(profiles, results, true).map { it.id } == listOf(3L,2L,1L,4L))
+    val mixed = results + (1L to app.slipnet.domain.model.PingResult.Success(5, true, quick = true))
+    check(app.slipnet.domain.model.ProfileRanking.sort(profiles, mixed).first().id == 1L)
+    check(app.slipnet.domain.model.ProfileRanking.sort(profiles, mixed, true).map { it.id } == listOf(3L,2L,1L,4L))
+    kotlinx.coroutines.runBlocking {
+        val hosts = mutableListOf<String>()
+        val blocked = TunnelProbe.sample({}) { host -> hosts.add(host); error("endpoint blocked") }
+        check(blocked.summary == null && blocked.attempts == 2)
+        check(hosts == listOf(TunnelProbe.HOST, TunnelProbe.FALLBACK_HOST))
+        hosts.clear()
+        val alternate = TunnelProbe.sample({}) { host ->
+            hosts.add(host)
+            if (host == TunnelProbe.HOST) throw java.net.SocketTimeoutException()
+            83L
+        }
+        check(hosts == listOf(TunnelProbe.HOST, TunnelProbe.FALLBACK_HOST, TunnelProbe.FALLBACK_HOST))
+        check(alternate.summary == ProbeSummary(83,0,2,3))
+        hosts.clear()
+        val quick = TunnelProbe.sample({}, successTarget = 1) { host -> hosts.add(host); 37L }
+        check(hosts == listOf(TunnelProbe.HOST) && quick.summary == ProbeSummary(37,0,1,1))
+        hosts.clear()
+        val quickAlternate = TunnelProbe.sample({}, successTarget = 1) { host ->
+            hosts.add(host)
+            if (host == TunnelProbe.HOST) throw java.net.SocketTimeoutException()
+            49L
+        }
+        check(hosts == listOf(TunnelProbe.HOST,TunnelProbe.FALLBACK_HOST))
+        check(quickAlternate.summary == ProbeSummary(49,0,1,2))
+        check(runCatching { TunnelProbe.sample({}, successTarget = 0) { 0L } }.isFailure)
+        // Cancel while the proxy is silent. It must see EOF without waiting
+        // for the configured 20-second socket deadline.
+        ServerSocket(0).use { silent ->
+            val greeting = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val closed = kotlinx.coroutines.CompletableDeferred<Boolean>()
+            thread(isDaemon = true) {
+                silent.accept().use { peer ->
+                    DataInputStream(peer.getInputStream()).readFully(ByteArray(3))
+                    greeting.complete(Unit)
+                    closed.complete(peer.getInputStream().read() == -1)
+                }
+            }
+            val job = launch { TunnelProbe.measureCancellable(silent.localPort, null, null, TunnelProbe.HOST, 20000) }
+            kotlinx.coroutines.withTimeout(3000) { greeting.await(); job.cancel(); job.join(); check(closed.await()) }
+        }
+    }
     tlsServer.close()
     println("HTTPS probe: SOCKS-only success, authentication, bad credentials, redirect rejection, hostname and certificate verification, unavailable proxy and sample statistics passed")
 }

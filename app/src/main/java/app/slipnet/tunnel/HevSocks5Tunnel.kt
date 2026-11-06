@@ -59,7 +59,7 @@ object HevSocks5Tunnel {
         if (isRunning()) {
             Log.w(TAG, "Tunnel already running, stopping first...")
             stop()
-            Thread.sleep(500)
+            if (isRunning()) return Result.failure(IllegalStateException("Previous packet tunnel is still stopping"))
         }
 
         val config = buildConfig(
@@ -81,7 +81,6 @@ object HevSocks5Tunnel {
         Log.i(TAG, "  IPv4: $ipv4Address")
         Log.i(TAG, "  IPv6: $ipv6Address")
         Log.i(TAG, "========================================")
-        Log.d(TAG, "Config:\n$config")
 
         return try {
             nativeSetRejectQuic(disableQuic)

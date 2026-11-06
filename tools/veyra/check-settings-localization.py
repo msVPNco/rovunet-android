@@ -26,7 +26,8 @@ for file in files:
   allowed=('Rovunet VPN v','SOCKS5:','HTTP:','No stability report recorded.')
   assert text.startswith(allowed) or text in ('DNS','AES-128-GCM','ChaCha20-Poly1305'),(file.name,text)
 def args(value):return sorted(re.findall(r'%(\d+)\$([sd])',value or ''))
-for key in used:
+required = {key for key,node in resources['values'].items() if node.attrib.get('translatable') != 'false'}
+for key in required:
  original=resources['values'][key]
  signature=args(original.text) if original.tag=='string' else args(original.find('item').text)
  for folder in folders:
@@ -39,4 +40,4 @@ for key in used:
   if folder=='values-ru' and node.tag=='plurals':assert {'one','few','many','other'}<=set(c.attrib['quantity'] for c in node),(key,'Russian plural categories')
 main=(root/'app/src/main/java/app/slipnet/presentation/main/MainScreen.kt').read_text()
 assert 'activity?.recreate()' not in main,'Language changes must not recreate Activity'
-print(f'PASS settings/About: {len(used)} resource keys in four languages, format parity, Russian plurals, no raw UI sentences or Activity recreation')
+print(f'PASS all {len(required)} translatable resource keys in four languages, format parity and Russian plurals; settings/About raw-text and Activity checks ({len(used)} used keys)')

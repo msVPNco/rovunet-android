@@ -163,7 +163,9 @@ func (c *SoarClient) SetDiscoveryCandidates(list string) {
 }
 
 // SetTCPMode controls TCP/53 paths: "auto" (default) adds one for a resolver
-// whose UDP path never answers, "on" adds one for every resolver, "only"
+// whose UDP path remains unverified after repeated unanswered/failed probes;
+// an authenticated tunnel response is required, not just any DNS reply.
+// "on" adds one for every resolver, "only"
 // uses TCP alone, "off" never. Must be called before Start.
 func (c *SoarClient) SetTCPMode(mode string) {
 	switch mode {

@@ -825,7 +825,7 @@ object DnsttSocksBridge {
                     input.readFully(methods)
 
                     // Authenticate local client
-                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword)) {
+                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword, socket.inetAddress)) {
                         return@Thread
                     }
 

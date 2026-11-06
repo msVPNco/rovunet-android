@@ -18,7 +18,7 @@ data class AppUpdate(val versionName: String, val downloadUrl: String, val relea
 /** Only HTTPS release assets from this repository; no installation without OS confirmation. */
 object UpdateChecker {
     const val RELEASES_URL = "https://github.com/msVPNco/rovunet-android/releases"
-    private const val API = "https://api.github.com/repos/msVPNco/rovunet-android/releases/latest"
+    private const val API = "https://api.github.com/repos/msVPNco/rovunet-android/releases"
     const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
 
     private fun connection(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -46,8 +46,19 @@ object UpdateChecker {
             }
         } finally { conn.disconnect() }
     }
-    suspend fun check(currentVersionName: String): AppUpdate? = withContext(Dispatchers.IO) {
-        val manifest = UpdateManifest.parse(readText(API, 2_000_000), currentVersionName, currentVersionName.endsWith("-lite")) ?: return@withContext null
+    suspend fun check(currentVersionName: String, includePreview: Boolean): AppUpdate? = withContext(Dispatchers.IO) {
+        val body = if (!includePreview) readText("$API/latest", 2_000_000) else {
+            var newest: org.json.JSONObject? = null
+            var page = 1
+            while (true) {
+                val releases = org.json.JSONArray(readText("$API?per_page=30&page=$page", 3_000_000))
+                newest = UpdateManifest.newestPublished(releases, newest)
+                if (releases.length() < 30) break
+                check(++page <= 10) { "Release listing incomplete" }
+            }
+            checkNotNull(newest) { "No public Android releases found" }.toString()
+        }
+        val manifest = UpdateManifest.parse(body, currentVersionName, currentVersionName.endsWith("-lite")) ?: return@withContext null
         val digest = manifest.digest.ifEmpty { UpdateManifest.checksum(readText(manifest.checksumsUrl, 64_000), manifest.url) }
         AppUpdate(manifest.version, manifest.url, manifest.notes, digest, manifest.size)
     }

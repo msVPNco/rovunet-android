@@ -8,7 +8,6 @@ data class ScanServiceState(
     val scannedCount: Int = 0,
     val totalCount: Int = 0,
     val workingCount: Int = 0,
-    val stopRequested: Boolean = false,
     /** Working scan results preserved across activity recreation. */
     val results: List<ResolverScanResult> = emptyList(),
     /** Profile ID for restoring E2E test context after activity recreation. */
@@ -23,4 +22,6 @@ data class ScanServiceState(
     val simpleE2ePassedCount: Int = 0,
     // Active E2E resolvers: host → current phase (e.g. "Connecting...", "Testing HTTP")
     val e2eActiveResolvers: Map<String, String> = emptyMap()
-)
+) {
+    val active: Boolean get() = isScanning || isE2eRunning
+}

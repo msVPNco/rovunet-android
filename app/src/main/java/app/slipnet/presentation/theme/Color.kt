@@ -1,6 +1,7 @@
 package app.slipnet.presentation.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 // Primary colors
 val Purple80 = Color(0xFFD0BCFF)
@@ -41,3 +42,9 @@ val SurfaceVariantAmoled = Color(0xFF1A1A1A)
 // Traffic indicator colors
 val UploadBlue = Color(0xFF087F8C)
 val DownloadGreen = Color(0xFF4CAF50)
+
+/** Status text keeps sufficient contrast on both light and dark surfaces. */
+val ConnectionSuccessColor: Color
+    @androidx.compose.runtime.Composable get() =
+        if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF126B46)
+        else Color(0xFF61DBA3)

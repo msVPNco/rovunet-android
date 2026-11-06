@@ -143,8 +143,8 @@ func dialWebSocket(sshHost string, sshPort int, profile *Profile) (net.Conn, err
 			sni = wsHost
 		}
 		tlsConn := tls.Client(conn, &tls.Config{
-			ServerName:         sni,
-			InsecureSkipVerify: true,
+			ServerName: sni,
+			MinVersion: tls.VersionTLS12,
 		})
 		if err := tlsConn.Handshake(); err != nil {
 			conn.Close()
@@ -203,8 +203,8 @@ func wrapTLS(conn net.Conn, host string, port int, sni string) (net.Conn, error)
 		sni = host
 	}
 	tlsConn := tls.Client(conn, &tls.Config{
-		ServerName:         sni,
-		InsecureSkipVerify: true,
+		ServerName: sni,
+		MinVersion: tls.VersionTLS12,
 	})
 	if err := tlsConn.Handshake(); err != nil {
 		conn.Close()
@@ -331,6 +331,9 @@ func (c *wsConn) readFrame() (int, []byte, error) {
 		payloadLen = binary.BigEndian.Uint64(ext)
 	}
 
+	if payloadLen > 16*1024*1024 || (opcode >= 8 && (payloadLen > 125 || hdr[0]&0x80 == 0)) {
+		return 0, nil, fmt.Errorf("invalid WebSocket frame size")
+	}
 	var maskKey []byte
 	if masked {
 		maskKey = make([]byte, 4)

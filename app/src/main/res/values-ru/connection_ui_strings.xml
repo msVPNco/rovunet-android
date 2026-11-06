@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_hide_paths">Свернуть пути</string>
+    <string name="ui_show_paths">Показать пути</string>
+    <string name="ui_connect_named">Подключиться через %1$s</string>
+    <string name="ui_choose_path">Выбрать путь</string>
+    <string name="ui_cancel_connection">Отменить подключение</string>
+    <string name="ui_disconnect">Отключиться</string>
+    <string name="ui_connecting">Подключение…</string>
+    <string name="ui_pinned">Закреплено</string>
+    <string name="ui_locked">Заблокировано</string>
+    <string name="ui_expired">Срок истёк</string>
+    <string name="ui_unavailable_edition">Недоступно в этой версии</string>
+    <string name="ui_not_verified">HTTPS не проверен</string>
+    <string name="ui_last_test_failed">Последний тест не пройден</string>
+    <string name="ui_testing">Тестирование…</string>
+    <string name="ui_more_actions">Другие действия</string>
+    <string name="ui_edit">Изменить</string>
+    <string name="ui_test_details">Подробности последнего теста</string>
+    <string name="ui_unpin">Открепить</string>
+    <string name="ui_pin">Закрепить вверху</string>
+    <string name="ui_share_qr">Поделиться QR-кодом</string>
+    <string name="ui_delete">Удалить</string>
+    <string name="ui_choose_protocol">Выберите тип подключения</string>
+    <string name="diag_title">Диагностика подключения</string>
+    <string name="diag_safe_notice">Отчёт не содержит паролей, ссылок конфигурации и адресов серверов. Отправка — только по вашему выбору.</string>
+    <string name="diag_copy">Копировать отчёт</string>
+    <string name="diag_share">Поделиться отчётом</string>
+    <string name="diag_save">Сохранить текстовый отчёт</string>
+    <string name="diag_clear">Очистить диагностику</string>
+    <string name="diag_recent">Последние попытки подключения</string>
+    <string name="diag_refresh">Обновить</string>
+    <string name="diag_saved">Отчёт сохранён</string>
+    <string name="diag_save_failed">Не удалось сохранить отчёт</string>
+    <string name="diag_show_raw">Показать локальный технический журнал</string>
+    <string name="diag_show_safe">Показать безопасный отчёт</string>
+    <string name="diag_raw_warning">Технический журнал может содержать данные сервера. Кнопки экспорта передают только безопасный отчёт.</string>
+</resources>

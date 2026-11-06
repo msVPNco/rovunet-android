@@ -229,4 +229,19 @@
     <string name="update_failed">Download or verification failed. Check your connection and try again.</string>
     <string name="update_check_failed">Could not check for updates. Try again.</string>
     <string name="update_current">You have the latest version.</string>
+    <string name="scan_service_start_failed">Could not start the DNS scanner.</string>
+    <string name="vpn_tun_unavailable">Android could not open the VPN interface.</string>
+    <string name="mtu_preference_with_ipv6">Saved preference: %1$d. With IPv6 enabled, the next connection uses %2$d.</string>
+    <string name="profile_credentials_unavailable">Saved credentials unavailable</string>
+    <string name="profile_restore_help">Retry reading this config, or restore its credentials from the original link for this account and server.</string>
+    <string name="profile_restore_locked">Retry reading this locked config. If it still fails, import the original locked link from your provider as a new config.</string>
+    <string name="profile_restore_retry">Retry reading</string>
+    <string name="profile_restore_link">Original config link</string>
+    <string name="profile_restore_action">Replace credentials</string>
+    <string name="profile_restore_confirm">Replace the unreadable credentials with those in this link?</string>
+    <string name="profile_restore_mismatch">Use the original unlocked link for this protocol, server and account. If the config changed, retry reading it.</string>
+    <string name="profile_restore_failed">Could not save the replacement credentials. The original encrypted data is preserved.</string>
+    <string name="recovery_back">Back</string>
+    <string name="proxy_password_unavailable">The local proxy password could not be read. Set a new password in Settings to use local proxy authentication.</string>
+    <string name="collection_needs_credentials">Open this collection to review unavailable credentials.</string>
 </resources>

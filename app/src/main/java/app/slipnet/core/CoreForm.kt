@@ -8,18 +8,34 @@ import java.net.URLEncoder
 data class CoreForm(val kind: String, val fields: Map<String, String>) {
     operator fun get(key: String): String = fields[key].orEmpty()
     fun with(key: String, value: String) = copy(fields = fields + (key to value))
+    enum class FieldIssue { WIREGUARD_MULTILINE, SERVER_ADDRESS, SERVER_PORT, AUTH_REQUIRED }
+    fun validationIssue(): FieldIssue? {
+        if (kind == "wireguard") return if (fields.values.any { it.contains('\n') || it.contains('\r') }) FieldIssue.WIREGUARD_MULTILINE else null
+        val host = this["server"].trim().removeSurrounding("[", "]")
+        return when {
+            host.isBlank() || host.any { it.isWhitespace() || it in "/?#@" } -> FieldIssue.SERVER_ADDRESS
+            this["port"].toIntOrNull() !in 1..65535 -> FieldIssue.SERVER_PORT
+            this["auth"].isBlank() -> FieldIssue.AUTH_REQUIRED
+            else -> null
+        }
+    }
+
     fun encode(name: String): String {
+        val issue = validationIssue()
+        require(issue == null) { when(issue) {
+            FieldIssue.WIREGUARD_MULTILINE -> "WireGuard fields must each fit on one line"
+            FieldIssue.SERVER_ADDRESS -> "Enter a server hostname or IP address"
+            FieldIssue.SERVER_PORT -> "Port must be 1–65535"
+            FieldIssue.AUTH_REQUIRED -> "Enter the UUID or authentication password"
+            null -> "Invalid core settings"
+        } }
         fun enc(v: String) = URLEncoder.encode(v, "UTF-8").replace("+", "%20")
         if (kind == "wireguard") {
             fun line(key: String, label: String) = if (this[key].isBlank()) "" else "$label = ${this[key].trim()}\n"
-            require(fields.values.none { it.contains('\n') || it.contains('\r') }) { "WireGuard fields must each fit on one line" }
             return "[Interface]\n" + line("privatekey", "PrivateKey") + line("address", "Address") + line("dns", "DNS") + line("mtu", "MTU") +
                 "\n[Peer]\n" + line("publickey", "PublicKey") + line("presharedkey", "PresharedKey") + line("endpoint", "Endpoint") + line("allowedips", "AllowedIPs") + line("persistentkeepalive", "PersistentKeepalive")
         }
         val host = this["server"].trim().removeSurrounding("[", "]")
-        require(host.isNotBlank() && host.none { it.isWhitespace() || it in "/?#@" }) { "Enter a server hostname or IP address" }
-        require(this["port"].toIntOrNull() in 1..65535) { "Port must be 1–65535" }
-        require(this["auth"].isNotBlank()) { "Enter the UUID or authentication password" }
         val q = fields.filterKeys { it !in setOf("server", "port", "auth") }.toMutableMap()
         if (kind == "vless") {
             if (q["type"] == "xhttp") q.remove("flow") else listOf("mode", "host", "path", "extra").forEach(q::remove)

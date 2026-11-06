@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProfileEntity::class, ChainEntity::class],
-    version = 46,
+    version = 47,
     exportSchema = true
 )
 abstract class SlipNetDatabase : RoomDatabase() {
@@ -15,6 +15,10 @@ abstract class SlipNetDatabase : RoomDatabase() {
     abstract fun chainDao(): ChainDao
 
     companion object {
+        val MIGRATION_46_47 = object : Migration(46, 47) {
+            override fun migrate(db: SupportSQLiteDatabase) = ProfileSecrets.migrate(db)
+        }
+
         val MIGRATION_45_46 = object : Migration(45, 46) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE server_profiles ADD COLUMN collectionId TEXT NOT NULL DEFAULT ''")

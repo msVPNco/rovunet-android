@@ -10,6 +10,8 @@ interface ProfileRepository {
     suspend fun saveProfile(profile: ServerProfile): Long
     suspend fun updateProfile(profile: ServerProfile)
     suspend fun updateProfiles(profiles: List<ServerProfile>)
+    suspend fun updateCollectionMemberships(profiles: List<ServerProfile>)
+    suspend fun restoreCredentials(reviewed: ServerProfile, replacement: ServerProfile): Boolean
     suspend fun insertCollection(profiles: List<ServerProfile>): List<Long>
     suspend fun deleteReviewedProfiles(expected: List<ServerProfile>, deleteIds: List<Long>): Boolean
     suspend fun deleteProfile(id: Long)

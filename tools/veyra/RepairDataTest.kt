@@ -37,5 +37,14 @@ fun main() {
  check(!UpdateManifest.trustedAsset(prefix+"../evil.apk"))
  check(UpdateManifest.checksum("$digest  Rovunet-full.apk",prefix+"Rovunet-full.apk")==digest)
  check(runCatching { UpdateManifest.parse(body.replace("Rovunet-full.apk","other.apk"),"0.3.0-alpha08",false) }.isFailure)
+ val ipv6 = DnsResolver("2001:db8::53", 5353, true)
+ val sshProfile = ServerProfile(name = "regression", domain = "ssh.invalid", tunnelType = TunnelType.SSH,
+     sshUsername = "qa", sshPassword = "sample", resolvers = listOf(ipv6))
+ fun native(p: ServerProfile) = ConfigImporter().parseAndImport(ConfigExporter().exportSingleProfile(p))
+ check((native(sshProfile) as ImportResult.Success).profiles.single().resolvers.single() == ipv6)
+ check(native(sshProfile.copy(sshPort = -1)) is ImportResult.Error)
+ check(native(sshProfile.copy(dnsPayloadSize = Int.MAX_VALUE)) is ImportResult.Error)
+ val releases = JSONArray("""[{"tag_name":"v0.3.0-alpha13","draft":true},{"tag_name":"cli-v10"},{"tag_name":"v0.3.0-alpha11"},{"tag_name":"v0.3.0-alpha12","prerelease":true}]""")
+ check(UpdateManifest.newestPublished(releases)?.getString("tag_name") == "v0.3.0-alpha12")
  println("PASS lossless v33 secrets, hidden resolver policy, malformed hashes, expired chain and update asset checks")
 }

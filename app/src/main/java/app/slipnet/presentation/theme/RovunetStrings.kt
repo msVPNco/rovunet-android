@@ -12,6 +12,7 @@ object RovunetStrings {
         "Android could not stop the VPN service" to R.string.connection_service_stop_failed,
         "Android could not start the VPN foreground service" to R.string.connection_service_start_failed,
 
+        app.slipnet.domain.model.SAVED_CREDENTIALS_UNAVAILABLE to R.string.profile_credentials_unavailable,
         "Apply" to R.string.rv_apply_31e392,
         "No exact duplicates found" to R.string.rv_no_exact_duplicates_found_b3a2b7,
         "Only exact duplicates within the same collection are listed. Locked, pinned and chain profiles are protected." to R.string.rv_only_exact_duplicates_within_the_same_collection_are_listed_locked_pinned_and_chain_profil_6064c6,

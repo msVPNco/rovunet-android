@@ -12,6 +12,9 @@ import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -47,6 +50,9 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         private const val TCP_CONNECT_TIMEOUT_MS = 30000
         private const val DNS_TIMEOUT_MS = 15000
         private const val DNS_CACHE_TTL_MS = 60_000L
+        private val dnsDeadlines = ScheduledThreadPoolExecutor(1) { task ->
+            Thread(task, "socks-dns-deadline").apply { isDaemon = true }
+        }.apply { removeOnCancelPolicy = true }
     }
 
     private var remoteHost: String = ""
@@ -54,12 +60,26 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
     private var remoteUsername: String? = null
     private var remotePassword: String? = null
     private var dnsHost: String = "8.8.8.8"
+    private var dnsFallback: String? = null
     private var localAuthUsername: String? = null
     private var localAuthPassword: String? = null
     private var serverSocket: ServerSocket? = null
     private var acceptorThread: Thread? = null
     private val running = AtomicBoolean(false)
     private val connectionThreads = CopyOnWriteArrayList<Thread>()
+    private val activeSockets = ConcurrentHashMap.newKeySet<Socket>()
+    private val runGeneration = AtomicLong(0)
+    @Volatile private var diagnosticRun: Pair<Long, Long> = 0L to 0L
+    private fun trace(event: app.slipnet.util.ConnectionDiagnostics.Event, runId: Long, code: Int? = null,
+        failure: app.slipnet.util.ConnectionDiagnostics.Failure = app.slipnet.util.ConnectionDiagnostics.Failure.NONE) {
+        val snapshot = diagnosticRun
+        if (snapshot.first == runId && running.get() && runGeneration.get() == runId)
+            app.slipnet.util.ConnectionDiagnostics.flow(event, snapshot.second, code, failure)
+    }
+    private fun track(socket: Socket, runId: Long): Boolean = synchronized(activeSockets) {
+        if (!running.get() || runGeneration.get() != runId) { runCatching { socket.close() }; false }
+        else { activeSockets.add(socket); true }
+    }
     private var dnsExecutor = Executors.newFixedThreadPool(8)
     private val tunnelTxBytes = AtomicLong(0)  // client -> tunnel (upload), current session
     private val tunnelRxBytes = AtomicLong(0)  // tunnel -> client (download), current session
@@ -70,6 +90,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
     private data class DnsCacheEntry(val response: ByteArray, val expiresAt: Long)
     private val dnsCache = ConcurrentHashMap<String, DnsCacheEntry>()
 
+    @Synchronized
     fun start(
         remoteHost: String,
         remotePort: Int,
@@ -79,7 +100,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         listenHost: String = "127.0.0.1",
         dnsHost: String = "8.8.8.8",
         localAuthUsername: String? = null,
-        localAuthPassword: String? = null
+        localAuthPassword: String? = null,
+        dnsFallback: String? = null
     ): Result<Unit> {
         Log.i(TAG, "========================================")
         Log.i(TAG, "Starting SOCKS5 proxy bridge")
@@ -96,20 +118,23 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         this.remoteUsername = remoteUsername
         this.remotePassword = remotePassword
         this.dnsHost = dnsHost
+        this.dnsFallback = dnsFallback
         this.localAuthUsername = localAuthUsername
         this.localAuthPassword = localAuthPassword
 
         return try {
             val ss = bindServerSocket(listenHost, listenPort)
             serverSocket = ss
+            val runId = runGeneration.incrementAndGet()
+            diagnosticRun = runId to app.slipnet.util.ConnectionDiagnostics.currentSessionId()
             running.set(true)
 
             acceptorThread = Thread({
                 logd("Acceptor thread started")
-                while (running.get() && !Thread.currentThread().isInterrupted) {
+                while (running.get() && runGeneration.get() == runId && !Thread.currentThread().isInterrupted) {
                     try {
                         val clientSocket = ss.accept()
-                        handleConnection(clientSocket)
+                        handleConnection(clientSocket, runId)
                     } catch (e: Exception) {
                         if (running.get()) {
                             Log.w(TAG, "Accept error: ${e.message}")
@@ -128,7 +153,9 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         }
     }
 
+    @Synchronized
     fun stop() {
+        runGeneration.incrementAndGet()
         if (!running.getAndSet(false) && serverSocket == null) {
             return
         }
@@ -136,6 +163,10 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
 
         try { serverSocket?.close() } catch (_: Exception) {}
         serverSocket = null
+        synchronized(activeSockets) {
+            activeSockets.forEach { runCatching { it.close() } }
+            activeSockets.clear()
+        }
 
         // Wait for acceptor thread to fully exit so the port is released
         // before a new start() tries to bind the same port.
@@ -200,7 +231,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         throw lastException ?: java.net.BindException("Failed to bind to port $port")
     }
 
-    private fun handleConnection(clientSocket: Socket) {
+    private fun handleConnection(clientSocket: Socket, runId: Long) {
+        if (!track(clientSocket, runId)) return
         val thread = Thread({
             try {
                 clientSocket.use { socket ->
@@ -224,7 +256,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                     input.readFully(methods)
 
                     // Authenticate local client
-                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword)) {
+                    if (!LocalProxyAuth.handleGreeting(methods, input, output, localAuthUsername, localAuthPassword, socket.inetAddress)) {
                         return@Thread
                     }
 
@@ -279,17 +311,19 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                     // Handle FWD_UDP (cmd 0x05)
                     if (cmd == 0x05) {
                         socket.soTimeout = 0
-                        handleFwdUdp(input, output)
+                        handleFwdUdp(input, output, runId)
                         return@Thread
                     }
 
                     // Handle CONNECT (cmd 0x01) — chain through remote SOCKS5 proxy
-                    handleConnect(destHost, destPort, rawAddr, portBytes, socket, input, output)
+                    handleConnect(destHost, destPort, rawAddr, portBytes, socket, input, output, runId)
                 }
             } catch (e: Exception) {
                 if (running.get()) {
                     logd("Connection handler error: ${e.message}")
                 }
+            } finally {
+                activeSockets.remove(clientSocket)
             }
         }, "socks5-bridge-handler-$instanceId")
         thread.isDaemon = true
@@ -310,16 +344,18 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         portBytes: ByteArray,
         clientSocket: Socket,
         clientInput: InputStream,
-        clientOutput: OutputStream
+        clientOutput: OutputStream,
+        runId: Long
     ) {
+        if (!running.get() || runGeneration.get() != runId) return
         val router = domainRouter
         if (router.enabled) {
-            handleConnectWithRouting(router, destHost, destPort, rawAddr, portBytes, clientSocket, clientInput, clientOutput)
+            handleConnectWithRouting(router, destHost, destPort, rawAddr, portBytes, clientSocket, clientInput, clientOutput, runId)
             return
         }
 
         // Original flow — no domain routing
-        connectViaProxy(destHost, destPort, rawAddr, portBytes, clientSocket, clientInput, clientOutput, sendReply = true)
+        connectViaProxy(destHost, destPort, rawAddr, portBytes, clientSocket, clientInput, clientOutput, sendReply = true, runId = runId)
     }
 
     private fun handleConnectWithRouting(
@@ -330,7 +366,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         portBytes: ByteArray,
         clientSocket: Socket,
         clientInput: InputStream,
-        clientOutput: OutputStream
+        clientOutput: OutputStream,
+        runId: Long
     ) {
         var effectiveHost = destHost
         var sniffBuffer: ByteArray? = null
@@ -358,15 +395,21 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             logd("CONNECT: bypassing tunnel for $effectiveHost:$destPort")
             try {
                 val directSocket = router.createDirectConnection(destHost, destPort)
-                if (!wasEarlyReply) {
-                    clientOutput.write(byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
-                    clientOutput.flush()
+                if (!track(directSocket, runId)) return
+                try {
+                    if (!wasEarlyReply) {
+                        clientOutput.write(byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
+                        clientOutput.flush()
+                    }
+                    clientSocket.soTimeout = 0
+                    val effectiveInput = if (sniffLen > 0)
+                        SequenceInputStream(ByteArrayInputStream(sniffBuffer!!, 0, sniffLen), clientInput)
+                    else clientInput
+                    bridgeDirect(effectiveInput, clientOutput, directSocket)
+                } finally {
+                    activeSockets.remove(directSocket)
+                    runCatching { directSocket.close() }
                 }
-                clientSocket.soTimeout = 0
-                val effectiveInput = if (sniffLen > 0)
-                    SequenceInputStream(ByteArrayInputStream(sniffBuffer!!, 0, sniffLen), clientInput)
-                else clientInput
-                bridgeDirect(effectiveInput, clientOutput, directSocket)
             } catch (e: Exception) {
                 logd("CONNECT: direct connection failed for $effectiveHost:$destPort: ${e.message}")
                 if (!wasEarlyReply) {
@@ -384,7 +427,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         val effectiveInput = if (sniffLen > 0)
             SequenceInputStream(ByteArrayInputStream(sniffBuffer!!, 0, sniffLen), clientInput)
         else clientInput
-        connectViaProxy(destHost, destPort, rawAddr, portBytes, clientSocket, effectiveInput, clientOutput, sendReply = !wasEarlyReply)
+        connectViaProxy(destHost, destPort, rawAddr, portBytes, clientSocket, effectiveInput, clientOutput, sendReply = !wasEarlyReply, runId = runId)
     }
 
     /**
@@ -397,7 +440,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         remoteInput: InputStream,
         remoteOutput: OutputStream,
         sendClientReply: Boolean,
-        clientOutput: OutputStream
+        clientOutput: OutputStream,
+        runId: Long
     ): Boolean {
         val username = remoteUsername
         val password = remotePassword
@@ -414,8 +458,17 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         remoteOutput.flush()
 
         val greetResp = ByteArray(2)
-        remoteInput.readFully(greetResp)
+        trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_GREETING_WAIT, runId)
+        try {
+            remoteInput.readFully(greetResp)
+        } catch (e: Exception) {
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_GREETING_FAILED, runId,
+                failure = app.slipnet.util.ConnectionDiagnostics.failure(e))
+            throw e
+        }
         if (greetResp[0] != 0x05.toByte()) {
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_GREETING, runId,
+                failure = app.slipnet.util.ConnectionDiagnostics.Failure.OTHER)
             Log.w(TAG, "Remote proxy rejected greeting (ver=${greetResp[0]})")
             if (sendClientReply) {
                 clientOutput.write(byteArrayOf(0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
@@ -425,6 +478,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         }
 
         val selectedMethod = greetResp[1].toInt() and 0xFF
+        trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_GREETING, runId, selectedMethod)
 
         when (selectedMethod) {
             0x00 -> {
@@ -434,6 +488,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             0x02 -> {
                 // Username/password authentication (RFC 1929)
                 if (!hasAuth) {
+                    trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_AUTH, runId, 2,
+                        app.slipnet.util.ConnectionDiagnostics.Failure.AUTH_REJECTED)
                     Log.w(TAG, "Remote proxy requires auth but no credentials provided")
                     if (sendClientReply) {
                         clientOutput.write(byteArrayOf(0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
@@ -460,7 +516,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                 val authResp = ByteArray(2)
                 remoteInput.readFully(authResp)
 
-                if (authResp[1] != 0x00.toByte()) {
+                if (authResp[0] != 0x01.toByte() || authResp[1] != 0x00.toByte()) {
+                    trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_AUTH, runId, authResp[1].toInt() and 255, app.slipnet.util.ConnectionDiagnostics.Failure.AUTH_REJECTED)
                     Log.w(TAG, "Remote proxy authentication failed (status=${authResp[1]})")
                     if (sendClientReply) {
                         clientOutput.write(byteArrayOf(0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
@@ -468,9 +525,12 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                     }
                     return false
                 }
+                trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_AUTH, runId, 0)
                 logd("Remote proxy authentication succeeded")
             }
             0xFF -> {
+                trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_AUTH, runId, 255,
+                    app.slipnet.util.ConnectionDiagnostics.Failure.AUTH_REJECTED)
                 Log.w(TAG, "Remote proxy rejected all auth methods")
                 if (sendClientReply) {
                     clientOutput.write(byteArrayOf(0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
@@ -504,14 +564,20 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
         clientSocket: Socket,
         clientInput: InputStream,
         clientOutput: OutputStream,
-        sendReply: Boolean
+        sendReply: Boolean,
+        runId: Long
     ) {
-        val remoteSocket: Socket
+        val remoteSocket = Socket()
+        if (!track(remoteSocket, runId)) return
         try {
-            remoteSocket = Socket()
             remoteSocket.connect(InetSocketAddress(remoteHost, remotePort), TCP_CONNECT_TIMEOUT_MS)
+            remoteSocket.soTimeout = TCP_CONNECT_TIMEOUT_MS
             remoteSocket.tcpNoDelay = true
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_TCP_READY, runId)
         } catch (e: Exception) {
+            activeSockets.remove(remoteSocket)
+            runCatching { remoteSocket.close() }
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_CONNECT, runId, failure = app.slipnet.util.ConnectionDiagnostics.failure(e))
             logd("CONNECT: failed to connect to remote SOCKS5 proxy: ${e.message}")
             if (sendReply) {
                 clientOutput.write(byteArrayOf(0x05, 0x05, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
@@ -525,7 +591,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             val remoteOutput = remoteSocket.getOutputStream()
 
             // SOCKS5 handshake with remote proxy (greeting + optional auth)
-            if (!performRemoteSocks5Handshake(remoteInput, remoteOutput, sendReply, clientOutput)) {
+            if (!performRemoteSocks5Handshake(remoteInput, remoteOutput, sendReply, clientOutput, runId)) {
                 remoteSocket.close()
                 return
             }
@@ -539,6 +605,11 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             val connRespHeader = ByteArray(4)
             remoteInput.readFully(connRespHeader)
 
+            if (connRespHeader[0] != 0x05.toByte() || connRespHeader[2] != 0x00.toByte()) {
+                trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_CONNECT, runId, 1)
+                throw java.io.IOException("Invalid SOCKS5 CONNECT response")
+            }
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_CONNECT, runId, connRespHeader[1].toInt() and 255)
             if (connRespHeader[1] != 0x00.toByte()) {
                 logd("CONNECT: remote proxy rejected to $destHost:$destPort (rep=${connRespHeader[1]})")
                 if (sendReply) {
@@ -552,7 +623,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             // Read remaining response bytes based on address type
             when (connRespHeader[3].toInt() and 0xFF) {
                 0x01 -> { val rest = ByteArray(6); remoteInput.readFully(rest) }
-                0x03 -> { val len = remoteInput.read(); val rest = ByteArray(len + 2); remoteInput.readFully(rest) }
+                0x03 -> { val len = remoteInput.read(); if (len !in 1..255) throw java.io.IOException("Invalid SOCKS5 bound address"); remoteInput.readFully(ByteArray(len + 2)) }
                 0x04 -> { val rest = ByteArray(18); remoteInput.readFully(rest) }
             }
 
@@ -565,6 +636,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             }
 
             clientSocket.soTimeout = 0
+            remoteSocket.soTimeout = 0
 
             // Bridge bidirectionally
             remoteSocket.use { remote ->
@@ -588,6 +660,8 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                 }
             }
         } catch (e: Exception) {
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.SOCKS_CONNECT, runId,
+                failure = app.slipnet.util.ConnectionDiagnostics.failure(e))
             logd("CONNECT: chain error for $destHost:$destPort: ${e.message}")
             if (sendReply) {
                 try {
@@ -596,6 +670,9 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                 } catch (_: Exception) {}
             }
             try { remoteSocket.close() } catch (_: Exception) {}
+        } finally {
+            activeSockets.remove(remoteSocket)
+            runCatching { remoteSocket.close() }
         }
     }
 
@@ -607,13 +684,13 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
      * DNS queries are dispatched to a thread pool for concurrent resolution.
      * Responses are cached for 60s to avoid repeated round-trips.
      */
-    private fun handleFwdUdp(input: InputStream, output: OutputStream) {
+    private fun handleFwdUdp(input: InputStream, output: OutputStream, runId: Long) {
         output.write(byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
         output.flush()
 
         logd("FWD_UDP session established")
 
-        while (running.get() && !Thread.currentThread().isInterrupted) {
+        while (running.get() && runGeneration.get() == runId && !Thread.currentThread().isInterrupted) {
             val hdr = ByteArray(3)
             input.readFully(hdr)
 
@@ -647,6 +724,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             val addrCopy = addrBytes.copyOf()
             val payloadCopy = payload.copyOf()
             dnsExecutor.submit {
+                if (!running.get() || runGeneration.get() != runId) return@submit
                 try {
                     // Check cache first. Only answers fetched through the tunnel count as
                     // tunnel traffic; cache hits and dropped non-DNS UDP never cross it.
@@ -655,11 +733,14 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
                         logd("DNS: cache hit")
                         cached
                     } else {
-                        val resolved = forwardDnsTcp(payloadCopy)
+                        val resolved = forwardDnsTcp(payloadCopy, runId)
                         if (resolved != null && resolved.isNotEmpty()) {
-                            cacheDnsResponse(payloadCopy, resolved)
-                            tunnelTxBytes.addAndGet(payloadCopy.size.toLong())
-                            tunnelRxBytes.addAndGet(resolved.size.toLong())
+                            synchronized(activeSockets) {
+                                if (!running.get() || runGeneration.get() != runId) return@submit
+                                if (DnsFallback.cacheable(resolved)) cacheDnsResponse(payloadCopy, resolved)
+                                tunnelTxBytes.addAndGet(payloadCopy.size.toLong())
+                                tunnelRxBytes.addAndGet(resolved.size.toLong())
+                            }
                         }
                         resolved
                     }
@@ -736,48 +817,73 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
      * Forward DNS query as DNS-over-TCP through the remote SOCKS5 proxy CONNECT to the configured DNS server.
      * Each call opens a new SOCKS5 connection (no persistent connections to keep it simple).
      */
-    private fun forwardDnsTcp(payload: ByteArray): ByteArray? {
+    private fun forwardDnsTcp(payload: ByteArray, runId: Long): ByteArray? {
+        var index = 0
+        val response = DnsFallback.query(payload, dnsHost, dnsFallback) { host, request ->
+            if (!running.get() || runGeneration.get() != runId) null else {
+                trace(if (index++ == 0) app.slipnet.util.ConnectionDiagnostics.Event.DNS_PRIMARY else app.slipnet.util.ConnectionDiagnostics.Event.DNS_FALLBACK, runId)
+                forwardDnsTcpAttempt(request, host, runId)
+            }
+        }
+        if (response != null && response.size >= 12)
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.DNS_ANSWER, runId, response[3].toInt() and 15)
+        return response
+    }
+
+    private fun dnsDestination(host: String): ByteArray {
+        val value = host.removeSurrounding("[", "]")
+        val parts = value.split('.')
+        if (parts.size == 4 && parts.all { it.toIntOrNull() != null }) {
+            require(parts.all { it.toInt() in 0..255 }) { "Invalid DNS IPv4 address" }
+            return byteArrayOf(1) + parts.map { it.toInt().toByte() }.toByteArray()
+        }
+        if (':' in value) {
+            val bytes = java.net.InetAddress.getByName(value).address // Numeric IPv6 only, no DNS lookup.
+            return byteArrayOf(if (bytes.size == 4) 1 else 4) + bytes
+        }
+        val bytes = java.net.IDN.toASCII(value).toByteArray(Charsets.US_ASCII)
+        require(bytes.size in 1..255) { "Invalid remote DNS host" }
+        return byteArrayOf(3, bytes.size.toByte()) + bytes
+    }
+
+    private fun forwardDnsTcpAttempt(payload: ByteArray, destination: String, runId: Long): ByteArray? {
         var socket: Socket? = null
+        var deadline: ScheduledFuture<*>? = null
+        val deadlineExpired = AtomicBoolean(false)
         try {
             // Connect to remote SOCKS5 proxy
-            socket = Socket()
+            val ownedSocket = Socket()
+            socket = ownedSocket
+            if (!track(ownedSocket, runId)) return null
+            deadline = dnsDeadlines.schedule({
+                deadlineExpired.set(true)
+                runCatching { ownedSocket.close() }
+            }, DNS_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
             socket.connect(InetSocketAddress(remoteHost, remotePort), DNS_TIMEOUT_MS)
             socket.soTimeout = DNS_TIMEOUT_MS
             socket.tcpNoDelay = true
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.DNS_TCP_READY, runId)
 
             val input = socket.getInputStream()
             val output = socket.getOutputStream()
 
             // SOCKS5 handshake with remote proxy (greeting + optional auth)
             // Use a dummy OutputStream for client reply since DNS doesn't send back SOCKS errors
-            if (!performRemoteSocks5Handshake(input, output, false, output)) {
+            if (!performRemoteSocks5Handshake(input, output, false, output, runId)) {
                 logd("DNS: remote proxy handshake failed")
                 return null
             }
 
-            // Parse DNS host into IPv4 bytes
-            val dnsIpParts = dnsHost.split(".")
-            if (dnsIpParts.size != 4) {
-                logd("DNS: invalid DNS host IP: $dnsHost")
-                return null
-            }
-
-            // SOCKS5 CONNECT to DNS server:53
-            val connectReq = byteArrayOf(
-                0x05, 0x01, 0x00,       // VER, CMD=CONNECT, RSV
-                0x01,                    // ATYP=IPv4
-                dnsIpParts[0].toInt().toByte(),
-                dnsIpParts[1].toInt().toByte(),
-                dnsIpParts[2].toInt().toByte(),
-                dnsIpParts[3].toInt().toByte(),
-                0x00, 0x35              // port 53
-            )
+            // Keep DNS resolution at the remote side; support numeric IPv4/IPv6 and DNS names.
+            val connectReq = byteArrayOf(0x05, 0x01, 0x00) + dnsDestination(destination) + byteArrayOf(0, 53)
             output.write(connectReq)
             output.flush()
 
             // Read CONNECT response
             val connResp = ByteArray(4)
             input.readFully(connResp)
+            if (connResp[0] != 0x05.toByte() || connResp[2] != 0x00.toByte()) return null
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.DNS_CONNECT, runId, connResp[1].toInt() and 255)
             if (connResp[1] != 0x00.toByte()) {
                 logd("DNS: SOCKS5 CONNECT rejected (rep=${connResp[1]})")
                 return null
@@ -786,8 +892,9 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             // Skip remaining response bytes based on address type
             when (connResp[3].toInt() and 0xFF) {
                 0x01 -> { val rest = ByteArray(6); input.readFully(rest) }
-                0x03 -> { val len = input.read(); val rest = ByteArray(len + 2); input.readFully(rest) }
+                0x03 -> { val len = input.read(); if (len !in 1..255) return null; input.readFully(ByteArray(len + 2)) }
                 0x04 -> { val rest = ByteArray(18); input.readFully(rest) }
+                else -> return null
             }
 
             // Send DNS query as TCP (2-byte length prefix per RFC 1035 section 4.2.2)
@@ -797,6 +904,7 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             ))
             output.write(payload)
             output.flush()
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.DNS_QUERY_SENT, runId)
 
             // Read DNS response (2-byte length prefix)
             val respLenBuf = ByteArray(2)
@@ -814,9 +922,14 @@ class Socks5ProxyInstance(val instanceId: String = "default") {
             logd("DNS: resolved via remote proxy (${response.size} bytes)")
             return response
         } catch (e: Exception) {
+            trace(app.slipnet.util.ConnectionDiagnostics.Event.DNS_FAILED, runId,
+                failure = if (deadlineExpired.get()) app.slipnet.util.ConnectionDiagnostics.Failure.TIMEOUT
+                    else app.slipnet.util.ConnectionDiagnostics.failure(e))
             logd("DNS-over-TCP failed: ${e.message}")
             return null
         } finally {
+            deadline?.cancel(false)
+            if (socket != null) activeSockets.remove(socket)
             try { socket?.close() } catch (_: Exception) {}
         }
     }

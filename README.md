@@ -1,81 +1,79 @@
-<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="200"></p>
+<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="180"></p>
+
+[English](README.md) · [فارسی](README.fa.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
 
 # Rovunet
 
-[English](README.md) · [فارسی](README.fa.md) · [Download](https://github.com/msVPNco/rovunet-android/releases/latest) · [Telegram](https://t.me/RovunetVPN) · [Server panel](https://github.com/msVPNco/rovunet-panel)
+**A multi-protocol Android VPN client for several routes to your own server.** Rovunet brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel.
 
-An Android multi-protocol VPN client that keeps a server's connection paths together in named collections. Import supported standard links or Rovunet bundles, connect a selected path directly, and run a separate HTTPS test to compare paths through the actual tunnel.
+[Releases](https://github.com/msVPNco/rovunet-android/releases) · [Telegram](https://t.me/RovunetVPN) · [Server panel](https://github.com/msVPNco/rovunet-panel) · [User guide](docs/USER_GUIDE.md)
 
-The interface supports Persian, English, Simplified Chinese and Russian. Settings and their dialogs use translated Android resources; some inherited advanced editor and scanner text still appears in English.
+## Release status
 
-## Download and install
+This tree prepares **0.3.0-alpha14 Full, version code 25**. Alpha11 is the previous public release. Alpha14 is not a published signed APK until its release assets are finalized. Production signing and the upgrade/migration decision remain required. [Release record](docs/releases/alpha14-final.md) · [Current status](docs/STATUS.md).
 
-**0.3.0-alpha11 Full · versionCode 17 · Android 7.0 or later.**
+Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inherited Naive/Tor binaries are unavailable on x86_64. No 32-bit x86 or new Lite asset is promised. No Rovunet Google Play, App Store or desktop GUI release is available.
 
-[Download the Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha11/Rovunet-0.3.0-alpha11-Full.apk) · [Release notes and all files](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha11)
+## Features
 
-Install over the previous Full version to retain profiles. The package ID remains app.veyra.client and the existing signing identity is retained. Export a backup before upgrading. There is no Google Play, App Store or Rovunet desktop GUI release yet.
+| Area | Current functionality |
+| --- | --- |
+| Collections | Group paths using collection/account/server metadata; remember explicit choices and retain completed measurements. |
+| Direct connection | First tap selects a path, tapping the selected path connects. Collection expansion, editing and menus do not connect. No prerequisite ping or resolver-pool scan. |
+| HTTPS tests | Actual HTTPS/204 inside the tunnel, certificate validation, a limited alternative target, success ratio and latency spread. DNS fallback in collection tests requires consent. |
+| Interface | Light, dark and AMOLED themes, distinct collection/path surfaces, green current-network HTTPS badges, four-language resources, quick controls and traffic counters. |
+| Configuration | Supported link/text/file/QR import with preview, collection export, sharing, password-encrypted backups and explicit recovery of unreadable credentials. Sharing/device restrictions remain enforced. |
+| Security | SSH identity approval, validated TLS and saved self-signed identities, encrypted stored credentials, authenticated private Xray SOCKS endpoints and cancellable setup. |
+| Diagnostics | Local safe stage/code reports and traffic snapshots, optionally shared by the user; no automatic upload and no endpoint/account/credential fields in the safe report. |
 
-The APK is a non-debuggable Full Release build, still signed with the existing debug certificate for upgrade compatibility. Production signing and physical-device validation remain pending. Automated tests do not establish reliability on every phone or network.
+Persian, English, Simplified Chinese and Russian cover the main interface, settings and profile-editor resources. Some inherited advanced scanner text and backend errors can remain English. Addresses, protocol names and configuration syntax are not translated.
 
-APK SHA-256:
+## Protocols
 
-```text
-0640b684cf1f07e6645aa536698a4b3820f2973b19e17fe5083017d80b825e98
-```
+| Family | Available paths |
+| --- | --- |
+| SSH | Direct SSH, compatible TLS/STunTLS configurations, HTTP CONNECT and WebSocket; password or supported key authentication. |
+| DNS tunnels | DNSTT, NoizDNS, VayDNS, Slipstream and Soar, including supported SSH combinations and backend-specific resolver discovery/tuning. |
+| HTTPS/proxies | NaiveProxy, NaiveProxy + SSH, remote SOCKS5 and DoH. Plain SOCKS5 does not encrypt transport; DoH alone encrypts DNS, not all traffic. |
+| VLESS/core | VLESS WebSocket, REALITY, XHTTP, Hysteria2 and standard single-peer WireGuard through the integrated core. |
+| Tor | Full-package Tor and supported Snowflake/obfs4/Meek/custom bridges, subject to backend and architecture availability. |
 
-## What changed
+**New Soar and Soar+SSH profiles default to UDP + TCP.** Existing/imported choices are preserved; Automatic, UDP + TCP, TCP only and UDP only remain independent options. SSH over a base tunnel also requires the server to allow the destination and SSH port.
 
-- Connect starts the selected path without a prerequisite ping, HTTPS test or resolver-pool scan. Without a selected path, it chooses a suitable direct path from the selected collection; DNS fallback still requires consent.
-- Waiting for destruction of the previous service is bounded. Expired or cancelled requests cannot start later, and stale callbacks cannot revive an abandoned attempt.
-- Foreground notification starts before blocking setup work. Actual protocol/VPN readiness completes Connected; idle zero traffic alone does not disconnect it. Protocol health and stalled-traffic monitoring continue after setup.
-- Includes alpha10's in-place language/RTL switching, translated settings and private, locally stored stability reports. Reports are shared only through an explicit user action.
+Imports include `rovunet://` bundles, compatible `veyra://`/`slipnet://` aliases, supported VLESS/Hysteria2 links and single-peer WireGuard INI. Native export is v33. Unknown future versions are explicitly rejected instead of partially imported. Arbitrary core JSON, AmneziaWG and every WireGuard URI dialect are not advertised as supported.
 
-[Alpha11 technical record](docs/releases/alpha11.md) · [Current status and remaining work](docs/STATUS.md)
+## Connect, measure and update
 
-## Protocols and configuration
+Import and review a profile, expand its collection, select a path and tap it again or use the collection control. A remembered path is already selected when you return. Grant Android VPN permission. Before approving an unknown SSH/self-signed identity, compare its fingerprint with your operator; background work never silently approves a new identity.
 
-Includes the DNS tunnel families (DNSTT, NoizDNS, VayDNS, Slipstream and Soar), SSH and supported wrappers, NaiveProxy, SOCKS5, DoH, VLESS WebSocket, Tor, and core profiles for REALITY, XHTTP, Hysteria2 and single-peer WireGuard. Availability depends on the backend, device architecture and server configuration; no protocol is guaranteed to bypass a particular network.
+Tests are separate from connection. A failed historical measurement does not block manual connection. Connected means technical tunnel readiness, not guaranteed access to every service. HTTPS latency is not download speed or a long-term stability guarantee.
 
-Imports include supported standard VLESS/Hysteria2 links, single-peer WireGuard INI and native rovunet:// bundles. Current native export is v33; earlier formats and veyra:// / slipnet:// aliases remain import-compatible. WireGuard URI dialects, AmneziaWG and arbitrary core JSON are not advertised as supported imports.
+The in-app updater downloads compatible GitHub release APKs and checks checksum, package, version and signer before opening Android's installer. No silent installation or alternative update mirror is provided. Changing signer does not automatically create a compatible upgrade.
 
-Connected describes tunnel readiness, while HTTPS results describe the last explicit measurement. A failed historical test does not block manual connection. HTTPS latency is not download speed or a long-term stability guarantee.
+**Do not uninstall the only readable copy of your profiles.** Alpha11 public and Rovunet Test have different identities. Encrypted bulk export excludes locked profiles; protected or device-bound profiles may require original links or reissue after a signing change. Follow the actual release's installation notes. [Migration](docs/adr/0002-signing-transition.md).
 
-The [server panel](https://github.com/msVPNco/rovunet-panel) is separate. Client support does not mean the panel automatically installs every supported protocol. Subscription refresh and automatic failover between collection paths are not included.
+## Server and limits
 
-## Source, build and verification
+[Rovunet Panel](https://github.com/msVPNco/rovunet-panel) manages supported Linux services and exports configs. Client support does not imply automatic panel installation; some `core-plan` paths require manual deployment. A server and valid credentials are needed; the app does not provide free accounts.
 
-The APK and both source assets use application commit [91f2c0e](https://github.com/msVPNco/rovunet-android/commit/91f2c0e9a9fd94eb72e30236bc965293b5303762). Later release-documentation changes do not rebuild that APK.
+Subscription refresh, automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences, remote SOCKS data flow and counters on the reported real network still require field evidence. No protocol guarantees access through every network.
 
-- **source-light.zip**: application code, resources, tests, licenses and available pinned native source trees; precompiled .so and .aar files omitted.
-- **source.zip**: the same application snapshot and available native sources, including tracked precompiled assets. It is not a fully self-contained native rebuild kit.
-- **SOURCE-MANIFEST.json** inside each ZIP records exact revisions and one unavailable upstream dnstt-mobile source tree. No substitute revision is presented as the original source.
-- Release assets also include SHA256SUMS.txt, APK-SHA256.txt, SIGNER-SHA256.txt, a Persian guide and VERIFICATION.json.
+## Source, verification and support
 
-[Build and tests](docs/BUILDING.md) · [Source provenance](docs/releases/alpha08-native-sources.md) · [Successful exact-commit CI](https://github.com/msVPNco/rovunet-android/actions/runs/41984862024) · [Release procedure](docs/RELEASING.md)
+Explicit source ZIPs contain app code, resources, tests, licenses and available pinned native sources. Light ZIPs omit tracked precompiled `.so`/`.aar` assets. `SOURCE-MANIFEST.json` records revisions, reused binaries and an unavailable old `dnstt-mobile` tree. Neither ZIP is a complete independent native rebuild kit.
 
-## Documentation and support
+[Build](docs/BUILDING.md) · [Release procedure](docs/RELEASING.md) · [Security](SECURITY.md) · [Core formats](VEYRA-CORE.md).
 
-- [User guide — English and Persian](docs/USER_GUIDE.md)
-- [Current status and roadmap](docs/STATUS.md)
-- [Core formats and limitations](VEYRA-CORE.md)
-- [Security reporting](SECURITY.md)
-- [Telegram community](https://t.me/RovunetVPN)
-
-For a problem report, include app version, Android version, protocol, steps and whether ordinary sites open. Review diagnostics before sharing; do not post config links, credentials or device identifiers publicly.
+For support, provide app/Android versions, protocol, reproduction steps and the local safe report. Do not publicly post configuration links, passwords, private keys or device identifiers. Community: [t.me/RovunetVPN](https://t.me/RovunetVPN).
 
 ## Optional development support
 
-Support is voluntary and is not required to use the app. The address is also available with a copy button in Settings and About.
+If you would like to help improve Rovunet, donations are voluntary and never required to use it. **USDT on Tron/TRC20 only:**
 
-- Asset: **USDT**
-- Network: **Tron (TRC20)**
-- Address: `TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ`
-
-Send only USDT on Tron (TRC20) to this address.
+`TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ`
 
 ## License and attribution
 
-AGPL-3.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE.md). Xray-core is distributed under MPL-2.0; source pins and native dependency metadata are retained under tools/veyra.
+AGPL-3.0: [LICENSE](LICENSE), [NOTICE](NOTICE.md). Xray-core is under MPL-2.0; source pins and notices are retained.
 
-Rovunet is based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full by Anonvector. It is an independent project and is not affiliated with the SlipNet project.
+Based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full by Anonvector. Rovunet is an independent project, not affiliated with SlipNet.

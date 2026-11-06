@@ -12,10 +12,21 @@ object UpdateManifest {
         url.startsWith(PREFIX) && uri.host == "github.com" && uri.userInfo == null && uri.fragment == null && uri.query == null &&
             !uri.path.contains("/../") && uri.path.startsWith("/msVPNco/rovunet-android/releases/download/")
     }.getOrDefault(false)
+    fun newestPublished(releases: org.json.JSONArray, previous: JSONObject? = null): JSONObject? {
+        var best = previous
+        for (i in 0 until releases.length()) {
+            val release = releases.getJSONObject(i)
+            val version = release.optString("tag_name")
+            if (!release.optBoolean("draft") && ReleaseVersion.supports(version) &&
+                (best == null || ReleaseVersion.isNewer(version, best.getString("tag_name")))) best = release
+        }
+        return best
+    }
     fun parse(body: String, current: String, lite: Boolean): UpdateAsset? {
         val json = JSONObject(body)
         val version = json.getString("tag_name").removePrefix("v")
-        if (json.optBoolean("draft") || !ReleaseVersion.isNewer(version, current.removeSuffix("-lite"))) return null
+        require(!json.optBoolean("draft") && ReleaseVersion.supports(version) && ReleaseVersion.supports(current)) { "Unrecognized release information" }
+        if (!ReleaseVersion.isNewer(version, current.removeSuffix("-lite"))) return null
         val assets = json.getJSONArray("assets")
         val entries = (0 until assets.length()).map { assets.getJSONObject(it) }
         val apks = entries.filter {

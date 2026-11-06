@@ -390,6 +390,7 @@ class NotificationHelper @Inject constructor(
     }
 
     fun createScanNotification(
+        runId: String,
         scannedCount: Int,
         totalCount: Int,
         workingCount: Int,
@@ -411,6 +412,7 @@ class NotificationHelper @Inject constructor(
 
         val stopIntent = Intent(context, ScanService::class.java).apply {
             action = ScanService.ACTION_STOP
+            data = android.net.Uri.fromParts("rovunet-scan", runId, null)
         }
         val stopPendingIntent = createServicePendingIntent(
             requestCode = REQUEST_CODE_SCAN_STOP,

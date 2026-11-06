@@ -14,6 +14,7 @@ if cfg.get('neverListen'):time.sleep(60)
 time.sleep(cfg.get('readyDelayMs',0)/1000)
 s=socket.socket();s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
 s.bind(('127.0.0.1',cfg['inbounds'][0]['port']));s.listen(4)
+print('2026/01/01 00:00:00.000000 [Warning] core: Xray 26.10.31 started',flush=True)
 while True:
  c,_=s.accept()
  with c:
@@ -34,10 +35,24 @@ while True:
         ServerSocket(port).close()
         check(core.start(fake, config("\"neverListen\":true"), startupTimeoutMs = 300).isFailure)
         check(!core.isRunning())
+        // A different listener can offer even the exact requested SOCKS method.
+        java.net.ServerSocket(port).use { imposter ->
+            val result = core.start(fake, config("\"neverListen\":true"), startupTimeoutMs = 300)
+            check(result.isFailure && !core.isRunning())
+            imposter.soTimeout = 100
+            check(runCatching { imposter.accept().close() }.isFailure) { "Sent a handshake to an unrelated listener" }
+        }
         ServerSocket(port).close()
         core.start(fake, config("\"ignoreTerm\":true")).getOrThrow()
         core.stop()
         check(!core.isRunning())
+        // A different listener can offer even the exact requested SOCKS method.
+        java.net.ServerSocket(port).use { imposter ->
+            val result = core.start(fake, config("\"neverListen\":true"), startupTimeoutMs = 300)
+            check(result.isFailure && !core.isRunning())
+            imposter.soTimeout = 100
+            check(runCatching { imposter.accept().close() }.isFailure) { "Sent a handshake to an unrelated listener" }
+        }
         ServerSocket(port).close()
         println("PASS delayed core listener readiness, bounded never-ready startup and forced-stop cleanup")
     } finally { core.stop();directory.deleteRecursively() }

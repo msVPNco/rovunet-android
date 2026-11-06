@@ -70,7 +70,12 @@ object BundleCrypto {
 
     private fun deriveKey(password: String, salt: ByteArray): SecretKeySpec {
         val spec = PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_BITS)
-        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        val factory = try {
+            SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        } catch (_: java.security.NoSuchAlgorithmException) {
+            // API 24/25 may lack the platform factory. Keep the same UTF-8 PBKDF2 format.
+            SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256", org.bouncycastle.jce.provider.BouncyCastleProvider())
+        }
         val keyBytes = factory.generateSecret(spec).encoded
         return SecretKeySpec(keyBytes, "AES")
     }

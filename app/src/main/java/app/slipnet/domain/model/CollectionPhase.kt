@@ -2,16 +2,16 @@ package app.slipnet.domain.model
 
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** One bounded phase. Cleanup remains the probe's responsibility, including cancellation. */
 object CollectionPhase {
     suspend fun run(profiles: List<ServerProfile>, connectAfter: Boolean, budgetMs: Long,
                     onProgress: (Int, ServerProfile) -> Unit,
                     onResult: (ServerProfile, PingResult) -> Unit,
+                    pausedNanos: () -> Long = { 0L },
                     probe: suspend (ServerProfile) -> PingResult): Boolean {
         var passed = false
-        withTimeoutOrNull(budgetMs) {
+        PausedTimeout.runOrNull(budgetMs, pausedNanos) {
             for ((index, profile) in profiles.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 onProgress(index,profile)

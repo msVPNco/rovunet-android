@@ -1,113 +1,95 @@
-# Rovunet user guide — 0.3.0-alpha11 Full
+# Rovunet user guide — alpha14 / راهنمای کاربر
 
-[فارسی](#راهنمای-فارسی) · [Download](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha11) · [Telegram](https://t.me/RovunetVPN)
+[English](#english) · [فارسی](#فارسی) · [简体中文](USER_GUIDE.zh-CN.md) · [Русский](USER_GUIDE.ru.md)
 
-## Install and update
+## English
 
-Download **Rovunet-0.3.0-alpha11-Full.apk** from the release Assets. Minimum Android API is 24 (Android 7.0). The universal APK contains ARM32, ARM64 and x86_64 assets; inherited Naive/Tor availability is limited on x86_64. No Lite APK is published for alpha11.
+### Installation and updates
 
-Export a backup, then install over the previous Full build. Do not uninstall first if you want to retain profiles and saved identities. The package ID and signer are unchanged. Android controls installation and the VPN permission prompt. Verify the APK hash against the release checksums; an unknown-developer Play Protect warning by itself is not a security verdict.
+The prepared version is **0.3.0-alpha14 Full, code 25**. Download installable files only from the actual published [release](https://github.com/msVPNco/rovunet-android/releases). The signing/migration decision is not yet complete; an unsigned preparation artifact cannot be installed. A private `Rovunet Test` package is separate from public `app.veyra.client` and is not its in-place update.
 
-In Settings, Check for updates reads this repository's **Latest** release. A newer compatible Full APK can be downloaded in the app; it is checked for hash, package, version and signer before opening Android's installer. Installation is never silent. A Lite installation does not have a new alpha11 Lite asset.
+Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
-The file is a non-debuggable Release build, but retains the old debug signing certificate for upgrades. There is no current Rovunet Google Play, App Store or desktop GUI listing.
+Before an upgrade, read its signer notes and retain your readable installation. Password-encrypted bulk export excludes locked profiles; unshareable/device-bound profiles may require original links or operator reissue. Do not clear application data or uninstall as a routine troubleshooting step. [Migration](UPGRADE.md).
 
-## Import and collections
+Check for updates in Settings downloads a compatible published GitHub APK inside the app, verifies checksum/package/version/signer, then asks Android to install it. GitHub must be reachable. Installing is never silent, and an unrelated signer is rejected. Public preview inclusion is optional; private candidates are delivered separately.
 
-Use **+ → Import** to paste text or import a supported file/QR. Supported links include native rovunet:// bundles, compatible slipnet:// and veyra:// aliases, supported standard VLESS/Hysteria2 links and single-peer WireGuard INI. Consult [core limitations](../VEYRA-CORE.md) before converting another app's format.
+### Import and collections
 
-A collection groups related paths for one account/server. Prefer explicit collection metadata exported by the panel; legacy inference is best effort. Review the group and rename it if needed. Grouping is a UI association, not a guarantee that credentials can safely be shared.
+Use **+ → Import** for text, supported files or QR, review the preview and confirm. Supported formats include native `rovunet://`, compatible `veyra://`/`slipnet://`, supported VLESS/Hysteria2 links and single-peer WireGuard INI. Native export is v33. Unknown future versions are rejected: update the client instead of editing away version/security fields.
 
-Use the collection's three-dot menu for available operations. Export/sharing restrictions and protected chain members still apply. Export a backup before regrouping or bulk deletion. Duplicate removal has a preview and checks full connection identity rather than protocol name alone.
+Collections retain related paths, explicit choices and completed measurements. Tap the collection header/chevron to expand or collapse. Tap a path once to select it and again to connect; a remembered path is already selected after returning. Edit/delete/menu controls are separate. Collection power starts its remembered path or an eligible initial path, without an automatic ping. No manual choice is silently replaced by another protocol.
 
-## Connect first; test separately
+### Connect, trust and stop
 
-1. Select the collection and expand it.
-2. Tap the desired profile, then **Connect**. It starts that profile directly, without a prerequisite ping/HTTPS/resolver scan.
-3. Approve Android VPN permission if requested. For an unknown SSH key or self-signed TLS identity, compare the displayed fingerprint with your administrator before approving.
-4. After protocol/VPN readiness, the app displays **Connected**. Open a normal site or app to check useful traffic.
+Grant the Android VPN permission when requested. Connect starts the selected transport directly: no ping, HTTPS test or resolver-pool scan is required. For an unknown SSH or self-signed identity, compare the fingerprint with the operator before approval. Background tests do not approve identities automatically; a changed identity is not silently accepted.
 
-If no specific profile is selected, Connect chooses a suitable non-DNS path from the selected collection using the existing order and cached measurements. DNS fallback still asks for consent. With DNS-only paths, consenting to Connect starts the configured path directly; it does not run the scanner first.
+Use the main/collection power control or path menu to cancel Connecting or disconnect. Previous setup is cancelled and I/O closed before replacement. Report persistent stopping rather than repeatedly tapping Connect. Connected means the transport/VPN is ready; it is not proof of access to every site. Idle zero counters alone are not a reason to disconnect.
 
-Connected is not a promise that every destination is reachable. Backend failure and stalled traffic are monitored after setup. A previous red HTTPS result is historical and does not prohibit manual connection. Idle traffic counters may legitimately be zero.
+### Tests, DNS and Soar
 
-The previous service's destruction wait is bounded at 10 seconds. Technical startup budgets are 90 seconds for direct paths, 120 for DNS and 180 for Tor/unknown restored starts; chains follow their first layer. These are error deadlines, not expected connection times.
+Run an explicit collection test while disconnected. It checks HTTPS/204 through each actual tunnel, with certificate checks and a limited fallback target. Measurements show last-test time, success and latency spread. They are not download-speed measurements; a historical failure does not block manual connection. Results from another network are identified separately.
 
-## Measure a selected collection
+Direct paths come before UDP/DNS fallback. DNS testing/discovery can take minutes and is cancellable; consent is required before entering the DNS fallback phase. Manual DNS paths use configured resolvers without a prerequisite pool scan.
 
-Use the explicit collection Ping/Test action while disconnected; it tests **only that selected collection**. It starts each path and performs HTTPS requests through the actual tunnel, with certificate validation and a fallback target. Protocol setup and request budgets differ by path.
+New **Soar and Soar+SSH default to UDP + TCP**. Existing/imported values remain unchanged. Automatic starts with UDP and can later add TCP for repeatedly failing unverified paths; it is not equivalent to UDP + TCP from startup. Keep the mode that works on your network. SSH-over-Soar needs server permission for the SSH destination/port in addition to a working base tunnel.
 
-Direct testing has a 90-second phase budget. If direct paths fail, DNS fallback asks for consent. Configured-resolver testing and subsequent resolver discovery each have an upper phase budget of 180 seconds, so a full fallback search can take several minutes. Cancel if you do not want it to continue.
+### Credentials, sharing and appearance
 
-Results show measured HTTPS latency, successful samples and variation. They are a short sample, not throughput or long-session stability. Plain TCP/DNS reachability is diagnostic only. The separate DNS scanner has its own configurable probe/HTTP criteria and is not equivalent to collection HTTPS validation.
+Stored secrets use Android Keystore-backed encryption. If a record becomes unreadable, it is marked for explicit credential recovery rather than silently erased; recover from a matching original configuration/operator. Keystore storage is not a portable backup after uninstall.
 
-## Settings, diagnostics and limitations
+Locked profiles and collection sharing restrictions remain effective in supported export paths; a lock is a client policy, not a guarantee against a modified client. Use a strong password for portable backups. Verify a backup can actually be imported before relying on it.
 
-Settings and related dialogs are translated into Persian, English, Simplified Chinese and Russian. Language and layout direction update in place. Some inherited advanced editor/scanner text remains English.
+Choose Persian/English/Simplified Chinese/Russian and light/dark/AMOLED in Settings. Main settings/editor resources are translated; some inherited advanced scanner text and backend errors may remain English. Protocol identifiers and addresses stay unchanged. The notification/widget/quick-settings controls depend on Android permissions and launcher behavior.
 
-For Connecting stalls, a Wait/Close dialog or an unexpected exit: open the stability report in Settings. It stores bounded local diagnostics and fixed connection-stage events. Sharing is explicit; no automatic diagnostic upload is performed. Review the report before sharing it.
+### Troubleshooting and limits
 
-A useful report includes app/Android versions, tunnel type, steps, connection-stage message and whether normal traffic works. Do not post config URIs, credentials, private keys, addresses or device identifiers in a public issue.
+Include app/Android versions, protocol, reproduction steps and whether ordinary pages open. The safe connection report records typed stages/codes, configured Soar mode and UI traffic snapshots without address/account/credential fields. It is local and shared only by user action. Detailed inherited debug logs can contain sensitive data; review/redact them before sharing. Do not post real config links, passwords, private keys or device IDs in public Telegram/issues.
 
-Known follow-ups: clearer update-version wording, reset-button alignment, advanced translation, physical-device testing, subscription refresh, collection failover and production signing. See [status](STATUS.md).
+Remote SOCKS data flow, Soar auto/on differences and counters in the reported network still need field diagnosis. SOCKS CONNECT success is not proof of payload transfer; DNS failure does not prove censorship or server ACL. DoH alone encrypts DNS; ordinary SOCKS5 does not encrypt transport. Subscription refresh, automatic path failover and throughput benchmarks are not included. [Status](STATUS.md) · [Telegram](https://t.me/RovunetVPN).
 
-## Server and privacy
+## فارسی
 
-Use a compatible server from an administrator you trust, or consult [Rovunet Panel](https://github.com/msVPNco/rovunet-panel). Client protocol support is not a claim that the panel deploys every backend.
+### نصب و به‌روزرسانی
 
-DoH-only mode protects DNS requests; it is not a general encrypted traffic tunnel. Standalone SOCKS5 does not provide transport encryption. SSH protects its channel but does not prove the server can reach every Internet destination. A pinned key identifies the endpoint, not its policy or trustworthiness.
+نسخهٔ آماده‌شونده **آلفا۱۴ Full، کد ۲۵** است. فایل نصب را از [انتشار واقعی گیت‌هاب](https://github.com/msVPNco/rovunet-android/releases) بگیرید. تصمیم امضا/مهاجرت هنوز کامل نشده؛ فایل بدون امضای مرحلهٔ آماده‌سازی قابل نصب نیست. بستهٔ خصوصی **Rovunet Test** مستقل است و روی آلفا۱۱ عمومی به‌عنوان آپدیت نصب نمی‌شود.
 
-An encrypted/locked profile with an embedded application key is a sharing-control mechanism, not guaranteed secrecy against someone who has the app. Use a strong password for password-derived encrypted backups. A shared WireGuard private key is not made safe for simultaneous devices; issue separate peer credentials.
+اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 
-[Security policy](../SECURITY.md) · [Source/build limitations](BUILDING.md)
+پیش از ارتقا، توضیح امضا را بخوانید و نسخهٔ قابل‌خواندن را حفظ کنید. خروجی گروهی رمزدار، کانفیگ قفل‌شده را شامل نمی‌شود؛ کانفیگ غیرقابل‌اشتراک یا مقید به دستگاه ممکن است به لینک اصلی یا صدور دوبارهٔ مدیر نیاز داشته باشد. حذف اپ یا پاک‌کردن داده، راهکار معمول عیب‌یابی نیست. [مهاجرت](UPGRADE.md).
 
-# راهنمای فارسی
+بررسی به‌روزرسانی در تنظیمات، APK سازگار را داخل اپ از گیت‌هاب دانلود و هش، بسته، نسخه و امضا را کنترل می‌کند؛ سپس نصب را به اندروید می‌سپارد. گیت‌هاب باید در دسترس باشد. نصب بی‌صدا نیست و امضای نامرتبط رد می‌شود. کانال پیش‌انتشار عمومی اختیاری است؛ نسخه‌های خصوصی جدا تحویل می‌شوند.
 
-## نصب و ارتقا
+### ورود کانفیگ و مجموعه‌ها
 
-از Assets انتشار، فایل **Rovunet-0.3.0-alpha11-Full.apk** را بگیرید. اندروید ۷ یا جدیدتر لازم است. برای حفظ کانفیگ و هویت‌های ذخیره‌شده، پس از گرفتن پشتیبان روی Full قبلی نصب کنید؛ برنامه را حذف نکنید. برای این نسخه APK از نوع Lite ارائه نشده است.
+از **+ ← ورود** برای متن، فایل یا QR پشتیبانی‌شده استفاده کنید؛ پیش‌نمایش را ببینید و تأیید کنید. فرمت‌ها شامل `rovunet://`، نام‌های سازگار `veyra://` و `slipnet://`، لینک‌های پشتیبانی‌شدهٔ VLESS/Hysteria2 و INI تک‌همتای WireGuard هستند. خروجی اختصاصی نسخهٔ ۳۳ است. نسخهٔ آیندهٔ ناشناخته رد می‌شود؛ به‌جای حذف شمارهٔ نسخه یا فیلد امنیتی، اپ را به‌روز کنید.
 
-هش فایل را با SHA256SUMS.txt مقایسه کنید. هشدار ناشر ناشناس به‌تنهایی دربارهٔ امنیت فایل نتیجهٔ قطعی نمی‌دهد. نصب و اجازهٔ VPN در اختیار اندروید است. APK غیرقابل دیباگ است، اما گواهی debug قبلی را برای ارتقا حفظ کرده است؛ امضای تولید و نسخهٔ فروشگاهی هنوز وجود ندارند.
+مجموعه مسیرهای مرتبط، انتخاب صریح و نتیجه‌های تکمیل‌شده را نگه می‌دارد. سرتیتر یا فلش، مجموعه را باز/بسته می‌کند. لمس اول کانفیگ را انتخاب و لمس دوبارهٔ کانفیگ انتخاب‌شده وصل می‌کند؛ انتخاب ذخیره‌شده هنگام بازگشت از قبل فعال است. ویرایش، حذف و منو کنترل جدا دارند. پاور مجموعه مسیر به‌یادمانده یا مسیر اولیهٔ مجاز را بدون پینگ اجباری راه می‌اندازد؛ انتخاب صریح بی‌صدا با پروتکل دیگری عوض نمی‌شود.
 
-به‌روزرسانی در تنظیمات از GitHub Latest بررسی می‌شود. برای نسخهٔ جدید سازگار، دانلود و کنترل هش، بسته، کد نسخه و امضا داخل اپ انجام می‌شود؛ نصب به تأیید اندروید نیاز دارد. متن نمایش نسخه‌ها برای اصلاح بعدی ثبت شده است.
+### اتصال، اعتماد و توقف
 
-## ورود کانفیگ و مجموعه‌ها
+مجوز VPN اندروید را بدهید. اتصال دستی مسیر انتخاب‌شده را مستقیم راه می‌اندازد و پینگ، تست HTTPS یا اسکن مجموعهٔ resolver پیش‌نیاز نیست. برای SSH ناشناس یا گواهی خودامضا، اثر انگشت را قبل از تأیید با مدیر سرور تطبیق دهید. کار پس‌زمینه هویت ناشناس را خودکار تأیید و هویت تغییریافته را بی‌صدا قبول نمی‌کند.
 
-از **+ ← ورود**، متن، فایل یا QR پشتیبانی‌شده را وارد کنید. قالب rovunet://، نام‌های قدیمی slipnet:// و veyra://، لینک‌های استاندارد پشتیبانی‌شدهٔ VLESS/Hysteria2 و فایل WireGuard تک‌همتا قابل استفاده‌اند. همهٔ قالب‌های دیگر اپ‌ها الزاماً پشتیبانی نمی‌شوند.
+از پاور اصلی/مجموعه یا منوی کانفیگ برای لغو Connecting و قطع استفاده کنید. پیش از جایگزینی، راه‌اندازی قبلی لغو و I/O بسته می‌شود. اگر توقف طولانی شد گزارش بدهید و مکرر اتصال نزنید. «متصل» یعنی آمادگی فنی مسیر/VPN، نه تضمین دسترسی به هر سایت؛ صفر بودن مصرفِ بی‌کاری به‌تنهایی علت قطع نیست.
 
-مجموعه برای مسیرهای یک حساب/سرور است. خروجی پنل با شناسهٔ صریح مجموعه دقیق‌تر از گروه‌بندی حدسی کانفیگ قدیمی است. نام و اعضا را بررسی کنید. گروه‌بندی به معنی امن‌بودن اشتراک عمومی اعتبارنامه‌ها نیست.
+### تست، DNS و Soar
 
-عملیات مجموعه در منوی سه‌نقطه است. محدودیت خروجی کانفیگ و محافظت اعضای زنجیره برقرار می‌مانند. حذف تکراری‌ها پیش‌نمایش دارد و هویت کامل اتصال را مقایسه می‌کند؛ قبل از تغییر عمده پشتیبان بگیرید.
+تست صریح مجموعه را در حالت قطع اجرا کنید. HTTPS با پاسخ ۲۰۴ از داخل تونل واقعی، اعتبارسنجی گواهی و مقصد جایگزین محدود بررسی می‌شود. زمان تست، نسبت موفقیت و پراکندگی تأخیر نمونهٔ کوتاه‌اند، نه سرعت دانلود. شکست قبلی مانع اتصال دستی نیست؛ نتیجهٔ شبکهٔ دیگر جدا مشخص می‌شود.
 
-## اتصال عادی
+مسیرهای مستقیم پیش از UDP و جایگزین DNS می‌آیند. تست/کشف DNS ممکن است چند دقیقه طول بکشد و قابل لغو است؛ ورود به فاز جایگزین DNS رضایت کاربر می‌خواهد. اتصال دستی DNS از resolverهای تنظیم‌شده استفاده می‌کند و اسکن اجباری ندارد.
 
-۱. مجموعه را باز و کانفیگ مورد نظر را انتخاب کنید.
-۲. اتصال را بزنید؛ همان کانفیگ بدون پینگ، تست HTTPS یا اسکن اجباری رزولور شروع می‌شود.
-۳. اجازهٔ VPN اندروید را بدهید. اگر کلید SSH یا گواهی خودامضا ناشناس است، اثر انگشت را با مدیر سرور تطبیق دهید.
-۴. پس از آمادگی فنی تونل، «متصل» نمایش داده می‌شود؛ یک سایت یا اپ عادی باز کنید.
+پیش‌فرض **Soar و Soar+SSH جدید، UDP + TCP** است. حالت کانفیگ موجود یا واردشده حفظ می‌شود. خودکار با UDP شروع و ممکن است پس از شکست تکراری مسیر تأییدنشده TCP اضافه کند؛ با اجرای هر دو از ابتدا یکسان نیست. حالت کارآمد شبکه‌تان را نگه دارید. برای SSH روی Soar، سرور علاوه بر تونل پایه باید مقصد و پورت SSH را مجاز بداند.
 
-بدون انتخاب کانفیگ مشخص، مسیر مستقیم مناسبی از همان مجموعه برگزیده می‌شود. ورود به مسیرهای DNS با رضایت شماست. اتصال دستی از رزولور تنظیم‌شده استفاده می‌کند؛ اسکن بخشی از تست صریح است.
+### اطلاعات ورود، اشتراک و ظاهر
 
-خطای قرمز تست قبلی مانع اتصال دستی نیست. وضعیت متصل، آمادگی تونل است و دسترسی به همهٔ سایت‌ها را تضمین نمی‌کند. آمار صفر هنگام بیکاری طبیعی است؛ کنترل سلامت و توقف تبادل داده پس از راه‌اندازی ادامه دارد.
+رازهای ذخیره‌شده با کلید Android Keystore رمز می‌شوند. رکورد ناخوانا برای بازیابی صریح علامت می‌خورد و بی‌صدا خالی نمی‌شود؛ از کانفیگ اصلیِ منطبق یا مدیر سرور بازیابی کنید. Keystore پس از حذف اپ جایگزین پشتیبان قابل‌انتقال نیست.
 
-انتظار پایان سرویس قبلی حداکثر ۱۰ ثانیه است. مهلت راه‌اندازی مستقیم ۹۰، DNS برابر ۱۲۰ و Tor/شروع ناشناخته ۱۸۰ ثانیه است. این‌ها مهلت خطا هستند، نه مدت معمول اتصال.
+قفل و محدودیت اشتراک در مسیرهای خروجی پشتیبانی‌شده حفظ می‌شوند؛ قفل سیاست کلاینت است، نه تضمین در برابر کلاینت تغییریافته. برای پشتیبان قابل‌انتقال رمز قوی بگذارید و قبل از اتکا، ورود واقعی آن را بررسی کنید.
 
-## پینگ و تست
+زبان فارسی/انگلیسی/چینی ساده/روسی و تم روشن/تیره/AMOLED در تنظیمات انتخاب می‌شوند. منابع اصلی تنظیمات و ویرایشگر ترجمه شده‌اند؛ بعضی متن‌های پیشرفتهٔ اسکنر و خطاهای backend ممکن است انگلیسی باشند. نام پروتکل و آدرس تغییر نمی‌کنند. کنترل اعلان، ویجت و تنظیمات سریع به مجوز اندروید و رفتار لانچر وابسته است.
 
-عملیات تست/پینگ مجموعه فقط **مجموعهٔ انتخاب‌شده** را بررسی می‌کند. هنگام تست، اتصال عادی را قطع نگه دارید. سنجش HTTPS از داخل تونل و با اعتبارسنجی گواهی انجام می‌شود؛ اتصال TCP یا پاسخ DNS به‌تنهایی موفقیت نهایی نیست.
+### عیب‌یابی و محدودیت
 
-فاز مستقیم حداکثر ۹۰ ثانیه بودجه دارد. پس از شکست مسیرهای مستقیم، برای ورود به DNS از شما اجازه می‌خواهد. تست رزولورهای موجود و مرحلهٔ کشف رزولور هرکدام تا ۱۸۰ ثانیه بودجه دارند؛ روند کامل ممکن است چند دقیقه طول بکشد و قابل لغو است.
+نسخهٔ اپ/اندروید، پروتکل، مراحل تکرار و بازشدن یا بازنشدن صفحهٔ عادی را گزارش کنید. گزارش امن اتصال، مرحله/کد نوع‌دار، سیاست Soar و نمونهٔ آمار رابط را بدون فیلد آدرس/حساب/اعتبارنامه ثبت می‌کند؛ محلی و اشتراک آن اختیاری است. لاگ دیباگ تفصیلیِ به‌ارث‌رسیده ممکن است حساس باشد؛ قبل از ارسال مرور و پاک‌سازی کنید. لینک واقعی، رمز، کلید خصوصی و شناسهٔ دستگاه را در تلگرام یا issue عمومی نگذارید.
 
-تأخیر HTTPS، نسبت موفقیت و پراکندگی پاسخ‌ها فقط نمونهٔ کوتاه‌اند؛ سرعت دانلود یا تضمین پایداری نیستند. اسکنر DNS معیار و نشانی تست جداگانه دارد و نباید نتیجهٔ آن را با اعتبارسنجی HTTPS مجموعه یکسان دانست.
-
-## زبان، گزارش مشکل و امنیت
-
-تنظیمات و پنجره‌های وابسته چهارزبانه‌اند؛ برخی متن‌های پیشرفتهٔ فرم‌ها و اسکنر هنوز انگلیسی هستند. تغییر زبان و جهت رابط بدون بازسازی صفحه انجام می‌شود.
-
-اگر روی Connecting ماند، پیام صبر/بستن آمد یا اپ خارج شد، گزارش پایداری را از تنظیمات باز کنید. گزارش محلی و محدود است؛ مرحله‌های ثابت اتصال، آدرس، نام کاربری، رمز و نام کانفیگ ندارند. ارسال خودکار وجود ندارد؛ قبل از اشتراک گزارش را مرور کنید.
-
-نسخهٔ اپ/اندروید، پروتکل، مراحل تکرار و بازشدن یا بازنشدن سایت عادی را گزارش کنید. لینک کانفیگ، کلید خصوصی، رمز و شناسهٔ دستگاه را عمومی نکنید.
-
-DoH به‌تنهایی تونل همهٔ ترافیک نیست؛ SOCKS5 معمولی رمزنگاری انتقال ندارد. اتصال موفق SSH هم تضمین دسترسی سرور به هر سایت نیست. قفل کانفیگ با کلید جاسازی‌شده، محرمانگی قطعی در برابر دارندهٔ اپ ایجاد نمی‌کند؛ پشتیبان مبتنی بر رمز قوی و اعتبارنامهٔ WireGuard جدا برای هر دستگاه استفاده کنید.
-
-[وضعیت و کارهای بعدی](STATUS.md) · [پنل سرور](https://github.com/msVPNco/rovunet-panel) · [گروه تلگرام](https://t.me/RovunetVPN)
+مسیر دادهٔ SOCKS، تفاوت auto/on در Soar و شمارنده‌ها روی شبکهٔ گزارش‌شده هنوز بررسی میدانی می‌خواهند. پذیرش CONNECT اثبات عبور داده نیست؛ خطای DNS هم سانسور یا ACL را قطعی نمی‌کند. DoH به‌تنهایی فقط DNS را رمز می‌کند و SOCKS5 معمولی رمزنگاری انتقال ندارد. اشتراک دوره‌ای، تعویض خودکار مسیر و سنجش نرخ دانلود اضافه نشده‌اند. [وضعیت](STATUS.md) · [تلگرام](https://t.me/RovunetVPN).

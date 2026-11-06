@@ -22,7 +22,7 @@ object ProfileCollections {
             TunnelType.SNOWFLAKE -> 4
             else -> 5
         } }
-        val fresh = results.filterValues { it is PingResult.Success && System.currentTimeMillis() - it.measuredAt in 0..300_000 }
+        val fresh = results.filterValues { it is PingResult.Success && it.currentNetwork && System.currentTimeMillis() - it.measuredAt in 0..300_000 }
         return ProfileRanking.sort(defaults, fresh, true).sortedBy { if (isDns(it)) 1 else 0 }
     }
     fun suggestedName(profiles: List<ServerProfile>): String {

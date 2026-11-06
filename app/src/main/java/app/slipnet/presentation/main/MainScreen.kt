@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,6 +56,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.FlightTakeoff
@@ -112,6 +114,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -142,6 +145,7 @@ import app.slipnet.presentation.common.components.AboutDialogContent
 import app.slipnet.presentation.common.components.ProfileListItem
 import app.slipnet.presentation.theme.rv
 import app.slipnet.domain.model.ProfileCollections
+import app.slipnet.domain.model.ConnectionChoice.CardTap
 import app.slipnet.presentation.common.components.QrCodeDialog
 import app.slipnet.presentation.common.icons.TorIcon
 import app.slipnet.presentation.common.icons.VlessIcon
@@ -179,11 +183,11 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val trustRequest by app.slipnet.tunnel.TransportTrust.request.collectAsState()
     trustRequest?.let { request ->
-        AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(false) },
+        AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(request, false) },
             title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_title)) },
             text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_message, request.endpoint, request.fingerprint)) },
-            confirmButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(true) }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_accept)) } },
-            dismissButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(false) }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
+            confirmButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(request, true) }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.server_identity_accept)) } },
+            dismissButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(request, false) }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
     }
     var showConnectionGuide by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -215,7 +219,10 @@ fun MainScreen(
 
     // Dialog/sheet state
     var showLanguage by remember { mutableStateOf(false) }
-    var expandedCollection by remember { mutableStateOf<String?>(null) }
+    var expandedCollection by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiState.isPingRunning) {
+        if (uiState.isPingRunning) expandedCollection = uiState.selectedCollection
+    }
     var moveTarget by remember { mutableStateOf<ServerProfile?>(null) }
     var renameTarget by remember { mutableStateOf<ServerProfile?>(null) }
     var renameText by remember { mutableStateOf("") }
@@ -404,6 +411,7 @@ fun MainScreen(
 
     // Helper: proceed with VPN permission check and connect
     fun proceedWithConnect(profile: ServerProfile? = null) {
+        if (pendingConnect) return
         if (activity != null) {
             // In proxy-only mode, skip VPN permission check — no TUN interface is created,
             // so VpnService.prepare() is unnecessary and would fail when another app
@@ -448,8 +456,8 @@ fun MainScreen(
         if (uiState.isPingRunning) { viewModel.cancelPing(); return }
         when (uiState.connectionState) {
             is ConnectionState.Connected,
-            is ConnectionState.Connecting,
-            is ConnectionState.Error -> viewModel.disconnect()
+            is ConnectionState.Connecting -> viewModel.disconnect()
+            is ConnectionState.Disconnecting -> Unit
             else -> {
                 if (activity != null) {
                     // Check battery optimization on first connect
@@ -766,7 +774,12 @@ fun MainScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            androidx.compose.material3.CircularProgressIndicator()
+                            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                androidx.compose.material3.CircularProgressIndicator()
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.profiles_preparing),
+                                    style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
                     uiState.profiles.isEmpty() -> {
@@ -846,15 +859,22 @@ fun MainScreen(
                                 ) { collection ->
                                     val representative = collection.first()
                                     val collectionKey = ProfileCollections.key(representative)
-                                    val selected = collectionKey == (uiState.selectedCollection ?: uiState.activeProfile?.let { ProfileCollections.key(it) })
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    val selected = collectionKey == uiState.selectedCollection
+                                    CollectionStack(expanded = expandedCollection == collectionKey, header = {
                                         CollectionCard(
                                             profiles = collection, results = uiState.pingResults,
                                             selected = selected, expanded = expandedCollection == collectionKey,
                                             connectedProfileId = uiState.connectedProfileId?.takeIf { id -> collection.any { it.id == id } },
-                                            manualProfileId = uiState.manualProfileId?.takeIf { id -> collection.any { it.id == id } },
+                                            manualProfileId = viewModel.preferredProfile(collection)?.id,
+                                            connecting = collection.any { it.id == uiState.connectingProfileId } && uiState.connectionState.isConnecting,
                                             busy = uiState.isPingRunning || uiState.collectionPrompt,
-                                            onSelect = { viewModel.selectCollection(representative) },
+                                            canConnect = uiState.connectionState !is ConnectionState.Disconnecting &&
+                                                (!uiState.connectionState.isConnecting || collection.any { it.id == uiState.connectingProfileId }),
+                                            onConnect = {
+                                                if (collection.any { it.id == uiState.connectedProfileId || it.id == uiState.connectingProfileId }) viewModel.disconnect()
+                                                else viewModel.preferredProfile(collection)?.let { proceedWithConnect(it) }
+                                                    ?: run { expandedCollection = collectionKey }
+                                            },
                                             onDetails = { expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
                                             onRename = { renameTarget = representative; renameText = ProfileCollections.name(representative) },
                                             onMove = { moveTarget = representative },
@@ -864,16 +884,27 @@ fun MainScreen(
                                             onTest = {
                                                 if (uiState.proxyOnlyMode) viewModel.pingCollection(representative)
                                                 else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative) }
+                                            },
+                                            onStabilityTest = {
+                                                if (uiState.proxyOnlyMode) viewModel.pingCollection(representative, detailed = true)
+                                                else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative, detailed = true) }
                                             }
                                         )
-                                        if (expandedCollection == collectionKey) collection.forEach { profile ->
+                                    }) {
+                                        collection.forEach { profile ->
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
                                         isSelected = profile.id == uiState.manualProfileId,
                                         isConnected = isConnected,
                                         pingResult = uiState.pingResults[profile.id],
-                                        onClick = { viewModel.setActiveProfile(profile) },
+                                        onClick = { viewModel.selectProfileOnly(profile) },
+                                        isConnecting = uiState.connectionState.isConnecting && uiState.connectingProfileId == profile.id,
+                                        connectionBusy = uiState.connectionState.isConnecting || uiState.connectionState is ConnectionState.Disconnecting,
+                                        onConnectClick = {
+                                            if (isConnected || (uiState.connectionState.isConnecting && uiState.connectingProfileId == profile.id)) viewModel.disconnect()
+                                            else proceedWithConnect(profile)
+                                        },
                                         onEditClick = { onNavigateToEditProfile(profile.id) },
                                         onDeleteClick = {
                                             if (isConnected) {
@@ -900,8 +931,9 @@ fun MainScreen(
                                         },
                                         onPinClick = { viewModel.togglePinProfile(profile) },
                                         onPingClick = { viewModel.pingSingleProfile(profile) },
+                                        onStabilityTestClick = { viewModel.pingSingleProfile(profile, detailed = true) },
                                         isPingRunning = uiState.isPingRunning,
-                                        modifier = Modifier.padding(start = 12.dp)
+                                        modifier = Modifier
                                     )
                                         }
                                     }
@@ -946,15 +978,12 @@ fun MainScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
                     )
-                    @OptIn(ExperimentalLayoutApi::class)
-                    FlowRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        maxItemsInEachRow = 3
-                    ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_choose_protocol), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                        IconButton(onClick = { showConnectionGuide = true }) {
+                            Icon(Icons.Default.HelpOutline, androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_which_should_i_use_8e8eed))
+                        }
+                    }
                         val groups = listOf(
                             "Web / TCP paths" to listOf(Triple("REALITY", "reality", Icons.Default.Shield), Triple("XHTTP", "xhttp", Icons.Default.Language), Triple("VLESS WS", "vless", VlessIcon), Triple("SSH", "ssh", Icons.Default.Lock), Triple("SOCKS5", "socks5", Icons.Default.Share)) +
                                 (if (BuildConfig.INCLUDE_NAIVE) listOf(Triple("NaiveProxy", "naive", Icons.Default.Shield)) else emptyList()),
@@ -962,15 +991,23 @@ fun MainScreen(
                             "DNS / alternative paths" to listOf(Triple("DNSTT", "dnstt", Icons.Default.Dns), Triple("NoizDNS", TunnelType.NOIZDNS.value, Icons.Default.VisibilityOff), Triple("VayDNS", "vaydns", Icons.Default.Air), Triple("Soar", "soar", Icons.Default.FlightTakeoff), Triple("Slipstream", "slipstream", Icons.Default.Waves), Triple("DOH", "doh", Icons.Default.Language)) +
                                 (if (BuildConfig.INCLUDE_TOR) listOf(Triple("Tor", "snowflake", TorIcon)) else emptyList())
                         )
-                        TextButton(onClick = { showConnectionGuide = true }, modifier = Modifier.fillMaxWidth()) { Text("Which should I use? • Speed is unknown until tested") }
-                        groups.forEach { (heading, entries) ->
-                            Text(heading, style = MaterialTheme.typography.titleSmall, modifier = Modifier.fillMaxWidth().padding(12.dp))
+                    val pickerConfig = androidx.compose.ui.platform.LocalConfiguration.current
+                    val pickerColumns = when {
+                        pickerConfig.fontScale >= 1.8f -> 1
+                        pickerConfig.fontScale >= 1.2f || pickerConfig.screenWidthDp < 360 -> 2
+                        else -> 3
+                    }
+                    groups.forEach { (heading, entries) ->
+                        Text(rv(heading), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 6.dp))
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp), maxItemsInEachRow = pickerColumns,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             entries.forEach { (label, route, tileIcon) ->
                                 AddMenuGridItem(modifier = Modifier.weight(1f), icon = tileIcon, title = label,
                                     onClick = { showAddMenu = false; onNavigateToAddProfile(route) })
                             }
                         }
-
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     AddMenuOption(
@@ -1000,7 +1037,8 @@ fun MainScreen(
 
     if (showConnectionGuide) {
         AlertDialog(onDismissRequest = { showConnectionGuide = false }, title = { Text("Choose a connection") },
-            text = { Text(app.slipnet.domain.model.ProfileGuidance.GUIDE, modifier = Modifier.verticalScroll(rememberScrollState())) },
+            text = { Text(app.slipnet.domain.model.ProfileGuidance.GUIDE + "\n\n" +
+                androidx.compose.ui.res.stringResource(app.slipnet.R.string.probe_204_requirement), modifier = Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text("OK") } })
     }
     // ── Dialogs ─────────────────────────────────────────────────────────
@@ -2023,7 +2061,7 @@ private fun ConnectionStatusStrip(
                     Text(
                         text = when {
                             isConnected && connectionState is ConnectionState.Connected ->
-                                connectionState.chainName ?: ProfileCollections.name(connectionState.profile)
+                                connectionState.chainName ?: "${connectionState.profile.name} · ${connectionState.profile.tunnelType.displayName}"
                             isError && connectionState is ConnectionState.Error ->
                                 connectionState.message
                             activeChain != null -> activeChain.name
@@ -2033,7 +2071,7 @@ private fun ConnectionStatusStrip(
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isError) DisconnectedRed
                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -2286,7 +2324,7 @@ private fun AddMenuOption(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -2319,25 +2357,15 @@ private fun AddMenuGridItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(28.dp)
-        )
-        Text(
-            text = rv(title),
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1
-        )
+    Surface(onClick = onClick, modifier = modifier.heightIn(min = 48.dp),
+        shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Row(Modifier.padding(horizontal = 7.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icon, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(rv(title), style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
 

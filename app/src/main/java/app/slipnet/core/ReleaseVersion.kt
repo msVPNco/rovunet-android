@@ -12,6 +12,7 @@ object ReleaseVersion {
         val revision = if (m.groupValues[5].isEmpty()) 0L else m.groupValues[5].toLongOrNull() ?: return null
         return listOf(major, minor, patch, stage, revision)
     }
+    fun supports(version: String): Boolean = parse(version) != null
     fun isNewer(remote: String, current: String): Boolean {
         val r = parse(remote) ?: return false
         val c = parse(current) ?: return false

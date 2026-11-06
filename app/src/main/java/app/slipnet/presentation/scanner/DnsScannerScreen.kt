@@ -395,10 +395,10 @@ fun DnsScannerScreen(
                     onToggleSelection = { viewModel.toggleResolverSelection(it) },
                     onApply = {
                         viewModel.saveRecentDns()
-                        onResolversSelected(
-                            viewModel.getSelectedResolversString(),
-                            viewModel.getRecommendedTransportHint()
-                        )
+                        val resolvers = viewModel.getSelectedResolversString()
+                        val hint = viewModel.getRecommendedTransportHint()
+                        viewModel.stopAll()
+                        onResolversSelected(resolvers, hint)
                     }
                 )
             }

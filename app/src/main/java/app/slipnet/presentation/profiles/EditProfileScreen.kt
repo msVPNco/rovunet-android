@@ -125,6 +125,7 @@ fun EditProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val messageResources = androidx.compose.ui.platform.LocalResources.current
     val globalResolverEnabled by viewModel.globalResolverEnabled.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
@@ -147,7 +148,7 @@ fun EditProfileScreen(
         when (selectedResolversTransportHint) {
             "UDP", "TCP" -> viewModel.applyScanTransportHint(selectedResolversTransportHint)
             "MIXED" -> snackbarHostState.showSnackbar(
-                "Selected resolvers don't share a transport — pick UDP or TCP manually."
+                messageResources.getString(app.slipnet.R.string.editor_resolver_transport_conflict)
             )
             else -> {}
         }
@@ -158,7 +159,7 @@ fun EditProfileScreen(
             if (uiState.showRestartVpnMessage) {
                 android.widget.Toast.makeText(
                     context,
-                    "Profile saved. Turn VPN off and on to apply changes.",
+                    messageResources.getString(app.slipnet.R.string.editor_saved_reconnect_hint),
                     android.widget.Toast.LENGTH_LONG
                 ).show()
             }
@@ -181,6 +182,11 @@ fun EditProfileScreen(
         }
     }
 
+    if (uiState.needsCredentials) {
+        ProfileCredentialRecovery(uiState, onNavigateBack, viewModel::retryCredentials, viewModel::restoreCredentials, snackbarHostState)
+        return
+    }
+
     if (uiState.tunnelType == app.slipnet.domain.model.TunnelType.XRAY && !uiState.isLocked && !uiState.isLoading) {
         CoreProfileEditor(uiState, viewModel::updateCoreField, viewModel::updateName, viewModel::save,
             onNavigateBack, snackbarHostState)
@@ -192,14 +198,14 @@ fun EditProfileScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (uiState.isLocked) "Locked Profile"
-                        else if (profileId != null) "Edit Profile"
-                        else "Add Profile"
+                        if (uiState.isLocked) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_locked_profile)
+                        else if (profileId != null) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_edit_profile_fec2ac)
+                        else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_add_profile)
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.recovery_back))
                     }
                 },
                 actions = {
@@ -217,7 +223,7 @@ fun EditProfileScreen(
                             )
                         } else {
                             IconButton(onClick = { viewModel.save() }) {
-                                Icon(Icons.Default.Check, contentDescription = "Save")
+                                Icon(Icons.Default.Check, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_save_1509f5))
                             }
                         }
                     }
@@ -248,806 +254,826 @@ fun EditProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header card: name + tunnel type + locked-state info rows
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                EditorSection {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        ),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                modifier = Modifier.size(44.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp),
-                                        tint = MaterialTheme.colorScheme.primary
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(22.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = uiState.name,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = uiState.tunnelType.displayName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
-                            Column {
-                                Text(
-                                    text = uiState.name,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = uiState.tunnelType.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                            if (uiState.expirationDate > 0) {
+                                val isExpired = System.currentTimeMillis() > uiState.expirationDate
+                                val dateStr = java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault())
+                                    .format(java.util.Date(uiState.expirationDate))
+                                LockedInfoRow(
+                                    icon = if (isExpired) Icons.Default.Warning else Icons.Default.Schedule,
+                                    label = if (isExpired) androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_expired) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_expires),
+                                    value = dateStr,
+                                    valueColor = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                        if (uiState.expirationDate > 0) {
-                            val isExpired = System.currentTimeMillis() > uiState.expirationDate
-                            val dateStr = java.text.SimpleDateFormat("MMM dd, yyyy HH:mm", java.util.Locale.getDefault())
-                                .format(java.util.Date(uiState.expirationDate))
+                            if (uiState.boundDeviceId.isNotEmpty()) {
+                                LockedInfoRow(
+                                    icon = Icons.Default.PhoneAndroid,
+                                    label = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_device),
+                                    value = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_bound)
+                                )
+                            }
+                            val displayUsername = when {
+                                uiState.useSsh && uiState.sshUsername.isNotBlank() -> uiState.sshUsername
+                                uiState.isNaiveBased && uiState.naiveUsername.isNotBlank() -> uiState.naiveUsername
+                                uiState.socksUsername.isNotBlank() -> uiState.socksUsername
+                                else -> null
+                            }
+                            if (displayUsername != null) {
+                                LockedInfoRow(
+                                    icon = Icons.Default.Person,
+                                    label = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_username_e3b89e),
+                                    value = displayUsername
+                                )
+                            }
                             LockedInfoRow(
-                                icon = if (isExpired) Icons.Default.Warning else Icons.Default.Schedule,
-                                label = if (isExpired) "Expired" else "Expires",
-                                value = dateStr,
-                                valueColor = if (isExpired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                icon = Icons.Default.Share,
+                                label = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_re_sharing),
+                                value = if (uiState.allowSharing) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_allowed) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_disabled_75081b)
                             )
                         }
-                        if (uiState.boundDeviceId.isNotEmpty()) {
-                            LockedInfoRow(
-                                icon = Icons.Default.PhoneAndroid,
-                                label = "Device",
-                                value = "Bound"
-                            )
-                        }
-                        val displayUsername = when {
-                            uiState.useSsh && uiState.sshUsername.isNotBlank() -> uiState.sshUsername
-                            uiState.isNaiveBased && uiState.naiveUsername.isNotBlank() -> uiState.naiveUsername
-                            uiState.socksUsername.isNotBlank() -> uiState.socksUsername
-                            else -> null
-                        }
-                        if (displayUsername != null) {
-                            LockedInfoRow(
-                                icon = Icons.Default.Person,
-                                label = "Username",
-                                value = displayUsername
-                            )
-                        }
-                        LockedInfoRow(
-                            icon = Icons.Default.Share,
-                            label = "Re-sharing",
-                            value = if (uiState.allowSharing) "Allowed" else "Disabled"
-                        )
                     }
                 }
 
                 // DNS settings section
-                if (uiState.isDnsttOrNoizOrVaydnsBased || uiState.isSlipstreamBased || uiState.isSoarBased) {
-                    Text(
-                        text = "DNS Settings",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    Text(
-                        text = "You can change DNS settings. Other profile details are locked.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
+                EditorSection {
+                    if (uiState.isDnsttOrNoizOrVaydnsBased || uiState.isSlipstreamBased || uiState.isSoarBased) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_settings),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_locked_dns_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
 
-                            // DNS Transport selector (DNSTT-based profiles only)
-                            if (uiState.isDnsttOrNoizOrVaydnsBased) {
-                                Text(
-                                    text = "DNS Transport",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    DnsTransport.entries.forEach { transport ->
-                                        if (uiState.dnsTransport == transport) {
-                                            Button(
-                                                onClick = { },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text(transport.displayName)
-                                            }
-                                        } else {
-                                            OutlinedButton(
-                                                onClick = { viewModel.updateDnsTransport(transport) },
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text(transport.displayName)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // DoH URL for DNSTT with DoH transport
-                            if (uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH) {
-                                DohServerSelector(
-                                    dohUrl = uiState.dohUrl,
-                                    dohUrlError = uiState.dohUrlError,
-                                    onUrlChange = { viewModel.updateDohUrl(it) },
-                                    onPresetSelected = { viewModel.selectDohPreset(it) },
-                                    onTestServers = { scope -> viewModel.testDohServers(scope) },
-                                    customDohUrls = uiState.customDohUrls,
-                                    onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
-                                )
-                            }
-
-                            // Resolver field (not shown when DNSTT with DoH transport)
-                            if (!(uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH)) {
-                                if (globalResolverEnabled) {
-                                    Card(
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                                        ),
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                                    ) {
+                                // DNS Transport selector (DNSTT-based profiles only)
+                                EditorSection {
+                                    if (uiState.isDnsttOrNoizOrVaydnsBased) {
                                         Text(
-                                            text = "Global DNS resolver override is active in Settings. Profile resolvers will be ignored at connection time.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(12.dp)
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_transport),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.padding(top = 8.dp)
                                         )
-                                    }
-                                }
-                                if (uiState.resolversHidden) {
-                                    // Hidden resolver: show count and toggle for custom override
-                                    val resolverCount = uiState.defaultResolversList.size
-                                    Text(
-                                        text = if (resolverCount > 0) "DNS Resolver: $resolverCount resolver${if (resolverCount != 1) "s" else ""} (hidden)"
-                                               else "DNS Resolver: Default (hidden)",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "Use custom resolver",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Switch(
-                                            checked = uiState.useCustomResolver,
-                                            onCheckedChange = { viewModel.updateUseCustomResolver(it) }
-                                        )
-                                    }
-                                    if (uiState.useCustomResolver) {
-                                        val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
-                                        OutlinedTextField(
-                                            value = uiState.resolvers,
-                                            onValueChange = { viewModel.updateResolvers(it) },
-                                            label = { Text("DNS Resolver") },
-                                            placeholder = { Text(if (isDoT) "e.g. dns.google:853" else "e.g. 8.8.8.8:53") },
-                                            isError = uiState.resolversError != null,
-                                            supportingText = {
-                                                Text(uiState.resolversError ?: if (isDoT) "IP or domain (host:853)" else "IP or domain (host:port)")
-                                            },
-                                            trailingIcon = {
-                                                IconButton(
-                                                    onClick = { viewModel.autoDetectResolver() },
-                                                    enabled = !uiState.isAutoDetecting
-                                                ) {
-                                                    if (uiState.isAutoDetecting) {
-                                                        CircularProgressIndicator(
-                                                            modifier = Modifier.size(18.dp),
-                                                            strokeWidth = 2.dp
-                                                        )
-                                                    } else {
-                                                        Text(
-                                                            text = "Local",
-                                                            style = MaterialTheme.typography.labelMedium,
-                                                            color = MaterialTheme.colorScheme.primary
-                                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            DnsTransport.entries.forEach { transport ->
+                                                if (uiState.dnsTransport == transport) {
+                                                    Button(
+                                                        onClick = { },
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text(transport.displayName)
+                                                    }
+                                                } else {
+                                                    OutlinedButton(
+                                                        onClick = { viewModel.updateDnsTransport(transport) },
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text(transport.displayName)
                                                     }
                                                 }
-                                            },
-                                            singleLine = true,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        if (onNavigateToScanner != null) {
-                                            Button(
-                                                onClick = { viewModel.saveForScanner() },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(10.dp)
-                                            ) {
-                                                Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("Scan for Working Resolvers")
                                             }
                                         }
                                     }
-                                } else {
-                                    val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
-                                    OutlinedTextField(
-                                        value = uiState.resolvers,
-                                        onValueChange = { viewModel.updateResolvers(it) },
-                                        label = { Text("DNS Resolver") },
-                                        placeholder = { Text(if (isDoT) "e.g. dns.google:853" else "e.g. 8.8.8.8:53") },
-                                        isError = uiState.resolversError != null,
-                                        supportingText = {
-                                            Text(uiState.resolversError ?: if (isDoT) "IP or domain (host:853)" else "IP or domain (host:port)")
-                                        },
-                                        trailingIcon = {
-                                            IconButton(
-                                                onClick = { viewModel.autoDetectResolver() },
-                                                enabled = !uiState.isAutoDetecting
+                                }
+
+                                // DoH URL for DNSTT with DoH transport
+                                EditorSection {
+                                    if (uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH) {
+                                        DohServerSelector(
+                                            dohUrl = uiState.dohUrl,
+                                            dohUrlError = uiState.dohUrlError,
+                                            onUrlChange = { viewModel.updateDohUrl(it) },
+                                            onPresetSelected = { viewModel.selectDohPreset(it) },
+                                            onTestServers = { scope -> viewModel.testDohServers(scope) },
+                                            customDohUrls = uiState.customDohUrls,
+                                            onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
+                                        )
+                                    }
+                                }
+
+                                // Resolver field (not shown when DNSTT with DoH transport)
+                                EditorSection {
+                                    if (!(uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH)) {
+                                        if (globalResolverEnabled) {
+                                            Card(
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                                ),
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                                             ) {
-                                                if (uiState.isAutoDetecting) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(18.dp),
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = "Local",
-                                                        style = MaterialTheme.typography.labelMedium,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    )
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_global_dns_hint),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.padding(12.dp)
+                                                )
+                                            }
+                                        }
+                                        if (uiState.resolversHidden) {
+                                            // Hidden resolver: show count and toggle for custom override
+                                            val resolverCount = uiState.defaultResolversList.size
+                                            Text(
+                                                text = if (resolverCount > 0) androidx.compose.ui.res.pluralStringResource(app.slipnet.R.plurals.editor_hidden_resolvers, resolverCount, resolverCount)
+                                                       else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver_default_hidden),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_use_custom_resolver),
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                                Switch(
+                                                    checked = uiState.useCustomResolver,
+                                                    onCheckedChange = { viewModel.updateUseCustomResolver(it) }
+                                                )
+                                            }
+                                            if (uiState.useCustomResolver) {
+                                                val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.resolvers,
+                                                    onValueChange = { viewModel.updateResolvers(it) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver)) },
+                                                    placeholder = { Text(if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_e_g_dns_google_853) else "e.g. 8.8.8.8:53") },
+                                                    isError = uiState.resolversError != null,
+                                                    supportingText = {
+                                                        Text(uiState.resolversError ?: if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_853) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_port))
+                                                    },
+                                                    trailingIcon = {
+                                                        IconButton(
+                                                            onClick = { viewModel.autoDetectResolver() },
+                                                            enabled = !uiState.isAutoDetecting
+                                                        ) {
+                                                            if (uiState.isAutoDetecting) {
+                                                                CircularProgressIndicator(
+                                                                    modifier = Modifier.size(18.dp),
+                                                                    strokeWidth = 2.dp
+                                                                )
+                                                            } else {
+                                                                Text(
+                                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_local),
+                                                                    style = MaterialTheme.typography.labelMedium,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    singleLine = true,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    shape = RoundedCornerShape(12.dp)
+                                                )
+                                                if (onNavigateToScanner != null) {
+                                                    Button(
+                                                        onClick = { viewModel.saveForScanner() },
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        shape = RoundedCornerShape(10.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                        Spacer(Modifier.width(8.dp))
+                                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_scan_resolvers))
+                                                    }
                                                 }
                                             }
-                                        },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-
-                                    if (onNavigateToScanner != null) {
-                                        Button(
-                                            onClick = { viewModel.saveForScanner() },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(10.dp)
-                                        ) {
-                                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Scan for Working Resolvers")
-                                        }
-                                    }
-                                }
-                                // Multi-resolver mode + spread count (only shown when 2+ resolvers)
-                                // Check both visible resolvers and hidden defaults
-                                val hasMultipleResolvers = uiState.resolvers.contains(",") ||
-                                    (!uiState.useCustomResolver && uiState.defaultResolversList.size >= 2)
-                                if (hasMultipleResolvers && !uiState.isSlipstreamBased && !uiState.isSoarBased) {
-                                    MultiResolverSettings(
-                                        resolverMode = uiState.resolverMode,
-                                        rrSpreadCount = uiState.rrSpreadCount,
-                                        onResolverModeChange = { viewModel.updateResolverMode(it) },
-                                        onSpreadCountChange = { viewModel.updateRrSpreadCount(it) }
-                                    )
-                                }
-                            }
-
-                            // Soar discovery / TCP settings (locked profiles)
-                            if (uiState.isSoarBased) {
-                                SoarSettings(
-                                    discovery = uiState.soarDiscovery,
-                                    country = uiState.soarCountry,
-                                    discoveryList = uiState.soarDiscoveryList,
-                                    customList = uiState.soarDiscoveryCustom,
-                                    customListError = uiState.soarDiscoveryCustomError,
-                                    customListHidden = uiState.soarDiscoveryCustomHidden,
-                                    discoveryError = uiState.soarDiscoveryError,
-                                    tcpMode = uiState.soarTcpMode,
-                                    onDiscoveryChange = { viewModel.updateSoarDiscovery(it) },
-                                    onCountryChange = { viewModel.updateSoarCountry(it) },
-                                    onDiscoveryListChange = { viewModel.updateSoarDiscoveryList(it) },
-                                    onCustomListChange = { viewModel.updateSoarDiscoveryCustom(it) },
-                                    onTcpModeChange = { viewModel.updateSoarTcpMode(it) }
-                                )
-                            }
-
-                            // DNS Query Size (locked profiles, not for VayDNS — it uses QNAME length instead).
-                            // Hidden when Auto is on.
-                            if (uiState.isDnsttOrNoizOrVaydnsBased && !uiState.isVaydnsBased && !uiState.dnsAutoTune) {
-                                var showMtuDialogLocked by remember { mutableStateOf(false) }
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showMtuDialogLocked = true }
-                                        .padding(vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "DNS Query Size",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = if (uiState.dnsPayloadSize == 0) "Full capacity (fastest)"
-                                                   else "${uiState.dnsPayloadSize} bytes per query",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                if (showMtuDialogLocked) {
-                                    val mtuPresetsLocked = listOf(
-                                        0 to "Full capacity — fastest, largest queries",
-                                        100 to "Large — good balance",
-                                        80 to "Medium — less conspicuous",
-                                        60 to "Small — stealthier, slower",
-                                        50 to "Minimum — most stealthy, slowest"
-                                    )
-                                    val isCustomLocked = mtuPresetsLocked.none { it.first == uiState.dnsPayloadSize }
-                                    var customMtuTextLocked by remember { mutableStateOf(if (isCustomLocked) uiState.dnsPayloadSize.toString() else "") }
-                                    var useCustomLocked by remember { mutableStateOf(isCustomLocked) }
-                                    AlertDialog(
-                                        onDismissRequest = { showMtuDialogLocked = false },
-                                        title = { Text("DNS Query Size") },
-                                        text = {
-                                            Column {
-                                                Text(
-                                                    text = "Bytes of data per DNS query. Smaller values produce shorter, less suspicious queries at the cost of speed.",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(bottom = 12.dp)
-                                                )
-                                                mtuPresetsLocked.forEach { (size, desc) ->
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                            .clickable {
-                                                                useCustomLocked = false
-                                                                viewModel.updateDnsPayloadSize(size)
-                                                                showMtuDialogLocked = false
-                                                            }
-                                                            .padding(vertical = 10.dp, horizontal = 8.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
+                                        } else {
+                                            val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
+                                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                value = uiState.resolvers,
+                                                onValueChange = { viewModel.updateResolvers(it) },
+                                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver)) },
+                                                placeholder = { Text(if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_e_g_dns_google_853) else "e.g. 8.8.8.8:53") },
+                                                isError = uiState.resolversError != null,
+                                                supportingText = {
+                                                    Text(uiState.resolversError ?: if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_853) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_port))
+                                                },
+                                                trailingIcon = {
+                                                    IconButton(
+                                                        onClick = { viewModel.autoDetectResolver() },
+                                                        enabled = !uiState.isAutoDetecting
                                                     ) {
-                                                        RadioButton(
-                                                            selected = !useCustomLocked && uiState.dnsPayloadSize == size,
-                                                            onClick = {
-                                                                useCustomLocked = false
-                                                                viewModel.updateDnsPayloadSize(size)
-                                                                showMtuDialogLocked = false
-                                                            }
-                                                        )
-                                                        Column(modifier = Modifier.padding(start = 8.dp)) {
-                                                            Text(text = if (size == 0) "Full" else "$size")
+                                                        if (uiState.isAutoDetecting) {
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(18.dp),
+                                                                strokeWidth = 2.dp
+                                                            )
+                                                        } else {
                                                             Text(
-                                                                text = desc,
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_local),
+                                                                style = MaterialTheme.typography.labelMedium,
+                                                                color = MaterialTheme.colorScheme.primary
                                                             )
                                                         }
                                                     }
-                                                }
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .clickable { useCustomLocked = true }
-                                                        .padding(vertical = 10.dp, horizontal = 8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
+                                                },
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(12.dp)
+                                            )
+
+                                            if (onNavigateToScanner != null) {
+                                                Button(
+                                                    onClick = { viewModel.saveForScanner() },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    shape = RoundedCornerShape(10.dp)
                                                 ) {
-                                                    RadioButton(
-                                                        selected = useCustomLocked,
-                                                        onClick = { useCustomLocked = true }
-                                                    )
-                                                    OutlinedTextField(
-                                                        value = customMtuTextLocked,
-                                                        onValueChange = { customMtuTextLocked = it.filter { c -> c.isDigit() }.take(3) },
-                                                        enabled = useCustomLocked,
-                                                        label = { Text("Custom") },
-                                                        placeholder = { Text("50–120") },
-                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                        singleLine = true,
-                                                        modifier = Modifier
-                                                            .padding(start = 8.dp)
-                                                            .fillMaxWidth()
-                                                    )
+                                                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_scan_resolvers))
                                                 }
                                             }
-                                        },
-                                        confirmButton = {
-                                            if (useCustomLocked) {
-                                                TextButton(
-                                                    onClick = {
-                                                        val value = customMtuTextLocked.toIntOrNull()
-                                                        if (value != null && value in 50..120) {
-                                                            viewModel.updateDnsPayloadSize(value)
-                                                            showMtuDialogLocked = false
+                                        }
+                                        // Multi-resolver mode + spread count (only shown when 2+ resolvers)
+                                        // Check both visible resolvers and hidden defaults
+                                        val hasMultipleResolvers = uiState.resolvers.contains(",") ||
+                                            (!uiState.useCustomResolver && uiState.defaultResolversList.size >= 2)
+                                        if (hasMultipleResolvers && !uiState.isSlipstreamBased && !uiState.isSoarBased) {
+                                            MultiResolverSettings(
+                                                resolverMode = uiState.resolverMode,
+                                                rrSpreadCount = uiState.rrSpreadCount,
+                                                onResolverModeChange = { viewModel.updateResolverMode(it) },
+                                                onSpreadCountChange = { viewModel.updateRrSpreadCount(it) }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Soar discovery / TCP settings (locked profiles)
+                                EditorSection {
+                                    if (uiState.isSoarBased) {
+                                        SoarSettings(
+                                            discovery = uiState.soarDiscovery,
+                                            country = uiState.soarCountry,
+                                            discoveryList = uiState.soarDiscoveryList,
+                                            customList = uiState.soarDiscoveryCustom,
+                                            customListError = uiState.soarDiscoveryCustomError,
+                                            customListHidden = uiState.soarDiscoveryCustomHidden,
+                                            discoveryError = uiState.soarDiscoveryError,
+                                            tcpMode = uiState.soarTcpMode,
+                                            onDiscoveryChange = { viewModel.updateSoarDiscovery(it) },
+                                            onCountryChange = { viewModel.updateSoarCountry(it) },
+                                            onDiscoveryListChange = { viewModel.updateSoarDiscoveryList(it) },
+                                            onCustomListChange = { viewModel.updateSoarDiscoveryCustom(it) },
+                                            onTcpModeChange = { viewModel.updateSoarTcpMode(it) }
+                                        )
+                                    }
+                                }
+
+                                // DNS Query Size (locked profiles, not for VayDNS — it uses QNAME length instead).
+                                // Hidden when Auto is on.
+                                EditorSection {
+                                    if (uiState.isDnsttOrNoizOrVaydnsBased && !uiState.isVaydnsBased && !uiState.dnsAutoTune) {
+                                        var showMtuDialogLocked by remember { mutableStateOf(false) }
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { showMtuDialogLocked = true }
+                                                .padding(vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_query_size),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                Text(
+                                                    text = if (uiState.dnsPayloadSize == 0) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_full_capacity_fastest)
+                                                           else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes_per_query, (uiState.dnsPayloadSize).toString()),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        if (showMtuDialogLocked) {
+                                            val mtuPresetsLocked = listOf(
+                                                0 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_size_full_hint),
+                                                100 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_large_good_balance),
+                                                80 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_medium_less_conspicuous),
+                                                60 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_small_stealthier_slower),
+                                                50 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_size_minimum_hint)
+                                            )
+                                            val isCustomLocked = mtuPresetsLocked.none { it.first == uiState.dnsPayloadSize }
+                                            var customMtuTextLocked by remember { mutableStateOf(if (isCustomLocked) uiState.dnsPayloadSize.toString() else "") }
+                                            var useCustomLocked by remember { mutableStateOf(isCustomLocked) }
+                                            AlertDialog(
+                                                onDismissRequest = { showMtuDialogLocked = false },
+                                                title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_query_size)) },
+                                                text = {
+                                                    Column {
+                                                        Text(
+                                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_size_hint),
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.padding(bottom = 12.dp)
+                                                        )
+                                                        mtuPresetsLocked.forEach { (size, desc) ->
+                                                            Row(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .clip(RoundedCornerShape(8.dp))
+                                                                    .clickable {
+                                                                        useCustomLocked = false
+                                                                        viewModel.updateDnsPayloadSize(size)
+                                                                        showMtuDialogLocked = false
+                                                                    }
+                                                                    .padding(vertical = 10.dp, horizontal = 8.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                RadioButton(
+                                                                    selected = !useCustomLocked && uiState.dnsPayloadSize == size,
+                                                                    onClick = {
+                                                                        useCustomLocked = false
+                                                                        viewModel.updateDnsPayloadSize(size)
+                                                                        showMtuDialogLocked = false
+                                                                    }
+                                                                )
+                                                                Column(modifier = Modifier.padding(start = 8.dp)) {
+                                                                    Text(text = if (size == 0) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_full) else "$size")
+                                                                    Text(
+                                                                        text = desc,
+                                                                        style = MaterialTheme.typography.bodySmall,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .clickable { useCustomLocked = true }
+                                                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            RadioButton(
+                                                                selected = useCustomLocked,
+                                                                onClick = { useCustomLocked = true }
+                                                            )
+                                                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                                value = customMtuTextLocked,
+                                                                onValueChange = { customMtuTextLocked = it.filter { c -> c.isDigit() }.take(3) },
+                                                                enabled = useCustomLocked,
+                                                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_custom_081ae3)) },
+                                                                placeholder = { Text("50–120") },
+                                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                                singleLine = true,
+                                                                modifier = Modifier
+                                                                    .padding(start = 8.dp)
+                                                                    .fillMaxWidth()
+                                                            )
                                                         }
                                                     }
-                                                ) {
-                                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
-                                                }
-                                            }
-                                        },
-                                        dismissButton = {
-                                            TextButton(onClick = { showMtuDialogLocked = false }) {
-                                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Auto toggle for DNSTT/NoizDNS (locked) — sits below DNS Query Size.
-                            // Hidden when Authoritative is on (probe would be a no-op).
-                            if (uiState.isDnsttOrNoizBased && !uiState.dnsttAuthoritative) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Auto-tune",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = "Probe resolver at connect time to pick query length",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = uiState.dnsAutoTune,
-                                        onCheckedChange = { viewModel.updateDnsAutoTune(it) }
-                                    )
-                                }
-                            }
-
-                            // Stealth mode (locked profiles, NoizDNS only)
-                            if (uiState.isNoizdnsBased) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Stealth mode",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = "Slower speed, harder to detect",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = uiState.noizdnsStealth,
-                                        onCheckedChange = { viewModel.updateNoizdnsStealth(it) }
-                                    )
-                                }
-                                if (uiState.noizdnsStealth && !uiState.dnsttAuthoritative) {
-                                    Text(
-                                        text = "Internet speed will be reduced.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-
-                            // VayDNS settings (locked profiles)
-                            if (uiState.isVaydnsBased) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                                // Response Record Type selector
-                                Text(
-                                    text = "Response Record Type",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-                                Text(
-                                    text = "Must match the server configuration. Try CNAME or A if TXT is blocked.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    listOf("txt", "cname", "a", "aaaa", "mx", "ns", "srv", "null", "caa").forEach { type ->
-                                        if (uiState.vaydnsRecordType == type) {
-                                            Button(onClick = { }) {
-                                                Text(type.uppercase())
-                                            }
-                                        } else {
-                                            OutlinedButton(onClick = { viewModel.updateVaydnsRecordType(type) }) {
-                                                Text(type.uppercase())
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Auto toggle (locked, VayDNS) — sits below Record Type.
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Auto-tune",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = "Probe resolver at connect time to pick query length and rate limit",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Switch(
-                                        checked = uiState.dnsAutoTune,
-                                        onCheckedChange = { viewModel.updateDnsAutoTune(it) }
-                                    )
-                                }
-
-                                // QNAME Length — hidden when Auto is on.
-                                var showQnameDialogLocked by remember { mutableStateOf(false) }
-                                if (!uiState.dnsAutoTune) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showQnameDialogLocked = true }
-                                        .padding(vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Query Length",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = "${uiState.vaydnsMaxQnameLen} bytes" + when {
-                                                uiState.vaydnsMaxQnameLen <= 80 -> " — stealthy"
-                                                uiState.vaydnsMaxQnameLen <= 120 -> " — balanced"
-                                                uiState.vaydnsMaxQnameLen <= 180 -> " — fast"
-                                                else -> " — maximum"
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Icon(
-                                        Icons.Default.KeyboardArrowRight,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (showQnameDialogLocked) {
-                                    val minQname = 60
-                                    val maxQname = 253
-                                    val midQname = 101
-                                    fun toSlider(qname: Int): Float {
-                                        val clamped = qname.coerceIn(minQname, maxQname)
-                                        return if (clamped <= midQname) {
-                                            (clamped - minQname).toFloat() / (midQname - minQname) * 0.5f
-                                        } else {
-                                            0.5f + (clamped - midQname).toFloat() / (maxQname - midQname) * 0.5f
-                                        }
-                                    }
-                                    fun fromSlider(value: Float): Int = if (value <= 0.5f) {
-                                        (minQname + (value / 0.5f) * (midQname - minQname)).roundToInt()
-                                    } else {
-                                        (midQname + ((value - 0.5f) / 0.5f) * (maxQname - midQname)).roundToInt()
-                                    }
-                                    var sliderValue by remember { mutableStateOf(toSlider(uiState.vaydnsMaxQnameLen)) }
-                                    val displayValue = fromSlider(sliderValue)
-                                    var customText by remember { mutableStateOf("") }
-                                    var customError by remember { mutableStateOf(false) }
-                                    AlertDialog(
-                                        onDismissRequest = { showQnameDialogLocked = false },
-                                        title = { Text("Query Length") },
-                                        text = {
-                                            Column {
-                                                Text(
-                                                    text = "$displayValue bytes",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    textAlign = TextAlign.Center
-                                                )
-                                                Slider(
-                                                    value = sliderValue,
-                                                    onValueChange = { sliderValue = it; customText = ""; customError = false },
-                                                    valueRange = 0f..1f,
-                                                    steps = 19,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text("60\nStealthy", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                                    Text("101\nDefault", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                                    Text("253\nFastest", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                                }
-                                                Spacer(modifier = Modifier.height(12.dp))
-                                                OutlinedTextField(
-                                                    value = customText,
-                                                    onValueChange = { text ->
-                                                        customText = text
-                                                        val v = text.toIntOrNull()
-                                                        if (v != null && v in minQname..maxQname) {
-                                                            sliderValue = toSlider(v)
-                                                            customError = false
-                                                        } else {
-                                                            customError = text.isNotEmpty()
+                                                },
+                                                confirmButton = {
+                                                    if (useCustomLocked) {
+                                                        TextButton(
+                                                            onClick = {
+                                                                val value = customMtuTextLocked.toIntOrNull()
+                                                                if (value != null && value in 50..120) {
+                                                                    viewModel.updateDnsPayloadSize(value)
+                                                                    showMtuDialogLocked = false
+                                                                }
+                                                            }
+                                                        ) {
+                                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                                                         }
-                                                    },
-                                                    label = { Text("Custom value") },
-                                                    placeholder = { Text("$minQname–$maxQname") },
-                                                    isError = customError,
-                                                    supportingText = if (customError) {{ Text("Must be $minQname–$maxQname") }} else null,
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                    singleLine = true,
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    }
+                                                },
+                                                dismissButton = {
+                                                    TextButton(onClick = { showMtuDialogLocked = false }) {
+                                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Auto toggle for DNSTT/NoizDNS (locked) — sits below DNS Query Size.
+                                // Hidden when Authoritative is on (probe would be a no-op).
+                                EditorSection {
+                                    if (uiState.isDnsttOrNoizBased && !uiState.dnsttAuthoritative) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_auto_tune),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_autotune_length_hint),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
-                                        },
-                                        confirmButton = {
-                                            TextButton(onClick = {
-                                                val custom = customText.toIntOrNull()
-                                                val finalValue = if (custom != null && custom in minQname..maxQname) custom else displayValue
-                                                viewModel.updateVaydnsMaxQnameLen(finalValue)
-                                                showQnameDialogLocked = false
-                                            }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392)) }
-                                        },
-                                        dismissButton = {
-                                            Row {
-                                                if (displayValue != midQname) {
-                                                    TextButton(onClick = {
-                                                        sliderValue = 0.5f; customText = ""; customError = false
-                                                        viewModel.updateVaydnsMaxQnameLen(midQname)
-                                                        showQnameDialogLocked = false
-                                                    }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76)) }
-                                                }
-                                                TextButton(onClick = { showQnameDialogLocked = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
-                                            }
+                                            Switch(
+                                                checked = uiState.dnsAutoTune,
+                                                onCheckedChange = { viewModel.updateDnsAutoTune(it) }
+                                            )
                                         }
-                                    )
-                                }
-                                } // end if (!uiState.dnsAutoTune)
-
-                                // Rate limit — hidden when Auto is on.
-                                if (!uiState.dnsAutoTune) {
-                                    OutlinedTextField(
-                                        value = uiState.vaydnsRps,
-                                        onValueChange = { viewModel.updateVaydnsRps(it.filter { c -> c.isDigit() || c == '.' }.take(6)) },
-                                        label = { Text("Query Rate Limit (q/s)") },
-                                        supportingText = { Text("Max DNS queries per second. 0 = unlimited.") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                        singleLine = true
-                                    )
+                                    }
                                 }
 
-                                // Advanced settings (hidden by default)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { viewModel.toggleVaydnsAdvanced() }
-                                        .padding(vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Icon(
-                                        Icons.Default.KeyboardArrowRight,
-                                        contentDescription = if (uiState.vaydnsAdvancedExpanded) "Collapse" else "Expand",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.rotate(if (uiState.vaydnsAdvancedExpanded) 90f else 0f)
-                                    )
+                                // Stealth mode (locked profiles, NoizDNS only)
+                                EditorSection {
+                                    if (uiState.isNoizdnsBased) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_stealth_mode),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_slower_speed_harder_to_detect),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Switch(
+                                                checked = uiState.noizdnsStealth,
+                                                onCheckedChange = { viewModel.updateNoizdnsStealth(it) }
+                                            )
+                                        }
+                                        if (uiState.noizdnsStealth && !uiState.dnsttAuthoritative) {
+                                            Text(
+                                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_internet_speed_will_be_reduced),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
                                 }
 
-                                AnimatedVisibility(visible = uiState.vaydnsAdvancedExpanded) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
+                                // VayDNS settings (locked profiles)
+                                EditorSection {
+                                    if (uiState.isVaydnsBased) {
+                                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                        // Response Record Type selector
                                         Text(
-                                            text = "Only change these if you know what you're doing. 0 = use default.",
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_response_record_type),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.padding(top = 8.dp)
+                                        )
+                                        Text(
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_record_type_hint),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(bottom = 4.dp)
                                         )
-                                        OutlinedTextField(
-                                            value = uiState.vaydnsIdleTimeout,
-                                            onValueChange = { viewModel.updateVaydnsIdleTimeout(it.filter { c -> c.isDigit() }.take(4)) },
-                                            label = { Text("Idle Timeout (seconds)") },
-                                            placeholder = { Text("10 (default)") },
-                                            supportingText = { Text("Session idle timeout.") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true
-                                        )
-                                        OutlinedTextField(
-                                            value = uiState.vaydnsKeepalive,
-                                            onValueChange = { viewModel.updateVaydnsKeepalive(it.filter { c -> c.isDigit() }.take(4)) },
-                                            label = { Text("Keepalive (seconds)") },
-                                            placeholder = { Text("2 (default)") },
-                                            supportingText = { Text("Keepalive interval.") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true
-                                        )
-                                        OutlinedTextField(
-                                            value = uiState.vaydnsUdpTimeout,
-                                            onValueChange = { viewModel.updateVaydnsUdpTimeout(it.filter { c -> c.isDigit() }.take(5)) },
-                                            label = { Text("UDP Timeout (ms)") },
-                                            placeholder = { Text("500 (default)") },
-                                            supportingText = { Text("Per-query UDP response timeout. Default: ~500ms.") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true
-                                        )
-                                        OutlinedTextField(
-                                            value = uiState.vaydnsMaxNumLabels,
-                                            onValueChange = { viewModel.updateVaydnsMaxNumLabels(it.filter { c -> c.isDigit() }.take(2)) },
-                                            label = { Text("Max Labels") },
-                                            placeholder = { Text("unlimited") },
-                                            supportingText = { Text("Max data labels in query name. 0 = unlimited.") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true
-                                        )
-                                        OutlinedTextField(
-                                            value = uiState.vaydnsClientIdSize,
-                                            onValueChange = { viewModel.updateVaydnsClientIdSize(it.filter { c -> c.isDigit() }.take(2)) },
-                                            label = { Text("Client ID Size (bytes)") },
-                                            placeholder = { Text("2 (default)") },
-                                            supportingText = { Text("ClientID length on the wire. Must match server. Ignored when DNSTT compat is on (fixed at 8).") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true
-                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            listOf("txt", "cname", "a", "aaaa", "mx", "ns", "srv", "null", "caa").forEach { type ->
+                                                if (uiState.vaydnsRecordType == type) {
+                                                    Button(onClick = { }) {
+                                                        Text(type.uppercase())
+                                                    }
+                                                } else {
+                                                    OutlinedButton(onClick = { viewModel.updateVaydnsRecordType(type) }) {
+                                                        Text(type.uppercase())
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Auto toggle (locked, VayDNS) — sits below Record Type.
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_auto_tune),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_autotune_rate_hint),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Switch(
+                                                checked = uiState.dnsAutoTune,
+                                                onCheckedChange = { viewModel.updateDnsAutoTune(it) }
+                                            )
+                                        }
+
+                                        // QNAME Length — hidden when Auto is on.
+                                        var showQnameDialogLocked by remember { mutableStateOf(false) }
+                                        if (!uiState.dnsAutoTune) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { showQnameDialogLocked = true }
+                                                .padding(vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_length),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes, (uiState.vaydnsMaxQnameLen).toString()) + when {
+                                                        uiState.vaydnsMaxQnameLen <= 80 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_stealthy)
+                                                        uiState.vaydnsMaxQnameLen <= 120 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_balanced)
+                                                        uiState.vaydnsMaxQnameLen <= 180 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fast)
+                                                        else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_maximum)
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Icon(
+                                                Icons.Default.KeyboardArrowRight,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        if (showQnameDialogLocked) {
+                                            val minQname = 60
+                                            val maxQname = 253
+                                            val midQname = 101
+                                            fun toSlider(qname: Int): Float {
+                                                val clamped = qname.coerceIn(minQname, maxQname)
+                                                return if (clamped <= midQname) {
+                                                    (clamped - minQname).toFloat() / (midQname - minQname) * 0.5f
+                                                } else {
+                                                    0.5f + (clamped - midQname).toFloat() / (maxQname - midQname) * 0.5f
+                                                }
+                                            }
+                                            fun fromSlider(value: Float): Int = if (value <= 0.5f) {
+                                                (minQname + (value / 0.5f) * (midQname - minQname)).roundToInt()
+                                            } else {
+                                                (midQname + ((value - 0.5f) / 0.5f) * (maxQname - midQname)).roundToInt()
+                                            }
+                                            var sliderValue by remember { mutableStateOf(toSlider(uiState.vaydnsMaxQnameLen)) }
+                                            val displayValue = fromSlider(sliderValue)
+                                            var customText by remember { mutableStateOf("") }
+                                            var customError by remember { mutableStateOf(false) }
+                                            AlertDialog(
+                                                onDismissRequest = { showQnameDialogLocked = false },
+                                                title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_length)) },
+                                                text = {
+                                                    Column {
+                                                        Text(
+                                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes, (displayValue).toString()),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            textAlign = TextAlign.Center
+                                                        )
+                                                        Slider(
+                                                            value = sliderValue,
+                                                            onValueChange = { sliderValue = it; customText = ""; customError = false },
+                                                            valueRange = 0f..1f,
+                                                            steps = 19,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        )
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
+                                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_60_stealthy), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_101_default), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_253_fastest), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                                        }
+                                                        Spacer(modifier = Modifier.height(12.dp))
+                                                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                            value = customText,
+                                                            onValueChange = { text ->
+                                                                customText = text
+                                                                val v = text.toIntOrNull()
+                                                                if (v != null && v in minQname..maxQname) {
+                                                                    sliderValue = toSlider(v)
+                                                                    customError = false
+                                                                } else {
+                                                                    customError = text.isNotEmpty()
+                                                                }
+                                                            },
+                                                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_value)) },
+                                                            placeholder = { Text("$minQname–$maxQname") },
+                                                            isError = customError,
+                                                            supportingText = if (customError) {{ Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_must_be_value_value, (minQname).toString(), (maxQname).toString())) }} else null,
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                            singleLine = true,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        )
+                                                    }
+                                                },
+                                                confirmButton = {
+                                                    TextButton(onClick = {
+                                                        val custom = customText.toIntOrNull()
+                                                        val finalValue = if (custom != null && custom in minQname..maxQname) custom else displayValue
+                                                        viewModel.updateVaydnsMaxQnameLen(finalValue)
+                                                        showQnameDialogLocked = false
+                                                    }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392)) }
+                                                },
+                                                dismissButton = {
+                                                    Row {
+                                                        if (displayValue != midQname) {
+                                                            TextButton(onClick = {
+                                                                sliderValue = 0.5f; customText = ""; customError = false
+                                                                viewModel.updateVaydnsMaxQnameLen(midQname)
+                                                                showQnameDialogLocked = false
+                                                            }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76)) }
+                                                        }
+                                                        TextButton(onClick = { showQnameDialogLocked = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        } // end if (!uiState.dnsAutoTune)
+
+                                        // Rate limit — hidden when Auto is on.
+                                        if (!uiState.dnsAutoTune) {
+                                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                value = uiState.vaydnsRps,
+                                                onValueChange = { viewModel.updateVaydnsRps(it.filter { c -> c.isDigit() || c == '.' }.take(6)) },
+                                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_rate_limit_q_s)) },
+                                                supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_rate_hint)) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                singleLine = true
+                                            )
+                                        }
+
+                                        // Advanced settings (hidden by default)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { viewModel.toggleVaydnsAdvanced() }
+                                                .padding(vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
+                                                style = MaterialTheme.typography.titleMedium
+                                            )
+                                            Icon(
+                                                Icons.Default.KeyboardArrowRight,
+                                                contentDescription = if (uiState.vaydnsAdvancedExpanded) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_collapse) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_expand),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.rotate(if (uiState.vaydnsAdvancedExpanded) 90f else 0f)
+                                            )
+                                        }
+
+                                        AnimatedVisibility(visible = uiState.vaydnsAdvancedExpanded) {
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_advanced_hint),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(bottom = 4.dp)
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.vaydnsIdleTimeout,
+                                                    onValueChange = { viewModel.updateVaydnsIdleTimeout(it.filter { c -> c.isDigit() }.take(4)) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_idle_timeout_seconds)) },
+                                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_10_default)) },
+                                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_session_idle_timeout)) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.vaydnsKeepalive,
+                                                    onValueChange = { viewModel.updateVaydnsKeepalive(it.filter { c -> c.isDigit() }.take(4)) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_keepalive_seconds)) },
+                                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_2_default)) },
+                                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_keepalive_interval)) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.vaydnsUdpTimeout,
+                                                    onValueChange = { viewModel.updateVaydnsUdpTimeout(it.filter { c -> c.isDigit() }.take(5)) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_udp_timeout_ms)) },
+                                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_500_default)) },
+                                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_udp_timeout_hint)) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.vaydnsMaxNumLabels,
+                                                    onValueChange = { viewModel.updateVaydnsMaxNumLabels(it.filter { c -> c.isDigit() }.take(2)) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_max_labels)) },
+                                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlimited)) },
+                                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_max_labels_hint)) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = uiState.vaydnsClientIdSize,
+                                                    onValueChange = { viewModel.updateVaydnsClientIdSize(it.filter { c -> c.isDigit() }.take(2)) },
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_client_id_size_bytes)) },
+                                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_2_default)) },
+                                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_client_id_hint)) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true
+                                                )
+                                            }
+                                        }
                                     }
                                 }
-                            }
+                        }
                     }
                 }
 
@@ -1056,135 +1082,139 @@ fun EditProfileScreen(
                 val showSocksCreds = uiState.isSocks5 ||
                         (uiState.showConnectionMethod && !uiState.useSsh && !uiState.isNaiveBased && !uiState.isSoarBased)
                 val showNaiveCreds = uiState.isNaiveBased
-                if (showSshCreds || showSocksCreds || showNaiveCreds) {
-                    Text(
-                        text = "Credentials",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    Text(
-                        text = "You can change the username and password.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
+                EditorSection {
+                    if (showSshCreds || showSocksCreds || showNaiveCreds) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_credentials),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_editable_credentials_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
 
-                            if (showSocksCreds) {
-                                OutlinedTextField(
-                                    value = uiState.socksUsername,
-                                    onValueChange = { viewModel.updateSocksUsername(it) },
-                                    label = { Text("SOCKS5 Username") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                var lockedSocksPasswordVisible by remember { mutableStateOf(false) }
-                                OutlinedTextField(
-                                    value = uiState.socksPassword,
-                                    onValueChange = { viewModel.updateSocksPassword(it) },
-                                    label = { Text("SOCKS5 Password") },
-                                    visualTransformation = if (lockedSocksPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    trailingIcon = {
-                                        IconButton(onClick = { lockedSocksPasswordVisible = !lockedSocksPasswordVisible }) {
-                                            Text(
-                                                text = if (lockedSocksPasswordVisible) "Hide" else "Show",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
+                                if (showSocksCreds) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.socksUsername,
+                                        onValueChange = { viewModel.updateSocksUsername(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks5_username)) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    var lockedSocksPasswordVisible by remember { mutableStateOf(false) }
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.socksPassword,
+                                        onValueChange = { viewModel.updateSocksPassword(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks5_password)) },
+                                        visualTransformation = if (lockedSocksPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { lockedSocksPasswordVisible = !lockedSocksPasswordVisible }) {
+                                                Text(
+                                                    text = if (lockedSocksPasswordVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
 
-                            if (showNaiveCreds) {
-                                OutlinedTextField(
-                                    value = uiState.naiveUsername,
-                                    onValueChange = { viewModel.updateNaiveUsername(it) },
-                                    label = { Text("Proxy Username") },
-                                    isError = uiState.naiveUsernameError != null,
-                                    supportingText = uiState.naiveUsernameError?.let { { Text(it) } },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                OutlinedTextField(
-                                    value = uiState.naivePassword,
-                                    onValueChange = { viewModel.updateNaivePassword(it) },
-                                    label = { Text("Proxy Password") },
-                                    visualTransformation = PasswordVisualTransformation(),
-                                    isError = uiState.naivePasswordError != null,
-                                    supportingText = uiState.naivePasswordError?.let { { Text(it) } },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
+                                if (showNaiveCreds) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.naiveUsername,
+                                        onValueChange = { viewModel.updateNaiveUsername(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_username)) },
+                                        isError = uiState.naiveUsernameError != null,
+                                        supportingText = uiState.naiveUsernameError?.let { { Text(it) } },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.naivePassword,
+                                        onValueChange = { viewModel.updateNaivePassword(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_password)) },
+                                        visualTransformation = PasswordVisualTransformation(),
+                                        isError = uiState.naivePasswordError != null,
+                                        supportingText = uiState.naivePasswordError?.let { { Text(it) } },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
 
-                            if (showSshCreds) {
-                                OutlinedTextField(
-                                    value = uiState.sshUsername,
-                                    onValueChange = { viewModel.updateSshUsername(it) },
-                                    label = { Text("SSH Username") },
-                                    isError = uiState.sshUsernameError != null,
-                                    supportingText = uiState.sshUsernameError?.let { { Text(it) } },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                var lockedSshPasswordVisible by remember { mutableStateOf(false) }
-                                OutlinedTextField(
-                                    value = uiState.sshPassword,
-                                    onValueChange = { viewModel.updateSshPassword(it) },
-                                    label = { Text("SSH Password") },
-                                    visualTransformation = if (lockedSshPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                    trailingIcon = {
-                                        IconButton(onClick = { lockedSshPasswordVisible = !lockedSshPasswordVisible }) {
-                                            Text(
-                                                text = if (lockedSshPasswordVisible) "Hide" else "Show",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    },
-                                    isError = uiState.sshPasswordError != null,
-                                    supportingText = uiState.sshPasswordError?.let { { Text(it) } },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
+                                if (showSshCreds) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sshUsername,
+                                        onValueChange = { viewModel.updateSshUsername(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_username)) },
+                                        isError = uiState.sshUsernameError != null,
+                                        supportingText = uiState.sshUsernameError?.let { { Text(it) } },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    var lockedSshPasswordVisible by remember { mutableStateOf(false) }
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sshPassword,
+                                        onValueChange = { viewModel.updateSshPassword(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_password)) },
+                                        visualTransformation = if (lockedSshPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                        trailingIcon = {
+                                            IconButton(onClick = { lockedSshPasswordVisible = !lockedSshPasswordVisible }) {
+                                                Text(
+                                                    text = if (lockedSshPasswordVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        },
+                                        isError = uiState.sshPasswordError != null,
+                                        supportingText = uiState.sshPasswordError?.let { { Text(it) } },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                }
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Unlock button
-                OutlinedButton(
-                    onClick = {
-                        unlockPassword = ""
-                        unlockError = false
-                        showUnlockDialog = true
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LockOpen,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Unlock Profile")
+                EditorSection {
+                    OutlinedButton(
+                        onClick = {
+                            unlockPassword = ""
+                            unlockError = false
+                            showUnlockDialog = true
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlock_profile))
+                    }
                 }
             }
 
@@ -1192,11 +1222,11 @@ fun EditProfileScreen(
             if (showUnlockDialog) {
                 AlertDialog(
                     onDismissRequest = { showUnlockDialog = false },
-                    title = { Text("Unlock Profile") },
+                    title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlock_profile)) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Enter the admin password to permanently unlock this profile.")
-                            OutlinedTextField(
+                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlock_hint))
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                                 value = unlockPassword,
                                 onValueChange = {
                                     unlockPassword = it
@@ -1206,7 +1236,7 @@ fun EditProfileScreen(
                                 visualTransformation = PasswordVisualTransformation(),
                                 isError = unlockError,
                                 supportingText = if (unlockError) {
-                                    { Text("Incorrect password") }
+                                    { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_incorrect_password)) }
                                 } else null,
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -1225,7 +1255,7 @@ fun EditProfileScreen(
                                 }
                             },
                             enabled = unlockPassword.isNotBlank()
-                        ) { Text("Unlock") }
+                        ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlock)) }
                     },
                     dismissButton = {
                         TextButton(onClick = { showUnlockDialog = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
@@ -1243,488 +1273,508 @@ fun EditProfileScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Name
-                OutlinedTextField(
-                    value = uiState.name,
-                    onValueChange = { viewModel.updateName(it) },
-                    label = { Text("Profile Name") },
-                    placeholder = { Text("My VPN Server") },
-                    isError = uiState.nameError != null,
-                    supportingText = uiState.nameError?.let { { Text(it) } },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                EditorSection {
+                    OutlinedTextField(
+                        value = uiState.name,
+                        onValueChange = { viewModel.updateName(it) },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_profile_name)) },
+                        placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_my_vpn_server)) },
+                        isError = uiState.nameError != null,
+                        supportingText = uiState.nameError?.let { { Text(it) } },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 // Domain / SSH Server (hidden for DOH, Snowflake, SOCKS5, and VLESS profiles)
-                if (!uiState.isDoh && !uiState.isSnowflake && !uiState.isSocks5 && !uiState.isVless) {
-                    OutlinedTextField(
-                        value = uiState.domain,
-                        onValueChange = { viewModel.updateDomain(it) },
-                        label = {
-                            Text(
-                                when {
-                                    uiState.isSshOnly -> "SSH Server"
-                                    uiState.isNaiveBased -> "Server"
-                                    else -> "Domain"
-                                }
-                            )
-                        },
-                        placeholder = {
-                            Text(
-                                when {
-                                    uiState.isDnsttOrNoizOrVaydnsBased || uiState.isSoarBased -> "t.example.com"
-                                    uiState.isSshOnly -> "ssh.example.com"
-                                    uiState.isNaiveBased -> "proxy.example.com"
-                                    else -> "vpn.example.com"
-                                }
-                            )
-                        },
-                        isError = uiState.domainError != null,
-                        supportingText = {
-                            Text(
-                                uiState.domainError ?: when {
-                                    uiState.isNoizdnsBased -> "NoizDNS tunnel domain"
-                                    uiState.isVaydnsBased -> "VayDNS tunnel domain"
-                                    uiState.isSoarBased -> "Soar tunnel zone (delegated to the Soar server)"
-                                    uiState.isDnsttBased -> "DNSTT tunnel domain"
-                                    uiState.isSlipstreamBased -> "Slipstream tunnel domain"
-                                    uiState.isNaiveBased -> "Caddy server hostname"
-                                    else -> "SSH server hostname or IP"
-                                }
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                // SOCKS5 Proxy fields
-                if (uiState.isSocks5) {
-                    OutlinedTextField(
-                        value = uiState.domain,
-                        onValueChange = { viewModel.updateDomain(it) },
-                        label = { Text("SOCKS5 Server") },
-                        placeholder = { Text("proxy.example.com") },
-                        isError = uiState.domainError != null,
-                        supportingText = { Text(uiState.domainError ?: "Remote SOCKS5 proxy hostname or IP") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.socks5ServerPort,
-                        onValueChange = { viewModel.updateSocks5ServerPort(it) },
-                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_port_72e9a5)) },
-                        placeholder = { Text("1080") },
-                        isError = uiState.socks5ServerPortError != null,
-                        supportingText = { Text(uiState.socks5ServerPortError ?: "SOCKS5 proxy port") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.socksUsername,
-                        onValueChange = { viewModel.updateSocksUsername(it) },
-                        label = { Text("Username (optional)") },
-                        placeholder = { Text("") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    var socks5PasswordVisible by remember { mutableStateOf(false) }
-                    OutlinedTextField(
-                        value = uiState.socksPassword,
-                        onValueChange = { viewModel.updateSocksPassword(it) },
-                        label = { Text("Password (optional)") },
-                        placeholder = { Text("") },
-                        singleLine = true,
-                        visualTransformation = if (socks5PasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { socks5PasswordVisible = !socks5PasswordVisible }) {
+                EditorSection {
+                    if (!uiState.isDoh && !uiState.isSnowflake && !uiState.isSocks5 && !uiState.isVless) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.domain,
+                            onValueChange = { viewModel.updateDomain(it) },
+                            label = {
                                 Text(
-                                    text = if (socks5PasswordVisible) "Hide" else "Show",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
+                                    when {
+                                        uiState.isSshOnly -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_server)
+                                        uiState.isNaiveBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_server_aef7de)
+                                        else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_domain)
+                                    }
                                 )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                // VLESS fields
-                if (uiState.isVless) {
-                    Text("VLESS WebSocket settings", style = MaterialTheme.typography.titleMedium)
-                    Text("For REALITY or XHTTP, use the advanced editor below. Existing saved WebSocket profiles are kept; saving creates a separate profile. The server must support the chosen transport.", style = MaterialTheme.typography.bodySmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { viewModel.openCoreEditor("reality") }) { Text("REALITY") }
-                        TextButton(onClick = { viewModel.openCoreEditor("xhttp") }) { Text("XHTTP") }
-                    }
-
-                    OutlinedTextField(
-                        value = uiState.vlessUuid,
-                        onValueChange = { viewModel.updateVlessUuid(it) },
-                        label = { Text("UUID") },
-                        placeholder = { Text("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") },
-                        isError = uiState.vlessUuidError != null,
-                        supportingText = { Text(uiState.vlessUuidError ?: "VLESS user ID") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.domain,
-                        onValueChange = { viewModel.updateDomain(it) },
-                        label = { Text("Server Domain") },
-                        placeholder = { Text("your-domain.example.com") },
-                        isError = uiState.domainError != null,
-                        supportingText = { Text(uiState.domainError ?: "Your domain behind Cloudflare (used as TLS SNI and WS Host)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.cdnIp,
-                        onValueChange = { viewModel.updateCdnIp(it) },
-                        label = { Text("CDN IP") },
-                        placeholder = { Text("188.114.98.0") },
-                        isError = uiState.cdnIpError != null,
-                        supportingText = { Text(uiState.cdnIpError ?: "Cloudflare clean IP address") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    // Security + Transport selector
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("tls" to "TLS", "none" to "None").forEach { (value, label) ->
-                            FilterChip(
-                                selected = uiState.vlessSecurity == value,
-                                onClick = { viewModel.updateVlessSecurity(value) },
-                                label = { Text(label) }
-                            )
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = uiState.cdnPort,
-                            onValueChange = { viewModel.updateCdnPort(it) },
-                            label = { Text("CDN Port") },
-                            placeholder = { Text("443") },
-                            isError = uiState.cdnPortError != null,
-                            supportingText = { Text(uiState.cdnPortError ?: "") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f)
-                        )
-                        OutlinedTextField(
-                            value = uiState.vlessWsPath,
-                            onValueChange = { viewModel.updateVlessWsPath(it) },
-                            label = { Text("WS Path") },
-                            placeholder = { Text("/") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    // TLS DPI bypass options (only relevant when security=tls)
-                    if (uiState.vlessSecurity == "tls") {
-                        OutlinedTextField(
-                            value = uiState.vlessSni,
-                            onValueChange = { viewModel.updateVlessSni(it) },
-                            label = { Text("TLS SNI") },
-                            placeholder = { Text("leave empty to use WS Host") },
-                            supportingText = { Text("Sent in the TLS ClientHello. Must match the CDN cert hostname for CDN routing; on direct servers any hostname works.") },
+                            },
+                            placeholder = {
+                                Text(
+                                    when {
+                                        uiState.isDnsttOrNoizOrVaydnsBased || uiState.isSoarBased -> "t.example.com"
+                                        uiState.isSshOnly -> "ssh.example.com"
+                                        uiState.isNaiveBased -> "proxy.example.com"
+                                        else -> "vpn.example.com"
+                                    }
+                                )
+                            },
+                            isError = uiState.domainError != null,
+                            supportingText = {
+                                Text(
+                                    uiState.domainError ?: when {
+                                        uiState.isNoizdnsBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_noizdns_tunnel_domain)
+                                        uiState.isVaydnsBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_vaydns_tunnel_domain)
+                                        uiState.isSoarBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_soar_zone_hint)
+                                        uiState.isDnsttBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dnstt_tunnel_domain)
+                                        uiState.isSlipstreamBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_slipstream_tunnel_domain)
+                                        uiState.isNaiveBased -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_caddy_server_hostname)
+                                        else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_host_hint)
+                                    }
+                                )
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
+                }
 
-                        // SNI Fragmentation section
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("SNI Fragmentation", style = MaterialTheme.typography.bodyLarge)
-                            Switch(
-                                checked = uiState.sniFragmentEnabled,
-                                onCheckedChange = { viewModel.updateSniFragmentEnabled(it) }
+                // SOCKS5 Proxy fields
+                EditorSection {
+                    if (uiState.isSocks5) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.domain,
+                            onValueChange = { viewModel.updateDomain(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks5_server)) },
+                            placeholder = { Text("proxy.example.com") },
+                            isError = uiState.domainError != null,
+                            supportingText = { Text(uiState.domainError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks_host_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.socks5ServerPort,
+                            onValueChange = { viewModel.updateSocks5ServerPort(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_port_72e9a5)) },
+                            placeholder = { Text("1080") },
+                            isError = uiState.socks5ServerPortError != null,
+                            supportingText = { Text(uiState.socks5ServerPortError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks5_proxy_port)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.socksUsername,
+                            onValueChange = { viewModel.updateSocksUsername(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_username_optional)) },
+                            placeholder = { Text("") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        var socks5PasswordVisible by remember { mutableStateOf(false) }
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.socksPassword,
+                            onValueChange = { viewModel.updateSocksPassword(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_password_optional)) },
+                            placeholder = { Text("") },
+                            singleLine = true,
+                            visualTransformation = if (socks5PasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { socks5PasswordVisible = !socks5PasswordVisible }) {
+                                    Text(
+                                        text = if (socks5PasswordVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                // VLESS fields
+                EditorSection {
+                    if (uiState.isVless) {
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_vless_websocket_settings), style = MaterialTheme.typography.titleMedium)
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_core_editor_hint), style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { viewModel.openCoreEditor("reality") }) { Text("REALITY") }
+                            TextButton(onClick = { viewModel.openCoreEditor("xhttp") }) { Text("XHTTP") }
+                        }
+
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.vlessUuid,
+                            onValueChange = { viewModel.updateVlessUuid(it) },
+                            label = { Text("UUID") },
+                            placeholder = { Text("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") },
+                            isError = uiState.vlessUuidError != null,
+                            supportingText = { Text(uiState.vlessUuidError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_vless_user_id)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.domain,
+                            onValueChange = { viewModel.updateDomain(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_server_domain)) },
+                            placeholder = { Text("your-domain.example.com") },
+                            isError = uiState.domainError != null,
+                            supportingText = { Text(uiState.domainError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_cloudflare_domain_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.cdnIp,
+                            onValueChange = { viewModel.updateCdnIp(it) },
+                            label = { Text("CDN IP") },
+                            placeholder = { Text("188.114.98.0") },
+                            isError = uiState.cdnIpError != null,
+                            supportingText = { Text(uiState.cdnIpError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_cloudflare_clean_ip_address)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        // Security + Transport selector
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("tls" to "TLS", "none" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_none)).forEach { (value, label) ->
+                                FilterChip(
+                                    selected = uiState.vlessSecurity == value,
+                                    onClick = { viewModel.updateVlessSecurity(value) },
+                                    label = { Text(label) }
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.cdnPort,
+                                onValueChange = { viewModel.updateCdnPort(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_cdn_port)) },
+                                placeholder = { Text("443") },
+                                isError = uiState.cdnPortError != null,
+                                supportingText = { Text(uiState.cdnPortError ?: "") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.vlessWsPath,
+                                onValueChange = { viewModel.updateVlessWsPath(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ws_path)) },
+                                placeholder = { Text("/") },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
-                        if (uiState.sniFragmentEnabled) {
-                            // Strategies are ordered by effectiveness against modern
-                            // reassembling DPIs — chunkier and reorder-based modes tend
-                            // to outperform simple splits.
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                listOf(
-                                    "micro" to "Micro ★★",
-                                    "multi" to "Multi ★",
-                                    "disorder" to "Disorder ★",
-                                    "fake" to "Fake",
-                                    "sni_split" to "SNI Split",
-                                    "half" to "Half"
-                                ).forEach { (value, label) ->
-                                    FilterChip(
-                                        selected = uiState.sniFragmentStrategy == value,
-                                        onClick = { viewModel.updateSniFragmentStrategy(value) },
-                                        label = { Text(label) }
-                                    )
-                                }
-                            }
-                            Text(
-                                text = "★★ = strongest (1 byte per TLS record + MSS cap, trades throughput). ★ = recommended against strict DPI.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            OutlinedTextField(
-                                value = uiState.sniFragmentDelayMs,
-                                onValueChange = { viewModel.updateSniFragmentDelayMs(it) },
-                                label = { Text("Fragment Delay (ms)") },
-                                placeholder = { Text("300") },
-                                supportingText = { Text("Delay between TLS fragments. 100ms works on most networks; try 300–500ms against strict reassembling DPI. In Micro mode this also controls per-record jitter.") },
+                        // TLS DPI bypass options (only relevant when security=tls)
+                        if (uiState.vlessSecurity == "tls") {
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.vlessSni,
+                                onValueChange = { viewModel.updateVlessSni(it) },
+                                label = { Text("TLS SNI") },
+                                placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_leave_empty_to_use_ws_host)) },
+                                supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tls_sni_hint)) },
                                 singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            if (uiState.sniFragmentStrategy == "fake" || uiState.sniFragmentStrategy == "disorder") {
-                                OutlinedTextField(
-                                    value = uiState.sniSpoofTtl,
-                                    onValueChange = { viewModel.updateSniSpoofTtl(it) },
-                                    label = { Text("Decoy TTL (hops)") },
-                                    placeholder = { Text("8") },
-                                    supportingText = { Text("Decoy packet must die between local DPI and CDN edge. Try 4–12 if connections fail; lower it if your CDN POP is close.") },
+
+                            // SNI Fragmentation section
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_sni_fragmentation), style = MaterialTheme.typography.bodyLarge)
+                                Switch(
+                                    checked = uiState.sniFragmentEnabled,
+                                    onCheckedChange = { viewModel.updateSniFragmentEnabled(it) }
+                                )
+                            }
+
+                            if (uiState.sniFragmentEnabled) {
+                                // Strategies are ordered by effectiveness against modern
+                                // reassembling DPIs — chunkier and reorder-based modes tend
+                                // to outperform simple splits.
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    listOf(
+                                        "micro" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_micro_mode),
+                                        "multi" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_multi_mode),
+                                        "disorder" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_disorder_mode),
+                                        "fake" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fake_mode),
+                                        "sni_split" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_sni_split_mode),
+                                        "half" to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_half_mode)
+                                    ).forEach { (value, label) ->
+                                        FilterChip(
+                                            selected = uiState.sniFragmentStrategy == value,
+                                            onClick = { viewModel.updateSniFragmentStrategy(value) },
+                                            label = { Text(label) }
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fragment_strength_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sniFragmentDelayMs,
+                                    onValueChange = { viewModel.updateSniFragmentDelayMs(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fragment_delay_ms)) },
+                                    placeholder = { Text("300") },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fragment_delay_hint)) },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (uiState.sniFragmentStrategy == "fake" || uiState.sniFragmentStrategy == "disorder") {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sniSpoofTtl,
+                                        onValueChange = { viewModel.updateSniSpoofTtl(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_decoy_ttl_hops)) },
+                                        placeholder = { Text("8") },
+                                        supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_decoy_ttl_hint)) },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                if (uiState.sniFragmentStrategy == "fake") {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.fakeDecoyHost,
+                                        onValueChange = { viewModel.updateFakeDecoyHost(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_decoy_hostname)) },
+                                        placeholder = { Text("www.google.com") },
+                                        supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_decoy_hostname_hint)) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.tcpMaxSeg,
+                                    onValueChange = { viewModel.updateTcpMaxSeg(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_force_tcp_mss_advanced)) },
+                                    placeholder = { Text("0") },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tcp_mss_hint)) },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
-                            if (uiState.sniFragmentStrategy == "fake") {
-                                OutlinedTextField(
-                                    value = uiState.fakeDecoyHost,
-                                    onValueChange = { viewModel.updateFakeDecoyHost(it) },
-                                    label = { Text("Decoy Hostname") },
-                                    placeholder = { Text("www.google.com") },
-                                    supportingText = { Text("SNI written into the decoy ClientHello. Pick a host the local DPI is known to allow. Truncated or space-padded to the real hostname length. Empty = www.google.com.") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            OutlinedTextField(
-                                value = uiState.tcpMaxSeg,
-                                onValueChange = { viewModel.updateTcpMaxSeg(it) },
-                                label = { Text("Force TCP MSS (advanced)") },
-                                placeholder = { Text("0") },
-                                supportingText = { Text("Cap outgoing TCP segment size so each TLS record spills across multiple segments. 0 = auto (on only in Micro / CH-padding). 40–1400 = explicit override; 70 is a good starting point against per-segment DPI. Smaller = slower throughput.") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
 
-                        // ClientHello padding
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("ClientHello Padding", style = MaterialTheme.typography.bodyLarge)
-                                Text("Micro-fragment each byte into its own TLS record (~6x wire expansion)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Switch(
-                                checked = uiState.chPaddingEnabled,
-                                onCheckedChange = { viewModel.updateChPaddingEnabled(it) }
-                            )
-                        }
-
-                        // Header obfuscation (only for WS transport)
-                        if (uiState.vlessTransport == "ws") {
+                            // ClientHello padding
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Header Obfuscation", style = MaterialTheme.typography.bodyLarge)
-                                    Text("Add browser headers and randomize order in WS upgrade", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_clienthello_padding), style = MaterialTheme.typography.bodyLarge)
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_clienthello_padding_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Switch(
-                                    checked = uiState.wsHeaderObfuscation,
-                                    onCheckedChange = { viewModel.updateWsHeaderObfuscation(it) }
+                                    checked = uiState.chPaddingEnabled,
+                                    onCheckedChange = { viewModel.updateChPaddingEnabled(it) }
                                 )
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Cover Traffic", style = MaterialTheme.typography.bodyLarge)
-                                    Text("Send random WS pings to mask traffic patterns", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // Header obfuscation (only for WS transport)
+                            if (uiState.vlessTransport == "ws") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_header_obfuscation), style = MaterialTheme.typography.bodyLarge)
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_header_obfuscation_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Switch(
+                                        checked = uiState.wsHeaderObfuscation,
+                                        onCheckedChange = { viewModel.updateWsHeaderObfuscation(it) }
+                                    )
                                 }
-                                Switch(
-                                    checked = uiState.wsPaddingEnabled,
-                                    onCheckedChange = { viewModel.updateWsPaddingEnabled(it) }
-                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_cover_traffic), style = MaterialTheme.typography.bodyLarge)
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_cover_traffic_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Switch(
+                                        checked = uiState.wsPaddingEnabled,
+                                        onCheckedChange = { viewModel.updateWsPaddingEnabled(it) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
                 // DoH Server URL (shown for DOH profiles)
-                if (uiState.isDoh) {
-                    DohServerSelector(
-                        dohUrl = uiState.dohUrl,
-                        dohUrlError = uiState.dohUrlError,
-                        onUrlChange = { viewModel.updateDohUrl(it) },
-                        onPresetSelected = { viewModel.selectDohPreset(it) },
-                        onTestServers = { scope -> viewModel.testDohServers(scope) },
-                        customDohUrls = uiState.customDohUrls,
-                        onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
-                    )
+                EditorSection {
+                    if (uiState.isDoh) {
+                        DohServerSelector(
+                            dohUrl = uiState.dohUrl,
+                            dohUrlError = uiState.dohUrlError,
+                            onUrlChange = { viewModel.updateDohUrl(it) },
+                            onPresetSelected = { viewModel.selectDohPreset(it) },
+                            onTestServers = { scope -> viewModel.testDohServers(scope) },
+                            customDohUrls = uiState.customDohUrls,
+                            onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
+                        )
 
-                    // DoH warning
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        // DoH warning
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    text = "DNS-only encryption",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                Text(
-                                    text = "DoH encrypts DNS queries only. Your IP address remains visible to websites. For bypassing censorship, it may not work on all websites.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_only_encryption),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_scope_hint),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
                 // NaiveProxy fields (shown for NAIVE and NAIVE_SSH)
-                if (uiState.isNaiveBased) {
-                    OutlinedTextField(
-                        value = uiState.naivePort,
-                        onValueChange = { viewModel.updateNaivePort(it) },
-                        label = { Text("Server Port") },
-                        placeholder = { Text("443") },
-                        isError = uiState.naivePortError != null,
-                        supportingText = uiState.naivePortError?.let { { Text(it) } },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.naiveUsername,
-                        onValueChange = { viewModel.updateNaiveUsername(it) },
-                        label = { Text("Proxy Username") },
-                        placeholder = { Text("HTTP proxy auth username") },
-                        isError = uiState.naiveUsernameError != null,
-                        supportingText = uiState.naiveUsernameError?.let { { Text(it) } },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.naivePassword,
-                        onValueChange = { viewModel.updateNaivePassword(it) },
-                        label = { Text("Proxy Password") },
-                        placeholder = { Text("HTTP proxy auth password") },
-                        isError = uiState.naivePasswordError != null,
-                        supportingText = uiState.naivePasswordError?.let { { Text(it) } },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                EditorSection {
+                    if (uiState.isNaiveBased) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.naivePort,
+                            onValueChange = { viewModel.updateNaivePort(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_server_port)) },
+                            placeholder = { Text("443") },
+                            isError = uiState.naivePortError != null,
+                            supportingText = uiState.naivePortError?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.naiveUsername,
+                            onValueChange = { viewModel.updateNaiveUsername(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_username)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_http_proxy_auth_username)) },
+                            isError = uiState.naiveUsernameError != null,
+                            supportingText = uiState.naiveUsernameError?.let { { Text(it) } },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.naivePassword,
+                            onValueChange = { viewModel.updateNaivePassword(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_password)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_http_proxy_auth_password)) },
+                            isError = uiState.naivePasswordError != null,
+                            supportingText = uiState.naivePasswordError?.let { { Text(it) } },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // SSH Port (shown only for SSH-only, near domain)
-                if (uiState.isSshOnly) {
-                    OutlinedTextField(
-                        value = uiState.sshPort,
-                        onValueChange = { viewModel.updateSshPort(it) },
-                        label = { Text("SSH Port") },
-                        placeholder = { Text("22") },
-                        isError = uiState.sshPortError != null,
-                        supportingText = uiState.sshPortError?.let { { Text(it) } },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                EditorSection {
+                    if (uiState.isSshOnly) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.sshPort,
+                            onValueChange = { viewModel.updateSshPort(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_port)) },
+                            placeholder = { Text("22") },
+                            isError = uiState.sshPortError != null,
+                            supportingText = uiState.sshPortError?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // Soar Public Key (Ed25519, base64 from `soar-server pubkey`)
-                if (uiState.isSoarBased) {
-                    OutlinedTextField(
-                        value = uiState.dnsttPublicKey,
-                        onValueChange = { viewModel.updateDnsttPublicKey(it) },
-                        label = { Text("Public Key") },
-                        placeholder = { Text("Server's Ed25519 public key (base64)") },
-                        isError = uiState.dnsttPublicKeyError != null,
-                        supportingText = {
-                            Text(uiState.dnsttPublicKeyError ?: "Output of `soar-server pubkey` on the server")
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                EditorSection {
+                    if (uiState.isSoarBased) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.dnsttPublicKey,
+                            onValueChange = { viewModel.updateDnsttPublicKey(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_public_key)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ed25519_key_hint)) },
+                            isError = uiState.dnsttPublicKeyError != null,
+                            supportingText = {
+                                Text(uiState.dnsttPublicKeyError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_soar_key_command_hint))
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // DNSTT Public Key
-                if (uiState.isDnsttOrNoizOrVaydnsBased) {
-                    OutlinedTextField(
-                        value = uiState.dnsttPublicKey,
-                        onValueChange = { viewModel.updateDnsttPublicKey(it) },
-                        label = { Text("Public Key") },
-                        placeholder = { Text("Server's Noise public key (hex)") },
-                        isError = uiState.dnsttPublicKeyError != null,
-                        supportingText = {
-                            Text(uiState.dnsttPublicKeyError ?: "Server's Noise protocol public key in hex format")
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                EditorSection {
+                    if (uiState.isDnsttOrNoizOrVaydnsBased) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.dnsttPublicKey,
+                            onValueChange = { viewModel.updateDnsttPublicKey(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_public_key)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_noise_key_placeholder)) },
+                            isError = uiState.dnsttPublicKeyError != null,
+                            supportingText = {
+                                Text(uiState.dnsttPublicKeyError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_noise_key_hint))
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // DNS Transport selector (DNSTT-based profiles only)
-                if (uiState.isDnsttOrNoizOrVaydnsBased) {
-                    Text(
-                        text = "DNS Transport",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                EditorSection {
+                    if (uiState.isDnsttOrNoizOrVaydnsBased) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_transport),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        DnsTransport.entries.forEach { transport ->
-                            if (uiState.dnsTransport == transport) {
-                                Button(
-                                    onClick = { },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(transport.displayName)
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = { viewModel.updateDnsTransport(transport) },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(transport.displayName)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            DnsTransport.entries.forEach { transport ->
+                                if (uiState.dnsTransport == transport) {
+                                    Button(
+                                        onClick = { },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(transport.displayName)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { viewModel.updateDnsTransport(transport) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(transport.displayName)
+                                    }
                                 }
                             }
                         }
@@ -1732,69 +1782,117 @@ fun EditProfileScreen(
                 }
 
                 // DoH URL for DNSTT with DoH transport
-                if (uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH) {
-                    DohServerSelector(
-                        dohUrl = uiState.dohUrl,
-                        dohUrlError = uiState.dohUrlError,
-                        onUrlChange = { viewModel.updateDohUrl(it) },
-                        onPresetSelected = { viewModel.selectDohPreset(it) },
-                        onTestServers = { scope -> viewModel.testDohServers(scope) },
-                        customDohUrls = uiState.customDohUrls,
-                        onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
-                    )
+                EditorSection {
+                    if (uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH) {
+                        DohServerSelector(
+                            dohUrl = uiState.dohUrl,
+                            dohUrlError = uiState.dohUrlError,
+                            onUrlChange = { viewModel.updateDohUrl(it) },
+                            onPresetSelected = { viewModel.selectDohPreset(it) },
+                            onTestServers = { scope -> viewModel.testDohServers(scope) },
+                            customDohUrls = uiState.customDohUrls,
+                            onCustomDohUrlsChange = { viewModel.updateCustomDohUrls(it) }
+                        )
+                    }
                 }
 
                 // DNS Resolver
                 val showResolvers = !uiState.isSshOnly && !uiState.isDoh && !uiState.isSnowflake && !uiState.isNaiveBased &&
                         !uiState.isSocks5 && !uiState.isVless && !(uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOH)
-                if (showResolvers) {
-                    if (globalResolverEnabled) {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            ),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                        ) {
-                            Text(
-                                text = "Global DNS resolver override is active in Settings. Profile resolvers will be ignored at connection time.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(12.dp)
-                            )
+                EditorSection {
+                    if (showResolvers) {
+                        if (globalResolverEnabled) {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            ) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_global_dns_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                         }
-                    }
-                    if (uiState.resolversHidden) {
-                        val resolverCount = uiState.defaultResolversList.size
-                        Text(
-                            text = if (resolverCount > 0) "DNS Resolver: $resolverCount resolver${if (resolverCount != 1) "s" else ""} (hidden)"
-                                   else "DNS Resolver: Default (hidden)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        if (uiState.resolversHidden) {
+                            val resolverCount = uiState.defaultResolversList.size
                             Text(
-                                text = "Use custom resolver",
-                                style = MaterialTheme.typography.bodyMedium
+                                text = if (resolverCount > 0) androidx.compose.ui.res.pluralStringResource(app.slipnet.R.plurals.editor_hidden_resolvers, resolverCount, resolverCount)
+                                       else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver_default_hidden),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Switch(
-                                checked = uiState.useCustomResolver,
-                                onCheckedChange = { viewModel.updateUseCustomResolver(it) }
-                            )
-                        }
-                        if (uiState.useCustomResolver) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_use_custom_resolver),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Switch(
+                                    checked = uiState.useCustomResolver,
+                                    onCheckedChange = { viewModel.updateUseCustomResolver(it) }
+                                )
+                            }
+                            if (uiState.useCustomResolver) {
+                                val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.resolvers,
+                                    onValueChange = { viewModel.updateResolvers(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver)) },
+                                    placeholder = { Text(if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_e_g_dns_google_853) else "e.g. 8.8.8.8:53") },
+                                    isError = uiState.resolversError != null,
+                                    supportingText = {
+                                        Text(uiState.resolversError ?: if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_853) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_port))
+                                    },
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = { viewModel.autoDetectResolver() },
+                                            enabled = !uiState.isAutoDetecting
+                                        ) {
+                                            if (uiState.isAutoDetecting) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_local),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (onNavigateToScanner != null) {
+                                    Button(
+                                        onClick = { viewModel.saveForScanner() },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(Icons.Default.Search, contentDescription = null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_scan_resolvers))
+                                    }
+                                }
+                            }
+                        } else {
                             val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
-                            OutlinedTextField(
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                                 value = uiState.resolvers,
                                 onValueChange = { viewModel.updateResolvers(it) },
-                                label = { Text("DNS Resolver") },
-                                placeholder = { Text(if (isDoT) "e.g. dns.google:853" else "e.g. 8.8.8.8:53") },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_resolver)) },
+                                placeholder = { Text(if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_e_g_dns_google_853) else "e.g. 8.8.8.8:53") },
                                 isError = uiState.resolversError != null,
                                 supportingText = {
-                                    Text(uiState.resolversError ?: if (isDoT) "IP or domain (host:853)" else "IP or domain (host:port)")
+                                    Text(uiState.resolversError ?: if (isDoT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_853) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ip_or_domain_host_port))
                                 },
                                 trailingIcon = {
                                     IconButton(
@@ -1808,7 +1906,7 @@ fun EditProfileScreen(
                                             )
                                         } else {
                                             Text(
-                                                text = "Local",
+                                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_local),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
@@ -1818,6 +1916,7 @@ fun EditProfileScreen(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
+
                             if (onNavigateToScanner != null) {
                                 Button(
                                     onClick = { viewModel.saveForScanner() },
@@ -1826,150 +1925,111 @@ fun EditProfileScreen(
                                 ) {
                                     Icon(Icons.Default.Search, contentDescription = null)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Scan for Working Resolvers")
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_scan_resolvers))
                                 }
                             }
                         }
-                    } else {
-                        val isDoT = uiState.isDnsttOrNoizOrVaydnsBased && uiState.dnsTransport == DnsTransport.DOT
-                        OutlinedTextField(
-                            value = uiState.resolvers,
-                            onValueChange = { viewModel.updateResolvers(it) },
-                            label = { Text("DNS Resolver") },
-                            placeholder = { Text(if (isDoT) "e.g. dns.google:853" else "e.g. 8.8.8.8:53") },
-                            isError = uiState.resolversError != null,
-                            supportingText = {
-                                Text(uiState.resolversError ?: if (isDoT) "IP or domain (host:853)" else "IP or domain (host:port)")
-                            },
-                            trailingIcon = {
-                                IconButton(
-                                    onClick = { viewModel.autoDetectResolver() },
-                                    enabled = !uiState.isAutoDetecting
-                                ) {
-                                    if (uiState.isAutoDetecting) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "Local",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        if (onNavigateToScanner != null) {
-                            Button(
-                                onClick = { viewModel.saveForScanner() },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Icon(Icons.Default.Search, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Scan for Working Resolvers")
-                            }
+                        // Multi-resolver mode (only shown when 2+ resolvers, not for slipstream which uses QUIC multipath)
+                        if (uiState.resolvers.contains(",") && !uiState.isSlipstreamBased && !uiState.isSoarBased) {
+                            MultiResolverSettings(
+                                resolverMode = uiState.resolverMode,
+                                rrSpreadCount = uiState.rrSpreadCount,
+                                onResolverModeChange = { viewModel.updateResolverMode(it) },
+                                onSpreadCountChange = { viewModel.updateRrSpreadCount(it) }
+                            )
                         }
-                    }
-                    // Multi-resolver mode (only shown when 2+ resolvers, not for slipstream which uses QUIC multipath)
-                    if (uiState.resolvers.contains(",") && !uiState.isSlipstreamBased && !uiState.isSoarBased) {
-                        MultiResolverSettings(
-                            resolverMode = uiState.resolverMode,
-                            rrSpreadCount = uiState.rrSpreadCount,
-                            onResolverModeChange = { viewModel.updateResolverMode(it) },
-                            onSpreadCountChange = { viewModel.updateRrSpreadCount(it) }
-                        )
-                    }
 
+                    }
                 }
 
                 // Soar-specific settings
-                if (uiState.isSoarBased) {
-                    SoarSettings(
-                        discovery = uiState.soarDiscovery,
-                        country = uiState.soarCountry,
-                        discoveryList = uiState.soarDiscoveryList,
-                        customList = uiState.soarDiscoveryCustom,
-                        customListError = uiState.soarDiscoveryCustomError,
-                        customListHidden = false,
-                        discoveryError = uiState.soarDiscoveryError,
-                        tcpMode = uiState.soarTcpMode,
-                        onDiscoveryChange = { viewModel.updateSoarDiscovery(it) },
-                        onCountryChange = { viewModel.updateSoarCountry(it) },
-                        onDiscoveryListChange = { viewModel.updateSoarDiscoveryList(it) },
-                        onCustomListChange = { viewModel.updateSoarDiscoveryCustom(it) },
-                        onTcpModeChange = { viewModel.updateSoarTcpMode(it) }
-                    )
+                EditorSection {
+                    if (uiState.isSoarBased) {
+                        SoarSettings(
+                            discovery = uiState.soarDiscovery,
+                            country = uiState.soarCountry,
+                            discoveryList = uiState.soarDiscoveryList,
+                            customList = uiState.soarDiscoveryCustom,
+                            customListError = uiState.soarDiscoveryCustomError,
+                            customListHidden = false,
+                            discoveryError = uiState.soarDiscoveryError,
+                            tcpMode = uiState.soarTcpMode,
+                            onDiscoveryChange = { viewModel.updateSoarDiscovery(it) },
+                            onCountryChange = { viewModel.updateSoarCountry(it) },
+                            onDiscoveryListChange = { viewModel.updateSoarDiscoveryList(it) },
+                            onCustomListChange = { viewModel.updateSoarDiscoveryCustom(it) },
+                            onTcpModeChange = { viewModel.updateSoarTcpMode(it) }
+                        )
+                    }
                 }
 
                 // Authoritative Mode toggle (DNSTT/NoizDNS only — VayDNS has no authoritative mode)
-                if (uiState.isDnsttOrNoizBased) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Authoritative Mode",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Aggressive query rate for faster speeds",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                EditorSection {
+                    if (uiState.isDnsttOrNoizBased) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_authoritative_mode),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_aggressive_query_rate_for_faster_speeds),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.dnsttAuthoritative,
+                                onCheckedChange = { viewModel.updateDnsttAuthoritative(it) }
                             )
                         }
-                        Switch(
-                            checked = uiState.dnsttAuthoritative,
-                            onCheckedChange = { viewModel.updateDnsttAuthoritative(it) }
-                        )
-                    }
-                    if (uiState.dnsttAuthoritative) {
-                        Text(
-                            text = "Only use when the DNS resolver is your own server. Public resolvers (Google, Cloudflare) will rate-limit and block your connection.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        if (uiState.dnsttAuthoritative) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_authoritative_warning),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
                     }
                 }
 
                 // VayDNS-specific settings
-                if (uiState.isVaydnsBased) {
-                    // Response Record Type selector
-                    Text(
-                        text = "Response Record Type",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    Text(
-                        text = "Must match the server configuration. Try CNAME or A if TXT is blocked.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("txt", "cname", "a", "aaaa", "mx", "ns", "srv", "null", "caa").forEach { type ->
-                            if (uiState.vaydnsRecordType == type) {
-                                Button(onClick = { }) {
-                                    Text(type.uppercase())
-                                }
-                            } else {
-                                OutlinedButton(onClick = { viewModel.updateVaydnsRecordType(type) }) {
-                                    Text(type.uppercase())
+                EditorSection {
+                    if (uiState.isVaydnsBased) {
+                        // Response Record Type selector
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_response_record_type),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_record_type_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("txt", "cname", "a", "aaaa", "mx", "ns", "srv", "null", "caa").forEach { type ->
+                                if (uiState.vaydnsRecordType == type) {
+                                    Button(onClick = { }) {
+                                        Text(type.uppercase())
+                                    }
+                                } else {
+                                    OutlinedButton(onClick = { viewModel.updateVaydnsRecordType(type) }) {
+                                        Text(type.uppercase())
+                                    }
                                 }
                             }
                         }
@@ -1980,651 +2040,609 @@ fun EditProfileScreen(
                 // Hidden when Authoritative is on — probe would be a no-op there.
                 val autoToggleVisible = uiState.isDnsttOrNoizOrVaydnsBased &&
                     !(uiState.isDnsttOrNoizBased && uiState.dnsttAuthoritative)
-                if (autoToggleVisible) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Auto-tune",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = if (uiState.isVaydnsBased)
-                                    "Probe resolver at connect time to pick query length and rate limit"
-                                else
-                                    "Probe resolver at connect time to pick query length",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                EditorSection {
+                    if (autoToggleVisible) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_auto_tune),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = if (uiState.isVaydnsBased)
+                                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_autotune_rate_hint)
+                                    else
+                                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_autotune_length_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.dnsAutoTune,
+                                onCheckedChange = { viewModel.updateDnsAutoTune(it) }
                             )
                         }
-                        Switch(
-                            checked = uiState.dnsAutoTune,
-                            onCheckedChange = { viewModel.updateDnsAutoTune(it) }
-                        )
                     }
                 }
 
                 // VayDNS: QNAME length slider (controls query size on the wire).
                 // Hidden when Auto is on — value is probed at connect time.
-                if (uiState.isVaydnsBased && !uiState.dnsAutoTune) {
-                    var showQnameDialog by remember { mutableStateOf(false) }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { showQnameDialog = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Query Length",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "${uiState.vaydnsMaxQnameLen} bytes" + when {
-                                    uiState.vaydnsMaxQnameLen <= 80 -> " — stealthy"
-                                    uiState.vaydnsMaxQnameLen <= 120 -> " — balanced"
-                                    uiState.vaydnsMaxQnameLen <= 180 -> " — fast"
-                                    else -> " — maximum"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            Icons.Default.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    if (showQnameDialog) {
-                        val minQname = 60
-                        val maxQname = 253
-                        val midQname = 101
-                        // Non-linear slider: 0..1 with midQname (101) at center (0.5)
-                        fun toSlider(qname: Int): Float {
-                            val clamped = qname.coerceIn(minQname, maxQname)
-                            return if (clamped <= midQname) {
-                                (clamped - minQname).toFloat() / (midQname - minQname) * 0.5f
-                            } else {
-                                0.5f + (clamped - midQname).toFloat() / (maxQname - midQname) * 0.5f
+                EditorSection {
+                    if (uiState.isVaydnsBased && !uiState.dnsAutoTune) {
+                        var showQnameDialog by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showQnameDialog = true }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_length),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes, (uiState.vaydnsMaxQnameLen).toString()) + when {
+                                        uiState.vaydnsMaxQnameLen <= 80 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_stealthy)
+                                        uiState.vaydnsMaxQnameLen <= 120 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_balanced)
+                                        uiState.vaydnsMaxQnameLen <= 180 -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_fast)
+                                        else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_maximum)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
+                            Icon(
+                                Icons.Default.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        fun fromSlider(value: Float): Int = if (value <= 0.5f) {
-                            (minQname + (value / 0.5f) * (midQname - minQname)).roundToInt()
-                        } else {
-                            (midQname + ((value - 0.5f) / 0.5f) * (maxQname - midQname)).roundToInt()
-                        }
-                        var sliderValue by remember { mutableStateOf(toSlider(uiState.vaydnsMaxQnameLen)) }
-                        val displayValue = fromSlider(sliderValue)
-                        var customText by remember { mutableStateOf("") }
-                        var customError by remember { mutableStateOf(false) }
-                        AlertDialog(
-                            onDismissRequest = { showQnameDialog = false },
-                            title = { Text("Query Length") },
-                            text = {
-                                Column {
-                                    Text(
-                                        text = "Controls the size of each DNS query on the wire. Shorter queries blend in with normal traffic but carry less data.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(bottom = 12.dp)
-                                    )
-                                    Text(
-                                        text = "$displayValue bytes",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 4.dp),
-                                        textAlign = TextAlign.Center
-                                    )
-                                    Slider(
-                                        value = sliderValue,
-                                        onValueChange = {
-                                            sliderValue = it
-                                            customText = ""
-                                            customError = false
-                                        },
-                                        valueRange = 0f..1f,
-                                        steps = 19,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("60\nStealthy", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                        Text("101\nDefault", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                        Text("253\nFastest", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-                                    }
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    OutlinedTextField(
-                                        value = customText,
-                                        onValueChange = { text ->
-                                            customText = text
-                                            val v = text.toIntOrNull()
-                                            if (v != null && v in minQname..maxQname) {
-                                                sliderValue = toSlider(v)
+
+                        if (showQnameDialog) {
+                            val minQname = 60
+                            val maxQname = 253
+                            val midQname = 101
+                            // Non-linear slider: 0..1 with midQname (101) at center (0.5)
+                            fun toSlider(qname: Int): Float {
+                                val clamped = qname.coerceIn(minQname, maxQname)
+                                return if (clamped <= midQname) {
+                                    (clamped - minQname).toFloat() / (midQname - minQname) * 0.5f
+                                } else {
+                                    0.5f + (clamped - midQname).toFloat() / (maxQname - midQname) * 0.5f
+                                }
+                            }
+                            fun fromSlider(value: Float): Int = if (value <= 0.5f) {
+                                (minQname + (value / 0.5f) * (midQname - minQname)).roundToInt()
+                            } else {
+                                (midQname + ((value - 0.5f) / 0.5f) * (maxQname - midQname)).roundToInt()
+                            }
+                            var sliderValue by remember { mutableStateOf(toSlider(uiState.vaydnsMaxQnameLen)) }
+                            val displayValue = fromSlider(sliderValue)
+                            var customText by remember { mutableStateOf("") }
+                            var customError by remember { mutableStateOf(false) }
+                            AlertDialog(
+                                onDismissRequest = { showQnameDialog = false },
+                                title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_length)) },
+                                text = {
+                                    Column {
+                                        Text(
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_length_hint),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(bottom = 12.dp)
+                                        )
+                                        Text(
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes, (displayValue).toString()),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp),
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Slider(
+                                            value = sliderValue,
+                                            onValueChange = {
+                                                sliderValue = it
+                                                customText = ""
                                                 customError = false
-                                            } else {
-                                                customError = text.isNotEmpty()
-                                            }
-                                        },
-                                        label = { Text("Custom value") },
-                                        placeholder = { Text("$minQname–$maxQname") },
-                                        isError = customError,
-                                        supportingText = if (customError) {{ Text("Must be $minQname–$maxQname") }} else null,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        val custom = customText.toIntOrNull()
-                                        val finalValue = if (custom != null && custom in minQname..maxQname) custom else displayValue
-                                        viewModel.updateVaydnsMaxQnameLen(finalValue)
-                                        showQnameDialog = false
+                                            },
+                                            valueRange = 0f..1f,
+                                            steps = 19,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_60_stealthy), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_101_default), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_253_fastest), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+                                        }
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                            value = customText,
+                                            onValueChange = { text ->
+                                                customText = text
+                                                val v = text.toIntOrNull()
+                                                if (v != null && v in minQname..maxQname) {
+                                                    sliderValue = toSlider(v)
+                                                    customError = false
+                                                } else {
+                                                    customError = text.isNotEmpty()
+                                                }
+                                            },
+                                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_value)) },
+                                            placeholder = { Text("$minQname–$maxQname") },
+                                            isError = customError,
+                                            supportingText = if (customError) {{ Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_must_be_value_value, (minQname).toString(), (maxQname).toString())) }} else null,
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
-                                ) {
-                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
-                                }
-                            },
-                            dismissButton = {
-                                Row {
-                                    if (displayValue != midQname) {
-                                        TextButton(onClick = {
-                                            sliderValue = 0.5f
-                                            customText = ""
-                                            customError = false
-                                            viewModel.updateVaydnsMaxQnameLen(midQname)
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            val custom = customText.toIntOrNull()
+                                            val finalValue = if (custom != null && custom in minQname..maxQname) custom else displayValue
+                                            viewModel.updateVaydnsMaxQnameLen(finalValue)
                                             showQnameDialog = false
-                                        }) {
-                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76))
+                                        }
+                                    ) {
+                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
+                                    }
+                                },
+                                dismissButton = {
+                                    Row {
+                                        if (displayValue != midQname) {
+                                            TextButton(onClick = {
+                                                sliderValue = 0.5f
+                                                customText = ""
+                                                customError = false
+                                                viewModel.updateVaydnsMaxQnameLen(midQname)
+                                                showQnameDialog = false
+                                            }) {
+                                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_reset_daee76))
+                                            }
+                                        }
+                                        TextButton(onClick = { showQnameDialog = false }) {
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                                         }
                                     }
-                                    TextButton(onClick = { showQnameDialog = false }) {
-                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
-                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
 
                 // VayDNS: Query rate limit. Hidden when Auto is on.
-                if (uiState.isVaydnsBased && !uiState.dnsAutoTune) {
-                    OutlinedTextField(
-                        value = uiState.vaydnsRps,
-                        onValueChange = { viewModel.updateVaydnsRps(it.filter { c -> c.isDigit() || c == '.' }.take(6)) },
-                        label = { Text("Query Rate Limit (q/s)") },
-                        supportingText = { Text("Max DNS queries per second. 0 = unlimited.") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true
-                    )
+                EditorSection {
+                    if (uiState.isVaydnsBased && !uiState.dnsAutoTune) {
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.vaydnsRps,
+                            onValueChange = { viewModel.updateVaydnsRps(it.filter { c -> c.isDigit() || c == '.' }.take(6)) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_rate_limit_q_s)) },
+                            supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_query_rate_hint)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true
+                        )
+                    }
                 }
 
                 // VayDNS: Advanced settings (hidden by default)
-                if (uiState.isVaydnsBased) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { viewModel.toggleVaydnsAdvanced() }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Icon(
-                            Icons.Default.KeyboardArrowRight,
-                            contentDescription = if (uiState.vaydnsAdvancedExpanded) "Collapse" else "Expand",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.rotate(if (uiState.vaydnsAdvancedExpanded) 90f else 0f)
-                        )
-                    }
-
-                    AnimatedVisibility(visible = uiState.vaydnsAdvancedExpanded) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                EditorSection {
+                    if (uiState.isVaydnsBased) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { viewModel.toggleVaydnsAdvanced() }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Only change these if you know what you're doing. 0 = use default.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 4.dp)
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_advanced_9f088d),
+                                style = MaterialTheme.typography.titleMedium
                             )
-                            OutlinedTextField(
-                                value = uiState.vaydnsIdleTimeout,
-                                onValueChange = { viewModel.updateVaydnsIdleTimeout(it.filter { c -> c.isDigit() }.take(4)) },
-                                label = { Text("Idle Timeout (seconds)") },
-                                placeholder = { Text("10 (default)") },
-                                supportingText = { Text("Session idle timeout.") },
+                            Icon(
+                                Icons.Default.KeyboardArrowRight,
+                                contentDescription = if (uiState.vaydnsAdvancedExpanded) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_collapse) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_expand),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.rotate(if (uiState.vaydnsAdvancedExpanded) 90f else 0f)
+                            )
+                        }
+
+                        AnimatedVisibility(visible = uiState.vaydnsAdvancedExpanded) {
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = uiState.vaydnsKeepalive,
-                                onValueChange = { viewModel.updateVaydnsKeepalive(it.filter { c -> c.isDigit() }.take(4)) },
-                                label = { Text("Keepalive (seconds)") },
-                                placeholder = { Text("2 (default)") },
-                                supportingText = { Text("Keepalive interval.") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = uiState.vaydnsUdpTimeout,
-                                onValueChange = { viewModel.updateVaydnsUdpTimeout(it.filter { c -> c.isDigit() }.take(5)) },
-                                label = { Text("UDP Timeout (ms)") },
-                                placeholder = { Text("500 (default)") },
-                                supportingText = { Text("Per-query UDP response timeout. Default: ~500ms.") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = uiState.vaydnsMaxNumLabels,
-                                onValueChange = { viewModel.updateVaydnsMaxNumLabels(it.filter { c -> c.isDigit() }.take(2)) },
-                                label = { Text("Max Labels") },
-                                placeholder = { Text("unlimited") },
-                                supportingText = { Text("Max data labels in query name. 0 = unlimited.") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = uiState.vaydnsClientIdSize,
-                                onValueChange = { viewModel.updateVaydnsClientIdSize(it.filter { c -> c.isDigit() }.take(2)) },
-                                label = { Text("Client ID Size (bytes)") },
-                                placeholder = { Text("2 (default)") },
-                                supportingText = { Text("ClientID length on the wire. Must match server. Ignored when DNSTT compat is on (fixed at 8).") },
-                                modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_advanced_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.vaydnsIdleTimeout,
+                                    onValueChange = { viewModel.updateVaydnsIdleTimeout(it.filter { c -> c.isDigit() }.take(4)) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_idle_timeout_seconds)) },
+                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_10_default)) },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_session_idle_timeout)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.vaydnsKeepalive,
+                                    onValueChange = { viewModel.updateVaydnsKeepalive(it.filter { c -> c.isDigit() }.take(4)) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_keepalive_seconds)) },
+                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_2_default)) },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_keepalive_interval)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.vaydnsUdpTimeout,
+                                    onValueChange = { viewModel.updateVaydnsUdpTimeout(it.filter { c -> c.isDigit() }.take(5)) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_udp_timeout_ms)) },
+                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_500_default)) },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_udp_timeout_hint)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.vaydnsMaxNumLabels,
+                                    onValueChange = { viewModel.updateVaydnsMaxNumLabels(it.filter { c -> c.isDigit() }.take(2)) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_max_labels)) },
+                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_unlimited)) },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_max_labels_hint)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.vaydnsClientIdSize,
+                                    onValueChange = { viewModel.updateVaydnsClientIdSize(it.filter { c -> c.isDigit() }.take(2)) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_client_id_size_bytes)) },
+                                    placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_2_default)) },
+                                    supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_client_id_hint)) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true
+                                )
+                            }
                         }
                     }
                 }
 
                 // DNS MTU selector (DNSTT/NoizDNS only). Hidden when Auto is on.
-                if (uiState.isDnsttOrNoizBased && !uiState.dnsAutoTune) {
-                    var showMtuDialog by remember { mutableStateOf(false) }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { showMtuDialog = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "DNS Query Size",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = if (uiState.dnsPayloadSize == 0) "Full capacity (fastest)"
-                                       else "${uiState.dnsPayloadSize} bytes per query",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                EditorSection {
+                    if (uiState.isDnsttOrNoizBased && !uiState.dnsAutoTune) {
+                        var showMtuDialog by remember { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showMtuDialog = true }
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_query_size),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = if (uiState.dnsPayloadSize == 0) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_full_capacity_fastest)
+                                           else androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_bytes_per_query, (uiState.dnsPayloadSize).toString()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                Icons.Default.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Icon(
-                            Icons.Default.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
 
-                    if (showMtuDialog) {
-                            // DNSTT/NoizDNS: preset list
-                            val mtuPresets = listOf(
-                                0 to "Full capacity — fastest, largest queries",
-                                100 to "Large — good balance",
-                                80 to "Medium — less conspicuous",
-                                60 to "Small — stealthier, slower",
-                                50 to "Minimum — most stealthy, slowest"
-                            )
-                            val isCustom = mtuPresets.none { it.first == uiState.dnsPayloadSize }
-                            var customMtuText by remember { mutableStateOf(if (isCustom) uiState.dnsPayloadSize.toString() else "") }
-                            var useCustom by remember { mutableStateOf(isCustom) }
-                            AlertDialog(
-                                onDismissRequest = { showMtuDialog = false },
-                                title = { Text("DNS Query Size") },
-                                text = {
-                                    Column {
-                                        Text(
-                                            text = "Bytes of data per DNS query. Smaller values produce shorter, less suspicious queries at the cost of speed.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(bottom = 12.dp)
-                                        )
-                                        mtuPresets.forEach { (size, desc) ->
+                        if (showMtuDialog) {
+                                // DNSTT/NoizDNS: preset list
+                                val mtuPresets = listOf(
+                                    0 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_size_full_hint),
+                                    100 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_large_good_balance),
+                                    80 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_medium_less_conspicuous),
+                                    60 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_small_stealthier_slower),
+                                    50 to androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_size_minimum_hint)
+                                )
+                                val isCustom = mtuPresets.none { it.first == uiState.dnsPayloadSize }
+                                var customMtuText by remember { mutableStateOf(if (isCustom) uiState.dnsPayloadSize.toString() else "") }
+                                var useCustom by remember { mutableStateOf(isCustom) }
+                                AlertDialog(
+                                    onDismissRequest = { showMtuDialog = false },
+                                    title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_query_size)) },
+                                    text = {
+                                        Column {
+                                            Text(
+                                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_size_hint),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(bottom = 12.dp)
+                                            )
+                                            mtuPresets.forEach { (size, desc) ->
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable {
+                                                            useCustom = false
+                                                            viewModel.updateDnsPayloadSize(size)
+                                                            showMtuDialog = false
+                                                        }
+                                                        .padding(vertical = 10.dp, horizontal = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    RadioButton(
+                                                        selected = !useCustom && uiState.dnsPayloadSize == size,
+                                                        onClick = {
+                                                            useCustom = false
+                                                            viewModel.updateDnsPayloadSize(size)
+                                                            showMtuDialog = false
+                                                        }
+                                                    )
+                                                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                                                        Text(text = if (size == 0) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_full) else "$size")
+                                                        Text(
+                                                            text = desc,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .clip(RoundedCornerShape(8.dp))
-                                                    .clickable {
-                                                        useCustom = false
-                                                        viewModel.updateDnsPayloadSize(size)
-                                                        showMtuDialog = false
-                                                    }
+                                                    .clickable { useCustom = true }
                                                     .padding(vertical = 10.dp, horizontal = 8.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 RadioButton(
-                                                    selected = !useCustom && uiState.dnsPayloadSize == size,
-                                                    onClick = {
-                                                        useCustom = false
-                                                        viewModel.updateDnsPayloadSize(size)
+                                                    selected = useCustom,
+                                                    onClick = { useCustom = true }
+                                                )
+                                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                                    value = customMtuText,
+                                                    onValueChange = { customMtuText = it.filter { c -> c.isDigit() }.take(3) },
+                                                    enabled = useCustom,
+                                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_custom_081ae3)) },
+                                                    placeholder = { Text("50–120") },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true,
+                                                    modifier = Modifier
+                                                        .padding(start = 8.dp)
+                                                        .fillMaxWidth()
+                                                )
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        if (useCustom) {
+                                            TextButton(
+                                                onClick = {
+                                                    val value = customMtuText.toIntOrNull()
+                                                    if (value != null && value in 50..120) {
+                                                        viewModel.updateDnsPayloadSize(value)
                                                         showMtuDialog = false
                                                     }
-                                                )
-                                                Column(modifier = Modifier.padding(start = 8.dp)) {
-                                                    Text(text = if (size == 0) "Full" else "$size")
-                                                    Text(
-                                                        text = desc,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
                                                 }
+                                            ) {
+                                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
                                             }
                                         }
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable { useCustom = true }
-                                                .padding(vertical = 10.dp, horizontal = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            RadioButton(
-                                                selected = useCustom,
-                                                onClick = { useCustom = true }
-                                            )
-                                            OutlinedTextField(
-                                                value = customMtuText,
-                                                onValueChange = { customMtuText = it.filter { c -> c.isDigit() }.take(3) },
-                                                enabled = useCustom,
-                                                label = { Text("Custom") },
-                                                placeholder = { Text("50–120") },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                singleLine = true,
-                                                modifier = Modifier
-                                                    .padding(start = 8.dp)
-                                                    .fillMaxWidth()
-                                            )
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showMtuDialog = false }) {
+                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
                                         }
                                     }
-                                },
-                                confirmButton = {
-                                    if (useCustom) {
-                                        TextButton(
-                                            onClick = {
-                                                val value = customMtuText.toIntOrNull()
-                                                if (value != null && value in 50..120) {
-                                                    viewModel.updateDnsPayloadSize(value)
-                                                    showMtuDialog = false
-                                                }
-                                            }
-                                        ) {
-                                            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_apply_31e392))
-                                        }
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showMtuDialog = false }) {
-                                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e))
-                                    }
-                                }
-                            )
+                                )
+                        }
                     }
                 }
 
                 // NoizDNS stealth mode toggle
-                if (uiState.isNoizdnsBased) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Stealth mode",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Slower speed, harder to detect",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                EditorSection {
+                    if (uiState.isNoizdnsBased) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_stealth_mode),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_slower_speed_harder_to_detect),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.noizdnsStealth,
+                                onCheckedChange = { viewModel.updateNoizdnsStealth(it) }
                             )
                         }
-                        Switch(
-                            checked = uiState.noizdnsStealth,
-                            onCheckedChange = { viewModel.updateNoizdnsStealth(it) }
-                        )
-                    }
-                    if (uiState.noizdnsStealth && !uiState.dnsttAuthoritative) {
-                        Text(
-                            text = "Internet speed will be reduced. Use split tunneling to limit which apps use the tunnel for better performance.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
+                        if (uiState.noizdnsStealth && !uiState.dnsttAuthoritative) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_stealth_performance_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
 
+                    }
                 }
 
                 // Snowflake / Tor bridge config
-                if (uiState.isSnowflake) {
-                    Text(
-                        text = "Your bridges",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-
-                    // "Not sure? Ask Tor" auto-detect button
-                    OutlinedButton(
-                        onClick = { viewModel.askTor() },
-                        enabled = !uiState.isAskingTor,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (uiState.isAskingTor) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Detecting...")
-                        } else {
-                            Text("Auto-detect Best Bridge")
-                        }
-                    }
-                    Text(
-                        text = "Auto-detect the best transport for your network",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    // Bridge type selector — vertical radio list
-                    val bridgeOptions = listOf(
-                        TorBridgeType.SNOWFLAKE_AMP to Pair("Snowflake (AMP)", "Uses Google AMP cache for rendezvous"),
-                        TorBridgeType.DIRECT to Pair("Direct", "Connect directly without bridges (easiest to block)"),
-                        TorBridgeType.OBFS4 to Pair("obfs4 (built-in)", "Disguises your traffic as random data"),
-                        TorBridgeType.MEEK_AZURE to Pair("Meek (Azure)", "Disguises your traffic as cloud service requests"),
-                        TorBridgeType.SNOWFLAKE to Pair("Snowflake (built-in)", "Disguises your traffic as a video call"),
-                        TorBridgeType.SMART to Pair("Smart Connect", "Automatically tries transports until one works"),
-                        TorBridgeType.CUSTOM to Pair(
-                            "Manual selection",
-                            if (uiState.torBridgeLines.isNotBlank() && uiState.torBridgeType == TorBridgeType.CUSTOM) {
-                                val count = uiState.torBridgeLines.lines().count { it.isNotBlank() }
-                                "$count bridge${if (count != 1) "s" else ""} added"
-                            } else {
-                                "Enter your own bridge lines"
-                            }
+                EditorSection {
+                    if (uiState.isSnowflake) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_your_bridges),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
-                    )
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        bridgeOptions.forEach { (type, labels) ->
-                            val (title, description) = labels
-                            Surface(
-                                onClick = { viewModel.selectTorBridgeType(type) },
-                                shape = MaterialTheme.shapes.small,
-                                color = if (uiState.torBridgeType == type)
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                else
-                                    MaterialTheme.colorScheme.surface,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                        // "Not sure? Ask Tor" auto-detect button
+                        OutlinedButton(
+                            onClick = { viewModel.askTor() },
+                            enabled = !uiState.isAskingTor,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (uiState.isAskingTor) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_detecting))
+                            } else {
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_auto_detect_best_bridge))
+                            }
+                        }
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_bridge_detection_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Bridge type selector — vertical radio list
+                        val bridgeOptions = listOf(
+                            TorBridgeType.SNOWFLAKE_AMP to Pair("Snowflake (AMP)", androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_amp_bridge_hint)),
+                            TorBridgeType.DIRECT to Pair(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_direct), androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_direct_tor_hint)),
+                            TorBridgeType.OBFS4 to Pair(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_obfs4_built_in), androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_obfs4_hint)),
+                            TorBridgeType.MEEK_AZURE to Pair("Meek (Azure)", androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_meek_hint)),
+                            TorBridgeType.SNOWFLAKE to Pair(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_snowflake_built_in), androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_snowflake_hint)),
+                            TorBridgeType.SMART to Pair(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_smart_connect), androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_smart_bridge_hint)),
+                            TorBridgeType.CUSTOM to Pair(
+                                androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_manual_path),
+                                if (uiState.torBridgeLines.isNotBlank() && uiState.torBridgeType == TorBridgeType.CUSTOM) {
+                                    val count = uiState.torBridgeLines.lines().count { it.isNotBlank() }
+                                    androidx.compose.ui.res.pluralStringResource(app.slipnet.R.plurals.editor_bridges_added, count, count)
+                                } else {
+                                    androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_enter_your_own_bridge_lines)
+                                }
+                            )
+                        )
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            bridgeOptions.forEach { (type, labels) ->
+                                val (title, description) = labels
+                                Surface(
+                                    onClick = { viewModel.selectTorBridgeType(type) },
+                                    shape = MaterialTheme.shapes.small,
+                                    color = if (uiState.torBridgeType == type)
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    else
+                                        MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    RadioButton(
-                                        selected = uiState.torBridgeType == type,
-                                        onClick = { viewModel.selectTorBridgeType(type) }
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.bodyLarge
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = uiState.torBridgeType == type,
+                                            onClick = { viewModel.selectTorBridgeType(type) }
                                         )
-                                        Text(
-                                            text = description,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    // Bridge lines text field (Custom mode only)
-                    if (uiState.torBridgeType == TorBridgeType.CUSTOM) {
-                        OutlinedTextField(
-                            value = uiState.torBridgeLines,
-                            onValueChange = { viewModel.updateTorBridgeLines(it) },
-                            label = { Text("Bridge Lines") },
-                            placeholder = {
-                                Text("obfs4 IP:PORT FINGERPRINT cert=... iat-mode=0")
-                            },
-                            isError = uiState.torBridgeLinesError != null,
-                            supportingText = {
-                                Text(
-                                    uiState.torBridgeLinesError
-                                        ?: "Supported: obfs4, webtunnel, meek, snowflake (one per line)"
-                                )
-                            },
-                            minLines = 3,
-                            maxLines = 6,
-                            textStyle = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Find more bridges section
-                    Text(
-                        text = "Find more bridges",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-
-                    Text(
-                        text = "Since bridge addresses aren't public, you'll need to request one from the Tor Project.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-
-                    // Request bridges button (Moat API)
-                    Surface(
-                        onClick = { if (!uiState.isRequestingBridges) viewModel.requestBridges() },
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                Icons.Default.SmartToy,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
+                        // Bridge lines text field (Custom mode only)
+                        if (uiState.torBridgeType == TorBridgeType.CUSTOM) {
+                            OutlinedTextField(
+                                value = uiState.torBridgeLines,
+                                onValueChange = { viewModel.updateTorBridgeLines(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_bridge_lines)) },
+                                placeholder = {
+                                    Text("obfs4 IP:PORT FINGERPRINT cert=... iat-mode=0")
+                                },
+                                isError = uiState.torBridgeLinesError != null,
+                                supportingText = {
+                                    Text(
+                                        uiState.torBridgeLinesError
+                                            ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_supported_bridges_hint)
+                                    )
+                                },
+                                minLines = 3,
+                                maxLines = 6,
+                                textStyle = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Bridge Bot",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "Request bridges",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                            if (uiState.isRequestingBridges) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
                         }
-                    }
 
-                    val context = LocalContext.current
-                    data class BridgeLink(val label: String, val description: String, val url: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
-                    val bridgeLinks = listOf(
-                        BridgeLink("Telegram", "Message @GetBridgesBot", "https://t.me/GetBridgesBot", Icons.Default.Send),
-                        BridgeLink("Web", "bridges.torproject.org", "https://bridges.torproject.org", Icons.Default.Language),
-                        BridgeLink("Gmail or Riseup", "bridges@torproject.org", "mailto:bridges@torproject.org", Icons.Default.Email)
-                    )
-                    bridgeLinks.forEach { link ->
+                        // Find more bridges section
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_find_more_bridges),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 16.dp)
+                        )
+
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_request_bridge_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+
+                        // Request bridges button (Moat API)
                         Surface(
-                            onClick = {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(link.url)
-                                )
-                                context.startActivity(intent)
-                            },
+                            onClick = { if (!uiState.isRequestingBridges) viewModel.requestBridges() },
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.surface,
                             modifier = Modifier.fillMaxWidth()
@@ -2637,7 +2655,7 @@ fun EditProfileScreen(
                             ) {
                                 Spacer(Modifier.width(4.dp))
                                 Icon(
-                                    link.icon,
+                                    Icons.Default.SmartToy,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
@@ -2645,149 +2663,209 @@ fun EditProfileScreen(
                                 Spacer(Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = link.label,
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_bridge_bot),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        text = link.description,
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_request_bridges),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }
-                                Icon(
-                                    Icons.Default.OpenInNew,
-                                    contentDescription = "Open",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                if (uiState.isRequestingBridges) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
                                 Spacer(Modifier.width(8.dp))
+                            }
+                        }
+
+                        val context = LocalContext.current
+                        data class BridgeLink(val label: String, val description: String, val url: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+                        val bridgeLinks = listOf(
+                            BridgeLink("Telegram", androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_message_getbridgesbot), "https://t.me/GetBridgesBot", Icons.Default.Send),
+                            BridgeLink(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_web), "bridges.torproject.org", "https://bridges.torproject.org", Icons.Default.Language),
+                            BridgeLink("Gmail or Riseup", "bridges@torproject.org", "mailto:bridges@torproject.org", Icons.Default.Email)
+                        )
+                        bridgeLinks.forEach { link ->
+                            Surface(
+                                onClick = {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(link.url)
+                                    )
+                                    context.startActivity(intent)
+                                },
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        link.icon,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = link.label,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = link.description,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                    }
+                                    Icon(
+                                        Icons.Default.OpenInNew,
+                                        contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_open),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                }
                             }
                         }
                     }
                 }
 
                 // Slipstream-specific settings
-                if (uiState.isSlipstreamBased) {
-                    // Keep-Alive Interval (hidden in authoritative mode — polling subsumes keep-alive)
-                    if (!uiState.authoritativeMode) {
-                        OutlinedTextField(
-                            value = uiState.keepAliveInterval,
-                            onValueChange = { viewModel.updateKeepAliveInterval(it) },
-                            label = { Text("Keep-Alive Interval (ms)") },
-                            placeholder = { Text("5000") },
-                            supportingText = { Text("QUIC keep-alive interval in milliseconds") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Congestion Control
-                    CongestionControlDropdown(
-                        selected = uiState.congestionControl,
-                        onSelect = { viewModel.updateCongestionControl(it) }
-                    )
-
-                    // Authoritative Mode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Authoritative Mode",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Use authoritative DNS resolution (--authoritative)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                EditorSection {
+                    if (uiState.isSlipstreamBased) {
+                        // Keep-Alive Interval (hidden in authoritative mode — polling subsumes keep-alive)
+                        if (!uiState.authoritativeMode) {
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.keepAliveInterval,
+                                onValueChange = { viewModel.updateKeepAliveInterval(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_keep_alive_interval_ms)) },
+                                placeholder = { Text("5000") },
+                                supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_quic_keepalive_hint)) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
-                        Switch(
-                            checked = uiState.authoritativeMode,
-                            onCheckedChange = { viewModel.updateAuthoritativeMode(it) }
-                        )
-                    }
-                    if (uiState.authoritativeMode) {
-                        Text(
-                            text = "Only use when the DNS resolver is your own server. Public resolvers (Google, Cloudflare) will rate-limit and block your connection.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
 
-                    // GSO Mode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "GSO (Generic Segmentation Offload)",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Enable GSO for better performance (--gso)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Congestion Control
+                        CongestionControlDropdown(
+                            selected = uiState.congestionControl,
+                            onSelect = { viewModel.updateCongestionControl(it) }
+                        )
+
+                        // Authoritative Mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_authoritative_mode),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_authoritative_flag_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.authoritativeMode,
+                                onCheckedChange = { viewModel.updateAuthoritativeMode(it) }
                             )
                         }
-                        Switch(
-                            checked = uiState.gsoEnabled,
-                            onCheckedChange = { viewModel.updateGsoEnabled(it) }
-                        )
+                        if (uiState.authoritativeMode) {
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_authoritative_warning),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        // GSO Mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_gso_label),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_gso_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.gsoEnabled,
+                                onCheckedChange = { viewModel.updateGsoEnabled(it) }
+                            )
+                        }
                     }
                 }
 
                 // Connection Method section (DNSTT & Slipstream only, not SSH-only)
-                if (uiState.showConnectionMethod) {
-                    Text(
-                        text = "Connection Method",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                EditorSection {
+                    if (uiState.showConnectionMethod) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_connection_method),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // NaiveProxy and Soar servers dial destinations themselves: no SOCKS server to log in to
-                        val directLabel = if (uiState.isNaiveBased || uiState.isSoarBased) "Direct" else "SOCKS"
-                        val sshLabel = if (uiState.isNaiveBased || uiState.isSoarBased) "+ SSH" else "SSH"
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // NaiveProxy and Soar servers dial destinations themselves: no SOCKS server to log in to
+                            val directLabel = if (uiState.isNaiveBased || uiState.isSoarBased) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_direct) else "SOCKS"
+                            val sshLabel = if (uiState.isNaiveBased || uiState.isSoarBased) "+ SSH" else "SSH"
 
-                        if (uiState.useSsh) {
-                            OutlinedButton(
-                                onClick = { viewModel.setUseSsh(false) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(directLabel)
-                            }
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(sshLabel)
-                            }
-                        } else {
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(directLabel)
-                            }
-                            OutlinedButton(
-                                onClick = { viewModel.setUseSsh(true) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(sshLabel)
+                            if (uiState.useSsh) {
+                                OutlinedButton(
+                                    onClick = { viewModel.setUseSsh(false) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(directLabel)
+                                }
+                                Button(
+                                    onClick = { },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(sshLabel)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(directLabel)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.setUseSsh(true) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(sshLabel)
+                                }
                             }
                         }
                     }
@@ -2796,366 +2874,370 @@ fun EditProfileScreen(
                 // Soar+SSH: the Soar server dials SSH itself, and a stock soar-server refuses it
                 if (uiState.isSoarBased && uiState.useSsh) {
                     Text(
-                        text = "The Soar server connects to SSH at 127.0.0.1:${uiState.sshPort.ifBlank { "22" }}. Run soar-server with -allow-private and -allow-ports including the SSH port, or it refuses the connection.",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_soar_ssh_backend_hint, (uiState.sshPort.ifBlank { "22" }).toString()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 // SOCKS5 Credentials (optional, when SOCKS selected for DNSTT/Slipstream)
-                if (uiState.showConnectionMethod && !uiState.useSsh && !uiState.isNaiveBased && !uiState.isSoarBased) {
-                    Text(
-                        text = "SOCKS5 Credentials (Optional)",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                EditorSection {
+                    if (uiState.showConnectionMethod && !uiState.useSsh && !uiState.isNaiveBased && !uiState.isSoarBased) {
+                        Text(
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_socks5_credentials_optional),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
 
-                    OutlinedTextField(
-                        value = uiState.socksUsername,
-                        onValueChange = { viewModel.updateSocksUsername(it) },
-                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_username_e3b89e)) },
-                        placeholder = { Text("Enter SOCKS username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.socksUsername,
+                            onValueChange = { viewModel.updateSocksUsername(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_username_e3b89e)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_enter_socks_username)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                    var passwordVisible by remember { mutableStateOf(false) }
-                    OutlinedTextField(
-                        value = uiState.socksPassword,
-                        onValueChange = { viewModel.updateSocksPassword(it) },
-                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
-                        placeholder = { Text("Enter SOCKS password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Text(
-                                    text = if (passwordVisible) "Hide" else "Show",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        var passwordVisible by remember { mutableStateOf(false) }
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.socksPassword,
+                            onValueChange = { viewModel.updateSocksPassword(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_enter_socks_password)) },
+                            singleLine = true,
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Text(
+                                        text = if (passwordVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
 
                 // SSH Credentials (SSH-only, or when SSH selected for DNSTT/Slipstream)
-                if (uiState.useSsh) {
-                    Text(
-                        text = "SSH Credentials",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-
-                    // SSH Port (only for DNSTT+SSH / Slipstream+SSH / NAIVE_SSH, not SSH-only which has it near domain)
-                    if (uiState.showConnectionMethod) {
-                        OutlinedTextField(
-                            value = uiState.sshPort,
-                            onValueChange = { viewModel.updateSshPort(it) },
-                            label = { Text("SSH Port") },
-                            placeholder = { Text("22") },
-                            isError = uiState.sshPortError != null,
-                            supportingText = uiState.sshPortError?.let { { Text(it) } },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = uiState.sshUsername,
-                        onValueChange = { viewModel.updateSshUsername(it) },
-                        label = { Text("SSH Username") },
-                        placeholder = { Text("Enter SSH username") },
-                        isError = uiState.sshUsernameError != null,
-                        supportingText = uiState.sshUsernameError?.let { { Text(it) } },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    // SSH Auth Type Toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (uiState.sshAuthType == SshAuthType.PASSWORD) {
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
-                            }
-                            OutlinedButton(
-                                onClick = { viewModel.updateSshAuthType(SshAuthType.KEY) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Key")
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = { viewModel.updateSshAuthType(SshAuthType.PASSWORD) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
-                            }
-                            Button(
-                                onClick = { },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Key")
-                            }
-                        }
-                    }
-
-                    if (uiState.sshAuthType == SshAuthType.PASSWORD) {
-                        // Password auth
-                        var sshPasswordVisible by remember { mutableStateOf(false) }
-                        OutlinedTextField(
-                            value = uiState.sshPassword,
-                            onValueChange = { viewModel.updateSshPassword(it) },
-                            label = { Text("SSH Password") },
-                            placeholder = { Text("Enter SSH password") },
-                            isError = uiState.sshPasswordError != null,
-                            supportingText = uiState.sshPasswordError?.let { { Text(it) } },
-                            singleLine = true,
-                            visualTransformation = if (sshPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                IconButton(onClick = { sshPasswordVisible = !sshPasswordVisible }) {
-                                    Text(
-                                        text = if (sshPasswordVisible) "Hide" else "Show",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        // Key auth
-                        val context = LocalContext.current
-                        val keyFileLauncher = rememberLauncherForActivityResult(
-                            ActivityResultContracts.OpenDocument()
-                        ) { uri: Uri? ->
-                            uri?.let {
-                                try {
-                                    val content = context.contentResolver.openInputStream(it)
-                                        ?.bufferedReader()?.readText() ?: ""
-                                    viewModel.updateSshPrivateKey(content)
-                                } catch (_: Exception) {}
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = uiState.sshPrivateKey,
-                            onValueChange = { viewModel.updateSshPrivateKey(it) },
-                            label = { Text("SSH Private Key") },
-                            placeholder = { Text("-----BEGIN OPENSSH PRIVATE KEY-----") },
-                            isError = uiState.sshPrivateKeyError != null,
-                            supportingText = uiState.sshPrivateKeyError?.let { { Text(it) } },
-                            minLines = 3,
-                            maxLines = 8,
-                            textStyle = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedButton(
-                            onClick = { keyFileLauncher.launch(arrayOf("*/*")) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Import Key File")
-                        }
-
-                        var passphraseVisible by remember { mutableStateOf(false) }
-                        OutlinedTextField(
-                            value = uiState.sshKeyPassphrase,
-                            onValueChange = { viewModel.updateSshKeyPassphrase(it) },
-                            label = { Text("Key Passphrase (optional)") },
-                            placeholder = { Text("Enter passphrase if key is encrypted") },
-                            singleLine = true,
-                            visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            trailingIcon = {
-                                IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
-                                    Text(
-                                        text = if (passphraseVisible) "Hide" else "Show",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // SSH Transport settings — only for SSH-only tunnel type
-                    if (uiState.isSshOnly) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                EditorSection {
+                    if (uiState.useSsh) {
                         Text(
-                            text = "SSH Transport",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_credentials),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
-                        // Transport selector (mutually exclusive)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SshTransport.entries.forEach { transport ->
-                                FilterChip(
-                                    selected = uiState.sshTransport == transport,
-                                    onClick = { viewModel.updateSshTransport(transport) },
-                                    label = { Text(transport.displayName) }
-                                )
-                            }
-                        }
 
-                        // === Direct mode options ===
-                        if (uiState.sshTransport == SshTransport.DIRECT) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Wrap in TLS (Stunnel)", style = MaterialTheme.typography.bodyMedium)
-                                Switch(
-                                    checked = uiState.sshTlsEnabled,
-                                    onCheckedChange = { viewModel.updateSshTlsEnabled(it) }
-                                )
-                            }
-                            if (uiState.sshTlsEnabled) {
-                                OutlinedTextField(
-                                    value = uiState.sshTlsSni,
-                                    onValueChange = { viewModel.updateSshTlsSni(it) },
-                                    label = { Text("TLS SNI (optional)") },
-                                    placeholder = { Text("example.com") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = uiState.sshPayload,
-                                onValueChange = { viewModel.updateSshPayload(it) },
-                                label = { Text("SSH Payload (optional)") },
-                                placeholder = { Text("GET / HTTP/1.1[crlf]Host: [host][crlf][crlf]") },
-                                singleLine = false,
-                                minLines = 2,
-                                maxLines = 4,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Text(
-                                text = "Raw bytes sent before the SSH handshake for firewall bypass. Supports [host], [port], [crlf], [cr], [lf] placeholders.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // === HTTP CONNECT Proxy options ===
-                        if (uiState.sshTransport == SshTransport.HTTP_PROXY) {
-                            OutlinedTextField(
-                                value = uiState.sshHttpProxyHost,
-                                onValueChange = { viewModel.updateSshHttpProxyHost(it) },
-                                label = { Text("Proxy Host") },
-                                placeholder = { Text("proxy.example.com") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            OutlinedTextField(
-                                value = uiState.sshHttpProxyPort,
-                                onValueChange = { viewModel.updateSshHttpProxyPort(it) },
-                                label = { Text("Proxy Port") },
-                                placeholder = { Text("8080") },
-                                isError = uiState.sshHttpProxyPortError != null,
-                                supportingText = uiState.sshHttpProxyPortError?.let { { Text(it) } },
+                        // SSH Port (only for DNSTT+SSH / Slipstream+SSH / NAIVE_SSH, not SSH-only which has it near domain)
+                        if (uiState.showConnectionMethod) {
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.sshPort,
+                                onValueChange = { viewModel.updateSshPort(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_port)) },
+                                placeholder = { Text("22") },
+                                isError = uiState.sshPortError != null,
+                                supportingText = uiState.sshPortError?.let { { Text(it) } },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            OutlinedTextField(
-                                value = uiState.sshHttpProxyCustomHost,
-                                onValueChange = { viewModel.updateSshHttpProxyCustomHost(it) },
-                                label = { Text("Custom Host Header (optional)") },
-                                placeholder = { Text("cdn.example.com") },
+                        }
+
+                        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                            value = uiState.sshUsername,
+                            onValueChange = { viewModel.updateSshUsername(it) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_username)) },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_enter_ssh_username)) },
+                            isError = uiState.sshUsernameError != null,
+                            supportingText = uiState.sshUsernameError?.let { { Text(it) } },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // SSH Auth Type Toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (uiState.sshAuthType == SshAuthType.PASSWORD) {
+                                Button(
+                                    onClick = { },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.updateSshAuthType(SshAuthType.KEY) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_key))
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { viewModel.updateSshAuthType(SshAuthType.PASSWORD) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_password_e7cf3e))
+                                }
+                                Button(
+                                    onClick = { },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_key))
+                                }
+                            }
+                        }
+
+                        if (uiState.sshAuthType == SshAuthType.PASSWORD) {
+                            // Password auth
+                            var sshPasswordVisible by remember { mutableStateOf(false) }
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.sshPassword,
+                                onValueChange = { viewModel.updateSshPassword(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_password)) },
+                                placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_enter_ssh_password)) },
+                                isError = uiState.sshPasswordError != null,
+                                supportingText = uiState.sshPasswordError?.let { { Text(it) } },
                                 singleLine = true,
+                                visualTransformation = if (sshPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                trailingIcon = {
+                                    IconButton(onClick = { sshPasswordVisible = !sshPasswordVisible }) {
+                                        Text(
+                                            text = if (sshPasswordVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        } else {
+                            // Key auth
+                            val context = LocalContext.current
+                            val keyFileLauncher = rememberLauncherForActivityResult(
+                                ActivityResultContracts.OpenDocument()
+                            ) { uri: Uri? ->
+                                uri?.let {
+                                    try {
+                                        val content = context.contentResolver.openInputStream(it)
+                                            ?.bufferedReader()?.readText() ?: ""
+                                        viewModel.updateSshPrivateKey(content)
+                                    } catch (_: Exception) {}
+                                }
+                            }
+
+                            OutlinedTextField(
+                                value = uiState.sshPrivateKey,
+                                onValueChange = { viewModel.updateSshPrivateKey(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_private_key)) },
+                                placeholder = { Text("-----BEGIN OPENSSH PRIVATE KEY-----") },
+                                isError = uiState.sshPrivateKeyError != null,
+                                supportingText = uiState.sshPrivateKeyError?.let { { Text(it) } },
+                                minLines = 3,
+                                maxLines = 8,
+                                textStyle = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedButton(
+                                onClick = { keyFileLauncher.launch(arrayOf("*/*")) },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("TLS after CONNECT", style = MaterialTheme.typography.bodyMedium)
-                                Switch(
-                                    checked = uiState.sshTlsEnabled,
-                                    onCheckedChange = { viewModel.updateSshTlsEnabled(it) }
-                                )
+                                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_import_key_file))
                             }
-                            if (uiState.sshTlsEnabled) {
-                                OutlinedTextField(
-                                    value = uiState.sshTlsSni,
-                                    onValueChange = { viewModel.updateSshTlsSni(it) },
-                                    label = { Text("TLS SNI (optional)") },
-                                    placeholder = { Text("example.com") },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            Text(
-                                text = "Tunnel SSH through an HTTP CONNECT proxy. Use Custom Host for CDN facades or header-based routing.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                            var passphraseVisible by remember { mutableStateOf(false) }
+                            OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                value = uiState.sshKeyPassphrase,
+                                onValueChange = { viewModel.updateSshKeyPassphrase(it) },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_key_passphrase_optional)) },
+                                placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_key_passphrase_hint)) },
+                                singleLine = true,
+                                visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                trailingIcon = {
+                                    IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
+                                        Text(
+                                            text = if (passphraseVisible) androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_hide_ac20a5) else androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_show_0df6f1),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
 
-                        // === WebSocket options ===
-                        if (uiState.sshTransport == SshTransport.WEBSOCKET) {
+                        // SSH Transport settings — only for SSH-only tunnel type
+                        if (uiState.isSshOnly) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_transport),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            // Transport selector (mutually exclusive)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Use TLS (wss://)", style = MaterialTheme.typography.bodyMedium)
-                                Switch(
-                                    checked = uiState.sshWsUseTls,
-                                    onCheckedChange = { viewModel.updateSshWsUseTls(it) }
+                                SshTransport.entries.forEach { transport ->
+                                    FilterChip(
+                                        selected = uiState.sshTransport == transport,
+                                        onClick = { viewModel.updateSshTransport(transport) },
+                                        label = { Text(if (transport == SshTransport.DIRECT) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_direct) else if (transport == SshTransport.HTTP_PROXY) androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_http_proxy_label) else transport.displayName) }
+                                    )
+                                }
+                            }
+
+                            // === Direct mode options ===
+                            if (uiState.sshTransport == SshTransport.DIRECT) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_wrap_in_tls_stunnel), style = MaterialTheme.typography.bodyMedium)
+                                    Switch(
+                                        checked = uiState.sshTlsEnabled,
+                                        onCheckedChange = { viewModel.updateSshTlsEnabled(it) }
+                                    )
+                                }
+                                if (uiState.sshTlsEnabled) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sshTlsSni,
+                                        onValueChange = { viewModel.updateSshTlsSni(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tls_sni_optional)) },
+                                        placeholder = { Text("example.com") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshPayload,
+                                    onValueChange = { viewModel.updateSshPayload(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_payload_optional)) },
+                                    placeholder = { Text("GET / HTTP/1.1[crlf]Host: [host][crlf][crlf]") },
+                                    singleLine = false,
+                                    minLines = 2,
+                                    maxLines = 4,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_ssh_payload_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            OutlinedTextField(
-                                value = uiState.sshWsPath,
-                                onValueChange = { viewModel.updateSshWsPath(it) },
-                                label = { Text("WebSocket Path") },
-                                placeholder = { Text("/") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            OutlinedTextField(
-                                value = uiState.sshWsCustomHost,
-                                onValueChange = { viewModel.updateSshWsCustomHost(it) },
-                                label = { Text("Custom Host Header (optional)") },
-                                placeholder = { Text("cdn.example.com") },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            if (uiState.sshWsUseTls) {
-                                OutlinedTextField(
-                                    value = uiState.sshTlsSni,
-                                    onValueChange = { viewModel.updateSshTlsSni(it) },
-                                    label = { Text("TLS SNI (optional)") },
-                                    placeholder = { Text("example.com") },
+
+                            // === HTTP CONNECT Proxy options ===
+                            if (uiState.sshTransport == SshTransport.HTTP_PROXY) {
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshHttpProxyHost,
+                                    onValueChange = { viewModel.updateSshHttpProxyHost(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_host)) },
+                                    placeholder = { Text("proxy.example.com") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshHttpProxyPort,
+                                    onValueChange = { viewModel.updateSshHttpProxyPort(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_proxy_port)) },
+                                    placeholder = { Text("8080") },
+                                    isError = uiState.sshHttpProxyPortError != null,
+                                    supportingText = uiState.sshHttpProxyPortError?.let { { Text(it) } },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshHttpProxyCustomHost,
+                                    onValueChange = { viewModel.updateSshHttpProxyCustomHost(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_host_header_optional)) },
+                                    placeholder = { Text("cdn.example.com") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tls_after_connect), style = MaterialTheme.typography.bodyMedium)
+                                    Switch(
+                                        checked = uiState.sshTlsEnabled,
+                                        onCheckedChange = { viewModel.updateSshTlsEnabled(it) }
+                                    )
+                                }
+                                if (uiState.sshTlsEnabled) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sshTlsSni,
+                                        onValueChange = { viewModel.updateSshTlsSni(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tls_sni_optional)) },
+                                        placeholder = { Text("example.com") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_http_connect_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            Text(
-                                text = "Tunnel SSH through a WebSocket connection. Works with CDN proxies (Cloudflare), xray, v2ray, and similar WebSocket-to-TCP bridges.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+
+                            // === WebSocket options ===
+                            if (uiState.sshTransport == SshTransport.WEBSOCKET) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_use_tls_wss), style = MaterialTheme.typography.bodyMedium)
+                                    Switch(
+                                        checked = uiState.sshWsUseTls,
+                                        onCheckedChange = { viewModel.updateSshWsUseTls(it) }
+                                    )
+                                }
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshWsPath,
+                                    onValueChange = { viewModel.updateSshWsPath(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_websocket_path)) },
+                                    placeholder = { Text("/") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                    value = uiState.sshWsCustomHost,
+                                    onValueChange = { viewModel.updateSshWsCustomHost(it) },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_host_header_optional)) },
+                                    placeholder = { Text("cdn.example.com") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                if (uiState.sshWsUseTls) {
+                                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+                                        value = uiState.sshTlsSni,
+                                        onValueChange = { viewModel.updateSshTlsSni(it) },
+                                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_tls_sni_optional)) },
+                                        placeholder = { Text("example.com") },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Text(
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_websocket_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -3165,36 +3247,38 @@ fun EditProfileScreen(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Surface(
-                    onClick = {
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/anonvector/slipgate")
-                        )
-                        context.startActivity(intent)
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 14.dp, horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                EditorSection {
+                    Surface(
+                        onClick = {
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://github.com/anonvector/slipgate")
+                            )
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            Icons.Default.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            "Server Setup Guide",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp, horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_server_setup_guide),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
 
@@ -3228,11 +3312,11 @@ private fun CongestionControlDropdown(
         onExpandedChange = { expanded = it },
         modifier = modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
+        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
             value = selected.value.uppercase(),
             onValueChange = { },
             readOnly = true,
-            label = { Text("Congestion Control") },
+            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_congestion_control)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -3275,15 +3359,15 @@ private fun DohServerSelector(
         onExpandedChange = { expanded = it },
         modifier = Modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
-            value = matchingPreset?.name ?: if (dohUrl.isNotBlank()) "Custom" else "",
+        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
+            value = matchingPreset?.name ?: if (dohUrl.isNotBlank()) androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_custom_081ae3) else "",
             onValueChange = { },
             readOnly = true,
-            label = { Text("DoH Server") },
-            placeholder = { Text("Select a server") },
+            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_server)) },
+            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_select_a_server)) },
             isError = dohUrlError != null,
             supportingText = {
-                Text(dohUrlError ?: (matchingPreset?.url ?: "Select a preset or enter custom URL"))
+                Text(dohUrlError ?: (matchingPreset?.url ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_selection_hint)))
             },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
@@ -3315,7 +3399,7 @@ private fun DohServerSelector(
             }
             DropdownMenuItem(
                 text = {
-                    Text("Custom URL...", style = MaterialTheme.typography.bodyLarge)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_url), style = MaterialTheme.typography.bodyLarge)
                 },
                 onClick = {
                     onUrlChange("")
@@ -3327,14 +3411,14 @@ private fun DohServerSelector(
 
     // Show custom URL field when no preset matches (and not empty)
     if (matchingPreset == null) {
-        OutlinedTextField(
+        OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
             value = dohUrl,
             onValueChange = onUrlChange,
-            label = { Text("Custom DoH URL") },
+            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_doh_url)) },
             placeholder = { Text("https://example.com/dns-query") },
             isError = dohUrlError != null,
             supportingText = if (dohUrl.isNotBlank()) {
-                { Text(dohUrlError ?: "Custom DNS-over-HTTPS endpoint") }
+                { Text(dohUrlError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_endpoint_hint)) }
             } else null,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -3342,12 +3426,12 @@ private fun DohServerSelector(
     }
 
     // Multi-line custom URLs for batch testing
-    OutlinedTextField(
+    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
         value = customDohUrls,
         onValueChange = onCustomDohUrlsChange,
-        label = { Text("Custom DoH URLs to Test") },
-        placeholder = { Text("https://example.com/dns-query\nhttps://other.com/dns-query") },
-        supportingText = { Text("One URL per line — tested alongside presets") },
+        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_doh_urls_to_test)) },
+        placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_url_examples)) },
+        supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_list_hint)) },
         singleLine = false,
         minLines = 2,
         maxLines = 5,
@@ -3387,7 +3471,7 @@ private fun DohServerSelector(
     ) {
         Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(8.dp))
-        Text("Import List")
+        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_import_list))
     }
 
     val presetUrls = remember { DOH_SERVERS.map { it.url }.toSet() }
@@ -3403,7 +3487,7 @@ private fun DohServerSelector(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Presets")
+            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_presets))
         }
 
         OutlinedButton(
@@ -3413,7 +3497,7 @@ private fun DohServerSelector(
         ) {
             Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Custom")
+            Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_custom_081ae3))
         }
     }
 }
@@ -3433,7 +3517,7 @@ private fun DohTestDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("DoH Server Test")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_doh_server_test))
                 if (isTestingDoh) {
                     Spacer(Modifier.width(12.dp))
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -3447,9 +3531,9 @@ private fun DohTestDialog(
             ) {
                 Text(
                     text = if (isTestingDoh) {
-                        "Testing $completed/$total servers..."
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_testing_value_value_servers, (completed).toString(), (total).toString())
                     } else {
-                        "$reachable/$total reachable — tap to select"
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_value_value_reachable_tap_to_select, (reachable).toString(), (total).toString())
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -3498,14 +3582,14 @@ private fun DohTestDialog(
                                     }
                                     result.isSuccess -> {
                                         Text(
-                                            text = "${result.latencyMs}ms",
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_valuems, (result.latencyMs).toString()),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                     result.error != null -> {
                                         Text(
-                                            text = "Failed",
+                                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_failed),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.error
                                         )
@@ -3573,14 +3657,14 @@ private fun MultiResolverSettings(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Resolver Mode",
+                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_resolver_mode),
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
                 text = if (resolverMode == ResolverMode.FANOUT)
-                    "Sends to all resolvers"
+                    androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_sends_to_all_resolvers)
                 else
-                    "Distributes load across resolvers",
+                    androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_distributes_load_across_resolvers),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -3590,7 +3674,7 @@ private fun MultiResolverSettings(
                 FilterChip(
                     selected = resolverMode == mode,
                     onClick = { onResolverModeChange(mode) },
-                    label = { Text(mode.displayName) },
+                    label = { Text(androidx.compose.ui.res.stringResource(if (mode == ResolverMode.FANOUT) app.slipnet.R.string.editor_reliable_mode else app.slipnet.R.string.editor_fast_mode)) },
                     modifier = Modifier.padding(start = 4.dp)
                 )
             }
@@ -3606,14 +3690,14 @@ private fun MultiResolverSettings(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Spread Count",
+                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_spread_count),
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
                     text = if (rrSpreadCount == 1)
-                        "No duplicates (pure round-robin)"
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_round_robin_hint)
                     else
-                        "Send each query to $rrSpreadCount resolvers",
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_spread_hint, (rrSpreadCount).toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -3625,7 +3709,7 @@ private fun MultiResolverSettings(
                     onClick = { onSpreadCountChange(rrSpreadCount - 1) },
                     enabled = rrSpreadCount > 1
                 ) {
-                    Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                    Icon(Icons.Default.Remove, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_decrease_67e19d))
                 }
                 Text(
                     text = "$rrSpreadCount",
@@ -3636,7 +3720,7 @@ private fun MultiResolverSettings(
                     onClick = { onSpreadCountChange(rrSpreadCount + 1) },
                     enabled = rrSpreadCount < 5
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Increase")
+                    Icon(Icons.Default.Add, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_increase_5a7fec))
                 }
             }
         }
@@ -3672,11 +3756,11 @@ private fun SoarSettings(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Resolver Discovery",
+                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_resolver_discovery),
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "Find more resolvers that carry the tunnel; each is checked against the server's signed handshake",
+                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_discovery_verification_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -3696,9 +3780,9 @@ private fun SoarSettings(
     if (discovery) {
         Text(
             text = when (discoveryList) {
-                SoarConfig.LIST_APP -> "Discovery list: the app's resolver list (the scanner's default), then public resolvers"
-                SoarConfig.LIST_CUSTOM -> "Discovery list: your resolvers, then public resolvers"
-                else -> "Discovery list: Soar's bundled lists"
+                SoarConfig.LIST_APP -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_discovery_app_hint)
+                SoarConfig.LIST_CUSTOM -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_discovery_custom_hint)
+                else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_discovery_builtin_hint)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -3715,9 +3799,9 @@ private fun SoarSettings(
                     label = {
                         Text(
                             when (list) {
-                                SoarConfig.LIST_APP -> "App list"
-                                SoarConfig.LIST_CUSTOM -> "Custom"
-                                else -> "Built-in"
+                                SoarConfig.LIST_APP -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_app_list)
+                                SoarConfig.LIST_CUSTOM -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_custom_081ae3)
+                                else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_built_in)
                             }
                         )
                     },
@@ -3728,7 +3812,7 @@ private fun SoarSettings(
         when (discoveryList) {
             SoarConfig.LIST_SOAR -> {
                 Text(
-                    text = "Network country: also try that country's bundled resolver list",
+                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_discovery_country_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -3741,7 +3825,7 @@ private fun SoarSettings(
                         FilterChip(
                             selected = country == cc,
                             onClick = { onCountryChange(cc) },
-                            label = { Text(cc.ifEmpty { "Global" }) },
+                            label = { Text(cc.ifEmpty { androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_global) }) },
                             modifier = Modifier.padding(end = 4.dp)
                         )
                     }
@@ -3750,18 +3834,18 @@ private fun SoarSettings(
             SoarConfig.LIST_CUSTOM -> {
                 if (customListHidden) {
                     Text(
-                        text = "Using the custom list that came with this profile",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_profile_discovery_list_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    OutlinedTextField(
+                    OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                         value = customList,
                         onValueChange = onCustomListChange,
-                        label = { Text("Custom resolvers") },
-                        placeholder = { Text("e.g. 5.202.171.124\n46.100.40.59:53") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_resolvers)) },
+                        placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_custom_resolver_examples)) },
                         isError = customListError != null,
-                        supportingText = { Text(customListError ?: "One per line: IP or IP:port") },
+                        supportingText = { Text(customListError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_one_per_line_ip_or_ip_port)) },
                         minLines = 3,
                         maxLines = 8,
                         modifier = Modifier.fillMaxWidth()
@@ -3773,32 +3857,25 @@ private fun SoarSettings(
 
     Column(modifier = Modifier.padding(top = 8.dp)) {
         Text(
-            text = "DNS over TCP",
+            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_over_tcp),
             style = MaterialTheme.typography.bodyLarge
         )
         Text(
             text = when (tcpMode) {
-                SoarConfig.TCP_ON -> "TCP/53 alongside UDP for every resolver"
-                SoarConfig.TCP_ONLY -> "TCP/53 only, for networks that block or tamper with UDP/53"
-                SoarConfig.TCP_OFF -> "UDP/53 only"
-                else -> "TCP/53 for resolvers whose UDP never answers"
+                SoarConfig.TCP_ON -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_tcp_parallel_hint)
+                SoarConfig.TCP_ONLY -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_tcp_only_hint)
+                SoarConfig.TCP_OFF -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_udp_53_only)
+                else -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_dns_tcp_fallback_hint)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-    ) {
-        SoarConfig.TCP_MODES.forEach { mode ->
-            FilterChip(
-                selected = tcpMode == mode,
-                onClick = { onTcpModeChange(mode) },
-                label = { Text(mode.replaceFirstChar { it.uppercase() }) },
-                modifier = Modifier.padding(end = 4.dp)
-            )
-        }
-    }
+    SoarTcpModeSelector(tcpMode, onTcpModeChange)
 }
+
+/** Composition boundary only: uses the parent ColumnScope and adds no layout or transport work. */
+@Composable
+private fun androidx.compose.foundation.layout.ColumnScope.EditorSection(
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) { content(this) }

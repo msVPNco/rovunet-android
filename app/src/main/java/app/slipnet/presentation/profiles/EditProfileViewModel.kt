@@ -149,6 +149,7 @@ data class EditProfileUiState(
     val isPinned: Boolean = false,
     // Locked profile state
     val isLocked: Boolean = false,
+    val needsCredentials: Boolean = false,
     val lockPasswordHash: String = "",
     // Locked profile enhancements
     val expirationDate: Long = 0,
@@ -233,7 +234,7 @@ data class EditProfileUiState(
     val soarDiscoveryCustomHidden: Boolean = false,
     // Discovery off with no resolvers at all (a locked profile's hidden list can be empty)
     val soarDiscoveryError: String? = null,
-    val soarTcpMode: String = SoarConfig.TCP_AUTO,
+    val soarTcpMode: String = SoarConfig.newProfileTcpMode(tunnelType),
 ) {
     val useSsh: Boolean
         get() = tunnelType == TunnelType.SSH || tunnelType == TunnelType.DNSTT_SSH || tunnelType == TunnelType.SLIPSTREAM_SSH || tunnelType == TunnelType.NAIVE_SSH || tunnelType == TunnelType.NOIZDNS_SSH || tunnelType == TunnelType.VAYDNS_SSH || tunnelType == TunnelType.SOAR_SSH
@@ -292,12 +293,16 @@ class EditProfileViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
     private val getProfileByIdUseCase: GetProfileByIdUseCase,
+    private val profiles: app.slipnet.domain.repository.ProfileRepository,
+    private val importer: app.slipnet.data.export.ConfigImporter,
     private val saveProfileUseCase: SaveProfileUseCase,
     private val setActiveProfileUseCase: SetActiveProfileUseCase,
     private val connectionManager: VpnConnectionManager,
     private val preferencesDataStore: app.slipnet.data.local.datastore.PreferencesDataStore
 ) : ViewModel() {
 
+    private var recoveryProfile: ServerProfile? = null
+    private var soarTcpModeExplicitlyChosen = false
     private val profileId: Long? = savedStateHandle.get<Long>("profileId")
     private val coreMode = savedStateHandle.get<String>("tunnelType")?.takeIf { it in setOf("reality", "xhttp", "hysteria2", "wireguard") }
     private val initialTunnelType: TunnelType = savedStateHandle.get<String>("tunnelType")
@@ -346,7 +351,14 @@ class EditProfileViewModel @Inject constructor(
 
             val profile = getProfileByIdUseCase(id)
             if (profile != null) {
+                recoveryProfile = profile.takeIf { it.needsCredentials }
+                if (profile.needsCredentials) {
+                    _uiState.value = EditProfileUiState(profileId = profile.id, name = profile.name,
+                        tunnelType = profile.tunnelType, isLocked = profile.isLocked, needsCredentials = true)
+                    return@launch
+                }
                 _uiState.value = _uiState.value.copy(
+                    needsCredentials = false,
                     profileId = profile.id,
                     name = profile.name,
                     domain = profile.domain,
@@ -464,7 +476,7 @@ class EditProfileViewModel @Inject constructor(
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Profile not found"
+                    error = editorMessage(app.slipnet.R.string.editor_profile_not_found)
                 )
             }
         }
@@ -595,6 +607,11 @@ class EditProfileViewModel @Inject constructor(
         }
         _uiState.value = _uiState.value.copy(
             tunnelType = newType,
+            soarTcpMode = SoarConfig.tcpModeAfterSshChange(
+                _uiState.value.soarTcpMode, newType,
+                isNew = profileId == null || profileId == 0L,
+                explicitlyChosen = soarTcpModeExplicitlyChosen
+            ),
             sshUsernameError = null,
             sshPasswordError = null,
             sshPortError = null
@@ -604,7 +621,7 @@ class EditProfileViewModel @Inject constructor(
     fun updateDnsttPublicKey(publicKey: String) {
         // Validate in real-time but only show error if user has typed something
         val error = if (publicKey.isNotBlank()) {
-            if (_uiState.value.isSoarBased) SoarConfig.validatePublicKey(publicKey) else validateDnsttPublicKey(publicKey)
+            if (_uiState.value.isSoarBased) localizedSoarPublicKey(publicKey) else validateDnsttPublicKey(publicKey)
         } else {
             null
         }
@@ -672,6 +689,7 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun updateSoarTcpMode(mode: String) {
+        soarTcpModeExplicitlyChosen = true
         _uiState.value = _uiState.value.copy(soarTcpMode = SoarConfig.normalizeTcpMode(mode))
     }
 
@@ -855,13 +873,13 @@ class EditProfileViewModel @Inject constructor(
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isRequestingBridges = false,
-                        error = "No bridges returned. Try Telegram or email instead."
+                        error = editorMessage(app.slipnet.R.string.editor_bridges_empty_error)
                     )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isRequestingBridges = false,
-                    error = "Could not fetch bridges: ${e.message ?: "connection failed"}. Try Telegram or email instead."
+                    error = editorMessage(app.slipnet.R.string.editor_bridge_fetch_error, (e.message ?: "connection failed").toString())
                 )
             }
         }
@@ -1245,22 +1263,16 @@ class EditProfileViewModel @Inject constructor(
                     val latency = System.currentTimeMillis() - startTime
                     DohTestResult(preset.name, preset.url, latencyMs = latency)
                 } else {
-                    DohTestResult(preset.name, preset.url, error = "HTTP ${response.code}")
+                    DohTestResult(preset.name, preset.url, error = editorMessage(app.slipnet.R.string.editor_http_value, (response.code).toString()))
                 }
             }
         } catch (e: Exception) {
             val error = when (e) {
-                is SocketTimeoutException -> "Timeout"
-                is ConnectException -> "Connection refused"
-                is UnknownHostException -> "DNS lookup failed"
-                is SSLException -> "TLS error"
-                else -> {
-                    // Clean up raw Java messages like "Failed to connect to /1.2.3.4:443"
-                    val msg = e.message ?: "Connection failed"
-                    if (msg.contains("/")) msg.substringAfterLast("/").let {
-                        if (it.isBlank()) "Unreachable" else it
-                    } else msg
-                }
+                is SocketTimeoutException -> editorMessage(app.slipnet.R.string.editor_test_timeout)
+                is ConnectException -> editorMessage(app.slipnet.R.string.editor_test_refused)
+                is UnknownHostException -> editorMessage(app.slipnet.R.string.editor_test_dns)
+                is SSLException -> editorMessage(app.slipnet.R.string.editor_test_tls)
+                else -> editorMessage(app.slipnet.R.string.editor_test_failed)
             }
             DohTestResult(preset.name, preset.url, error = error)
         }
@@ -1310,14 +1322,14 @@ class EditProfileViewModel @Inject constructor(
                     updateResolvers("$resolverIp:53")
                 } else {
                     _uiState.value = _uiState.value.copy(
-                        error = "Could not detect DNS server"
+                        error = editorMessage(app.slipnet.R.string.editor_could_not_detect_dns_server)
                     )
                 }
                 _uiState.value = _uiState.value.copy(isAutoDetecting = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isAutoDetecting = false,
-                    error = "Auto-detect failed: ${e.message}"
+                    error = editorMessage(app.slipnet.R.string.editor_auto_detect_failed_value, (e.message).toString())
                 )
             }
         }
@@ -1355,8 +1367,22 @@ class EditProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSaving = true)
             try {
-                require(state.name.isNotBlank()) { "Profile name is required" }
-                val raw = requireNotNull(state.coreForm) { "Core settings are unavailable" }.encode(state.name.trim())
+                if (state.name.isBlank()) {
+                    _uiState.value = _uiState.value.copy(isSaving = false, error = editorMessage(app.slipnet.R.string.editor_name_is_required))
+                    return@launch
+                }
+                val form = requireNotNull(state.coreForm)
+                form.validationIssue()?.let { issue ->
+                    val message = when(issue) {
+                        app.slipnet.core.CoreForm.FieldIssue.WIREGUARD_MULTILINE -> app.slipnet.R.string.editor_core_single_line
+                        app.slipnet.core.CoreForm.FieldIssue.SERVER_ADDRESS -> app.slipnet.R.string.editor_core_server_invalid
+                        app.slipnet.core.CoreForm.FieldIssue.SERVER_PORT -> app.slipnet.R.string.editor_port_must_be_between_1_and_65535
+                        app.slipnet.core.CoreForm.FieldIssue.AUTH_REQUIRED -> app.slipnet.R.string.editor_core_auth_required
+                    }
+                    _uiState.value = _uiState.value.copy(isSaving = false, error = editorMessage(message))
+                    return@launch
+                }
+                val raw = form.encode(state.name.trim())
                 val parsed = app.slipnet.core.CoreLink.parse(raw)
                 val previous = state.profileId?.let { getProfileByIdUseCase(it) }
                 require(previous?.isLocked != true) { "Unlock this profile before editing" }
@@ -1370,12 +1396,44 @@ class EditProfileViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true,
                     showRestartVpnMessage = conn is ConnectionState.Connected || conn is ConnectionState.Connecting)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isSaving = false, error = e.message ?: "Invalid core settings")
+                _uiState.value = _uiState.value.copy(isSaving = false, error = editorMessage(app.slipnet.R.string.editor_invalid_core_settings))
+            }
+        }
+    }
+
+    fun retryCredentials() {
+        recoveryProfile?.id?.let { if (!_uiState.value.isSaving) loadProfile(it) }
+    }
+
+    fun restoreCredentials(input: String) {
+        val reviewed = recoveryProfile ?: return
+        if (reviewed.isLocked || _uiState.value.isSaving) return
+        _uiState.value = _uiState.value.copy(isSaving = true, error = null)
+        viewModelScope.launch {
+            val resources = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+            try {
+                val parsed = withContext(Dispatchers.Default) {
+                    importer.parseAndImport(input, connectionManager.getDeviceId())
+                }
+                val source = (parsed as? app.slipnet.data.export.ImportResult.Success)
+                    ?.takeIf { it.warnings.isEmpty() }?.profiles?.singleOrNull()
+                if (source == null || !profiles.restoreCredentials(reviewed, source)) {
+                    _uiState.value = _uiState.value.copy(isSaving = false,
+                        error = resources.getString(app.slipnet.R.string.profile_restore_mismatch))
+                } else {
+                    _uiState.value = _uiState.value.copy(isSaving = false, saveSuccess = true)
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(isSaving = false,
+                    error = resources.getString(app.slipnet.R.string.profile_restore_failed))
             }
         }
     }
 
     fun save() {
+        if (_uiState.value.needsCredentials) return
         if (_uiState.value.tunnelType == TunnelType.XRAY) {
             saveCoreProfile()
             return
@@ -1390,6 +1448,7 @@ class EditProfileViewModel @Inject constructor(
      * If validation fails, errors are shown on the form fields.
      */
     fun saveForScanner() {
+        if (_uiState.value.needsCredentials) return
         if (!validateProfile(forScanner = true)) return
         persistProfile(forScanner = true)
     }
@@ -1406,13 +1465,13 @@ class EditProfileViewModel @Inject constructor(
         var hasError = false
 
         if (state.name.isBlank()) {
-            _uiState.value = _uiState.value.copy(nameError = "Name is required")
+            _uiState.value = _uiState.value.copy(nameError = editorMessage(app.slipnet.R.string.editor_name_is_required))
             hasError = true
         }
 
         val skipDomain = state.tunnelType == TunnelType.DOH || state.tunnelType == TunnelType.SNOWFLAKE || state.isVless
         if (!skipDomain && state.domain.isBlank()) {
-            _uiState.value = _uiState.value.copy(domainError = "Domain is required")
+            _uiState.value = _uiState.value.copy(domainError = editorMessage(app.slipnet.R.string.editor_domain_is_required))
             hasError = true
         } else if (!skipDomain && state.domain.isNotBlank()) {
             val domainError = validateDomain(state.domain.trim(), state.tunnelType)
@@ -1427,10 +1486,10 @@ class EditProfileViewModel @Inject constructor(
                 (state.isDnsttOrNoizOrVaydnsBased && state.dnsTransport == DnsTransport.DOH)
         if (needsDohUrl) {
             if (state.dohUrl.isBlank()) {
-                _uiState.value = _uiState.value.copy(dohUrlError = "DoH server URL is required")
+                _uiState.value = _uiState.value.copy(dohUrlError = editorMessage(app.slipnet.R.string.editor_doh_server_url_is_required))
                 hasError = true
             } else if (!state.dohUrl.startsWith("https://")) {
-                _uiState.value = _uiState.value.copy(dohUrlError = "URL must start with https://")
+                _uiState.value = _uiState.value.copy(dohUrlError = editorMessage(app.slipnet.R.string.editor_url_must_start_with_https))
                 hasError = true
             }
         }
@@ -1445,7 +1504,7 @@ class EditProfileViewModel @Inject constructor(
                 (state.isSoarBased && state.soarDiscovery && state.resolvers.isBlank())
         if (!skipResolvers) {
             if (state.resolvers.isBlank()) {
-                _uiState.value = _uiState.value.copy(resolversError = "At least one resolver is required")
+                _uiState.value = _uiState.value.copy(resolversError = editorMessage(app.slipnet.R.string.editor_at_least_one_resolver_is_required))
                 hasError = true
             } else {
                 val resolversError = validateResolvers(state.resolvers)
@@ -1464,11 +1523,11 @@ class EditProfileViewModel @Inject constructor(
             !state.soarDiscoveryCustomHidden &&
             (state.soarDiscovery || state.soarDiscoveryCustom.isNotBlank())
         ) {
-            SoarConfig.validateCandidates(state.soarDiscoveryCustom)?.let {
+            localizedSoarCandidates(state.soarDiscoveryCustom)?.let {
                 _uiState.value = _uiState.value.copy(
                     soarDiscoveryCustomError = it,
                     soarDiscoveryError = if (state.soarDiscovery) null else
-                        "The custom discovery list has an error: turn on discovery to fix it"
+                        editorMessage(app.slipnet.R.string.editor_discovery_list_error)
                 )
                 hasError = true
             }
@@ -1479,7 +1538,7 @@ class EditProfileViewModel @Inject constructor(
         if (!forScanner && state.isSoarBased && !state.soarDiscovery &&
             state.resolversHidden && !state.useCustomResolver && state.defaultResolversList.isEmpty()
         ) {
-            _uiState.value = _uiState.value.copy(soarDiscoveryError = "This profile has no resolvers: turn on discovery or use a custom resolver")
+            _uiState.value = _uiState.value.copy(soarDiscoveryError = editorMessage(app.slipnet.R.string.editor_resolvers_missing_error))
             hasError = true
         }
 
@@ -1494,7 +1553,7 @@ class EditProfileViewModel @Inject constructor(
 
         // Soar: Ed25519 server key (base64 or hex)
         if (state.isSoarBased) {
-            val publicKeyError = SoarConfig.validatePublicKey(state.dnsttPublicKey)
+            val publicKeyError = localizedSoarPublicKey(state.dnsttPublicKey)
             if (publicKeyError != null) {
                 _uiState.value = _uiState.value.copy(dnsttPublicKeyError = publicKeyError)
                 hasError = true
@@ -1504,7 +1563,7 @@ class EditProfileViewModel @Inject constructor(
         // Tor bridge line validation (Custom bridge type requires non-empty lines)
         if (state.tunnelType == TunnelType.SNOWFLAKE && state.torBridgeType == TorBridgeType.CUSTOM) {
             if (state.torBridgeLines.isBlank()) {
-                _uiState.value = _uiState.value.copy(torBridgeLinesError = "Bridge lines are required")
+                _uiState.value = _uiState.value.copy(torBridgeLinesError = editorMessage(app.slipnet.R.string.editor_bridge_lines_are_required))
                 hasError = true
             }
         }
@@ -1513,7 +1572,7 @@ class EditProfileViewModel @Inject constructor(
         if (state.isSocks5) {
             val port = state.socks5ServerPort.toIntOrNull()
             if (port == null || port !in 1..65535) {
-                _uiState.value = _uiState.value.copy(socks5ServerPortError = "Port must be between 1 and 65535")
+                _uiState.value = _uiState.value.copy(socks5ServerPortError = editorMessage(app.slipnet.R.string.editor_port_must_be_between_1_and_65535))
                 hasError = true
             }
         }
@@ -1521,22 +1580,22 @@ class EditProfileViewModel @Inject constructor(
         // VLESS validation
         if (state.isVless) {
             if (state.vlessUuid.isBlank()) {
-                _uiState.value = _uiState.value.copy(vlessUuidError = "VLESS UUID is required")
+                _uiState.value = _uiState.value.copy(vlessUuidError = editorMessage(app.slipnet.R.string.editor_vless_uuid_is_required))
                 hasError = true
             } else {
                 val hex = state.vlessUuid.trim().replace("-", "")
                 if (hex.length != 32 || !hex.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
-                    _uiState.value = _uiState.value.copy(vlessUuidError = "Invalid UUID format")
+                    _uiState.value = _uiState.value.copy(vlessUuidError = editorMessage(app.slipnet.R.string.editor_invalid_uuid_format))
                     hasError = true
                 }
             }
             if (state.cdnIp.isBlank()) {
-                _uiState.value = _uiState.value.copy(cdnIpError = "CDN IP is required")
+                _uiState.value = _uiState.value.copy(cdnIpError = editorMessage(app.slipnet.R.string.editor_cdn_ip_is_required))
                 hasError = true
             }
             val cdnPort = state.cdnPort.toIntOrNull()
             if (cdnPort == null || cdnPort !in 1..65535) {
-                _uiState.value = _uiState.value.copy(cdnPortError = "Port must be between 1 and 65535")
+                _uiState.value = _uiState.value.copy(cdnPortError = editorMessage(app.slipnet.R.string.editor_port_must_be_between_1_and_65535))
                 hasError = true
             }
         }
@@ -1545,15 +1604,15 @@ class EditProfileViewModel @Inject constructor(
         if (state.isNaiveBased) {
             val naivePort = state.naivePort.toIntOrNull()
             if (naivePort == null || naivePort !in 1..65535) {
-                _uiState.value = _uiState.value.copy(naivePortError = "Port must be between 1 and 65535")
+                _uiState.value = _uiState.value.copy(naivePortError = editorMessage(app.slipnet.R.string.editor_port_must_be_between_1_and_65535))
                 hasError = true
             }
             if (state.naiveUsername.isBlank()) {
-                _uiState.value = _uiState.value.copy(naiveUsernameError = "Proxy username is required")
+                _uiState.value = _uiState.value.copy(naiveUsernameError = editorMessage(app.slipnet.R.string.editor_proxy_username_is_required))
                 hasError = true
             }
             if (state.naivePassword.isBlank()) {
-                _uiState.value = _uiState.value.copy(naivePasswordError = "Proxy password is required")
+                _uiState.value = _uiState.value.copy(naivePasswordError = editorMessage(app.slipnet.R.string.editor_proxy_password_is_required))
                 hasError = true
             }
         }
@@ -1561,20 +1620,20 @@ class EditProfileViewModel @Inject constructor(
         // SSH validation (SSH-only, DNSTT+SSH, NoizDNS+SSH, Slipstream+SSH, and NAIVE_SSH tunnel types)
         if (state.tunnelType == TunnelType.SSH || state.tunnelType == TunnelType.DNSTT_SSH || state.tunnelType == TunnelType.NOIZDNS_SSH || state.tunnelType == TunnelType.SLIPSTREAM_SSH || state.tunnelType == TunnelType.NAIVE_SSH || state.tunnelType == TunnelType.SOAR_SSH) {
             if (state.sshUsername.isBlank()) {
-                _uiState.value = _uiState.value.copy(sshUsernameError = "SSH username is required")
+                _uiState.value = _uiState.value.copy(sshUsernameError = editorMessage(app.slipnet.R.string.editor_ssh_username_is_required))
                 hasError = true
             }
             if (state.sshAuthType == SshAuthType.PASSWORD) {
                 if (state.sshPassword.isBlank()) {
-                    _uiState.value = _uiState.value.copy(sshPasswordError = "SSH password is required")
+                    _uiState.value = _uiState.value.copy(sshPasswordError = editorMessage(app.slipnet.R.string.editor_ssh_password_is_required))
                     hasError = true
                 }
             } else {
                 if (state.sshPrivateKey.isBlank()) {
-                    _uiState.value = _uiState.value.copy(sshPrivateKeyError = "SSH private key is required")
+                    _uiState.value = _uiState.value.copy(sshPrivateKeyError = editorMessage(app.slipnet.R.string.editor_ssh_private_key_is_required))
                     hasError = true
                 } else if (!state.sshPrivateKey.trimStart().startsWith("-----BEGIN")) {
-                    _uiState.value = _uiState.value.copy(sshPrivateKeyError = "Invalid key format (must be PEM)")
+                    _uiState.value = _uiState.value.copy(sshPrivateKeyError = editorMessage(app.slipnet.R.string.editor_invalid_key_format_must_be_pem))
                     hasError = true
                 }
             }
@@ -1584,7 +1643,7 @@ class EditProfileViewModel @Inject constructor(
         if (state.tunnelType == TunnelType.SSH || state.tunnelType == TunnelType.DNSTT_SSH || state.tunnelType == TunnelType.NOIZDNS_SSH || state.tunnelType == TunnelType.SLIPSTREAM_SSH || state.tunnelType == TunnelType.NAIVE_SSH || state.tunnelType == TunnelType.SOAR_SSH) {
             val sshPort = state.sshPort.toIntOrNull()
             if (sshPort == null || sshPort !in 1..65535) {
-                _uiState.value = _uiState.value.copy(sshPortError = "Port must be between 1 and 65535")
+                _uiState.value = _uiState.value.copy(sshPortError = editorMessage(app.slipnet.R.string.editor_port_must_be_between_1_and_65535))
                 hasError = true
             }
         }
@@ -1593,7 +1652,7 @@ class EditProfileViewModel @Inject constructor(
         if (state.isSshOnly && state.sshTransport == SshTransport.HTTP_PROXY) {
             val httpProxyPort = state.sshHttpProxyPort.toIntOrNull()
             if (httpProxyPort == null || httpProxyPort !in 1..65535) {
-                _uiState.value = _uiState.value.copy(sshHttpProxyPortError = "Port must be between 1 and 65535")
+                _uiState.value = _uiState.value.copy(sshHttpProxyPortError = editorMessage(app.slipnet.R.string.editor_port_must_be_between_1_and_65535))
                 hasError = true
             }
         }
@@ -1745,7 +1804,7 @@ class EditProfileViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    error = e.message ?: "Failed to save profile"
+                    error = editorMessage(app.slipnet.R.string.editor_failed_to_save_profile)
                 )
             }
         }
@@ -1800,6 +1859,22 @@ class EditProfileViewModel @Inject constructor(
      * SSH tunnel type allows IP addresses as the domain field is the SSH host.
      * @return error message if invalid, null if valid
      */
+    private fun localizedSoarCandidates(value: String): String? = SoarConfig.candidateIssue(value)?.let { issue ->
+        when(issue.kind) {
+            SoarConfig.CandidateError.EMPTY -> editorMessage(app.slipnet.R.string.editor_soar_candidates_empty)
+            SoarConfig.CandidateError.TOO_MANY -> editorMessage(app.slipnet.R.string.editor_soar_candidates_many, SoarConfig.MAX_CUSTOM_CANDIDATES)
+            SoarConfig.CandidateError.INVALID -> editorMessage(app.slipnet.R.string.editor_soar_candidate_invalid, issue.entry)
+        }
+    }
+    private fun localizedSoarPublicKey(value: String): String? = when(SoarConfig.publicKeyIssue(value)) {
+        SoarConfig.PublicKeyIssue.MISSING -> editorMessage(app.slipnet.R.string.editor_soar_key_missing)
+        SoarConfig.PublicKeyIssue.INVALID -> editorMessage(app.slipnet.R.string.editor_soar_key_invalid)
+        null -> null
+    }
+
+    private fun editorMessage(@androidx.annotation.StringRes resource: Int, vararg args: Any): String =
+        app.slipnet.presentation.theme.RovunetStrings.localizedContext(context).getString(resource, *args)
+
     private fun validateDomain(domain: String, tunnelType: TunnelType): String? {
         val isDnsTunnel = tunnelType == TunnelType.DNSTT || tunnelType == TunnelType.DNSTT_SSH ||
                 tunnelType == TunnelType.NOIZDNS || tunnelType == TunnelType.NOIZDNS_SSH ||
@@ -1811,17 +1886,17 @@ class EditProfileViewModel @Inject constructor(
 
         // Must not be an IP address
         if (domain.all { it.isDigit() || it == '.' } && isValidIPv4(domain)) {
-            return "Domain must be a hostname, not an IP address"
+            return editorMessage(app.slipnet.R.string.editor_domain_hostname_error)
         }
 
         // Must be a valid domain with at least 2 labels (e.g., "example.com")
         if (!isValidDomainName(domain)) {
-            return "Invalid domain format"
+            return editorMessage(app.slipnet.R.string.editor_invalid_domain_format)
         }
 
         val labels = domain.split(".")
         if (labels.size < 2) {
-            return "Domain must have at least two parts (e.g., t.example.com)"
+            return editorMessage(app.slipnet.R.string.editor_domain_labels_error)
         }
 
         return null
@@ -1836,17 +1911,17 @@ class EditProfileViewModel @Inject constructor(
         val trimmed = publicKey.trim()
 
         if (trimmed.isBlank()) {
-            return "Public key is required for DNSTT"
+            return editorMessage(app.slipnet.R.string.editor_public_key_is_required_for_dnstt)
         }
 
         // Check length: 32 bytes = 64 hex characters
         if (trimmed.length != 64) {
-            return "Public key must be 64 hex characters (32 bytes), got ${trimmed.length}"
+            return editorMessage(app.slipnet.R.string.editor_public_key_length_error, (trimmed.length).toString())
         }
 
         // Check if all characters are valid hex
         if (!trimmed.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) {
-            return "Public key must contain only hex characters (0-9, a-f)"
+            return editorMessage(app.slipnet.R.string.editor_public_key_hex_error)
         }
 
         return null
@@ -1863,11 +1938,11 @@ class EditProfileViewModel @Inject constructor(
         val resolvers = input.split(",", "\n").map { it.trim() }.filter { it.isNotBlank() }
 
         if (resolvers.isEmpty()) {
-            return "At least one resolver is required"
+            return editorMessage(app.slipnet.R.string.editor_at_least_one_resolver_is_required)
         }
 
         if (resolvers.size > MAX_RESOLVERS) {
-            return "Maximum $MAX_RESOLVERS resolvers allowed"
+            return editorMessage(app.slipnet.R.string.editor_maximum_value_resolvers_allowed, (MAX_RESOLVERS).toString())
         }
 
         for (resolver in resolvers) {
@@ -1931,12 +2006,12 @@ class EditProfileViewModel @Inject constructor(
         val trimmed = resolver.trim()
 
         if (trimmed.isBlank()) {
-            return "Resolver cannot be empty"
+            return editorMessage(app.slipnet.R.string.editor_resolver_cannot_be_empty)
         }
 
         // Block IPv6 — not supported by the tunnel stack
         if (trimmed.startsWith("[") || trimmed.count { it == ':' } > 1) {
-            return "IPv6 resolvers are not supported"
+            return editorMessage(app.slipnet.R.string.editor_ipv6_resolvers_are_not_supported)
         }
 
         // Count colons to distinguish IPv4:port from host:port
@@ -1967,25 +2042,25 @@ class EditProfileViewModel @Inject constructor(
 
     private fun validateHost(host: String): String? {
         if (host.isBlank()) {
-            return "Host cannot be empty"
+            return editorMessage(app.slipnet.R.string.editor_host_cannot_be_empty)
         }
 
         // Check if it's an IPv4 address (all digits and dots)
         if (host.all { it.isDigit() || it == '.' }) {
             if (!isValidIPv4(host)) {
-                return "Invalid IPv4 address: '$host'"
+                return editorMessage(app.slipnet.R.string.editor_invalid_ipv4_address_value, (host).toString())
             }
             return null
         }
 
         // Starts with digit + has 3 dots = IPv4 attempt with trailing garbage (e.g. "1.1.1.1abc")
         if (host.first().isDigit() && host.count { it == '.' } == 3) {
-            return "Invalid IPv4 address: '$host'"
+            return editorMessage(app.slipnet.R.string.editor_invalid_ipv4_address_value, (host).toString())
         }
 
         // Otherwise treat as domain name - basic validation
         if (!isValidDomainName(host)) {
-            return "Invalid host: '$host'"
+            return editorMessage(app.slipnet.R.string.editor_invalid_host_value, (host).toString())
         }
 
         return null
@@ -1994,10 +2069,10 @@ class EditProfileViewModel @Inject constructor(
     private fun validatePort(portStr: String, context: String): String? {
         val port = portStr.toIntOrNull()
         if (port == null) {
-            return "Invalid port number in '$context'"
+            return editorMessage(app.slipnet.R.string.editor_invalid_port_number_in_value, (context).toString())
         }
         if (port !in 1..65535) {
-            return "Port must be between 1 and 65535 in '$context'"
+            return editorMessage(app.slipnet.R.string.editor_port_range_context_error, (context).toString())
         }
         return null
     }
@@ -2063,7 +2138,7 @@ class EditProfileViewModel @Inject constructor(
 
     fun unlockProfile(password: String, onResult: (Boolean) -> Unit) {
         val state = _uiState.value
-        if (!LockPasswordUtil.verifyPassword(password, state.lockPasswordHash)) {
+        if (state.needsCredentials || !LockPasswordUtil.verifyPassword(password, state.lockPasswordHash)) {
             onResult(false)
             return
         }

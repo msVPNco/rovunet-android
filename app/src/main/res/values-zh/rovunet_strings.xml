@@ -228,4 +228,19 @@
     <string name="update_failed">下载或验证失败。请检查网络后重试。</string>
     <string name="update_check_failed">无法检查更新，请重试。</string>
     <string name="update_current">已是最新版本。</string>
+    <string name="scan_service_start_failed">无法启动 DNS 扫描。</string>
+    <string name="vpn_tun_unavailable">Android 无法打开 VPN 接口。</string>
+    <string name="mtu_preference_with_ipv6">已保存的首选值为 %1$d。启用 IPv6 时，下次连接将使用 %2$d。</string>
+    <string name="profile_credentials_unavailable">无法读取此配置已保存的凭据</string>
+    <string name="profile_restore_help">请重试读取配置，或使用此账号和服务器的原始链接恢复凭据。</string>
+    <string name="profile_restore_locked">请重试读取此锁定配置。如果仍然失败，请向服务提供方获取原始锁定链接，作为新配置导入。</string>
+    <string name="profile_restore_retry">重试读取</string>
+    <string name="profile_restore_link">原始配置链接</string>
+    <string name="profile_restore_action">替换凭据</string>
+    <string name="profile_restore_confirm">要用此链接中的凭据替换无法读取的凭据吗？</string>
+    <string name="profile_restore_mismatch">请使用此协议、服务器和账号的原始未锁定链接。如果配置已更改，请重试读取。</string>
+    <string name="profile_restore_failed">无法保存替换凭据。原加密数据已保留。</string>
+    <string name="recovery_back">返回</string>
+    <string name="proxy_password_unavailable">无法读取本地代理密码。请在设置中设置新密码以使用本地代理身份验证。</string>
+    <string name="collection_needs_credentials">打开此配置组以查看凭据不可用的配置。</string>
 </resources>

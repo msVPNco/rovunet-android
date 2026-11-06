@@ -21,6 +21,7 @@ class SlipNetApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        app.slipnet.util.ConnectionDiagnostics.enablePersistence(java.io.File(cacheDir, "connection-diagnostics.txt"))
         app.slipnet.util.StabilityDiagnostics.initialize(this)
         app.slipnet.tunnel.TransportTrust.initialize(this)
         createNotificationChannels()

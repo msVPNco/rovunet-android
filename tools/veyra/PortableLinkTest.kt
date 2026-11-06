@@ -19,7 +19,8 @@ fun main() {
     }
     check(!ConfigSchemes.accepts("https://example.org"))
     repeat(300) { ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CONNECT_REQUEST) }
-    check(ConnectionDiagnostics.report().lines().count { "CONNECT_REQUEST" in it } == 256)
+    // The per-attempt timeline is bounded separately from aggregated traffic and eight attempts.
+    check(ConnectionDiagnostics.report().lines().count { "CONNECT_REQUEST" in it } == 96)
     ConnectionDiagnostics.clear()
     check(!ConnectionDiagnostics.report().contains("CONNECT_REQUEST"))
     println("Portable URI, alias routing and bounded diagnostic checks passed")

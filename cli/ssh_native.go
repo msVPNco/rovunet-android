@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 // sshConnect establishes an SSH connection over the profile's transport
@@ -54,16 +57,35 @@ func sshHandshakeOver(profile *Profile, conn net.Conn, addr string) (*ssh.Client
 		auths = append(auths, ssh.Password(profile.SSHPass))
 	}
 
+	known := os.Getenv("ROVUNET_SSH_KNOWN_HOSTS")
+	if known == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		known = filepath.Join(home, ".ssh", "known_hosts")
+	}
+	verifyHost, err := knownhosts.New(known)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read SSH known_hosts (verify the host key before connecting): %w", err)
+	}
+	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		return nil, err
+	}
 	config := &ssh.ClientConfig{
 		User:            sshUser,
 		Auth:            auths,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: verifyHost,
 		Timeout:         30 * time.Second,
 	}
 
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, addr, config)
 	if err != nil {
 		return nil, fmt.Errorf("SSH handshake: %w", err)
+	}
+	if err := conn.SetDeadline(time.Time{}); err != nil {
+		sshConn.Close()
+		return nil, err
 	}
 	client := ssh.NewClient(sshConn, chans, reqs)
 	go sshKeepAlive(client, 30*time.Second)
@@ -118,15 +140,17 @@ func startDNSSSHLayer(profile *Profile, internalAddr, listenAddr string) (*dnsSS
 		return nil, err
 	}
 
+	listener, err := listenLocalSOCKS(listenAddr, "", "")
+	if err != nil {
+		client.Close()
+		return nil, err
+	}
 	layer := &dnsSSHLayer{client: client, dead: make(chan struct{})}
+	go func() { client.Wait(); listener.Close(); close(layer.dead) }()
 	go func() {
-		client.Wait()
-		close(layer.dead)
-	}()
-	go func() {
-		// runSOCKS5Server returns nil when its listener is closed (which
-		// happens automatically once client.Wait() fires).
-		_ = runSOCKS5Server(client, listenAddr, "", "")
+		if err := serveSSHProxy(client, listener, "", ""); err != nil {
+			client.Close()
+		}
 	}()
 	return layer, nil
 }
@@ -145,23 +169,40 @@ func sshKeepAlive(client *ssh.Client, interval time.Duration) {
 
 // runSOCKS5Server listens for SOCKS5 connections and forwards them through the SSH tunnel.
 func runSOCKS5Server(client *ssh.Client, listenAddr string, socksUser, socksPass string) error {
-	ln, err := net.Listen("tcp", listenAddr)
+	ln, err := listenLocalSOCKS(listenAddr, socksUser, socksPass)
 	if err != nil {
-		return fmt.Errorf("listen %s: %w", listenAddr, err)
+		return err
 	}
+	go func() { client.Wait(); ln.Close() }()
+	return serveSSHProxy(client, ln, socksUser, socksPass)
+}
 
-	go func() {
-		// Close listener when SSH client dies
-		client.Wait()
-		ln.Close()
-	}()
+func listenLocalSOCKS(addr, username, password string) (net.Listener, error) {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	if (username == "") != (password == "") {
+		return nil, fmt.Errorf("incomplete local SOCKS credentials")
+	}
+	if username == "" && host != "localhost" && !net.ParseIP(host).IsLoopback() {
+		return nil, fmt.Errorf("local SOCKS credentials are required for non-loopback addresses")
+	}
+	if host == "localhost" && username == "" {
+		_, port, _ := net.SplitHostPort(addr)
+		addr = net.JoinHostPort("127.0.0.1", port)
+	}
+	return net.Listen("tcp", addr)
+}
 
+func serveSSHProxy(client *ssh.Client, listener net.Listener, username, password string) error {
+	defer listener.Close()
 	for {
-		conn, err := ln.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			return nil // listener closed
+			return err
 		}
-		go handleSOCKS5(conn, client, socksUser, socksPass)
+		go handleSOCKS5(conn, client, username, password)
 	}
 }
 

@@ -2,17 +2,27 @@ package app.slipnet.tunnel
 
 import android.content.Context
 import app.slipnet.core.CoreLink
+import app.slipnet.core.LocalSocksEndpoint
 import app.slipnet.core.CoreProcess
 import java.io.File
 
 object XrayBridge {
     private val core = CoreProcess()
-    fun start(context: Context, link: String, port: Int, username: String?, password: String?, routing: org.json.JSONObject? = null): Result<Unit> =
+    @Volatile var activeEndpoint: LocalSocksEndpoint? = null
+        private set
+
+    fun start(context: Context, link: String, endpoint: LocalSocksEndpoint, routing: org.json.JSONObject?): Result<Unit> =
         runCatching {
-            CoreLink.runtime(link, port, username, password, routing)
-        }.fold(
-            onSuccess = { core.start(File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so"), it, File(context.applicationInfo.nativeLibraryDir, "libveyra_core_launcher.so")) },
-            onFailure = { Result.failure(it) })
-    fun stop() = core.stop()
+            require(!endpoint.user.isNullOrEmpty() && !endpoint.password.isNullOrEmpty()) { "Xray requires local SOCKS authentication" }
+            val config = CoreLink.runtime(link, endpoint.port, endpoint.user, endpoint.password, routing)
+            val nativeDir = context.applicationInfo.nativeLibraryDir
+            core.start(File(nativeDir, "libveyra_xray.so"), config, File(nativeDir, "libveyra_core_launcher.so")).getOrThrow()
+            activeEndpoint = endpoint
+        }
+
+    fun stop() {
+        core.stop()
+        activeEndpoint = null
+    }
     fun isRunning() = core.isRunning()
 }

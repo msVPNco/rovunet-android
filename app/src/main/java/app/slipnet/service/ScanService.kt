@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,82 +16,81 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Lightweight foreground service that keeps the DNS scan process alive when the
- * app is backgrounded and shows a sticky progress notification.
- *
- * Scan logic stays in DnsScannerViewModel; this service is purely a process-keepalive
- * wrapper that observes ScanStateHolder and updates the notification accordingly.
- * Android is far less likely to kill a process that owns a foreground service.
- */
+/** Owns the notification and CPU wake lock for the lifetime of the active DNS/E2E run. */
 @AndroidEntryPoint
 class ScanService : Service() {
-
     companion object {
         const val ACTION_STOP = "app.slipnet.SCAN_STOP"
+        private const val WAKE_TIMEOUT_MS = 4 * 60 * 60 * 1000L
     }
 
-    @Inject
-    lateinit var notificationHelper: NotificationHelper
-
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var observerJob: Job? = null
-    private val notificationManager by lazy { getSystemService(NotificationManager::class.java) }
+    @Inject lateinit var notificationHelper: NotificationHelper
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var observer: Job? = null
+    private var owner: ScanRun? = null
+    private val wakeLock by lazy {
+        getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Rovunet:ScanWakeLock")
+            .apply { setReferenceCounted(false) }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            // User tapped "Stop" in the notification — signal the ViewModel to stop.
-            ScanStateHolder.update { it.copy(stopRequested = true) }
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
-            return START_NOT_STICKY
-        }
-
-        val initialState = ScanStateHolder.state.value
-        val notification = notificationHelper.createScanNotification(
-            initialState.scannedCount, initialState.totalCount,
-            initialState.workingCount, initialState.isE2eRunning
-        )
-
+        val run = ScanStateHolder.current
+        if (intent?.action == ACTION_STOP && intent.data?.schemeSpecificPart == run.id) run.stop()
+        observer?.cancel()
+        val initial = run.state.value
+        // Even a run cancelled before start delivery must satisfy startForegroundService's contract.
+        val notification = notification(run, initial)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NotificationHelper.SCAN_NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
+            startForeground(NotificationHelper.SCAN_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
             startForeground(NotificationHelper.SCAN_NOTIFICATION_ID, notification)
         }
-
-        // Observe scan state and keep the notification current; stop self when done.
-        observerJob?.cancel()
-        observerJob = serviceScope.launch {
-            ScanStateHolder.state.collect { s ->
-                if (!s.isScanning && !s.isE2eRunning) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                    return@collect
-                }
-                notificationManager.notify(
-                    NotificationHelper.SCAN_NOTIFICATION_ID,
-                    notificationHelper.createScanNotification(
-                        scannedCount = s.scannedCount, totalCount = s.totalCount,
-                        workingCount = s.workingCount, isE2eRunning = s.isE2eRunning,
-                        isScanning = s.isScanning,
-                        e2eTestedCount = s.e2eTestedCount, e2eTotalCount = s.e2eTotalCount,
-                        e2ePassedCount = s.e2ePassedCount
-                    )
-                )
-            }
+        if (owner !== run && wakeLock.isHeld) wakeLock.release()
+        owner = run
+        if (!initial.active) {
+            finish(startId)
+            return START_NOT_STICKY
         }
 
+        if (!wakeLock.isHeld) wakeLock.acquire(WAKE_TIMEOUT_MS)
+        observer = scope.launch {
+            run.state.collect { state ->
+                if (owner !== run) return@collect
+                if (state.active) {
+                    getSystemService(NotificationManager::class.java)
+                        .notify(NotificationHelper.SCAN_NOTIFICATION_ID, notification(run, state))
+                } else {
+                    finish(startId)
+                }
+            }
+        }
         return START_NOT_STICKY
+    }
+
+    private fun notification(run: ScanRun, state: ScanServiceState) =
+        notificationHelper.createScanNotification(
+            run.id, state.scannedCount, state.totalCount, state.workingCount,
+            state.isE2eRunning, state.isScanning, state.e2eTestedCount, state.e2eTotalCount, state.e2ePassedCount
+        )
+
+    private fun finish(startId: Int) {
+        owner = null
+        if (wakeLock.isHeld) wakeLock.release()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelfResult(startId)
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        owner?.stop()
+        finish(startId)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        serviceScope.cancel()
+        scope.cancel()
+        owner?.stop()
+        if (wakeLock.isHeld) wakeLock.release()
         super.onDestroy()
     }
 }
