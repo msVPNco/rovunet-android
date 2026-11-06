@@ -32,7 +32,8 @@ jobs:
           python3 tools/veyra/prepare-native.py
           df -h "$GITHUB_WORKSPACE"
           bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
-          bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
+          bash gradlew :app:assembleFullRelease :app:assembleFullReleaseAndroidTest -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true -ProvunetMinifiedBindingTests=true --stacktrace
+          cp app/build/outputs/apk/full/release/*-full-release-universal.apk "$RUNNER_TEMP/Rovunet-minified-private.apk"
       - name: Verify instrumented VPN and scanner behaviour
         run: |
           test -c /dev/kvm
@@ -44,16 +45,16 @@ jobs:
           "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx rovunet-ci
           "$ANDROID_HOME/emulator/emulator" -avd rovunet-ci -accel on -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/emulator.log" 2>&1 &
           emulator_pid=$!
-          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          trap 'device_exit=$?; if [[ "$device_exit" != 0 ]]; then adb -s "$ANDROID_SERIAL" logcat -d -b crash > "$RUNNER_TEMP/minified-device-crash.log" 2>&1; tail -160 "$RUNNER_TEMP/minified-device-crash.log"; fi; kill "$emulator_pid" 2>/dev/null || true; exit "$device_exit"' EXIT
           timeout 360 bash -c 'until [[ $(adb -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d "\r") == 1 ]]; do sleep 2; done' || { tail -60 "$RUNNER_TEMP/emulator.log"; exit 1; }
           adb -s "$ANDROID_SERIAL" shell wm dismiss-keyguard
           python3 tools/veyra/run-device-gate.py
       - name: Prepare the verified public APK for offline signing
         run: |
-          cp app/build/outputs/apk/full/release/*-full-release-universal.apk "$RUNNER_TEMP/Rovunet-minified-private.apk"
           bash gradlew :app:assembleFullRelease -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=false -ProvunetUnsignedPublication=true --stacktrace
           python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
       - name: Retain verified minified APKs
+        if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: alpha15-minified-private-validation
@@ -61,6 +62,8 @@ jobs:
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
             app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
+            app/build/outputs/apk/androidTest/full/release/*-androidTest.apk
             app/build/outputs/mapping/fullRelease/mapping.txt
+            ${{ runner.temp }}/minified-device-crash.log
           if-no-files-found: error
           retention-days: 5

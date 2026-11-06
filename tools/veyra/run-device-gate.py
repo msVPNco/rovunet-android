@@ -113,12 +113,15 @@ def main():
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")
 
     # Debug tests cannot detect JNI members removed by R8. Install the minified
-    # private candidate with the same test signer and start a fresh test process.
+    # private candidate and its matching Release instrumentation. Debug tests
+    # cannot be reused against obfuscated application/dependency bytecode.
     release, = (outputs / "full/release").glob("*-full-release-universal.apk")
+    release_tests, = (outputs / "androidTest/full/release").glob("*-androidTest.apk")
     subprocess.run([sys.executable, str(ROOT / "tools/quality/check-gomobile-apk.py"), str(release)], check=True)
     adb("shell", "am", "force-stop", PACKAGE)
-    if "Success" not in adb("install", "-r", "-t", "-g", str(release), timeout=300).splitlines():
-        raise RuntimeError("Could not install the minified private candidate")
+    for apk in (release, release_tests):
+        if "Success" not in adb("install", "-r", "-t", "-g", str(apk), timeout=300).splitlines():
+            raise RuntimeError(f"Could not install the minified binding fixture: {apk.name}")
     result = adb("shell", "am", "instrument", "-w", "-r", "-e", "class",
                  "app.slipnet.core.GomobileBindingDeviceTest",
                  f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=180)

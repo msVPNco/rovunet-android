@@ -32,6 +32,15 @@ existing full Debug suite remains required. A passing Debug suite alone is not
 enough evidence for this fix. API30/x86_64 success will still not claim validation
 of the reported API37/ARM device or every real resolver.
 
+The first complete device run passed all 31 Debug cases and the minified APK's
+DEX check, but reusing the Debug test APK against Release crashed the test
+process before a case started. That is not a passing Release test. The gate now
+builds matching instrumentation with `testBuildType = "release"`, using a private
+test-only property and a binding-only source directory. Test names are preserved
+in the test APK; application R8 remains enabled. Failed device runs retain their
+private APK, matching test APK, mapping and crash buffer for diagnosis. Artifact
+presence alone never constitutes a passing gate.
+
 Alpha15 is code26 and retains the pinned production identity for any eventual
 public APK. Private CI artifacts remain a separate package and are not published
 as a public update. Alpha14 assets/tags are immutable. The owner reported the

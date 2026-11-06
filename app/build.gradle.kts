@@ -16,6 +16,8 @@ plugins {
 val veyraPrebuiltNative = providers.gradleProperty("veyraPrebuiltNative").orNull == "true"
 val minSdkVersion = 24
 val deviceCandidate = providers.gradleProperty("rovunetDeviceCandidate").orNull == "true"
+val minifiedBindingTests = providers.gradleProperty("rovunetMinifiedBindingTests").orNull == "true"
+require(!minifiedBindingTests || deviceCandidate) { "Minified binding instrumentation requires the private candidate" }
 // Prepare a non-installable Release artifact for an offline signer; never a debug-signed public APK.
 val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
 require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
@@ -70,6 +72,7 @@ fun isOpenSslAvailable(): Boolean {
 }
 
 android {
+    testBuildType = if (minifiedBindingTests) "release" else "debug"
     val javaVersion = JavaVersion.VERSION_17
     namespace = "app.slipnet"
     compileSdk = 36
@@ -123,6 +126,7 @@ android {
             isShrinkResources = true
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro", "gomobile-consumer-rules.pro")
+            testProguardFiles("gomobile-test-rules.pro")
             signingConfig = when {
                 unsignedPublication -> null
                 deviceCandidate -> signingConfigs.getByName("debug")
@@ -132,6 +136,10 @@ android {
     }
 
     sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
+    sourceSets["androidTest"].java.apply {
+        if (minifiedBindingTests) setSrcDirs(listOf("src/gomobileTest/java"))
+        else srcDir("src/gomobileTest/java")
+    }
 
     buildFeatures {
         compose = true
