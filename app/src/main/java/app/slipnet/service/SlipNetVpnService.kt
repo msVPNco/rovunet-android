@@ -429,7 +429,9 @@ class SlipNetVpnService : VpnService() {
             StartupTeardown.await(abortStartup, previousConnect)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STARTUP_WORKERS_STOPPED, serviceSessionId)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_RUNTIME)
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_WAIT, serviceSessionId)
             previousRuntime.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_DONE, serviceSessionId)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_TEARDOWN)
             disconnectJob?.join()
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_NATIVE_OWNER)
@@ -729,7 +731,9 @@ class SlipNetVpnService : VpnService() {
             StartupTeardown.await(abortStartup, previousConnect)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STARTUP_WORKERS_STOPPED, serviceSessionId)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_RUNTIME)
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_WAIT, serviceSessionId)
             previousRuntime.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_DONE, serviceSessionId)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_PREVIOUS_TEARDOWN)
             disconnectJob?.join()
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.WAIT_NATIVE_OWNER)
@@ -5802,8 +5806,12 @@ class SlipNetVpnService : VpnService() {
         disconnectJob = serviceScope.launch {
             StartupTeardown.await(abortStartup, previousConnect)
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STARTUP_WORKERS_STOPPED, serviceSessionId)
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_WAIT, serviceSessionId)
             previousRuntime.join()
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_RUNTIME_DONE, serviceSessionId)
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_LOCK_WAIT, serviceSessionId)
             TunnelOperations.mutex.withLock {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_LOCK_ACQUIRED, serviceSessionId)
             if (!app.slipnet.domain.model.ServiceCommandPolicy.acceptsStop(session, requestedSessionId)) return@launch
             serviceSessionId = session
             TunnelOperations.owner = session
@@ -6144,20 +6152,25 @@ class SlipNetVpnService : VpnService() {
         lastNetworkDnsServers = emptySet()
 
         // Stop native tunnels on IO thread to avoid ANR.
-        // Timeout after 8s — if a bridge hangs, don't block the entire disconnect.
+        // Cooperative budget only: an uninterruptible JNI stop can outlast it.
+        // Stage events below distinguish runtime, lock, native and proxy waits.
         try {
             withTimeout(8000) {
                 withContext(Dispatchers.IO) {
                     if (!isProxyOnly) {
                         try {
+                            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_HEV_BEGIN, serviceSessionId)
                             HevSocks5Tunnel.stop()
+                            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_HEV_END, serviceSessionId)
                         } catch (e: Exception) {
                             Log.e(TAG, "Error stopping HevSocks5Tunnel", e)
                         }
                     }
 
                     try {
+                        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_PROXY_BEGIN, serviceSessionId)
                         stopCurrentProxy()
+                        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_PROXY_END, serviceSessionId)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error stopping proxy", e)
                     }
@@ -6171,6 +6184,7 @@ class SlipNetVpnService : VpnService() {
         // Must come after stopCurrentProxy() to avoid crashing native protectSocket() calls.
         clearVpnServiceRef()
 
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.STOP_TUN_BEGIN, serviceSessionId)
         // Close VPN interface
         try {
             vpnInterface?.close()

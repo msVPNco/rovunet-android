@@ -76,16 +76,28 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                 Box {
                     IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.rv_collection_actions_06a9e8)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_connection_tests)
+                        DropdownMenuItem(text = { Text(stringResource(if (connecting) R.string.ui_cancel_connection else if (connected) R.string.ui_disconnect else R.string.rv_connect_1a2303)) },
+                            enabled = !busy && canConnect, modifier = Modifier.testTag("collection-menu-connect"),
+                            onClick = { menuOpen = false; onConnect() })
+                        DropdownMenuItem(text = { Text(stringResource(if (expanded) R.string.ui_hide_paths else R.string.ui_show_paths)) },
+                            modifier = Modifier.testTag("collection-menu-paths"),
+                            onClick = { menuOpen = false; onDetails() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !busy,
                             onClick = { menuOpen = false; onStabilityTest() })
-                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_share_collection_82ddc2)) }, enabled = !busy,
-                            onClick = { menuOpen = false; onExport() })
+                        HorizontalDivider()
+                        app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_manage)
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_rename_3064d7)) }, enabled = !busy,
                             onClick = { menuOpen = false; onRename() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_move_to_collection_b392f3)) }, enabled = !busy && !connected,
                             onClick = { menuOpen = false; onMove() })
+                        HorizontalDivider()
+                        app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_share)
+                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_share_collection_82ddc2)) }, enabled = !busy,
+                            onClick = { menuOpen = false; onExport() })
+                        HorizontalDivider()
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete_collection), color = colors.error) }, enabled = canDelete && !busy,
                             onClick = { menuOpen = false; onDelete() })
                     }

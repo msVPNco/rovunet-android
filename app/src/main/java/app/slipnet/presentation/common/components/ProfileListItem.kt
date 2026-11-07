@@ -98,23 +98,29 @@ fun ProfileListItem(
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.ui_more_actions)) }
                 DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                    ActionMenuSectionLabel(R.string.menu_connection_tests)
                     DropdownMenuItem(text = { Text(stringResource(if (isConnecting) R.string.ui_cancel_connection else if (isConnected) R.string.ui_disconnect else R.string.rv_connect_1a2303)) },
                         modifier = Modifier.testTag("profile-connect-${profile.id}"),
                         enabled = !isPingRunning && (isConnecting || isConnected || canStart),
                         onClick = { menu = false; onConnectClick() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_edit)) }, enabled = canEdit, onClick = { menu = false; onEditClick() })
-                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_test_details)) }, enabled = pingResult != null,
+                    DropdownMenuItem(text = { Text(stringResource(if (details) R.string.ui_hide_test_details else R.string.ui_test_details)) }, enabled = pingResult != null,
                         onClick = { menu = false; details = !details })
                     DropdownMenuItem(text = { Text(stringResource(R.string.probe_quick_test)) }, enabled = !isPingRunning,
                         onClick = { menu = false; onPingClick() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !isPingRunning,
                         onClick = { menu = false; onStabilityTestClick() })
+                    HorizontalDivider()
+                    ActionMenuSectionLabel(R.string.menu_manage)
+                    DropdownMenuItem(text = { Text(stringResource(R.string.ui_edit)) }, enabled = canEdit, onClick = { menu = false; onEditClick() })
                     DropdownMenuItem(text = { Text(stringResource(if (profile.isPinned) R.string.ui_unpin else R.string.ui_pin)) },
                         onClick = { menu = false; onPinClick() })
                     if (!profile.isLocked || profile.allowSharing) {
+                        HorizontalDivider()
+                        ActionMenuSectionLabel(R.string.menu_share)
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_366489)) }, onClick = { menu = false; onExportClick() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.ui_share_qr)) }, onClick = { menu = false; onShareQrClick() })
                     }
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text(stringResource(R.string.ui_delete), color = colors.error) },
                         enabled = !isConnected && !isConnecting && !isPingRunning,
                         onClick = { menu = false; onDeleteClick() })

@@ -14,6 +14,11 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.CardInteractionDeviceTest", "collectionMenuBrowsingAndExplicitConnectionRemainSeparate"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "persianScannerUsesTranslatedLabelsAcrossAllModes"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "changingLanguageUpdatesScannerLabelsWithoutLosingTransportSelection"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "persianResultsAndValidationErrorsDoNotExposeEnglishBackendMessages"),
+
     ("app.slipnet.core.GomobileBindingDeviceTest", "nativeConstructorsAndReferenceCallbacksSurviveMinification"),
     ("app.slipnet.core.GomobileBindingDeviceTest", "nativeErrorConstructorSurvivesMinification"),
     ("app.slipnet.presentation.CardInteractionDeviceTest", "lockedPathDoesNotRevealTheRestoredDestinationLine"),
@@ -111,6 +116,13 @@ def main():
                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=900)
     print(result, flush=True)
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")
+
+    # Synthetic scanner screenshot: no real profile, address or credential data.
+    previews = ROOT / "tools/veyra/device-results"
+    previews.mkdir(exist_ok=True)
+    with (previews / "scanner-fa-review02.png").open("wb") as image:
+        subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
+                        "cat", "files/scanner-fa-review02.png"], stdout=image, check=True)
 
     # Debug tests cannot detect JNI members removed by R8. Install the minified
     # private candidate and its matching Release instrumentation. Debug tests

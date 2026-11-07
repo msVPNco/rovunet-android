@@ -1,6 +1,7 @@
 package app.slipnet.presentation.scanner
 
 import app.slipnet.presentation.theme.rv
+import androidx.compose.ui.res.stringResource
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,6 +21,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -145,7 +147,7 @@ fun DnsScannerScreen(
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            snackbarHostState.showSnackbar(scannerErrorText(context, error))
             viewModel.clearError()
         }
     }
@@ -161,28 +163,24 @@ fun DnsScannerScreen(
         val ss = uiState.scannerState
         val isSimple = uiState.scanMode == ScanMode.SIMPLE
         val isE2eOnly = uiState.scanMode == ScanMode.E2E
-        val dialogText = if (isE2eOnly) {
-            val e2e = uiState.simpleModeE2eState
-            "E2E tested ${e2e.testedCount} of ${e2e.queuedCount} resolvers, ${e2e.passedCount} passed." +
-                " Continue from where you left off?"
-        } else if (isSimple) {
-            val e2e = uiState.simpleModeE2eState
-            buildString {
-                append("You scanned ${ss.scannedCount} of ${ss.totalCount}${if (ss.focusRangeCount > 0) " + ${ss.focusRangeCount} neighbors" else ""} resolvers")
-                append(" and found ${ss.workingCount} working.")
-                if (e2e.testedCount > 0) {
-                    append(" E2E tested ${e2e.testedCount}, ${e2e.passedCount} passed.")
-                }
-                append(" Continue from where you left off?")
+        val scannerResources = androidx.compose.ui.platform.LocalResources.current
+        val e2e = uiState.simpleModeE2eState
+        val dialogText = buildString {
+            if (!isE2eOnly) {
+                append(scannerResources.getString(app.slipnet.R.string.scanner_resume_dns,
+                    ss.scannedCount, ss.totalCount, ss.focusRangeCount, ss.workingCount))
+                append("\n")
             }
-        } else {
-            "You scanned ${ss.scannedCount} of ${ss.totalCount}${if (ss.focusRangeCount > 0) " + ${ss.focusRangeCount} neighbors" else ""} resolvers" +
-                    " and found ${ss.workingCount} working." +
-                    " Continue from where you left off?"
+            if (isE2eOnly || (isSimple && e2e.testedCount > 0)) {
+                append(scannerResources.getString(app.slipnet.R.string.scanner_resume_e2e,
+                    e2e.testedCount, e2e.queuedCount, e2e.passedCount))
+                append("\n")
+            }
+            append(scannerResources.getString(app.slipnet.R.string.scanner_resume_question))
         }
         AlertDialog(
             onDismissRequest = { viewModel.dismissResumeDialog() },
-            title = { Text("Continue Previous Scan?") },
+            title = { Text(stringResource(app.slipnet.R.string.scanner_resume_title)) },
             text = { Text(dialogText) },
             confirmButton = {
                 Button(onClick = { viewModel.resumeScan() }) {
@@ -191,7 +189,7 @@ fun DnsScannerScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.startFreshScan() }) {
-                    Text("Start Fresh")
+                    Text(stringResource(app.slipnet.R.string.scanner_start_fresh))
                 }
             }
         )
@@ -203,16 +201,16 @@ fun DnsScannerScreen(
         val e2eCount = uiState.lastScanE2ePassedIps.size
         AlertDialog(
             onDismissRequest = { viewModel.dismissLastScanIpsDialog() },
-            title = { Text("Load Last Scan IPs") },
+            title = { Text(stringResource(app.slipnet.R.string.scanner_load_previous)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Choose which IPs to load as the resolver list:")
+                    Text(stringResource(app.slipnet.R.string.scanner_choose_previous))
                     FilledTonalButton(
                         onClick = { viewModel.loadLastScanWorkingIps() },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Working IPs ($workingCount)")
+                        Text(stringResource(app.slipnet.R.string.scanner_counters_working , workingCount))
                     }
                     FilledTonalButton(
                         onClick = { viewModel.loadLastScanE2ePassedIps() },
@@ -220,7 +218,7 @@ fun DnsScannerScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("E2E Passed IPs ($e2eCount)")
+                        Text(stringResource(app.slipnet.R.string.scanner_counters_e2e , e2eCount))
                     }
                 }
             },
@@ -241,7 +239,7 @@ fun DnsScannerScreen(
                 title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_dns_scanner_a08849)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.stopAll(); onNavigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(app.slipnet.R.string.rv_back_76900f))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -407,7 +405,7 @@ fun DnsScannerScreen(
 }
 
 @Composable
-private fun HeroCard() {
+internal fun HeroCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -439,14 +437,14 @@ private fun HeroCard() {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Find Working Resolvers",
+                    text = stringResource(app.slipnet.R.string.scanner_hero_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Scan DNS servers to find ones that work without censorship.",
+                    text = stringResource(app.slipnet.R.string.scanner_hero_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                 )
@@ -456,7 +454,7 @@ private fun HeroCard() {
 }
 
 @Composable
-private fun ActionSection(
+internal fun ActionSection(
     canStartScan: Boolean,
     hasResults: Boolean,
     workingCount: Int,
@@ -465,14 +463,14 @@ private fun ActionSection(
     onViewResults: () -> Unit
 ) {
     val buttonLabel = when (scanMode) {
-        ScanMode.SIMPLE -> "Start Simple Scan"
-        ScanMode.E2E -> "Start E2E Scan"
-        else -> "Start Scan"
+        ScanMode.SIMPLE -> stringResource(app.slipnet.R.string.scanner_start_simple)
+        ScanMode.E2E -> stringResource(app.slipnet.R.string.scanner_start_e2e)
+        else -> stringResource(app.slipnet.R.string.rv_start_scan_1f5473)
     }
     val resultsLabel = when (scanMode) {
-        ScanMode.SIMPLE, ScanMode.E2E -> "View Results ($workingCount passed)"
-        ScanMode.PRISM -> "View Results ($workingCount verified)"
-        else -> "View Results ($workingCount working)"
+        ScanMode.SIMPLE, ScanMode.E2E -> stringResource(app.slipnet.R.string.scanner_results_passed , workingCount)
+        ScanMode.PRISM -> stringResource(app.slipnet.R.string.scanner_results_verified , workingCount)
+        else -> stringResource(app.slipnet.R.string.scanner_results_working , workingCount)
     }
 
     Column(
@@ -526,8 +524,9 @@ private fun ActionSection(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ScanModeToggle(
+internal fun ScanModeToggle(
     scanMode: ScanMode,
     canUseSimpleMode: Boolean,
     canUsePrismMode: Boolean = false,
@@ -537,15 +536,16 @@ private fun ScanModeToggle(
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (canUseSimpleMode) {
                 FilterChip(
                     selected = scanMode == ScanMode.SIMPLE,
                     onClick = { onModeChange(ScanMode.SIMPLE) },
                     enabled = enabled,
-                    label = { Text("Simple") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_simple)) },
                     leadingIcon = if (scanMode == ScanMode.SIMPLE) {
                         { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null,
@@ -575,7 +575,7 @@ private fun ScanModeToggle(
                     selected = scanMode == ScanMode.E2E,
                     onClick = { onModeChange(ScanMode.E2E) },
                     enabled = enabled,
-                    label = { Text("E2E") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_e2e)) },
                     leadingIcon = if (scanMode == ScanMode.E2E) {
                         { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null,
@@ -635,9 +635,9 @@ private fun ScanModeToggle(
         } else {
             Text(
                 text = when (scanMode) {
-                    ScanMode.SIMPLE -> "Scans DNS resolvers and automatically tests each one through the tunnel. Only resolvers that pass the tunnel test are shown."
-                    ScanMode.E2E -> "Tests each resolver directly through the tunnel, skipping DNS compatibility checks. Slower but tests real connectivity."
-                    else -> "Scan DNS resolvers first, then optionally run tunnel test separately."
+                    ScanMode.SIMPLE -> stringResource(app.slipnet.R.string.scanner_simple_hint)
+                    ScanMode.E2E -> stringResource(app.slipnet.R.string.scanner_e2e_hint)
+                    else -> stringResource(app.slipnet.R.string.scanner_advanced_hint)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -647,7 +647,7 @@ private fun ScanModeToggle(
 }
 
 @Composable
-private fun ConfigurationSection(
+internal fun ConfigurationSection(
     testDomain: String,
     isProfileLocked: Boolean = false,
     scanPort: String,
@@ -702,7 +702,7 @@ private fun ConfigurationSection(
         ) {
             SectionHeader(
                 icon = Icons.Default.Settings,
-                title = "Configuration"
+                title = stringResource(app.slipnet.R.string.scanner_configuration)
             )
 
             // Prism/E2E modes use the profile's tunnel domain — hide the editable field.
@@ -710,9 +710,9 @@ private fun ConfigurationSection(
                 OutlinedTextField(
                     value = testDomain,
                     onValueChange = onTestDomainChange,
-                    label = { Text("Test Domain") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_test_domain)) },
                     placeholder = {
-                        Text(if (isProfileLocked) "Profile domain (default)" else "google.com")
+                        Text(if (isProfileLocked) stringResource(app.slipnet.R.string.scanner_profile_domain) else "google.com")
                     },
                     leadingIcon = {
                         Icon(
@@ -723,8 +723,8 @@ private fun ConfigurationSection(
                     },
                     supportingText = {
                         Text(
-                            if (isProfileLocked && testDomain.isBlank()) "Using profile domain — enter a domain to override"
-                            else "Domain used to test if resolvers work"
+                            if (isProfileLocked && testDomain.isBlank()) stringResource(app.slipnet.R.string.scanner_override_domain)
+                            else stringResource(app.slipnet.R.string.scanner_test_domain_hint)
                         )
                     },
                     singleLine = true,
@@ -738,7 +738,7 @@ private fun ConfigurationSection(
                 OutlinedTextField(
                     value = scanPort,
                     onValueChange = onScanPortChange,
-                    label = { Text("Resolver Port") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_resolver_port)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -752,9 +752,9 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = e2eTimeoutMs,
                         onValueChange = { onE2eTimeoutChange(it.filter { c -> c.isDigit() }) },
-                        label = { Text("E2E Timeout") },
-                        suffix = { Text("ms") },
-                        supportingText = { Text("Timeout per resolver") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_e2e_timeout)) },
+                        suffix = { Text(stringResource(app.slipnet.R.string.scanner_ms)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_timeout_per_resolver)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -764,8 +764,8 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = e2eConcurrency,
                         onValueChange = { onE2eConcurrencyChange(it.filter { c -> c.isDigit() }.take(2)) },
-                        label = { Text("Workers") },
-                        supportingText = { Text("1-10, Slip. max 1") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_workers)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_worker_limit)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -780,11 +780,11 @@ private fun ConfigurationSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "HTTP/SSH verification",
+                            text = stringResource(app.slipnet.R.string.scanner_http_ssh_verification),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Verify HTTP connectivity through the tunnel (adds ~1-5s per resolver).",
+                            text = stringResource(app.slipnet.R.string.scanner_verification_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -798,7 +798,7 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = testUrl,
                         onValueChange = onTestUrlChange,
-                        label = { Text("Test URL (E2E)") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_test_url)) },
                         placeholder = { Text("http://www.gstatic.com/generate_204") },
                         leadingIcon = {
                             Icon(
@@ -807,7 +807,7 @@ private fun ConfigurationSection(
                                 modifier = Modifier.size(20.dp)
                             )
                         },
-                        supportingText = { Text("URL for tunnel connectivity test") },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_test_url_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -832,8 +832,8 @@ private fun ConfigurationSection(
                         OutlinedTextField(
                             value = timeoutMs,
                             onValueChange = onTimeoutChange,
-                            label = { Text("Timeout") },
-                            suffix = { Text("ms") },
+                            label = { Text(stringResource(app.slipnet.R.string.scanner_timeout)) },
+                            suffix = { Text(stringResource(app.slipnet.R.string.scanner_ms)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             modifier = Modifier.weight(1f),
@@ -844,7 +844,7 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = concurrency,
                         onValueChange = onConcurrencyChange,
-                        label = { Text("Workers") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_workers)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(0.8f),
@@ -858,14 +858,14 @@ private fun ConfigurationSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Transport",
+                        text = stringResource(app.slipnet.R.string.scanner_transport),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     ScanTransportMode.entries.forEach { mode ->
                         FilterChip(
                             selected = scanTransport == mode,
                             onClick = { onScanTransportChange(mode) },
-                            label = { Text(mode.displayName) },
+                            label = { Text(scannerTransportName(mode.displayName)) },
                             leadingIcon = if (scanTransport == mode) {
                                 { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                             } else null,
@@ -895,7 +895,7 @@ private fun ConfigurationSection(
                             tint = MaterialTheme.colorScheme.tertiary
                         )
                         Text(
-                            text = "Profile uses ${profileDnsTransport?.displayName} — E2E will test with ${profileDnsTransport?.displayName}, stage 1 with ${scanTransport.displayName}",
+                            text = stringResource(app.slipnet.R.string.scanner_transport_hint , profileDnsTransport?.displayName.orEmpty(), scannerTransportName(scanTransport.displayName)),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -911,8 +911,8 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = prismProbeCount,
                         onValueChange = onPrismProbeCountChange,
-                        label = { Text("Probes") },
-                        supportingText = { Text("Requests per resolver") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_probes)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_requests_per_resolver)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -922,8 +922,8 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = prismPassThreshold,
                         onValueChange = onPrismPassThresholdChange,
-                        label = { Text("Pass threshold") },
-                        supportingText = { Text("Min to pass") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_pass_threshold)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_min_to_pass)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -940,14 +940,14 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = prismTimeoutMs,
                         onValueChange = { onPrismTimeoutChange(it.filter { c -> c.isDigit() }) },
-                        label = { Text("Timeout (per resolver)") },
-                        suffix = { Text("ms") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_resolver_timeout)) },
+                        suffix = { Text(stringResource(app.slipnet.R.string.scanner_ms)) },
                         isError = perProbeTooLow,
                         supportingText = {
                             if (perProbeTooLow) {
-                                Text("${rawPerProbe}ms per probe — min 200ms required")
+                                Text(stringResource(app.slipnet.R.string.scanner_probe_ms_min , rawPerProbe))
                             } else {
-                                Text("${rawPerProbe}ms per probe")
+                                Text(stringResource(app.slipnet.R.string.scanner_probe_ms , rawPerProbe))
                             }
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -959,9 +959,9 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = prismResponseSize,
                         onValueChange = onPrismResponseSizeChange,
-                        label = { Text("Response size") },
-                        suffix = { Text("B") },
-                        supportingText = { Text("0 = server default") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_response_size)) },
+                        suffix = { Text(stringResource(app.slipnet.R.string.scanner_byte)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_server_default)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -975,9 +975,9 @@ private fun ConfigurationSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Pre-filter dead resolvers", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(app.slipnet.R.string.scanner_prefilter), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            text = "Quick DNS check to skip dead IPs before prism probes (uses test domain)",
+                            text = stringResource(app.slipnet.R.string.scanner_prefilter_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -992,9 +992,9 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = prismPrefilterTimeoutMs,
                         onValueChange = { onPrismPrefilterTimeoutChange(it.filter { c -> c.isDigit() }) },
-                        label = { Text("Pre-filter timeout") },
-                        suffix = { Text("ms") },
-                        supportingText = { Text("Min 500ms") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_prefilter_timeout)) },
+                        suffix = { Text(stringResource(app.slipnet.R.string.scanner_ms)) },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_min_500)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -1005,9 +1005,9 @@ private fun ConfigurationSection(
                 OutlinedTextField(
                     value = e2eTimeoutMs,
                     onValueChange = { onE2eTimeoutChange(it.filter { c -> c.isDigit() }) },
-                    label = { Text("E2E Timeout") },
-                    suffix = { Text("ms") },
-                    supportingText = { Text("Timeout per resolver for tunnel test") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_e2e_timeout)) },
+                    suffix = { Text(stringResource(app.slipnet.R.string.scanner_ms)) },
+                    supportingText = { Text(stringResource(app.slipnet.R.string.scanner_tunnel_timeout_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -1018,7 +1018,7 @@ private fun ConfigurationSection(
                     onClick = onResetPrismSettings,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Reset to defaults")
+                    Text(stringResource(app.slipnet.R.string.scanner_reset_defaults))
                 }
             }
 
@@ -1040,7 +1040,7 @@ private fun ConfigurationSection(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Shuffle IP list",
+                            text = stringResource(app.slipnet.R.string.scanner_shuffle),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -1068,7 +1068,7 @@ private fun ConfigurationSection(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Test nearby IPs (/24 subnet)",
+                                text = stringResource(app.slipnet.R.string.scanner_nearby),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -1078,7 +1078,7 @@ private fun ConfigurationSection(
                         )
                     }
                     Text(
-                        text = "When a working IP is found, also tests all 256 IPs in its /24 subnet. Only applies to country and custom range scans.",
+                        text = stringResource(app.slipnet.R.string.scanner_nearby_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1093,11 +1093,11 @@ private fun ConfigurationSection(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "HTTP/SSH verification",
+                            text = stringResource(app.slipnet.R.string.scanner_http_ssh_verification),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = "Verify HTTP connectivity through the tunnel (adds ~1–5s per resolver).",
+                            text = stringResource(app.slipnet.R.string.scanner_verification_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1111,7 +1111,7 @@ private fun ConfigurationSection(
                     OutlinedTextField(
                         value = testUrl,
                         onValueChange = onTestUrlChange,
-                        label = { Text("Test URL (E2E)") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_test_url)) },
                         placeholder = { Text("http://www.gstatic.com/generate_204") },
                         leadingIcon = {
                             Icon(
@@ -1120,7 +1120,7 @@ private fun ConfigurationSection(
                                 modifier = Modifier.size(20.dp)
                             )
                         },
-                        supportingText = { Text("URL for tunnel connectivity test") },
+                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_test_url_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -1133,7 +1133,7 @@ private fun ConfigurationSection(
                 OutlinedTextField(
                     value = e2eTimeoutMs,
                     onValueChange = { onE2eTimeoutChange(it.filter { c -> c.isDigit() }) },
-                    label = { Text("E2E Timeout (ms)") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_e2e_timeout_ms)) },
                     placeholder = { Text("10000") },
                     leadingIcon = {
                         Icon(
@@ -1142,7 +1142,7 @@ private fun ConfigurationSection(
                             modifier = Modifier.size(20.dp)
                         )
                     },
-                    supportingText = { Text("Timeout per resolver for tunnel test") },
+                    supportingText = { Text(stringResource(app.slipnet.R.string.scanner_tunnel_timeout_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1150,7 +1150,7 @@ private fun ConfigurationSection(
                 OutlinedTextField(
                     value = e2eConcurrency,
                     onValueChange = { onE2eConcurrencyChange(it.filter { c -> c.isDigit() }.take(2)) },
-                    label = { Text("E2E Concurrency") },
+                    label = { Text(stringResource(app.slipnet.R.string.scanner_e2e_concurrency)) },
                     placeholder = { Text("6") },
                     leadingIcon = {
                         Icon(
@@ -1159,7 +1159,7 @@ private fun ConfigurationSection(
                             modifier = Modifier.size(20.dp)
                         )
                     },
-                    supportingText = { Text("Parallel tunnel tests (1-10, Slipstream max 1)") },
+                    supportingText = { Text(stringResource(app.slipnet.R.string.scanner_parallel_limit)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -1254,7 +1254,7 @@ private fun ResolverListSection(
         ) {
             SectionHeader(
                 icon = Icons.Default.Storage,
-                title = "Resolver List"
+                title = stringResource(app.slipnet.R.string.scanner_resolver_list)
             )
 
             // Resolver count row
@@ -1287,18 +1287,18 @@ private fun ResolverListSection(
 
                 Column {
                     Text(
-                        text = "$resolverCount resolvers",
+                        text = stringResource(app.slipnet.R.string.scanner_resolver_count , resolverCount),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = when (listSource) {
-                            ListSource.DEFAULT -> "Built-in list"
-                            ListSource.IMPORTED -> if (importedFileName != null) "Imported: $importedFileName" else "Imported from file"
-                            ListSource.COUNTRY_RANGE -> "${selectedCountry.displayName} IP range ($effectiveSampleCount random IPs)"
-                            ListSource.CUSTOM_RANGE -> "Custom range ($resolverCount IPs)"
-                            ListSource.IR_DNS_RANGE -> "IR DNS range ($effectiveSampleCount random IPs)"
-                            ListSource.IR_DNS_LITE_RANGE -> "IR DNS Lite ($effectiveSampleCount random IPs)"
+                            ListSource.DEFAULT -> stringResource(app.slipnet.R.string.scanner_builtin)
+                            ListSource.IMPORTED -> if (importedFileName != null) stringResource(app.slipnet.R.string.scanner_imported_name , importedFileName.orEmpty()) else stringResource(app.slipnet.R.string.scanner_imported_file)
+                            ListSource.COUNTRY_RANGE -> stringResource(app.slipnet.R.string.scanner_country_sample , scannerCountryName(selectedCountry.code), effectiveSampleCount)
+                            ListSource.CUSTOM_RANGE -> stringResource(app.slipnet.R.string.scanner_custom_sample , resolverCount)
+                            ListSource.IR_DNS_RANGE -> stringResource(app.slipnet.R.string.scanner_iran_sample , effectiveSampleCount)
+                            ListSource.IR_DNS_LITE_RANGE -> stringResource(app.slipnet.R.string.scanner_iran_lite_sample , effectiveSampleCount)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1325,7 +1325,7 @@ private fun ResolverListSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Default", maxLines = 1)
+                    Text(stringResource(app.slipnet.R.string.scanner_default), maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -1372,7 +1372,7 @@ private fun ResolverListSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Country", maxLines = 1)
+                    Text(stringResource(app.slipnet.R.string.scanner_country), maxLines = 1)
                 }
 
                 OutlinedButton(
@@ -1396,7 +1396,7 @@ private fun ResolverListSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Custom", maxLines = 1)
+                    Text(stringResource(app.slipnet.R.string.scanner_custom), maxLines = 1)
                 }
             }
 
@@ -1423,7 +1423,7 @@ private fun ResolverListSection(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("IR DNS Ranges", maxLines = 1)
+                Text(stringResource(app.slipnet.R.string.scanner_iran_ranges), maxLines = 1)
             }
 
             OutlinedButton(
@@ -1449,7 +1449,7 @@ private fun ResolverListSection(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("IR DNS Lite", maxLines = 1)
+                Text(stringResource(app.slipnet.R.string.scanner_iran_lite), maxLines = 1)
             }
 
             // Country / Custom / IR DNS range panel (single AnimatedContent to avoid double-layout)
@@ -1469,12 +1469,12 @@ private fun ResolverListSection(
                             OutlinedTextField(
                                 value = customRangeInput,
                                 onValueChange = onCustomRangeInputChange,
-                                label = { Text("IP Ranges") },
+                                label = { Text(stringResource(app.slipnet.R.string.scanner_ip_ranges)) },
                                 placeholder = { Text("8.8.8.0/24\n1.1.1.1-1.1.1.10\n9.9.9.9\n1.2.3.4:53,5.6.7.8:53") },
                                 supportingText = {
                                     Text(
-                                        if (customRangePreviewCount > 0) "~%,d IPs \u2022 CIDR, range, comma-separated, or single IP".format(customRangePreviewCount)
-                                        else "CIDR, range, comma-separated, or single IP"
+                                        if (customRangePreviewCount > 0) stringResource(app.slipnet.R.string.scanner_range_preview , customRangePreviewCount)
+                                        else stringResource(app.slipnet.R.string.scanner_range_hint)
                                     )
                                 },
                                 modifier = Modifier
@@ -1503,7 +1503,7 @@ private fun ResolverListSection(
                                     )
                                 }
                                 Spacer(Modifier.width(8.dp))
-                                Text("Load IPs")
+                                Text(stringResource(app.slipnet.R.string.scanner_load_ips))
                             }
 
                             AnimatedVisibility(
@@ -1537,7 +1537,7 @@ private fun ResolverListSection(
                             // Country selector
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "Country",
+                                    text = stringResource(app.slipnet.R.string.scanner_country),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1549,7 +1549,7 @@ private fun ResolverListSection(
                                         OptionChip(
                                             selected = selectedCountry == country,
                                             onClick = { onSelectCountry(country) },
-                                            label = country.displayName
+                                            label = scannerCountryName(country.code)
                                         )
                                     }
                                 }
@@ -1569,24 +1569,24 @@ private fun ResolverListSection(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${cidrGroups.sumOf { it.rangeCount }} ranges",
+                                            text = stringResource(app.slipnet.R.string.scanner_range_count , cidrGroups.sumOf { it.rangeCount }),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d total IPs".format(countryTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_total_ips , countryTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "${selectedOctets.size}/${cidrGroups.size} groups",
+                                            text = stringResource(app.slipnet.R.string.scanner_groups_count , selectedOctets.size, cidrGroups.size),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d selected IPs".format(selectedTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_selected_ips , selectedTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -1597,7 +1597,7 @@ private fun ResolverListSection(
                             // Sample count selector
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "Sample Size",
+                                    text = stringResource(app.slipnet.R.string.scanner_sample_size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1615,23 +1615,23 @@ private fun ResolverListSection(
                                     OptionChip(
                                         selected = useCustomSampleCount,
                                         onClick = { onUseCustomSampleCount(true) },
-                                        label = "Custom"
+                                        label = stringResource(app.slipnet.R.string.scanner_custom)
                                     )
                                 }
                                 AnimatedVisibility(visible = useCustomSampleCount) {
                                     OutlinedTextField(
                                         value = customSampleCountText,
                                         onValueChange = onCustomSampleCountChange,
-                                        label = { Text("Count") },
-                                        placeholder = { Text("e.g. 3000") },
+                                        label = { Text(stringResource(app.slipnet.R.string.scanner_count)) },
+                                        placeholder = { Text(stringResource(app.slipnet.R.string.scanner_example_count)) },
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp),
-                                        supportingText = { Text("1 - %,d".format(DnsScannerUiState.MAX_SAMPLE_COUNT)) },
+                                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_count_bounds , DnsScannerUiState.MAX_SAMPLE_COUNT)) },
                                         trailingIcon = if (selectedTotalIps > 0) {
                                             {
                                                 Text(
-                                                    text = "Max",
+                                                    text = stringResource(app.slipnet.R.string.scanner_max),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     color = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier
@@ -1672,20 +1672,20 @@ private fun ResolverListSection(
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                             Text(
-                                                text = "IP Range Groups (${selectedOctets.size}/${cidrGroups.size} selected)",
+                                                text = stringResource(app.slipnet.R.string.scanner_range_groups , selectedOctets.size, cidrGroups.size),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(
-                                                text = "All",
+                                                text = stringResource(app.slipnet.R.string.scanner_all),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onSelectAllOctets() }
                                             )
                                             Text(
-                                                text = "None",
+                                                text = stringResource(app.slipnet.R.string.scanner_none),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onDeselectAllOctets() }
@@ -1732,7 +1732,7 @@ private fun ResolverListSection(
                                                             modifier = Modifier.width(80.dp)
                                                         )
                                                         Text(
-                                                            text = "${group.rangeCount} ranges",
+                                                            text = stringResource(app.slipnet.R.string.scanner_range_count , group.rangeCount),
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.weight(1f)
@@ -1770,7 +1770,7 @@ private fun ResolverListSection(
                                     )
                                 }
                                 Spacer(Modifier.width(8.dp))
-                                Text("Generate $effectiveSampleCount ${selectedCountry.displayName} IPs")
+                                Text(stringResource(app.slipnet.R.string.scanner_generate_country , effectiveSampleCount, scannerCountryName(selectedCountry.code)))
                             }
 
                             // Start Scan button after generation
@@ -1816,24 +1816,24 @@ private fun ResolverListSection(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${cidrGroups.sumOf { it.rangeCount }} ranges",
+                                            text = stringResource(app.slipnet.R.string.scanner_range_count , cidrGroups.sumOf { it.rangeCount }),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d total IPs".format(countryTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_total_ips , countryTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "${selectedOctets.size}/${cidrGroups.size} groups",
+                                            text = stringResource(app.slipnet.R.string.scanner_groups_count , selectedOctets.size, cidrGroups.size),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d selected IPs".format(selectedTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_selected_ips , selectedTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -1865,20 +1865,20 @@ private fun ResolverListSection(
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                             Text(
-                                                text = "IP Range Groups (${selectedOctets.size}/${cidrGroups.size} selected)",
+                                                text = stringResource(app.slipnet.R.string.scanner_range_groups , selectedOctets.size, cidrGroups.size),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(
-                                                text = "All",
+                                                text = stringResource(app.slipnet.R.string.scanner_all),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onSelectAllOctets() }
                                             )
                                             Text(
-                                                text = "None",
+                                                text = stringResource(app.slipnet.R.string.scanner_none),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onDeselectAllOctets() }
@@ -1925,7 +1925,7 @@ private fun ResolverListSection(
                                                             modifier = Modifier.width(80.dp)
                                                         )
                                                         Text(
-                                                            text = "${group.rangeCount} ranges",
+                                                            text = stringResource(app.slipnet.R.string.scanner_range_count , group.rangeCount),
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.weight(1f)
@@ -1946,7 +1946,7 @@ private fun ResolverListSection(
                             // Sample count selector
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "Sample Size",
+                                    text = stringResource(app.slipnet.R.string.scanner_sample_size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1964,23 +1964,23 @@ private fun ResolverListSection(
                                     OptionChip(
                                         selected = useCustomSampleCount,
                                         onClick = { onUseCustomSampleCount(true) },
-                                        label = "Custom"
+                                        label = stringResource(app.slipnet.R.string.scanner_custom)
                                     )
                                 }
                                 AnimatedVisibility(visible = useCustomSampleCount) {
                                     OutlinedTextField(
                                         value = customSampleCountText,
                                         onValueChange = onCustomSampleCountChange,
-                                        label = { Text("Count") },
-                                        placeholder = { Text("e.g. 3000") },
+                                        label = { Text(stringResource(app.slipnet.R.string.scanner_count)) },
+                                        placeholder = { Text(stringResource(app.slipnet.R.string.scanner_example_count)) },
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp),
-                                        supportingText = { Text("1 - %,d".format(DnsScannerUiState.MAX_SAMPLE_COUNT)) },
+                                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_count_bounds , DnsScannerUiState.MAX_SAMPLE_COUNT)) },
                                         trailingIcon = if (selectedTotalIps > 0) {
                                             {
                                                 Text(
-                                                    text = "Max",
+                                                    text = stringResource(app.slipnet.R.string.scanner_max),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     color = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier
@@ -2017,7 +2017,7 @@ private fun ResolverListSection(
                                     )
                                 }
                                 Spacer(Modifier.width(8.dp))
-                                Text("Generate $effectiveSampleCount IR DNS IPs")
+                                Text(stringResource(app.slipnet.R.string.scanner_generate_iran , effectiveSampleCount))
                             }
 
                             // Start Scan button after loading
@@ -2063,24 +2063,24 @@ private fun ResolverListSection(
                                 ) {
                                     Column {
                                         Text(
-                                            text = "${cidrGroups.sumOf { it.rangeCount }} ranges",
+                                            text = stringResource(app.slipnet.R.string.scanner_range_count , cidrGroups.sumOf { it.rangeCount }),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d total IPs".format(countryTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_total_ips , countryTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "${selectedOctets.size}/${cidrGroups.size} groups",
+                                            text = stringResource(app.slipnet.R.string.scanner_groups_count , selectedOctets.size, cidrGroups.size),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "%,d selected IPs".format(selectedTotalIps),
+                                            text = stringResource(app.slipnet.R.string.scanner_selected_ips , selectedTotalIps),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.primary
                                         )
@@ -2112,20 +2112,20 @@ private fun ResolverListSection(
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                             Text(
-                                                text = "IP Range Groups (${selectedOctets.size}/${cidrGroups.size} selected)",
+                                                text = stringResource(app.slipnet.R.string.scanner_range_groups , selectedOctets.size, cidrGroups.size),
                                                 style = MaterialTheme.typography.labelMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(
-                                                text = "All",
+                                                text = stringResource(app.slipnet.R.string.scanner_all),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onSelectAllOctets() }
                                             )
                                             Text(
-                                                text = "None",
+                                                text = stringResource(app.slipnet.R.string.scanner_none),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.clickable { onDeselectAllOctets() }
@@ -2172,7 +2172,7 @@ private fun ResolverListSection(
                                                             modifier = Modifier.width(80.dp)
                                                         )
                                                         Text(
-                                                            text = "${group.rangeCount} ranges",
+                                                            text = stringResource(app.slipnet.R.string.scanner_range_count , group.rangeCount),
                                                             style = MaterialTheme.typography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.weight(1f)
@@ -2193,7 +2193,7 @@ private fun ResolverListSection(
                             // Sample count selector
                             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(
-                                    text = "Sample Size",
+                                    text = stringResource(app.slipnet.R.string.scanner_sample_size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -2211,23 +2211,23 @@ private fun ResolverListSection(
                                     OptionChip(
                                         selected = useCustomSampleCount,
                                         onClick = { onUseCustomSampleCount(true) },
-                                        label = "Custom"
+                                        label = stringResource(app.slipnet.R.string.scanner_custom)
                                     )
                                 }
                                 AnimatedVisibility(visible = useCustomSampleCount) {
                                     OutlinedTextField(
                                         value = customSampleCountText,
                                         onValueChange = onCustomSampleCountChange,
-                                        label = { Text("Count") },
-                                        placeholder = { Text("e.g. 3000") },
+                                        label = { Text(stringResource(app.slipnet.R.string.scanner_count)) },
+                                        placeholder = { Text(stringResource(app.slipnet.R.string.scanner_example_count)) },
                                         singleLine = true,
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(12.dp),
-                                        supportingText = { Text("1 - %,d".format(DnsScannerUiState.MAX_SAMPLE_COUNT)) },
+                                        supportingText = { Text(stringResource(app.slipnet.R.string.scanner_count_bounds , DnsScannerUiState.MAX_SAMPLE_COUNT)) },
                                         trailingIcon = if (selectedTotalIps > 0) {
                                             {
                                                 Text(
-                                                    text = "Max",
+                                                    text = stringResource(app.slipnet.R.string.scanner_max),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     color = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier
@@ -2264,7 +2264,7 @@ private fun ResolverListSection(
                                     )
                                 }
                                 Spacer(Modifier.width(8.dp))
-                                Text("Generate $effectiveSampleCount IR DNS Lite IPs")
+                                Text(stringResource(app.slipnet.R.string.scanner_generate_iran_lite , effectiveSampleCount))
                             }
 
                             // Start Scan button after loading
@@ -2310,7 +2310,7 @@ private fun ResolverListSection(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
-                        Text("Load Last Scan IPs")
+                        Text(stringResource(app.slipnet.R.string.scanner_load_previous))
                     }
                 }
 
@@ -2327,8 +2327,8 @@ private fun ResolverListSection(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
-                        val label = if (savedPoolLabel != null) "$savedPoolLabel" else "Saved Pool"
-                        Text("$label ($savedPoolSize IPs)")
+                        val label = if (savedPoolLabel != null) "$savedPoolLabel" else stringResource(app.slipnet.R.string.scanner_saved_pool)
+                        Text(stringResource(app.slipnet.R.string.scanner_pool_count , label, savedPoolSize))
                     }
                 }
             }
@@ -2365,7 +2365,7 @@ private fun RecentDnsSection(
             ) {
                 SectionHeader(
                     icon = Icons.Default.History,
-                    title = "Recent DNS"
+                    title = stringResource(app.slipnet.R.string.scanner_recent_dns)
                 )
                 if (canSelect && selectedResolvers.isNotEmpty()) {
                     Text(
@@ -2455,7 +2455,7 @@ private fun RecentDnsSection(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Apply Selected")
+                    Text(stringResource(app.slipnet.R.string.scanner_apply_selected))
                 }
             }
         }

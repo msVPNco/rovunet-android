@@ -58,13 +58,14 @@ jobs:
         if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: rovunet-code27-review-validation
+          name: rovunet-code28-review-validation
           path: |
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
             app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
             app/build/outputs/apk/androidTest/full/release/*-androidTest.apk
             app/build/outputs/mapping/fullRelease/mapping.txt
+            tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
           if-no-files-found: error
           retention-days: 5

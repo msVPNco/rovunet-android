@@ -15,6 +15,7 @@ for folder in folders:
     entries[node.attrib['name']]=node
  resources[folder]=entries
 files=[root/'app/src/main/java/app/slipnet/presentation/settings/SettingsScreen.kt',root/'app/src/main/java/app/slipnet/presentation/settings/StabilityReportDialog.kt',root/'app/src/main/java/app/slipnet/presentation/common/components/AboutDialogContent.kt',root/'app/src/main/java/app/slipnet/SlipNetApp.kt']
+files += [root/'app/src/main/java/app/slipnet/presentation/scanner/DnsScannerScreen.kt', root/'app/src/main/java/app/slipnet/presentation/scanner/ScanResultsScreen.kt']
 used=set()
 for file in files:
  source=file.read_text()
@@ -22,9 +23,10 @@ for file in files:
  for match in re.finditer(r'(?:Text\s*\(\s*(?:text\s*=\s*)?|(?:title|description|subtitle|supportingText|contentDescription)\s*=\s*)"((?:[^"\\]|\\.)*)"',source):
   text=match[1]
   visible=re.sub(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z_0-9]*','',text)
+  visible=re.sub(r'\\[nrt]', ' ', visible)
   if not re.search('[A-Za-z]',visible):continue
   allowed=('Rovunet VPN v','SOCKS5:','HTTP:','No stability report recorded.')
-  assert text.startswith(allowed) or text in ('DNS','AES-128-GCM','ChaCha20-Poly1305'),(file.name,text)
+  assert text.startswith(allowed) or text in ('DNS','AES-128-GCM','ChaCha20-Poly1305','Prism','E2E','IP','UDP','TCP','google.com','http://www.gstatic.com/generate_204') or not re.search('[A-Za-z]', re.sub(r'%[,0-9$]*[ds]|ms', '', visible)),(file.name,text)
 def args(value):return sorted(re.findall(r'%(\d+)\$([sd])',value or ''))
 required = {key for key,node in resources['values'].items() if node.attrib.get('translatable') != 'false'}
 for key in required:
@@ -40,4 +42,4 @@ for key in required:
   if folder=='values-ru' and node.tag=='plurals':assert {'one','few','many','other'}<=set(c.attrib['quantity'] for c in node),(key,'Russian plural categories')
 main=(root/'app/src/main/java/app/slipnet/presentation/main/MainScreen.kt').read_text()
 assert 'activity?.recreate()' not in main,'Language changes must not recreate Activity'
-print(f'PASS all {len(required)} translatable resource keys in four languages, format parity and Russian plurals; settings/About raw-text and Activity checks ({len(used)} used keys)')
+print(f'PASS all {len(required)} translatable resource keys in four languages, format parity and Russian plurals; settings/About/scanner raw-text and Activity checks ({len(used)} used keys)')
