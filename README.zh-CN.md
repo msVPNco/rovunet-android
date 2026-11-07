@@ -1,12 +1,23 @@
-<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="180"></p>
+<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-[English](README.md) · [فارسی](README.fa.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+<h1 align="center">Rovunet 安卓版</h1>
 
-# Rovunet
+<p align="center"><b>一个安卓应用，多条通往你自己服务器的路径</b><br>DNS 隧道、SSH、HTTPS 代理和 Xray 配置归入命名配置组，支持直接连接和真实 HTTPS 测试。</p>
+
+<p align="center">
+  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
+  <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
+</p>
+
+<p align="center"><a href="README.md">English</a> · <a href="README.fa.md">فارسی</a> · <a href="README.ru.md">Русский</a> · <b>简体中文</b></p>
+
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">下载</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-ZH.pdf">完整指南（PDF）</a> · <a href="docs/USER_GUIDE.zh-CN.md">用户指南</a> · <a href="https://github.com/msVPNco/rovunet-panel">服务器面板</a></p>
+
+---
 
 **通过多种路径访问自有服务器的 Android 多协议 VPN 客户端。** Rovunet 集成 DNS 隧道、SSH 传输、HTTPS 代理和 Xray 配置。相关路径归入命名集合，可直接连接，也可单独运行经过真实隧道的 HTTPS 测试。
-
-[发布与下载](https://github.com/msVPNco/rovunet-android/releases) · [Telegram](https://t.me/RovunetVPN) · [服务器面板](https://github.com/msVPNco/rovunet-panel) · [用户指南](docs/USER_GUIDE.zh-CN.md)
 
 ## 发布状态
 
@@ -15,6 +26,13 @@
 alpha15.4 修复 Soar 扫描、订阅操作、菜单、重复导入、测试预算和状态显示。连接选择指南与扫描器使用四语言资源。[CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) 通过 **60 项 JVM、51 项 Debug 模拟器测试及 2 项精简 Release JNI 测试**，设备测试无跳过。33 个原生库与已审阅的 15.3 APK 相同，不宣称完整 native 重建。所有者批准发布同一个审阅 APK，未提供新的详细真实网络测量。
 
 **从公开 alpha14/alpha15 升级：**旧更新器不识别带点的 alpha 修订号。请直接下载 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) 并覆盖安装，不卸载、不清除数据。alpha15.4 支持后续带点修订号，包名和生产签名保持不变。
+
+## 快速开始
+
+1. **下载**：从 [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) 获取 Full APK 并安装。公开 alpha14 及以上版本可直接覆盖安装，无需卸载。
+2. **打开**：选择语言和主题，并在提示时授予安卓 VPN 权限。
+3. **导入**：订阅 → 粘贴 HTTPS 订阅链接 → **导入**；或使用 **+ → 导入** 导入链接、二维码或文件。
+4. **连接**：展开配置组，点击一次路径将其选中，再点击一次即可连接。
 
 ## 订阅、分享与 Soar 扫描
 
@@ -66,6 +84,14 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 [面板](https://github.com/msVPNco/rovunet-panel)管理支持的 Linux 服务并导出配置；客户端支持不等于面板自动安装，部分 `core-plan` 路径须手动部署。需自有服务器和有效凭据，不提供免费账号。
 
 尚无集合自动故障切换、下载吞吐量测试或桌面/商店版本。Soar 自动模式差异和远程 SOCKS 数据路径仍需实测。任何协议均不保证在所有网络可用。
+
+## 指南
+
+| | |
+|---|---|
+| 📘 完整指南（PDF） | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
+| [用户指南](docs/USER_GUIDE.zh-CN.md) | 安装、导入、连接、测试、Soar、凭据与故障排查 |
+| [当前状态](docs/STATUS.md) · [升级](docs/UPGRADE.md) | 发布状态、签名与迁移说明 |
 
 ## 源码与支持
 

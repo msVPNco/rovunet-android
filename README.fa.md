@@ -1,14 +1,25 @@
 <div dir="rtl">
 
-<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="180"></p>
+<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-[English](README.md) · [فارسی](README.fa.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+<h1 align="center">رووُنت برای اندروید (Rovunet)</h1>
 
-# رووُنت — Rovunet
+<p align="center"><b>چند مسیر به سرور خودتان، در یک اپ اندروید</b><br>تونل‌های DNS، SSH، پروکسی‌های HTTPS و پروفایل‌های Xray در مجموعه‌های نام‌دار، با اتصال مستقیم و تست واقعی HTTPS.</p>
+
+<p align="center">
+  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
+  <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
+</p>
+
+<p align="center"><a href="README.md">English</a> · <b>فارسی</b> · <a href="README.ru.md">Русский</a> · <a href="README.zh-CN.md">简体中文</a></p>
+
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">دانلود</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-FA.pdf">راهنمای جامع (PDF)</a> · <a href="docs/USER_GUIDE.md">راهنمای کاربر</a> · <a href="https://github.com/msVPNco/rovunet-panel">پنل سرور</a></p>
+
+---
 
 **کلاینت چندپروتکلی اندروید برای دسترسی به سرور شخصی از چند مسیر متفاوت.** رووُنت تونل‌های DNS، روش‌های اتصال SSH، پراکسی‌های HTTPS و کانفیگ‌های مبتنی بر Xray را در یک رابط جمع می‌کند. مسیرهای مرتبط در مجموعه‌های نام‌دار کنار هم می‌مانند؛ مسیر دلخواه را مستقیم وصل کنید یا جداگانه HTTPS را از داخل تونل اندازه بگیرید.
-
-[انتشارها و دانلود](https://github.com/msVPNco/rovunet-android/releases) · [گروه تلگرام](https://t.me/RovunetVPN) · [پنل سرور](https://github.com/msVPNco/rovunet-panel) · [راهنمای کاربر](docs/USER_GUIDE.md)
 
 ## وضعیت نسخه
 
@@ -17,6 +28,13 @@
 آلفا۱۵.۴ اسکن Soar، ورود و آپدیت اشتراک، منوها، ورود تکراری، مهلت تست و نمایش وضعیت را اصلاح می‌کند. راهنمای انتخاب اتصال و اسکنر از منابع چهار زبان استفاده می‌کنند. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) با **۶۰ آزمون JVM، ۵۱ تست Debug شبیه‌ساز و ۲ تست JNI نسخهٔ Release فشرده** و بدون skip موفق شد. ۳۳ کتابخانهٔ بومی با بستهٔ تست ۱۵.۳ یکسان‌اند؛ بازسازی کامل native انجام نشده است. مالک انتشار همان APK بررسی‌شده را تأیید کرد؛ گزارش کمی تازه‌ای از شبکهٔ واقعی ارائه نشده است.
 
 **ارتقا از آلفا۱۴/۱۵ عمومی:** آپدیتر قدیمی شمارهٔ اصلاحی اعشاری را نمی‌شناسد. این بار [APK کامل](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) را مستقیم دانلود و روی برنامهٔ فعلی نصب کنید؛ برنامه یا داده‌هایش را حذف نکنید. نسخهٔ ۱۵.۴ شماره‌های اصلاحی بعدی را می‌شناسد. بسته و امضای تولیدی همان قبلی‌اند.
+
+## شروع سریع
+
+1. **دانلود**: APK کامل را از [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
+2. **باز کردن**: زبان و تم را انتخاب کنید و مجوز VPN اندروید را بدهید.
+3. **ورود کانفیگ**: اشتراک‌ها ← لینک اشتراک HTTPS را بچسبانید ← **ایمپورت**؛ یا **+ ← ورود** برای لینک، QR یا فایل.
+4. **اتصال**: مجموعه را باز کنید، مسیر را یک بار لمس کنید تا انتخاب شود و دوباره لمس کنید تا وصل شود.
 
 ## اشتراک، QR مجموعه و اسکن Soar
 
@@ -69,6 +87,14 @@
 [پنل Rovunet](https://github.com/msVPNco/rovunet-panel) سرویس‌های پشتیبانی‌شدهٔ سرور لینوکسی را مدیریت و کانفیگ را تولید می‌کند. پشتیبانی اپ به معنی نصب خودکار همان پروتکل توسط پنل نیست؛ بعضی مسیرهای `core-plan` استقرار دستی می‌خواهند. سرور و اعتبارنامهٔ معتبر لازم است؛ اپ حساب سرور رایگان فراهم نمی‌کند.
 
 تعویض خودکار میان مسیرهای مجموعه، سنجش نرخ دانلود و نسخهٔ دسکتاپ/فروشگاهی اضافه نشده‌اند. علت تفاوت حالت خودکار Soar و مسیر دادهٔ SOCKS روی شبکهٔ گزارش‌شده هنوز شاهد میدانی می‌خواهند. هیچ پروتکلی تضمین عبور از هر شبکه را ندارد.
+
+## راهنماها
+
+| | |
+|---|---|
+| 📘 راهنمای جامع (PDF) | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
+| [راهنمای کاربر](docs/USER_GUIDE.md) | نصب، ورود کانفیگ، اتصال، تست، Soar، اطلاعات ورود و عیب‌یابی |
+| [وضعیت فعلی](docs/STATUS.md) · [ارتقا](docs/UPGRADE.md) | وضعیت انتشار، امضا و مهاجرت |
 
 ## سورس، بررسی و پشتیبانی
 

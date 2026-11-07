@@ -1,12 +1,23 @@
-<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="180"></p>
+<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-[English](README.md) · [فارسی](README.fa.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+<h1 align="center">Rovunet для Android</h1>
 
-# Rovunet
+<p align="center"><b>Несколько путей к вашему серверу в одном Android-приложении</b><br>DNS-туннели, SSH, HTTPS-прокси и профили Xray в именованных группах, с прямым подключением и настоящими тестами HTTPS.</p>
+
+<p align="center">
+  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
+  <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
+</p>
+
+<p align="center"><a href="README.md">English</a> · <a href="README.fa.md">فارسی</a> · <b>Русский</b> · <a href="README.zh-CN.md">简体中文</a></p>
+
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">Скачать</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-RU.pdf">Полное руководство (PDF)</a> · <a href="docs/USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/msVPNco/rovunet-panel">Серверная панель</a></p>
+
+---
 
 **Многопротокольный VPN-клиент Android для нескольких путей к собственному серверу.** Объединяет DNS-туннели, транспорты SSH, HTTPS-прокси и профили Xray. Связанные пути хранятся в коллекциях: подключайте выбранный напрямую или отдельно измеряйте HTTPS через настоящий туннель.
-
-[Выпуски](https://github.com/msVPNco/rovunet-android/releases) · [Telegram](https://t.me/RovunetVPN) · [Панель](https://github.com/msVPNco/rovunet-panel) · [Руководство](docs/USER_GUIDE.ru.md)
 
 ## Состояние выпуска
 
@@ -15,6 +26,13 @@
 Alpha15.4 исправляет сканирование Soar, подписки, меню, повторный импорт, сроки проверок и индикацию. Руководство выбора подключения и сканер используют четыре языка. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189): **60 JVM, 51 Debug-тест эмулятора и 2 JNI-теста минифицированного Release**, без пропусков. Все 33 native-библиотеки совпадают с проверенной 15.3; полной пересборки native нет. Владелец одобрил публикацию того же APK; новых подробных измерений реальной сети не предоставлено.
 
 **Обновление публичных alpha14/alpha15:** старый обновлятор не распознаёт дробные alpha-ревизии. Скачайте [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) напрямую и установите поверх без удаления приложения или данных. Alpha15.4 распознаёт следующие дробные ревизии; пакет и производственная подпись прежние.
+
+## Быстрый старт
+
+1. **Скачайте** Full APK из [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) и установите. Публичные alpha14 и новее ставятся поверх без удаления.
+2. **Откройте** Rovunet, выберите язык и тему и дайте Android разрешение VPN.
+3. **Импорт**: Подписки → вставьте HTTPS-ссылку подписки → **Импорт**, или **+ → Импорт** для ссылки, QR-кода или файла.
+4. **Подключение**: раскройте группу, коснитесь пути, чтобы выбрать, и ещё раз — чтобы подключиться.
 
 ## Подписки, обмен и сканирование Soar
 
@@ -67,6 +85,14 @@ HTTPS-подписки имеют кнопки **Обновить** и **Имп�
 [Панель](https://github.com/msVPNco/rovunet-panel) управляет поддерживаемыми службами Linux и экспортирует профили. Поддержка клиентом не означает автоматическую установку панелью; некоторым `core-plan` путям нужно ручное развёртывание. Требуются сервер и действительные учётные данные; бесплатных аккаунтов нет.
 
 Не включены автоматическая смена пути коллекции, тест пропускной способности и настольные/магазинные версии. Режим auto Soar и данные удалённого SOCKS в сообщённой сети требуют полевых свидетельств. Нет гарантии доступности в любой сети.
+
+## Руководства
+
+| | |
+|---|---|
+| 📘 Полное руководство (PDF) | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
+| [Руководство пользователя](docs/USER_GUIDE.ru.md) | Установка, импорт, подключение, проверки, Soar, учётные данные и диагностика |
+| [Текущее состояние](docs/STATUS.md) · [Обновление](docs/UPGRADE.md) | Состояние выпуска, подпись и миграция |
 
 ## Исходники, проверки и поддержка
 
