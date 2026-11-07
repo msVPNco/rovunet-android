@@ -15,12 +15,13 @@ for folder in folders:
     entries[node.attrib['name']]=node
  resources[folder]=entries
 files=list((root/'app/src/main/java/app/slipnet/presentation').rglob('*.kt'))
+files.extend((root/'app/src/main/java/app/slipnet/widget').glob('*.kt'))
 files.append(root/'app/src/main/java/app/slipnet/SlipNetApp.kt')
 used=set()
 for file in files:
  source=file.read_text()
  used.update(re.findall(r'(?<!android\.)R\.(?:string|plurals)\.([a-z0-9_]+)',source))
- for match in re.finditer(r'(?:Toast\.makeText\s*\(\s*[^,\n]+,\s*|showSnackbar\s*\(\s*|set(?:Title|Message)\s*\(\s*)"((?:[^"\\]|\\.)*)"',source):
+ for match in re.finditer(r'(?:Toast\.makeText\s*\(\s*[^,\n]+,\s*|set(?:TextViewText|ContentDescription)\s*\(\s*[^,\n]+,\s*|showSnackbar\s*\(\s*|set(?:Title|Message)\s*\(\s*)"((?:[^"\\]|\\.)*)"',source):
   assert not re.search('[A-Za-z]',match[1]),(file.name,'raw transient UI text',match[1])
  for match in re.finditer(r'(?:Text\s*\(\s*(?:text\s*=\s*)?|(?:title|description|subtitle|supportingText|contentDescription)\s*=\s*)"((?:[^"\\]|\\.)*)"',source):
   text=match[1]

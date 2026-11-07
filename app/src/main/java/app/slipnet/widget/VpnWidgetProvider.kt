@@ -53,6 +53,8 @@ class VpnWidgetProvider : AppWidgetProvider() {
 
         private fun buildRemoteViews(context: Context, state: ConnectionState): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_vpn_toggle)
+            val localized = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+            views.setContentDescription(R.id.widget_status_icon, localized.getString(R.string.widget_vpn_status_description))
 
             // Set tap action
             val toggleIntent = Intent(context, VpnWidgetToggleReceiver::class.java).apply {
@@ -68,7 +70,7 @@ class VpnWidgetProvider : AppWidgetProvider() {
             when (state) {
                 is ConnectionState.Disconnected -> {
                     views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_disconnected)
-                    views.setTextViewText(R.id.widget_status_text, "Disconnected")
+                    views.setTextViewText(R.id.widget_status_text, localized.getString(R.string.rv_disconnected_04dfac))
                     views.setTextColor(R.id.widget_status_text, 0xFF333333.toInt())
                     views.setInt(R.id.widget_status_icon, "setColorFilter", 0xFF333333.toInt())
                     views.setInt(R.id.widget_icon_badge, "setBackgroundResource", R.drawable.widget_icon_circle_dark)
@@ -77,7 +79,7 @@ class VpnWidgetProvider : AppWidgetProvider() {
                 }
                 is ConnectionState.Connecting -> {
                     views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_connecting)
-                    views.setTextViewText(R.id.widget_status_text, "Connecting...")
+                    views.setTextViewText(R.id.widget_status_text, localized.getString(R.string.rv_connecting_5f04ae))
                     views.setTextColor(R.id.widget_status_text, 0xFFFFFFFF.toInt())
                     views.setInt(R.id.widget_status_icon, "setColorFilter", 0xFFFFFFFF.toInt())
                     views.setInt(R.id.widget_icon_badge, "setBackgroundResource", R.drawable.widget_icon_circle)
@@ -86,7 +88,7 @@ class VpnWidgetProvider : AppWidgetProvider() {
                 }
                 is ConnectionState.Connected -> {
                     views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_connected)
-                    views.setTextViewText(R.id.widget_status_text, "Connected")
+                    views.setTextViewText(R.id.widget_status_text, localized.getString(R.string.rv_connected_229655))
                     views.setTextColor(R.id.widget_status_text, 0xFFFFFFFF.toInt())
                     views.setTextColor(R.id.widget_profile_name, 0xB3FFFFFF.toInt())
                     views.setInt(R.id.widget_status_icon, "setColorFilter", 0xFFFFFFFF.toInt())
@@ -97,7 +99,7 @@ class VpnWidgetProvider : AppWidgetProvider() {
                 }
                 is ConnectionState.Disconnecting -> {
                     views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_disconnected)
-                    views.setTextViewText(R.id.widget_status_text, "Disconnecting...")
+                    views.setTextViewText(R.id.widget_status_text, localized.getString(R.string.rv_disconnecting_cb5a85))
                     views.setTextColor(R.id.widget_status_text, 0xFF333333.toInt())
                     views.setInt(R.id.widget_status_icon, "setColorFilter", 0xFF333333.toInt())
                     views.setInt(R.id.widget_icon_badge, "setBackgroundResource", R.drawable.widget_icon_circle_dark)
@@ -106,7 +108,7 @@ class VpnWidgetProvider : AppWidgetProvider() {
                 }
                 is ConnectionState.Error -> {
                     views.setInt(R.id.widget_root, "setBackgroundResource", R.drawable.widget_bg_error)
-                    views.setTextViewText(R.id.widget_status_text, "Error")
+                    views.setTextViewText(R.id.widget_status_text, localized.getString(R.string.rv_error_54a0e8))
                     views.setTextColor(R.id.widget_status_text, 0xFFFFFFFF.toInt())
                     views.setInt(R.id.widget_status_icon, "setColorFilter", 0xFFFFFFFF.toInt())
                     views.setInt(R.id.widget_icon_badge, "setBackgroundResource", R.drawable.widget_icon_circle)
