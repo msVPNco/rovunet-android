@@ -203,7 +203,9 @@ object RovunetStrings {
         "Cannot export a locked profile" to R.string.err_locked_export,
         "No exportable profiles" to R.string.err_no_exportable,
         "Connect once and grant Android VPN permission, then disconnect and run the HTTPS test." to R.string.err_vpn_permission_then_https,
-        "The test stopped before every path was tested" to R.string.test_stopped_early
+        "The test stopped before every path was tested" to R.string.test_stopped_early,
+        "Every profile was already in the app; nothing was added" to R.string.import_all_present,
+        "Profiles already in the app were skipped" to R.string.import_some_present
     )
     private data class Localized(val language: String, val configuration: Configuration, val context: Context)
     @Volatile private var cached: Localized? = null

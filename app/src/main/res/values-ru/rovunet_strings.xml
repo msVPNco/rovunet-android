@@ -263,4 +263,6 @@
     <string name="err_no_exportable">Нет профилей для экспорта</string>
     <string name="err_vpn_permission_then_https">Подключитесь один раз и дайте разрешение VPN в Android, затем отключитесь и запустите HTTPS-проверку.</string>
     <string name="test_stopped_early">Проверка остановилась, не дойдя до всех путей</string>
+    <string name="import_all_present">Все профили уже есть в приложении; ничего не добавлено</string>
+    <string name="import_some_present">Профили, уже имеющиеся в приложении, пропущены</string>
 </resources>

@@ -963,16 +963,26 @@ class MainViewModel @Inject constructor(
         val preview = _uiState.value.importPreview ?: return
         viewModelScope.launch {
             try {
+                // Importing the same list again must not add it a second time.
+                val existing = _uiState.value.profiles
+                var skipped = 0
                 val importedProfiles = preview.groups.flatMap { group ->
                     val id = java.util.UUID.randomUUID().toString()
                     val name = if (preview.groups.size == 1) preview.collectionName else group.name
-                    group.profiles.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
+                    val fresh = ProfileDuplicates.withoutExisting(existing, group.profiles)
+                    skipped += group.profiles.size - fresh.size
+                    fresh.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
+                }
+                if (importedProfiles.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(importPreview = null,
+                        error = "Every profile was already in the app; nothing was added")
+                    return@launch
                 }
                 profileRepository.insertCollection(importedProfiles).firstOrNull()?.let { if (_uiState.value.connectionState.isDisconnected) setActiveProfileUseCase(it) }
                 _uiState.value = _uiState.value.copy(selectedCollection = null, manualProfileId = null)
                 _uiState.value = _uiState.value.copy(
                     importPreview = null,
-                    error = null
+                    error = if (skipped > 0) "Profiles already in the app were skipped" else null
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(

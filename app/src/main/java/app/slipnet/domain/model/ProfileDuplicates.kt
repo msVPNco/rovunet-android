@@ -25,4 +25,13 @@ object ProfileDuplicates {
         val seen = mutableSetOf<ServerProfile>()
         return profiles.filter { p -> p.isLocked || seen.add(key(p).copy(collectionId="")) }
     }
+    /**
+     * Profiles of an import that are not already in the app. A profile counts as present when every
+     * connection field equals an existing profile's (name, collection and timestamps do not count),
+     * so importing the same list twice adds nothing. Locked profiles are always kept, as elsewhere.
+     */
+    fun withoutExisting(existing: List<ServerProfile>, incoming: List<ServerProfile>): List<ServerProfile> {
+        val present = existing.map { key(it).copy(collectionId = "") }.toHashSet()
+        return incoming.filter { p -> p.isLocked || key(p).copy(collectionId = "") !in present }
+    }
 }

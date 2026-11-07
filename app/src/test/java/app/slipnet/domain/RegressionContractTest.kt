@@ -6,6 +6,7 @@ import app.slipnet.domain.model.SoarConfig
 import app.slipnet.domain.model.ServerProfile
 import app.slipnet.domain.model.ProfileCollections
 import app.slipnet.domain.model.ProbePolicy
+import app.slipnet.domain.model.ProfileDuplicates
 import app.slipnet.domain.model.TunnelType
 
 /** The command-line harness and Gradle execute the same portable contracts. */
@@ -79,6 +80,18 @@ class RegressionContractTest {
         assertEquals(17 * 40_000L, ProbePolicy.testAllBudgetMs(seventeen))
         assertEquals(90_000L, ProbePolicy.testAllBudgetMs(listOf(reality)))
         assertEquals(900_000L, ProbePolicy.testAllBudgetMs(List(60) { reality.copy(id = it + 1L) }))
+    }
+
+    @Test fun importingTheSameListAgainAddsNothing() {
+        val a = ServerProfile(id = 1, name = "a", domain = "one.example", collectionId = "c1", collectionName = "old")
+        val b = ServerProfile(id = 2, name = "b", domain = "two.example", collectionId = "c1", collectionName = "old")
+        val again = listOf(a.copy(id = 0, name = "renamed", collectionId = "n"), b.copy(id = 0, collectionId = "n"))
+        assertTrue(ProfileDuplicates.withoutExisting(listOf(a, b), again).isEmpty())
+        // A changed connection field is a different profile and is kept.
+        val moved = a.copy(id = 0, domain = "three.example", collectionId = "n")
+        assertEquals(listOf(moved), ProfileDuplicates.withoutExisting(listOf(a, b), listOf(again[0], moved)))
+        // Nothing existing: everything is kept, in order.
+        assertEquals(again, ProfileDuplicates.withoutExisting(emptyList(), again))
     }
 
     @Test fun explicitChoiceAndHistoricalEvidence() = connectionChoiceRegression()

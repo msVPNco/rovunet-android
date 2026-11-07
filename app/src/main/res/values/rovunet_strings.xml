@@ -261,4 +261,6 @@
     <string name="err_no_exportable">No exportable profiles</string>
     <string name="err_vpn_permission_then_https">Connect once and grant Android VPN permission, then disconnect and run the HTTPS test.</string>
     <string name="test_stopped_early">The test stopped before every path was tested</string>
+    <string name="import_all_present">Every profile was already in the app; nothing was added</string>
+    <string name="import_some_present">Profiles already in the app were skipped</string>
 </resources>
