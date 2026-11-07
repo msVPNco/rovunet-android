@@ -892,7 +892,7 @@ fun MainScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                if (uiState.connectionState.isConnected && dataPathNoteVisible(uiState.dataPathState, dataPassFresh)) item(key = "data-path-check") {
+                                if (uiState.connectionState.isConnected && app.slipnet.domain.model.dataPathNoteVisible(uiState.dataPathState, dataPassFresh)) item(key = "data-path-check") {
                                     DataPathCheckCard(uiState.dataPathState, viewModel::verifyDataPath)
                                 }
                                 items(

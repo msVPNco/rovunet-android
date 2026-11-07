@@ -45,7 +45,7 @@ class RegressionContractTest {
 
     @Test fun homeScreenHttpsNoteIsShortLivedAndNeverClaimsAnOldPass() {
         val shown = { state: app.slipnet.domain.model.DataPathState, fresh: Boolean ->
-            app.slipnet.presentation.main.dataPathNoteVisible(state, fresh) }
+            app.slipnet.domain.model.dataPathNoteVisible(state, fresh) }
         val states = app.slipnet.domain.model.DataPathState.values()
         // A pass is visible only while it is fresh; a failed check stays with its retry.
         assertTrue(shown(app.slipnet.domain.model.DataPathState.VERIFIED, true))

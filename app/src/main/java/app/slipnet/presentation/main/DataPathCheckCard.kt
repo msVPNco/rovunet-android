@@ -36,7 +36,3 @@ internal fun DataPathCheckCard(state: DataPathState, retry: () -> Unit) {
         }
     }
 }
-
-/** Whether the home screen has anything to show for [state] right now. */
-internal fun dataPathNoteVisible(state: DataPathState, passFresh: Boolean): Boolean =
-    (state == DataPathState.VERIFIED && passFresh) || state == DataPathState.UNKNOWN
