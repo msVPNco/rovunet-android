@@ -31,6 +31,8 @@ class SubscriptionDeviceTest {
             assertEquals(remote.sshPassword, mapper.toDomain(row).sshPassword)
             assertFalse(row.secretEnvelope.contains("first|password"))
             assertFalse(db.subscriptionDao().get(sourceId)?.sourceEnvelope.orEmpty().contains("example.invalid"))
+            repository.apply(repository.prepareDocument(preview.source.name, "https://example.invalid/sub", sourceId, false, exporter.exportSingleProfile(remote)))
+            assertEquals("A no-op update must not reseal credentials", row.secretEnvelope, db.profileDao().getProfileById(row.id)?.secretEnvelope)
             val refreshed = repository.prepareDocument(preview.source.name, "https://example.invalid/sub", sourceId, false,
                 exporter.exportSingleProfile(remote.copy(sshPassword = "second")))
             repository.apply(refreshed)

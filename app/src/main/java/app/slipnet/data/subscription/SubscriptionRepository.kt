@@ -27,7 +27,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-data class SubscriptionPreview(val source: SubscriptionEntity, val expectedMembers: String?,
+data class SubscriptionPreview(val source: SubscriptionEntity, val expectedSource: SubscriptionEntity?,
     val profiles: List<Pair<String, ServerProfile>>, val removed: Int)
 
 @Singleton
@@ -68,7 +68,7 @@ class SubscriptionRepository @Inject constructor(
                             else {
                                 require(it.isSuccessful) { "DOWNLOAD_FAILED" }
                                 require(!it.header("Content-Type").orEmpty().contains("text/html", ignoreCase = true)) { "INVALID_FEED" }
-                                val body = it.body
+                                val body = it.body ?: error("DOWNLOAD_FAILED")
                                 require(body.contentLength() <= 2 * 1024 * 1024) { "FEED_TOO_LARGE" }
                                 val text = body.byteStream().use { input ->
                                     val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
@@ -93,8 +93,13 @@ class SubscriptionRepository @Inject constructor(
         }
         error("DOWNLOAD_FAILED")
     }
-    suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview =
-        prepareDocument(name, address, existingId, auto, fetch(address))
+    suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
+        val initial = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
+        val document = fetch(address)
+        val preview = prepareDocument(name, address, existingId, auto, document)
+        require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
+        preview
+    }
 
     internal suspend fun prepareDocument(name: String, address: String, existingId: String?, auto: Boolean, document: String): SubscriptionPreview = withContext(Dispatchers.IO) {
         require(name.isNotBlank() && name.length <= 120) { "NAME_REQUIRED" }
@@ -116,24 +121,26 @@ class SubscriptionRepository @Inject constructor(
         val old = JSONArray(existing?.membersJson ?: "[]")
         val incoming = profiles.map { it.first }.toSet()
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
-        SubscriptionPreview(source, existing?.membersJson, profiles, removed)
+        SubscriptionPreview(source, existing, profiles, removed)
     }
-    /** Existing feeds must be reviewed again when deleting entries. Connection ownership is untouched. */
+    /** Retired entries are kept locally. Applying never changes a live native owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
         mutex.withLock {
-            require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
+            app.slipnet.service.TunnelOperations.mutex.withLock {
+            require(connection.connectionState.value.isDisconnected && app.slipnet.service.TunnelOperations.owner == 0L) { "DISCONNECT_TO_UPDATE" }
             db.withTransaction {
                 val current = db.subscriptionDao().get(preview.source.id)
-                require(current?.membersJson == preview.expectedMembers) { "SOURCE_CHANGED" }
+                require(current == preview.expectedSource) { "SOURCE_CHANGED" }
                 val old = JSONArray(current?.membersJson ?: "[]")
                 val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
                 val members = JSONArray()
                 preview.profiles.forEach { (key, remote) ->
+                    require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
                     val saved = previous[key]
                     val row = saved?.let { db.profileDao().getProfileById(it.getLong("id")) }
                     val local = row?.let(mapper::toDomain)
                     // A locally edited/locked row is retained in full, never silently overwritten.
-                    if (local != null && (local.needsCredentials || local.collectionId != preview.source.id || local.isLocked || digest(local) != saved.getString("digest"))) {
+                    if (local != null && (local.needsCredentials || local.collectionId != preview.source.id || local.isLocked || digest(local) != saved?.getString("digest"))) {
                         if (local.collectionId == preview.source.id) db.profileDao().updateMembership(local.id, local.collectionId, preview.source.name)
                         members.put(saved)
                     } else {
@@ -141,9 +148,16 @@ class SubscriptionRepository @Inject constructor(
                             collectionName = preview.source.name, isActive = local?.isActive ?: false,
                             isPinned = local?.isPinned ?: false, sortOrder = local?.sortOrder ?: 0,
                             createdAt = local?.createdAt ?: remote.createdAt)
+                        val newDigest = digest(profile)
                         val id = if (row == null) db.profileDao().insertProfile(mapper.toEntity(profile))
-                            else { db.profileDao().updateProfile(mapper.toEntity(profile)); row.id }
-                        members.put(JSONObject().put("key", key).put("id", id).put("digest", digest(profile)))
+                            else {
+                                if (local != null && digest(local) == newDigest) {
+                                    if (row.collectionId != profile.collectionId || row.collectionName != profile.collectionName)
+                                        db.profileDao().updateMembership(row.id, profile.collectionId, profile.collectionName)
+                                } else db.profileDao().updateProfile(mapper.toEntity(profile))
+                                row.id
+                            }
+                        members.put(JSONObject().put("key", key).put("id", id).put("digest", newDigest))
                     }
                 }
                 val incoming = preview.profiles.map { it.first }.toSet()
@@ -159,6 +173,7 @@ class SubscriptionRepository @Inject constructor(
                 }
                 db.subscriptionDao().put(preview.source.copy(membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
             }
+            }
         }
     }
     suspend fun refresh(id: String) {
@@ -171,7 +186,7 @@ class SubscriptionRepository @Inject constructor(
         catch (e: CancellationException) { throw e }
         catch (e: Exception) {
             val code = e.message?.takeIf { it in setOf("REVIEW_REQUIRED", "DISCONNECT_TO_UPDATE", "INVALID_FEED", "UNSUPPORTED_FEED", "HTTPS_REQUIRED", "FEED_TOO_LARGE") } ?: "DOWNLOAD_FAILED"
-            mutex.withLock { db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(lastError = code)) } }
+            mutex.withLock { db.subscriptionDao().get(id)?.takeIf { it == row }?.let { db.subscriptionDao().put(it.copy(lastError = code)) } }
             throw IllegalStateException(code)
         }
     }
