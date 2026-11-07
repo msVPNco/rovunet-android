@@ -260,4 +260,5 @@
     <string name="err_locked_export">پروفایل قفل‌شده قابل خروجی گرفتن نیست</string>
     <string name="err_no_exportable">پروفایلی برای خروجی گرفتن نیست</string>
     <string name="err_vpn_permission_then_https">یک بار وصل شوید و مجوز VPN اندروید را بدهید، سپس قطع کنید و آزمون HTTPS را اجرا کنید.</string>
+    <string name="test_stopped_early">آزمون پیش از رسیدن به همه‌ی مسیرها متوقف شد</string>
 </resources>

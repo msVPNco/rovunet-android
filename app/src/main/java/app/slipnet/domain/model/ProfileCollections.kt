@@ -12,6 +12,20 @@ object ProfileCollections {
         TunnelType.SOAR, TunnelType.SOAR_SSH)
     fun isUdp(p: ServerProfile): Boolean = p.tunnelType == TunnelType.XRAY &&
         (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2", "wireguard") || p.coreLink.trimStart().startsWith("[Interface]", true))
+    private val coreAuthority = Regex("""^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/?#]*@)?(\[[0-9A-Fa-f:]+]|[^:/?#\s]+):(\d{1,5})""")
+
+    /**
+     * Host and port a plain TCP connection can probe for an Xray core link, or null when the
+     * core runs over UDP (Hysteria 2, WireGuard: a TCP connect proves nothing there) or the
+     * link names no port.
+     */
+    fun coreTcpTarget(p: ServerProfile): Pair<String, Int>? {
+        if (p.tunnelType != TunnelType.XRAY || isUdp(p)) return null
+        val found = coreAuthority.find(p.coreLink.trim()) ?: return null
+        val port = found.groupValues[2].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null
+        return found.groupValues[1].trim('[', ']') to port
+    }
+
     fun ordered(profiles: List<ServerProfile>, results: Map<Long, PingResult>): List<ServerProfile> {
         // Measured paths first inside each tier; DNS always remains the explicit fallback.
         val defaults = profiles.sortedBy { when (it.tunnelType) {

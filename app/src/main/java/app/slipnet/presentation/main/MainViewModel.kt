@@ -1191,12 +1191,20 @@ class MainViewModel @Inject constructor(
             var passed = false
             try {
                 passed = app.slipnet.domain.model.CollectionPhase.run(candidates, connectAfter,
-                    if (dnsOnly) 180_000L else 90_000L,
+                    when {
+                        dnsOnly -> 180_000L
+                        connectAfter -> 90_000L // stop at the first verified path
+                        else -> app.slipnet.domain.model.ProbePolicy.testAllBudgetMs(candidates)
+                    },
                     onProgress = { index, p -> _uiState.value = _uiState.value.copy(collectionProgress = "${index + 1}/${candidates.size} · ${p.name}") },
                     onResult = { p, result -> _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (p.id to result)) },
                     pausedNanos = { app.slipnet.tunnel.TransportTrust.decisionWaitNanos },
                     probe = { p -> probeThroughService(p, keepConnected = connectAfter, profileResolvers = dnsOnly, detailed = detailed) })
                 if (!passed && dnsOnly) passed = discoverCollectionDns(candidates, connectAfter, detailed)
+                val untested = !connectAfter && !dnsOnly && candidates.any {
+                    _uiState.value.pingResults[it.id].let { r -> r is PingResult.Pending || r is PingResult.Testing }
+                }
+                if (untested) _uiState.value = _uiState.value.copy(error = "The test stopped before every path was tested")
                 val needsReview = candidates.any { _uiState.value.pingResults[it.id] == PingResult.ReviewIdentity }
                 if (!passed && !needsReview && !dnsOnly && members.any { ProfileCollections.isDns(it) }) {
                     _uiState.value = _uiState.value.copy(collectionPrompt = true)
@@ -1384,7 +1392,7 @@ class MainViewModel @Inject constructor(
 
         val skipped = PING_UNSUPPORTED_TYPES
         val initial = profiles.associate { profile ->
-            profile.id to if (profile.tunnelType in skipped) {
+            profile.id to if (profile.tunnelType in skipped || ProfileCollections.isUdp(profile)) {
                 PingResult.Skipped
             } else {
                 PingResult.Pending
@@ -1397,7 +1405,7 @@ class MainViewModel @Inject constructor(
                 pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers()
             )
             try {
-                val jobs = profiles.filter { it.tunnelType !in skipped }.map { profile ->
+                val jobs = profiles.filter { it.tunnelType !in skipped && !ProfileCollections.isUdp(it) }.map { profile ->
                     launch {
                         val target = getSimplePingTarget(profile)
                         val result = if (target != null) {
@@ -1420,6 +1428,7 @@ class MainViewModel @Inject constructor(
     private suspend fun getSimplePingTarget(profile: ServerProfile): Pair<String, Int>? {
         // Try direct TCP target first
         getTcpTarget(profile)?.let { return it }
+        ProfileCollections.coreTcpTarget(profile)?.let { return it }
         // For DNS-tunneled profiles, ping the first resolver — honoring the
         // global DNS override so the test mirrors what Connect actually uses.
         val resolver = effectiveResolvers(profile).firstOrNull() ?: return null

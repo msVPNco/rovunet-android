@@ -3,6 +3,9 @@ package app.slipnet.domain
 import org.junit.Test
 import org.junit.Assert.*
 import app.slipnet.domain.model.SoarConfig
+import app.slipnet.domain.model.ServerProfile
+import app.slipnet.domain.model.ProfileCollections
+import app.slipnet.domain.model.ProbePolicy
 import app.slipnet.domain.model.TunnelType
 
 /** The command-line harness and Gradle execute the same portable contracts. */
@@ -55,6 +58,27 @@ class RegressionContractTest {
         for (state in states.filter { it == app.slipnet.domain.model.DataPathState.UNTESTED || it == app.slipnet.domain.model.DataPathState.CHECKING }) {
             assertFalse(shown(state, true)); assertFalse(shown(state, false))
         }
+    }
+
+    @Test fun collectionTestsReachUdpCoresAndTcpChecksSkipThem() {
+        val base = ServerProfile(id = 1, name = "x", tunnelType = TunnelType.XRAY)
+        val reality = base.copy(coreLink = "vless://id@203.0.113.7:2083?security=reality&type=tcp#a b")
+        val xhttp = base.copy(coreLink = "vless://id@example.org:2096?type=xhttp")
+        val v6 = base.copy(coreLink = "vless://id@[2001:db8::1]:443?type=tcp")
+        val hy2 = base.copy(coreLink = "hysteria2://pw@example.org:8443?sni=example.org")
+        val wg = base.copy(coreLink = "[Interface]\nPrivateKey = x\n[Peer]\nEndpoint = example.org:51820")
+        assertEquals("203.0.113.7" to 2083, ProfileCollections.coreTcpTarget(reality))
+        assertEquals("example.org" to 2096, ProfileCollections.coreTcpTarget(xhttp))
+        assertEquals("2001:db8::1" to 443, ProfileCollections.coreTcpTarget(v6))
+        // A TCP connect says nothing about a UDP protocol, so there is no target to probe.
+        assertNull(ProfileCollections.coreTcpTarget(hy2))
+        assertNull(ProfileCollections.coreTcpTarget(wg))
+        assertNull(ProfileCollections.coreTcpTarget(base.copy(coreLink = "vless://id@host?type=tcp")))
+        // The all-paths budget grows with the collection, so the last-ordered UDP cores are reached.
+        val seventeen = List(17) { reality.copy(id = it + 1L) }
+        assertEquals(17 * 40_000L, ProbePolicy.testAllBudgetMs(seventeen))
+        assertEquals(90_000L, ProbePolicy.testAllBudgetMs(listOf(reality)))
+        assertEquals(900_000L, ProbePolicy.testAllBudgetMs(List(60) { reality.copy(id = it + 1L) }))
     }
 
     @Test fun explicitChoiceAndHistoricalEvidence() = connectionChoiceRegression()

@@ -202,7 +202,8 @@ object RovunetStrings {
         "Connection cleanup is still running; no profiles were deleted" to R.string.err_cleanup_running_no_delete,
         "Cannot export a locked profile" to R.string.err_locked_export,
         "No exportable profiles" to R.string.err_no_exportable,
-        "Connect once and grant Android VPN permission, then disconnect and run the HTTPS test." to R.string.err_vpn_permission_then_https
+        "Connect once and grant Android VPN permission, then disconnect and run the HTTPS test." to R.string.err_vpn_permission_then_https,
+        "The test stopped before every path was tested" to R.string.test_stopped_early
     )
     private data class Localized(val language: String, val configuration: Configuration, val context: Context)
     @Volatile private var cached: Localized? = null

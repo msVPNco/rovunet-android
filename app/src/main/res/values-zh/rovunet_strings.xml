@@ -259,4 +259,5 @@
     <string name="err_locked_export">无法导出已锁定的配置</string>
     <string name="err_no_exportable">没有可导出的配置</string>
     <string name="err_vpn_permission_then_https">请先连接一次并授予 Android VPN 权限，然后断开并运行 HTTPS 测试。</string>
+    <string name="test_stopped_early">测试在检查完所有路径之前已停止</string>
 </resources>
