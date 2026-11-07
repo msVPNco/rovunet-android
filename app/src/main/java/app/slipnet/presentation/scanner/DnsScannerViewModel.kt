@@ -791,7 +791,18 @@ class DnsScannerViewModel @Inject constructor(
                     val soar = actual?.tunnelType in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH)
                     if ((soar && session.scanIdentity == null) ||
                         (session.scanIdentity != null && session.scanIdentity != scannerIdentity(actual))) {
-                        loadInitialResolverList()
+                        // Resolver addresses remain useful input across profiles. Only the
+                        // old protocol's proof is invalid; don't discard an imported list.
+                        _uiState.update { it.copy(
+                            resolverList = session.resolverList.ifEmpty { scannerRepository.getDefaultResolvers() },
+                            listSource = try { ListSource.valueOf(session.listSource) } catch (_: Exception) { ListSource.DEFAULT },
+                            customRangeInput = session.customRangeInput.orEmpty(),
+                            scannerState = ScannerState(),
+                            simpleModeE2eState = SimpleModeE2eState(),
+                            e2eScannerState = E2eScannerState(),
+                            hostTransportSupport = emptyMap(),
+                            selectedResolvers = emptySet()
+                        ) }
                         loadProfileDomain()
                         return@launch
                     }

@@ -12,6 +12,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import app.slipnet.R
 import app.slipnet.domain.model.*
 import app.slipnet.presentation.main.ConnectionSelectionGuide
@@ -20,6 +22,7 @@ import app.slipnet.tunnel.SoarBridge
 import app.slipnet.tunnel.SoarResolverProbe
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Rule
@@ -34,6 +37,63 @@ class SoarScannerDeviceTest {
     private val host = "10.0.2.2"
     private fun profile() = ServerProfile(id = 909, name = "synthetic", tunnelType = TunnelType.SOAR,
         domain = fixture.getString("zone"), dnsttPublicKey = fixture.getString("publicKey"))
+
+    @Test fun oldProtocolProofIsDiscardedWithoutLosingImportedResolverCandidates() = runBlocking {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val preferences = app.slipnet.data.local.datastore.PreferencesDataStore(context)
+        val previous = preferences.getSavedScanSession()
+        val candidates = listOf("192.0.2.10", "192.0.2.11")
+        val selected = profile()
+        val profiles = java.lang.reflect.Proxy.newProxyInstance(javaClass.classLoader,
+            arrayOf(app.slipnet.domain.repository.ProfileRepository::class.java)) { _, method, _ ->
+            when (method.name) { "getProfileById" -> selected; else -> error("Unexpected profile operation: ${method.name}") }
+        } as app.slipnet.domain.repository.ProfileRepository
+        val scanner = java.lang.reflect.Proxy.newProxyInstance(javaClass.classLoader,
+            arrayOf(app.slipnet.domain.repository.ResolverScannerRepository::class.java)) { _, method, _ ->
+            when (method.name) {
+                "getDefaultResolvers" -> listOf("198.51.100.1")
+                "loadCountryCidrRanges" -> emptyList<Pair<Long, Long>>()
+                else -> error("A cache restore must not start a network scan: ${method.name}")
+            }
+        } as app.slipnet.domain.repository.ResolverScannerRepository
+        val vpn = object : app.slipnet.domain.repository.VpnRepository {
+            override val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+            override val trafficStats = MutableStateFlow(TrafficStats.EMPTY)
+            override suspend fun connect(profile: ServerProfile): Result<Unit> = error("Unexpected connection")
+            override suspend fun disconnect(): Result<Unit> = error("Unexpected disconnect")
+            override fun isConnected() = false
+            override fun getConnectedProfile(): ServerProfile? = null
+        }
+        try {
+            for (identity in listOf(null, "a-different-profile-and-protocol")) {
+                val cache = mutableMapOf<String, Any>("resolverList" to candidates, "testDomain" to "old.invalid",
+                    "timeoutMs" to "3000", "concurrency" to "50", "listSource" to "IMPORTED", "scanMode" to "PRISM",
+                    "scanTransport" to "UDP", "scannedCount" to 2, "workingCount" to 1,
+                    "results" to listOf(mapOf("host" to candidates[0], "status" to "WORKING", "e2eSuccess" to true, "prismVerified" to true)))
+                if (identity != null) cache["scanIdentity"] = identity
+                preferences.saveScanSession(com.google.gson.Gson().toJson(cache))
+                app.slipnet.service.ScanStateHolder.begin()
+                val store = ViewModelStore()
+                lateinit var vm: DnsScannerViewModel
+                try {
+                    instrumentation.runOnMainSync {
+                        vm = DnsScannerViewModel(SavedStateHandle(mapOf("profileId" to selected.id)), scanner, profiles, preferences, vpn, context)
+                        store.put("scanner", vm)
+                    }
+                    val state = withTimeout(5000) { vm.uiState.first { it.resolverList == candidates && it.testDomain == selected.domain } }
+                    assertEquals(ListSource.IMPORTED, state.listSource)
+                    assertTrue(state.scannerState.results.isEmpty())
+                    assertTrue(state.hostTransportSupport.isEmpty())
+                    assertEquals(0, state.simpleModeE2eState.testedCount)
+                    assertEquals(ScanMode.SIMPLE, state.scanMode)
+                    assertEquals(ScanTransportMode.BOTH, state.scanTransport)
+                } finally { instrumentation.runOnMainSync { store.clear() } }
+            }
+        } finally {
+            if (previous == null) preferences.clearScanSession() else preferences.saveScanSession(previous)
+        }
+    }
 
     @Test fun soarTransportDefaultsToBothAndDoesNotChangeTheOtherScannerPreference() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

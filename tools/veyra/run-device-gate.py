@@ -15,6 +15,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "oldProtocolProofIsDiscardedWithoutLosingImportedResolverCandidates"),
     ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "soarTransportDefaultsToBothAndDoesNotChangeTheOtherScannerPreference"),
     ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "fourSoarModesAndConnectionGuideUsePersianResources"),
     ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "tcpOnlyResolverPassesWhileUdpAndWrongServerKeyFail"),
