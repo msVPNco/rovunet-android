@@ -3199,6 +3199,10 @@ class DnsScannerViewModel @Inject constructor(
      */
     fun getRecommendedTransportHint(): String? {
         val state = _uiState.value
+        // Soar reads a TCP/53 policy, so a TCP-only scan is already informative for it:
+        // those resolvers answered over TCP and UDP was never tried.
+        if (state.scanTransport == ScanTransportMode.TCP && state.profile?.tunnelType.let {
+                it == TunnelType.SOAR || it == TunnelType.SOAR_SSH }) return "TCP_SCAN"
         if (state.scanTransport != ScanTransportMode.BOTH) return null
         val selected = state.selectedResolvers
         if (selected.isEmpty()) return null

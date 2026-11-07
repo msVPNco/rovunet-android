@@ -145,6 +145,15 @@ fun EditProfileScreen(
     // Apply transport hint from BOTH-mode scan. Only acts when the profile's current
     // transport is UDP/TCP (DoT/DoH choices are left alone). MIXED triggers a warning.
     LaunchedEffect(selectedResolversTransportHint) {
+        if (uiState.isSoarBased && selectedResolversTransportHint != null) {
+            // Soar reads its TCP/53 policy, not the DNS transport the hint is meant for.
+            if (viewModel.applySoarScanHint(selectedResolversTransportHint)) {
+                snackbarHostState.showSnackbar(
+                    messageResources.getString(app.slipnet.R.string.editor_soar_scan_tcp_applied)
+                )
+            }
+            return@LaunchedEffect
+        }
         when (selectedResolversTransportHint) {
             "UDP", "TCP" -> viewModel.applyScanTransportHint(selectedResolversTransportHint)
             "MIXED" -> snackbarHostState.showSnackbar(

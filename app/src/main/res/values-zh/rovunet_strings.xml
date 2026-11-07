@@ -243,4 +243,20 @@
     <string name="recovery_back">返回</string>
     <string name="proxy_password_unavailable">无法读取本地代理密码。请在设置中设置新密码以使用本地代理身份验证。</string>
     <string name="collection_needs_credentials">打开此配置组以查看凭据不可用的配置。</string>
+    <string name="menu_stop_test">停止测试</string>
+    <string name="dlg_share_qr_title">分享二维码</string>
+    <string name="dlg_export_profile_title">导出配置</string>
+    <string name="chain_title_edit">编辑链</string>
+    <string name="chain_title_new">新建链</string>
+    <string name="chain_save">保存链</string>
+    <string name="chain_create">创建链</string>
+    <string name="err_stop_test_first">请先停止连接测试</string>
+    <string name="err_no_profile_connect">没有可连接的配置</string>
+    <string name="err_profile_expired">此配置已过期</string>
+    <string name="err_chain_profiles_deleted">链中的部分配置已被删除</string>
+    <string name="err_remove_chains_first">删除全部配置前请先删除链</string>
+    <string name="err_cleanup_running_no_delete">连接清理仍在进行；未删除任何配置</string>
+    <string name="err_locked_export">无法导出已锁定的配置</string>
+    <string name="err_no_exportable">没有可导出的配置</string>
+    <string name="err_vpn_permission_then_https">请先连接一次并授予 Android VPN 权限，然后断开并运行 HTTPS 测试。</string>
 </resources>

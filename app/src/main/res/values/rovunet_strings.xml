@@ -244,4 +244,20 @@
     <string name="recovery_back">Back</string>
     <string name="proxy_password_unavailable">The local proxy password could not be read. Set a new password in Settings to use local proxy authentication.</string>
     <string name="collection_needs_credentials">Open this collection to review unavailable credentials.</string>
+    <string name="menu_stop_test">Stop test</string>
+    <string name="dlg_share_qr_title">Share QR Code</string>
+    <string name="dlg_export_profile_title">Export Profile</string>
+    <string name="chain_title_edit">Edit Chain</string>
+    <string name="chain_title_new">New Chain</string>
+    <string name="chain_save">Save Chain</string>
+    <string name="chain_create">Create Chain</string>
+    <string name="err_stop_test_first">Stop the connection test first</string>
+    <string name="err_no_profile_connect">No profile available to connect</string>
+    <string name="err_profile_expired">This profile has expired</string>
+    <string name="err_chain_profiles_deleted">Some profiles in chain were deleted</string>
+    <string name="err_remove_chains_first">Remove chains before deleting all profiles</string>
+    <string name="err_cleanup_running_no_delete">Connection cleanup is still running; no profiles were deleted</string>
+    <string name="err_locked_export">Cannot export a locked profile</string>
+    <string name="err_no_exportable">No exportable profiles</string>
+    <string name="err_vpn_permission_then_https">Connect once and grant Android VPN permission, then disconnect and run the HTTPS test.</string>
 </resources>

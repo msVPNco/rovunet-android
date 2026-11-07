@@ -113,4 +113,6 @@
   <string name="ui_database_unavailable">"The saved database could not be opened. Its data was preserved; do not uninstall the app. Use a compatible backup or upgrade path."</string>
   <string name="qr_privacy_hint">"This code may contain login secrets for the included profiles. Share it only with trusted recipients."</string>
   <string name="subscription_retained">"Kept locally"</string>
+  <string name="data_path_toast">"Connection check passed ✓"</string>
+  <string name="data_path_unknown_short">"Connection check did not pass"</string>
 </resources>

@@ -365,7 +365,7 @@ fun MainScreen(
                         putExtra(Intent.EXTRA_TEXT, json)
                         type = "text/plain"
                     }
-                    context.startActivity(Intent.createChooser(sendIntent, "Export Profile"))
+                    context.startActivity(Intent.createChooser(sendIntent, app.slipnet.presentation.theme.RovunetStrings.text(context, "Export Profile")))
                     viewModel.clearExportedJson()
                 }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_share_29887a)) }
             },
@@ -380,6 +380,16 @@ fun MainScreen(
                 }
             }
         )
+    }
+
+    // A passed HTTPS check is shown for three seconds in the session it belongs to, then hidden.
+    var dataPassFresh by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.dataPathState, uiState.connectionState.isConnected) {
+        dataPassFresh = uiState.connectionState.isConnected && uiState.dataPathState == app.slipnet.domain.model.DataPathState.VERIFIED
+        if (dataPassFresh) {
+            kotlinx.coroutines.delay(3_000)
+            dataPassFresh = false
+        }
     }
 
     val localizedError = uiState.error?.let { app.slipnet.presentation.theme.UiErrors.text(uiResources, it) }
@@ -544,40 +554,56 @@ fun MainScreen(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false }
                         ) {
-                            DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.subscriptions_title)) }, onClick = { showOverflowMenu = false; showSubscriptions = true })
+                            // Groups, top to bottom: app, tests and sorting, organising, data, danger.
+                            // A menu action always closes the menu first.
                             DropdownMenuItem(
-                            text = { Text("Language · زبان · 语言 · Язык") },
-                            onClick = { showOverflowMenu = false; showLanguage = true }
-                        )
-                        if (uiState.regroupUndoAvailable) DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_undo_regrouping_dbd472)) },
-                            enabled = !uiState.regroupBusy && !uiState.isPingRunning && uiState.connectionState.isDisconnected,
-                            onClick = viewModel::undoRegroup)
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
-                            enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
-                            onClick = { viewModel.previewRegroup() })
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_test_guide)) }, onClick = {
-                                showOverflowMenu = false; showConnectionGuide = true
-                            })
-                            DropdownMenuItem(
-                                text = {
-                                    Text(if (uiState.isPingRunning) "Stop HTTPS Test" else "Test selected collection")
-                                },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.subscriptions_title)) },
                                 onClick = {
                                     showOverflowMenu = false
-                                    mainActivity?.requestVpnPermissionAndConnect { viewModel.pingAllProfiles() } ?: viewModel.pingAllProfiles()
-                                },
-                                enabled = uiState.profiles.isNotEmpty()
+                                    showSubscriptions = true
+                                }
                             )
                             DropdownMenuItem(
-                                text = {
-                                    Text(if (uiState.isPingRunning) "Stop TCP Check" else "TCP check · selected collection")
-                                },
+                                text = { Text("Language · زبان · 语言 · Язык") },
                                 onClick = {
                                     showOverflowMenu = false
-                                    viewModel.pingAllProfilesSimple()
-                                },
-                                enabled = uiState.profiles.isNotEmpty()
+                                    showLanguage = true
+                                }
                             )
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_test_guide)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showConnectionGuide = true
+                                }
+                            )
+                            HorizontalDivider()
+                            if (uiState.isPingRunning) {
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.menu_stop_test)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.cancelPing()
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_test_selected_collection_e8f966)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        mainActivity?.requestVpnPermissionAndConnect { viewModel.pingAllProfiles() } ?: viewModel.pingAllProfiles()
+                                    },
+                                    enabled = uiState.profiles.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_tcp_check_selected_collection_a93693)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.pingAllProfilesSimple()
+                                    },
+                                    enabled = uiState.profiles.isNotEmpty()
+                                )
+                            }
                             if (uiState.pingResults.isNotEmpty() && !uiState.isPingRunning) {
                                 DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_clear_ping_results_ad461f)) },
@@ -588,21 +614,36 @@ fun MainScreen(
                                 )
                             }
                             // Only show "Sort by HTTPS latency" when at least one profile has a
-                            // successful measurement — otherwise there's nothing to sort by.
+                            // successful measurement; otherwise there is nothing to sort by.
                             if (uiState.pingResults.values.any { it is PingResult.Success && it.verified }) {
                                 DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sort_reliability)) }, onClick = {
                                     showOverflowMenu = false; viewModel.sortProfilesByPing(reliability = true)
                                 })
                             }
                             if (uiState.pingResults.values.any { it is PingResult.Success }) {
-                                DropdownMenuItem(
-                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sort_latency)) },
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        viewModel.sortProfilesByPing()
-                                    }
-                                )
+                                DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sort_latency)) }, onClick = {
+                                    showOverflowMenu = false; viewModel.sortProfilesByPing()
+                                })
                             }
+                            HorizontalDivider()
+                            if (uiState.regroupUndoAvailable) DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_undo_regrouping_dbd472)) },
+                                enabled = !uiState.regroupBusy && !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                                onClick = { showOverflowMenu = false; viewModel.undoRegroup() })
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
+                                enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                                onClick = { showOverflowMenu = false; viewModel.previewRegroup() })
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    viewModel.previewDuplicateProfiles()
+                                    showDeleteDuplicatesDialog = true
+                                },
+                                enabled = uiState.profiles.size > 1 && !uiState.isPingRunning && uiState.connectionState.isDisconnected
+                            )
+                            HorizontalDivider()
                             DropdownMenuItem(
                                 text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_export_all)) },
                                 onClick = {
@@ -626,17 +667,9 @@ fun MainScreen(
                                     showImportDialog = true
                                 }
                             )
+                            HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.previewDuplicateProfiles()
-                                    showDeleteDuplicatesDialog = true
-                                },
-                                enabled = uiState.profiles.size > 1 && !uiState.isPingRunning && uiState.connectionState.isDisconnected
-                            )
-                            DropdownMenuItem(
-                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_all)) },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_all), color = MaterialTheme.colorScheme.error) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showDeleteAllDialog = true
@@ -859,7 +892,7 @@ fun MainScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                if (uiState.connectionState.isConnected) item(key = "data-path-check") {
+                                if (uiState.connectionState.isConnected && dataPathNoteVisible(uiState.dataPathState, dataPassFresh)) item(key = "data-path-check") {
                                     DataPathCheckCard(uiState.dataPathState, viewModel::verifyDataPath)
                                 }
                                 items(
@@ -1361,7 +1394,7 @@ fun MainScreen(
         } else if (!profile.isLocked) {
             AlertDialog(
                 onDismissRequest = { exportLockProfile = null },
-                title = { Text(if (exportLockMode == "qr") "Share QR Code" else "Export Profile") },
+                title = { Text(rv(if (exportLockMode == "qr") "Share QR Code" else "Export Profile")) },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -1539,7 +1572,7 @@ fun MainScreen(
                             exportLockProfile = null
                         },
                         enabled = !exportLockEnabled || exportLockPassword.isNotBlank()
-                    ) { Text(if (exportLockMode == "qr") "Share" else "Export") }
+                    ) { Text(rv(if (exportLockMode == "qr") "Share" else "Export")) }
                 },
                 dismissButton = {
                     TextButton(onClick = { exportLockProfile = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }

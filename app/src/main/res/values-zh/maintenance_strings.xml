@@ -113,4 +113,6 @@
   <string name="ui_database_unavailable">"无法打开已保存的数据库。数据已保留，请勿卸载应用。请使用兼容备份或升级方式。"</string>
   <string name="qr_privacy_hint">"此码可能包含配置的登录凭据，请仅分享给可信任的人。"</string>
   <string name="subscription_retained">"本地保留"</string>
+  <string name="data_path_toast">"连接检查通过 ✓"</string>
+  <string name="data_path_unknown_short">"连接检查未通过"</string>
 </resources>

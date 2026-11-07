@@ -187,7 +187,22 @@ object RovunetStrings {
         "Tunnel not passing traffic" to R.string.rv_tunnel_not_passing_traffic_32058e,
         "The VPN tunnel appears to be broken" to R.string.rv_the_vpn_tunnel_appears_to_be_broken_3d5525,
         "Traffic blocked — Kill switch active" to R.string.rv_traffic_blocked_kill_switch_active_1b0a8a,
-        "Waiting for network…" to R.string.rv_waiting_for_network_d1c557
+        "Waiting for network…" to R.string.rv_waiting_for_network_d1c557,
+        "Share QR Code" to R.string.dlg_share_qr_title,
+        "Export Profile" to R.string.dlg_export_profile_title,
+        "Edit Chain" to R.string.chain_title_edit,
+        "New Chain" to R.string.chain_title_new,
+        "Save Chain" to R.string.chain_save,
+        "Create Chain" to R.string.chain_create,
+        "Stop the connection test first" to R.string.err_stop_test_first,
+        "No profile available to connect" to R.string.err_no_profile_connect,
+        "This profile has expired" to R.string.err_profile_expired,
+        "Some profiles in chain were deleted" to R.string.err_chain_profiles_deleted,
+        "Remove chains before deleting all profiles" to R.string.err_remove_chains_first,
+        "Connection cleanup is still running; no profiles were deleted" to R.string.err_cleanup_running_no_delete,
+        "Cannot export a locked profile" to R.string.err_locked_export,
+        "No exportable profiles" to R.string.err_no_exportable,
+        "Connect once and grant Android VPN permission, then disconnect and run the HTTPS test." to R.string.err_vpn_permission_then_https
     )
     private data class Localized(val language: String, val configuration: Configuration, val context: Context)
     @Volatile private var cached: Localized? = null

@@ -661,6 +661,18 @@ class EditProfileViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(dnsTransport = target)
     }
 
+    /**
+     * Soar takes the scan result through its TCP/53 policy, not through [DnsTransport]
+     * (which Soar never reads). Returns true when the policy changed.
+     */
+    fun applySoarScanHint(hint: String): Boolean {
+        val current = _uiState.value.soarTcpMode
+        val next = SoarConfig.tcpModeAfterScan(current, hint)
+        if (next == current) return false
+        _uiState.value = _uiState.value.copy(soarTcpMode = next)
+        return true
+    }
+
     fun updateDnsttAuthoritative(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(dnsttAuthoritative = enabled)
     }

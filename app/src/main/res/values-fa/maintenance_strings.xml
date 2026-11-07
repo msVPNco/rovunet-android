@@ -113,4 +113,6 @@
   <string name="ui_database_unavailable">"دیتابیس ذخیره‌شده باز نشد. داده‌ها حفظ شده‌اند؛ برنامه را حذف نکنید. از پشتیبان یا مسیر ارتقای سازگار استفاده کنید."</string>
   <string name="qr_privacy_hint">"این کد ممکن است اطلاعات ورود کانفیگ‌ها را داشته باشد؛ فقط با افراد مورد اعتماد به اشتراک بگذارید."</string>
   <string name="subscription_retained">"حفظ‌شدهٔ محلی"</string>
+  <string name="data_path_toast">"بررسی اتصال موفق بود ✓"</string>
+  <string name="data_path_unknown_short">"بررسی اتصال موفق نبود"</string>
 </resources>

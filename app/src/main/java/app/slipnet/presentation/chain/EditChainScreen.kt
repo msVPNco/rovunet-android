@@ -1,5 +1,6 @@
 package app.slipnet.presentation.chain
 
+import app.slipnet.presentation.theme.rv
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -64,7 +65,7 @@ fun EditChainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (uiState.isEditing) "Edit Chain" else "New Chain") },
+                title = { Text(rv(if (uiState.isEditing) "Edit Chain" else "New Chain")) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.recovery_back))
@@ -239,7 +240,7 @@ fun EditChainScreen(
                     .padding(vertical = 16.dp),
                 enabled = uiState.selectedProfileIds.size >= 2 && uiState.name.isNotBlank() && uiState.validationError == null
             ) {
-                Text(if (uiState.isEditing) "Save Chain" else "Create Chain")
+                Text(rv(if (uiState.isEditing) "Save Chain" else "Create Chain"))
             }
         }
     }

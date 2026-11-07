@@ -17,12 +17,31 @@ for folder in folders:
 files=list((root/'app/src/main/java/app/slipnet/presentation').rglob('*.kt'))
 files.extend((root/'app/src/main/java/app/slipnet/widget').glob('*.kt'))
 files.append(root/'app/src/main/java/app/slipnet/SlipNetApp.kt')
+def drop_conditions(text):
+ text=' if'+text if text.lstrip().startswith('(') else text
+ while True:
+  found=re.search(r'\bif\s*\(',text)
+  if not found:return text
+  depth=0
+  for index in range(found.end()-1,len(text)):
+   depth+=(text[index]=='(')-(text[index]==')')
+   if depth==0:
+    text=text[:found.start()]+' '+text[index+1:]
+    break
+  else:return text
 used=set()
 for file in files:
  source=file.read_text()
  used.update(re.findall(r'(?<!android\.)R\.(?:string|plurals)\.([a-z0-9_]+)',source))
  for match in re.finditer(r'(?:Toast\.makeText\s*\(\s*[^,\n]+,\s*|set(?:TextViewText|ContentDescription)\s*\(\s*[^,\n]+,\s*|showSnackbar\s*\(\s*|set(?:Title|Message)\s*\(\s*)"((?:[^"\\]|\\.)*)"',source):
   assert not re.search('[A-Za-z]',match[1]),(file.name,'raw transient UI text',match[1])
+ # Text(if (...) "English" else "English") has no resource id; Text(rv(if ...)) does.
+ for match in re.finditer(r'\bText\s*\(\s*if\b([^\n]*)',source):
+  rest=drop_conditions(match[1])
+  rest=re.sub(r'stringResource\([^)]*\)','',rest)
+  for literal in re.findall(r'"((?:[^"\\]|\\.)*)"',rest):
+   if re.search('[A-Za-z]',re.sub(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z_0-9]*','',literal)) and literal not in ('google.com',) and not re.fullmatch(r'e\.g\. [0-9.:/]+',literal):
+    raise AssertionError((file.name,'conditional raw UI text; wrap it in rv(...) or use a string resource',literal))
  for match in re.finditer(r'(?:Text\s*\(\s*(?:text\s*=\s*)?|(?:title|description|subtitle|supportingText|contentDescription)\s*=\s*)"((?:[^"\\]|\\.)*)"',source):
   text=match[1]
   visible=re.sub(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z_0-9]*','',text)
@@ -31,6 +50,15 @@ for file in files:
   if not re.search('[A-Za-z]',visible):continue
   allowed=('Rovunet VPN v','SOCKS5:','HTTP:','HTTPS ', '• ', 'rovunet://', 'USDT •', '@RovunetVPN', 'obfs4 ', '-----BEGIN ', 'GET / HTTP/1.1', '↑ ', '↓ ')
   assert text.startswith(allowed) or text in ('DNS','AES-128-GCM','ChaCha20-Poly1305','Prism','E2E','IP','UDP','TCP','google.com','http://www.gstatic.com/generate_204','Language · زبان · 语言 · Язык','REALITY','XHTTP','UUID','CDN IP','TLS SNI','xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx','proxy.example.com','your-domain.example.com','www.google.com','example.com','cdn.example.com','https://example.com/dns-query') or not re.search('[A-Za-z]', re.sub(r'%[,0-9$]*[ds]|ms|/s', '', visible)),(file.name,text)
+mapped=set(re.findall(r'"((?:[^"\\]|\\.)*)"\s+to\s+',(root/'app/src/main/java/app/slipnet/presentation/theme/RovunetStrings.kt').read_text()))
+for model in ('main/MainViewModel.kt','chain/EditChainViewModel.kt'):
+ path=root/'app/src/main/java/app/slipnet/presentation'/model
+ if not path.exists():continue
+ for match in re.finditer(r'\berror\s*=\s*"([A-Za-z][^"$\\]*)"',path.read_text()):
+  text=match[1]
+  # Codes such as DATABASE_UNAVAILABLE are mapped by UiErrors; prose must have a translation,
+  # or the user only sees the generic error text.
+  assert text==text.upper() or text in mapped,(path.name,'error message without translation',text)
 def args(value):return sorted(re.findall(r'%(\d+)\$([sd])',value or ''))
 required = {key for key,node in resources['values'].items() if node.attrib.get('translatable') != 'false'}
 for key in required:

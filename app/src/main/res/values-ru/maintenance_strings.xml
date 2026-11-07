@@ -113,4 +113,6 @@
   <string name="ui_database_unavailable">"Не удалось открыть сохранённую базу. Данные сохранены; не удаляйте приложение. Используйте совместимую копию или путь обновления."</string>
   <string name="qr_privacy_hint">"Код может содержать данные входа профилей. Делитесь только с доверенными получателями."</string>
   <string name="subscription_retained">"Сохранено локально"</string>
+  <string name="data_path_toast">"Проверка соединения пройдена ✓"</string>
+  <string name="data_path_unknown_short">"Проверка соединения не пройдена"</string>
 </resources>
