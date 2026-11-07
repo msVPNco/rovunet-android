@@ -20,7 +20,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_vpn_key"
             android:tint="#FF333333"
-            android:contentDescription="VPN toggle" />
+            android:contentDescription="@string/widget_vpn_toggle_description" />
 
         <!-- Spinner overlay (connecting/disconnecting) -->
         <ProgressBar

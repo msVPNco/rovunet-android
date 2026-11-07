@@ -20,6 +20,8 @@ used=set()
 for file in files:
  source=file.read_text()
  used.update(re.findall(r'(?<!android\.)R\.(?:string|plurals)\.([a-z0-9_]+)',source))
+ for match in re.finditer(r'(?:Toast\.makeText\s*\(\s*[^,\n]+,\s*|showSnackbar\s*\(\s*|set(?:Title|Message)\s*\(\s*)"((?:[^"\\]|\\.)*)"',source):
+  assert not re.search('[A-Za-z]',match[1]),(file.name,'raw transient UI text',match[1])
  for match in re.finditer(r'(?:Text\s*\(\s*(?:text\s*=\s*)?|(?:title|description|subtitle|supportingText|contentDescription)\s*=\s*)"((?:[^"\\]|\\.)*)"',source):
   text=match[1]
   visible=re.sub(r'\$\{[^}]*\}|\$[A-Za-z_][A-Za-z_0-9]*','',text)
@@ -42,5 +44,10 @@ for key in required:
    assert args(text)==signature,(folder,key,'format arguments')
   if folder=='values-ru' and node.tag=='plurals':assert {'one','few','many','other'}<=set(c.attrib['quantity'] for c in node),(key,'Russian plural categories')
 main=(root/'app/src/main/java/app/slipnet/presentation/main/MainScreen.kt').read_text()
+for file in (res/'layout').glob('*.xml'):
+ for node in ET.parse(file).iter():
+  for attribute in ('text','hint','contentDescription'):
+   value=node.attrib.get('{http://schemas.android.com/apk/res/android}'+attribute,'')
+   assert not value or value.startswith(('@','?')) or not re.search('[A-Za-z]',value),(file.name,attribute,value)
 assert 'activity?.recreate()' not in main,'Language changes must not recreate Activity'
 print(f'PASS all {len(required)} translatable resource keys in four languages, format parity and Russian plurals; all presentation raw-text and Activity checks ({len(used)} used keys)')
