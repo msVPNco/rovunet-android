@@ -26,7 +26,7 @@ internal fun scannerPhaseName(phase: String?): String = when {
 }
 
 /** Backend details remain in local diagnostics; UI never needs raw exception text. */
-internal fun scannerErrorText(context: android.content.Context, error: String): String {
+internal fun scannerErrorText(resources: android.content.res.Resources, error: String): String {
     val key = when {
         error.startsWith("Too many IPs") -> R.string.scanner_error_too_many
         error.startsWith("No IP ranges selected") -> R.string.scanner_error_select_ranges
@@ -40,5 +40,5 @@ internal fun scannerErrorText(context: android.content.Context, error: String): 
         error.contains("auth", true) -> R.string.scanner_error_auth
         else -> R.string.scanner_error_scan
     }
-    return context.getString(key)
+    return resources.getString(key)
 }

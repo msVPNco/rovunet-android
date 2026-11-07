@@ -145,9 +145,9 @@ fun DnsScannerScreen(
         uri?.let { viewModel.importList(it) }
     }
 
-    LaunchedEffect(uiState.error) {
+    LaunchedEffect(uiState.error, localizedResources) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(scannerErrorText(context, error))
+            snackbarHostState.showSnackbar(scannerErrorText(localizedResources, error))
             viewModel.clearError()
         }
     }

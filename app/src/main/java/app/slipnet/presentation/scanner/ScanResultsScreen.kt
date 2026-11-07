@@ -165,6 +165,7 @@ fun ScanResultsScreen(
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
     var proxyWarningDismissed by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val localizedResources = androidx.compose.ui.platform.LocalResources.current
     val prefs = remember { context.getSharedPreferences("scanner_ui", Context.MODE_PRIVATE) }
     var sortOption by remember {
         val initial = SortOption.entries.find { it.name == prefs.getString("sort_option", null) } ?: SortOption.NONE
@@ -242,9 +243,9 @@ fun ScanResultsScreen(
         )
     }
 
-    LaunchedEffect(uiState.error) {
+    LaunchedEffect(uiState.error, localizedResources) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(scannerErrorText(context, error))
+            snackbarHostState.showSnackbar(scannerErrorText(localizedResources, error))
             viewModel.clearError()
         }
     }
@@ -283,10 +284,10 @@ fun ScanResultsScreen(
 
     fun copyIpsToClipboard(ips: List<String>) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(app.slipnet.R.string.scanner_resolver_list), ips.joinToString(", ")))
+        clipboard.setPrimaryClip(ClipData.newPlainText(localizedResources.getString(app.slipnet.R.string.scanner_resolver_list), ips.joinToString(", ")))
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            launch { snackbarHostState.showSnackbar(context.getString(app.slipnet.R.string.scanner_copied_count, ips.size)) }
+            launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_copied_count, ips.size)) }
             delay(1500)
             snackbarHostState.currentSnackbarData?.dismiss()
         }
@@ -309,7 +310,7 @@ fun ScanResultsScreen(
 
         fun doExport(ips: List<String>) {
             pendingAction = null
-            performExport(context, ips, scope, snackbarHostState)
+            performExport(context, ips, scope, snackbarHostState, localizedResources)
         }
 
         fun doSave(ips: List<String>, label: String) {
@@ -317,7 +318,7 @@ fun ScanResultsScreen(
             viewModel.saveToPool(ips, label)
             scope.launch {
                 snackbarHostState.currentSnackbarData?.dismiss()
-                launch { snackbarHostState.showSnackbar(context.getString(app.slipnet.R.string.scanner_saved_count, ips.size)) }
+                launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_saved_count, ips.size)) }
                 delay(1800)
                 snackbarHostState.currentSnackbarData?.dismiss()
             }
@@ -345,7 +346,7 @@ fun ScanResultsScreen(
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(prismPassedIps)
-                                "save" -> doSave(prismPassedIps, context.getString(app.slipnet.R.string.scanner_prism_passed))
+                                "save" -> doSave(prismPassedIps, localizedResources.getString(app.slipnet.R.string.scanner_prism_passed))
                                 else -> doExport(prismPassedIps)
                             }
                         }) {
@@ -356,7 +357,7 @@ fun ScanResultsScreen(
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(visibleE2eIps)
-                                "save" -> doSave(visibleE2eIps, context.getString(app.slipnet.R.string.scanner_e2e_passed))
+                                "save" -> doSave(visibleE2eIps, localizedResources.getString(app.slipnet.R.string.scanner_e2e_passed))
                                 else -> doExport(visibleE2eIps)
                             }
                         }) {
@@ -367,7 +368,7 @@ fun ScanResultsScreen(
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(visibleStage1Ips)
-                                "save" -> doSave(visibleStage1Ips, context.getString(app.slipnet.R.string.scanner_stage1_working))
+                                "save" -> doSave(visibleStage1Ips, localizedResources.getString(app.slipnet.R.string.scanner_stage1_working))
                                 else -> doExport(visibleStage1Ips)
                             }
                         }) {
@@ -452,8 +453,8 @@ fun ScanResultsScreen(
                                         showOverflowMenu = false
                                         when {
                                             hasE2eResults || uiState.selectedResolvers.isNotEmpty() -> pendingAction = "export"
-                                            visibleStage1Ips.isNotEmpty() -> performExport(context, visibleStage1Ips, scope, snackbarHostState)
-                                            else -> performExport(context, visibleE2eIps, scope, snackbarHostState)
+                                            visibleStage1Ips.isNotEmpty() -> performExport(context, visibleStage1Ips, scope, snackbarHostState, localizedResources)
+                                            else -> performExport(context, visibleE2eIps, scope, snackbarHostState, localizedResources)
                                         }
                                     },
                                     leadingIcon = {
@@ -814,7 +815,7 @@ fun ScanResultsScreen(
                                     if (android.os.Build.VERSION.SDK_INT < 33) {
                                         scope.launch {
                                             snackbarHostState.currentSnackbarData?.dismiss()
-                                            launch { snackbarHostState.showSnackbar(context.getString(app.slipnet.R.string.scanner_copied_address, result.host)) }
+                                            launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_copied_address, result.host)) }
                                             delay(1200)
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                         }
@@ -1079,7 +1080,8 @@ private fun performExport(
     context: Context,
     ips: List<String>,
     scope: kotlinx.coroutines.CoroutineScope,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    localizedResources: android.content.res.Resources
 ) {
     try {
         val content = ips.joinToString("\n")
@@ -1095,10 +1097,10 @@ private fun performExport(
             putExtra(android.content.Intent.EXTRA_STREAM, uri)
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, context.getString(app.slipnet.R.string.scanner_export_dns_list)))
+        context.startActivity(android.content.Intent.createChooser(intent, localizedResources.getString(app.slipnet.R.string.scanner_export_dns_list)))
     } catch (e: Exception) {
         scope.launch {
-            snackbarHostState.showSnackbar(context.getString(app.slipnet.R.string.scanner_export_failed))
+            snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_export_failed))
         }
     }
 }
@@ -1865,7 +1867,7 @@ private fun ResultsResolverItem(
 
                 result.errorMessage?.takeIf { result.tunnelTestResult == null }?.let { error ->
                     Text(
-                        text = scannerErrorText(androidx.compose.ui.platform.LocalContext.current, error),
+                        text = scannerErrorText(androidx.compose.ui.platform.LocalResources.current, error),
                         style = MaterialTheme.typography.labelSmall,
                         color = ErrorRed,
                         maxLines = 1,

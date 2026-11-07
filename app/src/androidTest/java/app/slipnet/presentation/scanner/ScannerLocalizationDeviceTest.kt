@@ -86,6 +86,7 @@ class ScannerLocalizationDeviceTest {
                 LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 SlipstreamTheme { Column(Modifier.verticalScroll(rememberScrollState())) {
                     HeroCard()
+                    androidx.compose.material3.Text(scannerErrorText(resources, "No resolvers to scan"))
                     ConfigurationSection("example.invalid", scanPort = "53", timeoutMs = "3000", concurrency = "50",
                         scanTransport = selected, onScanTransportChange = { selected = it },
                         onTestDomainChange = {}, onScanPortChange = {}, onTimeoutChange = {}, onConcurrencyChange = {})
@@ -96,6 +97,8 @@ class ScannerLocalizationDeviceTest {
             compose.runOnIdle { language = next }
             val expected = context.createConfigurationContext(configuration(next)).getString(R.string.scanner_hero_title)
             compose.onNodeWithText(expected).assertExists()
+            val validation = context.createConfigurationContext(configuration(next)).getString(R.string.scanner_error_no_resolvers)
+            compose.onNodeWithText(validation).assertExists()
             compose.runOnIdle { assertEquals(ScanTransportMode.TCP, selected) }
         }
     }
@@ -104,8 +107,8 @@ class ScannerLocalizationDeviceTest {
         val config = configuration("fa")
         val localized = context.createConfigurationContext(config)
         val resources = localized.resources
-        assertEquals(resources.getString(R.string.scanner_error_no_resolvers), scannerErrorText(localized, "No resolvers to scan"))
-        assertEquals(resources.getString(R.string.scanner_error_profile), scannerErrorText(localized, "No profile loaded"))
+        assertEquals(resources.getString(R.string.scanner_error_no_resolvers), scannerErrorText(resources, "No resolvers to scan"))
+        assertEquals(resources.getString(R.string.scanner_error_profile), scannerErrorText(resources, "No profile loaded"))
         compose.setContent {
             CompositionLocalProvider(LocalResources provides resources, LocalConfiguration provides config,
                 LocalLayoutDirection provides LayoutDirection.Rtl) {
