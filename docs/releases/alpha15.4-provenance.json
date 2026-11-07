@@ -1,0 +1,18 @@
+{
+  "application_source_commit": "78d1b14426e675c3e2361152a3f0102d31d22bfc",
+  "version_name": "0.3.0-alpha15.4",
+  "version_code": 31,
+  "apk_sha256": "0c215077f346ffe5aabb81dd6c586a0059434226f7f369853537c3e98f43ae5a",
+  "apk_size": 97250001,
+  "certificate_sha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+  "owner_authorized_publication": true,
+  "authorization_date": "2026-11-07",
+  "ci_run": 42395755189,
+  "jvm_tests": 60,
+  "debug_emulator_tests": 51,
+  "minified_release_jni_tests": 2,
+  "new_detailed_physical_network_results_supplied": false,
+  "approved_apk_rebuilt": false,
+  "old_public_updater_transition": "direct APK installation without uninstalling",
+  "native_payload": "33 libraries unchanged from 15.3 owner review"
+}

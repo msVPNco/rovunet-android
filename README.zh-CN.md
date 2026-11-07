@@ -10,9 +10,17 @@
 
 ## 发布状态
 
-当前版本为 **0.3.0-alpha15 Full，版本代码 26**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15-Full.apk) · [发布记录](docs/releases/alpha15.md) · [状态](docs/STATUS.md)。
+当前版本为 **0.3.0-alpha15.4 Full，版本代码 31**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15.4-Full.apk) · [发布记录](docs/releases/alpha15.4.md) · [状态](docs/STATUS.md)。
 
-alpha15 修复 Release/R8 的 gomobile 打包问题，保留 Go/JNI 必需的类、构造函数、字段与回调。CI 通过 50 项 JVM 测试、31 项私有 Debug 设备测试，以及在精简私有 Release 上执行的两项 JNI 检查。最终公开 APK 另经 DEX 接口、签名及原生库对齐检查。设备证据仅覆盖 API 30/x86_64，不保证所有真实网络。
+alpha15.4 修复 Soar 扫描、订阅操作、菜单、重复导入、测试预算和状态显示。连接选择指南与扫描器使用四语言资源。[CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) 通过 **60 项 JVM、51 项 Debug 模拟器测试及 2 项精简 Release JNI 测试**，设备测试无跳过。33 个原生库与已审阅的 15.3 APK 相同，不宣称完整 native 重建。所有者批准发布同一个审阅 APK，未提供新的详细真实网络测量。
+
+**从公开 alpha14/alpha15 升级：**旧更新器不识别带点的 alpha 修订号。请直接下载 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) 并覆盖安装，不卸载、不清除数据。alpha15.4 支持后续带点修订号，包名和生产签名保持不变。
+
+## 订阅、分享与 Soar 扫描
+
+HTTPS 订阅提供 **更新** 和 **导入**。新来源一次导入成功后关闭整个窗口；错误保留表单，重复来源地址被拒绝，本地编辑得到保留。更新已有来源前须断开 VPN；移除旧条目仍需审核。可选自动刷新约每 12 小时在合适的网络/电池条件下运行。小集合可用 QR/PNG 分享，过大集合使用文件。
+
+Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed25519 密钥验证真实 Soar 握手；E2E 还验证 HTTP 204 或使用已批准服务器身份的 SSH 账户。高级模式只诊断 DNS。UDP/TCP 独立测试，Soar 扫描默认两者，不改写已保存的连接选择；丢弃旧协议的证明时保留导入的候选地址。
 
 需要 Android 7.0/API 24 或更新版本。目标架构为 ARM32、ARM64、x86_64；继承的 Naive/Tor 二进制不提供 x86_64。不承诺 32 位 x86 或新的 Lite 包。尚无 Google Play、App Store 或 Rovunet 桌面图形版本。
 
@@ -27,7 +35,7 @@ alpha15 修复 Release/R8 的 gomobile 打包问题，保留 Go/JNI 必需的类
 | 配置 | 链接/文本/文件/QR 导入预览、分享、集合导出、密码加密备份及显式凭据恢复，保留分享与设备限制。 |
 | 安全诊断 | SSH 身份确认、TLS 与保存的自签名身份验证、凭据存储加密、私有 Xray SOCKS 认证、可取消启动与本地安全报告。不自动上传；安全报告不含端点、账号或凭据字段。 |
 
-主要界面、设置和编辑器资源支持波斯语、英语、简体中文和俄语。部分继承的高级扫描器文本和后端错误仍可能为英语；技术名、地址和语法保持原样。
+主要界面、设置和编辑器资源支持波斯语、英语、简体中文和俄语。扫描器标签、映射错误及连接指南也已本地化；技术名、地址和语法保持原样。
 
 ## 协议
 
@@ -57,7 +65,7 @@ alpha15 修复 Release/R8 的 gomobile 打包问题，保留 Go/JNI 必需的类
 
 [面板](https://github.com/msVPNco/rovunet-panel)管理支持的 Linux 服务并导出配置；客户端支持不等于面板自动安装，部分 `core-plan` 路径须手动部署。需自有服务器和有效凭据，不提供免费账号。
 
-尚无订阅定期刷新、集合自动故障切换、下载吞吐量测试或桌面/商店版本。Soar 自动模式差异和远程 SOCKS 数据路径仍需实测。任何协议均不保证在所有网络可用。
+尚无集合自动故障切换、下载吞吐量测试或桌面/商店版本。Soar 自动模式差异和远程 SOCKS 数据路径仍需实测。任何协议均不保证在所有网络可用。
 
 ## 源码与支持
 
