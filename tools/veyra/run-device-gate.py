@@ -14,6 +14,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "persianSubscriptionFormUsesCurrentResourcesAndRtlWithoutStartingADownload"),
     ("app.slipnet.service.SubscriptionDeviceTest", "updatesAreAtomicPreserveIdentityAndDoNotOverwriteLocalChanges"),
     ("app.slipnet.service.SubscriptionDeviceTest", "collectionQrRoundTripPreservesEveryProfileAndSharingRestrictions"),
     ("app.slipnet.service.PacketStopDeviceTest", "idlePacketEngineStopsAndCanRestartWithoutTraffic"),
@@ -124,9 +125,10 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    with (previews / "scanner-fa-review02.png").open("wb") as image:
-        subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
-                        "cat", "files/scanner-fa-review02.png"], stdout=image, check=True)
+    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png"):
+        with (previews / filename).open("wb") as image:
+            subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
+                            "cat", "files/" + filename], stdout=image, check=True)
 
     # Debug tests cannot detect JNI members removed by R8. Install the minified
     # private candidate and its matching Release instrumentation. Debug tests

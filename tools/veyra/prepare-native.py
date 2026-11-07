@@ -48,5 +48,9 @@ print('Prepared Full native engines. Build: ./gradlew :app:assembleFullDebug -Pv
 with tempfile.TemporaryDirectory(prefix='rovunet-hev-') as temp:
  run([NDK/'ndk-build','NDK_PROJECT_PATH=null',f'APP_BUILD_SCRIPT={ROOT}/app/src/main/cpp/Android.mk',
       f'NDK_APPLICATION_MK={ROOT}/app/src/main/cpp/Application.mk',f'NDK_OUT={temp}/obj',
-      f'NDK_LIBS_OUT={ROOT}/app/src/main/jniLibs','APP_ABI=arm64-v8a armeabi-v7a x86_64','APP_MODULES=hev-tunnel-jni','-j2'])
-print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs.')
+      f'NDK_LIBS_OUT={temp}/libs','APP_ABI=arm64-v8a armeabi-v7a x86_64','APP_MODULES=hev-tunnel-jni','-j2'])
+ for abi in ['arm64-v8a','armeabi-v7a','x86_64']:
+  for name in ['libhev-socks5-tunnel.so','libhev-tunnel-jni.so']:
+   source=pathlib.Path(temp)/'libs'/abi/name
+   (ROOT/'app/src/main/jniLibs'/abi/name).write_bytes(source.read_bytes())
+print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs; preserved other transports.')
