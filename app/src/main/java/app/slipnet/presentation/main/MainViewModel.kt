@@ -184,6 +184,9 @@ class MainViewModel @Inject constructor(
     private var sleepTimerJob: Job? = null
     private var pingJob: Job? = null
     private var importJob: Job? = null
+    // Cached Room flows may emit synchronously during construction. State used
+    // by observers must exist before the init block launches them.
+    private val discoveredProfiles = mutableMapOf<Long, ServerProfile>()
     private var manualChoices: Map<String, Long> = emptyMap()
 
     private fun rememberHistory() {
@@ -1263,7 +1266,6 @@ class MainViewModel @Inject constructor(
         passed
     }
 
-    private val discoveredProfiles = mutableMapOf<Long, ServerProfile>()
 
     private fun startRealTests(profiles: List<ServerProfile>, detailed: Boolean = false) {
         if (profiles.isEmpty() || _uiState.value.isPingRunning) return
