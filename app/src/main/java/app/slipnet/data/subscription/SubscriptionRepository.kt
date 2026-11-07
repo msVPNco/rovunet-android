@@ -147,73 +147,78 @@ class SubscriptionRepository @Inject constructor(
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
         SubscriptionPreview(source, existing, profiles, removed)
     }
-    /** New sources only insert inactive rows. Updates require a disconnected native owner. */
+    /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
         mutex.withLock {
-            app.slipnet.service.TunnelOperations.mutex.withLock {
-            val addition = preview.expectedSource == null
-            require(addition || (connection.connectionState.value.isDisconnected && app.slipnet.service.TunnelOperations.owner == 0L)) { "DISCONNECT_TO_UPDATE" }
-            db.withTransaction {
-                val current = db.subscriptionDao().get(preview.source.id)
-                require(current == preview.expectedSource) { "SOURCE_CHANGED" }
-                if (addition) {
-                    val address = url(sourceUrl(preview.source)).toString()
-                    require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
+            if (preview.expectedSource == null) {
+                applyTransaction(preview, addition = true)
+            } else {
+                app.slipnet.service.TunnelOperations.mutex.withLock {
+                    require(connection.connectionState.value.isDisconnected && app.slipnet.service.TunnelOperations.owner == 0L) { "DISCONNECT_TO_UPDATE" }
+                    applyTransaction(preview, addition = false)
                 }
-                val old = JSONArray(current?.membersJson ?: "[]")
-                val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
-                var localCollectionName: String? = null
-                for (saved in previous.values) {
-                    val row = db.profileDao().getProfileById(saved.getLong("id"))
-                    if (row != null && row.collectionId == preview.source.id && row.collectionName.isNotBlank()) {
-                        localCollectionName = row.collectionName; break
-                    }
-                }
-                val resolvedName = if (current != null && preview.source.name == current.name)
-                    localCollectionName ?: preview.source.name else preview.source.name
-                val members = JSONArray()
-                preview.profiles.forEach { (key, remote) ->
-                    require(addition || connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
-                    val saved = previous[key]
-                    val row = saved?.let { db.profileDao().getProfileById(it.getLong("id")) }
-                    val local = row?.let(mapper::toDomain)
-                    // A locally edited/locked row is retained in full, never silently overwritten.
-                    if (local != null && (local.needsCredentials || local.collectionId != preview.source.id || local.isLocked || digest(local) != saved?.getString("digest"))) {
-                        if (local.collectionId == preview.source.id) db.profileDao().updateMembership(local.id, local.collectionId, resolvedName)
-                        members.put(saved)
-                    } else {
-                        val profile = remote.copy(id = row?.id ?: 0, collectionId = preview.source.id,
-                            collectionName = resolvedName, isActive = local?.isActive ?: false,
-                            isPinned = local?.isPinned ?: false, sortOrder = local?.sortOrder ?: 0,
-                            createdAt = local?.createdAt ?: remote.createdAt)
-                        val newDigest = digest(profile)
-                        val id = if (row == null) db.profileDao().insertProfile(mapper.toEntity(profile))
-                            else {
-                                if (local != null && digest(local) == newDigest) {
-                                    if (row.collectionId != profile.collectionId || row.collectionName != profile.collectionName)
-                                        db.profileDao().updateMembership(row.id, profile.collectionId, profile.collectionName)
-                                } else db.profileDao().updateProfile(mapper.toEntity(profile))
-                                row.id
-                            }
-                        members.put(JSONObject().put("key", key).put("id", id).put("digest", newDigest))
-                    }
-                }
-                val incoming = preview.profiles.map { it.first }.toSet()
-                // Refresh never deletes a saved profile. Retired source entries become
-                // a normal local collection and retain their row, secrets and chain IDs.
-                previous.filterKeys { it !in incoming }.values.forEach { saved ->
-                    require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
-                    val row = db.profileDao().getProfileById(saved.getLong("id"))
-                    if (row != null && row.collectionId == preview.source.id) {
-                        val suffix = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
-                            .getString(app.slipnet.R.string.subscription_retained)
-                        db.profileDao().updateMembership(row.id, preview.source.id + ":retained", resolvedName + " · " + suffix)
-                    }
-                }
-                db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
-            }
             }
         }
+    }
+
+    private suspend fun applyTransaction(preview: SubscriptionPreview, addition: Boolean) = db.withTransaction {
+        val current = db.subscriptionDao().get(preview.source.id)
+        require(current == preview.expectedSource) { "SOURCE_CHANGED" }
+        if (addition) {
+            val address = url(sourceUrl(preview.source)).toString()
+            require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
+        }
+        val old = JSONArray(current?.membersJson ?: "[]")
+        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+        var localCollectionName: String? = null
+        for (saved in previous.values) {
+            val row = db.profileDao().getProfileById(saved.getLong("id"))
+            if (row != null && row.collectionId == preview.source.id && row.collectionName.isNotBlank()) {
+                localCollectionName = row.collectionName; break
+            }
+        }
+        val resolvedName = if (current != null && preview.source.name == current.name)
+            localCollectionName ?: preview.source.name else preview.source.name
+        val members = JSONArray()
+        preview.profiles.forEach { (key, remote) ->
+            require(addition || connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
+            val saved = previous[key]
+            val row = saved?.let { db.profileDao().getProfileById(it.getLong("id")) }
+            val local = row?.let(mapper::toDomain)
+            // A locally edited/locked row is retained in full, never silently overwritten.
+            if (local != null && (local.needsCredentials || local.collectionId != preview.source.id || local.isLocked || digest(local) != saved?.getString("digest"))) {
+                if (local.collectionId == preview.source.id) db.profileDao().updateMembership(local.id, local.collectionId, resolvedName)
+                members.put(saved)
+            } else {
+                val profile = remote.copy(id = row?.id ?: 0, collectionId = preview.source.id,
+                    collectionName = resolvedName, isActive = local?.isActive ?: false,
+                    isPinned = local?.isPinned ?: false, sortOrder = local?.sortOrder ?: 0,
+                    createdAt = local?.createdAt ?: remote.createdAt)
+                val newDigest = digest(profile)
+                val id = if (row == null) db.profileDao().insertProfile(mapper.toEntity(profile))
+                    else {
+                        if (local != null && digest(local) == newDigest) {
+                            if (row.collectionId != profile.collectionId || row.collectionName != profile.collectionName)
+                                db.profileDao().updateMembership(row.id, profile.collectionId, profile.collectionName)
+                        } else db.profileDao().updateProfile(mapper.toEntity(profile))
+                        row.id
+                    }
+                members.put(JSONObject().put("key", key).put("id", id).put("digest", newDigest))
+            }
+        }
+        val incoming = preview.profiles.map { it.first }.toSet()
+        // Refresh never deletes a saved profile. Retired source entries become
+        // a normal local collection and retain their row, secrets and chain IDs.
+        previous.filterKeys { it !in incoming }.values.forEach { saved ->
+            require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
+            val row = db.profileDao().getProfileById(saved.getLong("id"))
+            if (row != null && row.collectionId == preview.source.id) {
+                val suffix = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+                    .getString(app.slipnet.R.string.subscription_retained)
+                db.profileDao().updateMembership(row.id, preview.source.id + ":retained", resolvedName + " · " + suffix)
+            }
+        }
+        db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
     }
     suspend fun refresh(id: String) {
         val row = db.subscriptionDao().get(id) ?: return

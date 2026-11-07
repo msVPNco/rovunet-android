@@ -30,7 +30,8 @@ class SubscriptionDeviceTest {
             TunnelOperations.owner = 717171L
         }
         try {
-            repository.apply(preview)
+            // A new source must also finish while native ownership is locked elsewhere.
+            kotlinx.coroutines.withTimeout(5000) { TunnelOperations.mutex.withLock { repository.apply(preview) } }
             assertEquals(717171L, TunnelOperations.owner)
             val saved = db.profileDao().getAllProfiles().first().single { it.collectionId == preview.source.id }
             assertFalse(saved.isActive)
