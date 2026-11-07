@@ -1,12 +1,23 @@
-<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="180"></p>
+<p align="center"><img src="assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-[English](README.md) · [فارسی](README.fa.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md)
+<h1 align="center">Rovunet for Android</h1>
 
-# Rovunet
+<p align="center"><b>Several routes to your own server, in one Android app</b><br>DNS tunnels, SSH, HTTPS proxies and Xray profiles in named collections, with direct connection and real HTTPS tests.</p>
+
+<p align="center">
+  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
+  <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
+</p>
+
+<p align="center"><b>English</b> · <a href="README.fa.md">فارسی</a> · <a href="README.ru.md">Русский</a> · <a href="README.zh-CN.md">简体中文</a></p>
+
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">Download</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="docs/USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
+
+---
 
 **A multi-protocol Android VPN client for several routes to your own server.** Rovunet brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel.
-
-[Releases](https://github.com/msVPNco/rovunet-android/releases) · [Telegram](https://t.me/RovunetVPN) · [Server panel](https://github.com/msVPNco/rovunet-panel) · [User guide](docs/USER_GUIDE.md)
 
 ## Release status
 
@@ -15,6 +26,13 @@ The current release is **0.3.0-alpha15.4 Full, version code 31**. It retains the
 Alpha15.4 fixes Soar scanning, subscription actions, menus, duplicate imports, test budgets and status feedback. The connection-selection guide and scanner use four-language resources. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) passed **60 JVM, 51 Debug emulator and 2 minified Release JNI tests**, with no device skips. All 33 native libraries match the 15.3 reviewed APK; this is not a complete native rebuild. The owner approved publication of the exact reviewed APK; no detailed new physical-network measurements were supplied.
 
 **Upgrading public alpha14/alpha15:** their older updater does not recognize dotted alpha revisions. Download the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) directly and install over the existing app without uninstalling or clearing data. Alpha15.4 understands subsequent dotted revisions. Package and production signer are unchanged.
+
+## Quick start
+
+1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) and install it. Public alpha14 and later install in place, without uninstalling.
+2. **Open** Rovunet, choose language and theme, and grant the Android VPN permission when asked.
+3. **Import**: Subscriptions → paste your HTTPS subscription link → **Import**, or **+ → Import** for a link, QR code or file.
+4. **Connect**: expand the collection, tap a path to select it and tap it again to connect.
 
 ## Subscriptions, sharing and Soar scanning
 
@@ -67,6 +85,14 @@ The in-app updater downloads compatible GitHub release APKs and checks checksum,
 [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) manages supported Linux services and exports configs. Client support does not imply automatic panel installation; some `core-plan` paths require manual deployment. A server and valid credentials are needed; the app does not provide free accounts.
 
 Automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
+
+## Guides
+
+| | |
+|---|---|
+| 📘 Complete guide (PDF) | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
+| [User guide](docs/USER_GUIDE.md) | Installation, import, connection, tests, Soar, credentials and troubleshooting |
+| [Current status](docs/STATUS.md) · [Upgrade](docs/UPGRADE.md) | Release state, signer and migration notes |
 
 ## Source, verification and support
 
