@@ -11,10 +11,43 @@ import com.google.gson.Gson
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.*
 import org.junit.Test
 
 class SubscriptionDeviceTest {
+    @Test fun newSourcePreservesTunnelOwnershipAndDuplicateImportsAreAtomic() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()
+        val db = DatabaseModule.provideDatabase(context)
+        val remote = ServerProfile(name = "New source fixture", tunnelType = TunnelType.SSH, domain = "192.0.2.52",
+            sshHost = "192.0.2.52", sshUsername = "fixture", sshPassword = "synthetic")
+        val document = ConfigExporter().exportSingleProfile(remote)
+        val address = "https://example.invalid/subscription-add-with-owner"
+        val preview = repository.prepareDocument("New source fixture", address, null, false, document)
+        TunnelOperations.mutex.withLock {
+            assertEquals(0L, TunnelOperations.owner)
+            TunnelOperations.owner = 717171L
+        }
+        try {
+            repository.apply(preview)
+            assertEquals(717171L, TunnelOperations.owner)
+            val saved = db.profileDao().getAllProfiles().first().single { it.collectionId == preview.source.id }
+            assertFalse(saved.isActive)
+            val repeated = repository.prepareDocument("Duplicate fixture", address, null, false, document)
+            assertEquals("SOURCE_EXISTS", runCatching { repository.apply(repeated) }.exceptionOrNull()?.message)
+            assertNull(db.subscriptionDao().get(repeated.source.id))
+            val update = repository.prepareDocument("Updated fixture", address, preview.source.id, false, document)
+            assertEquals("DISCONNECT_TO_UPDATE", runCatching { repository.apply(update) }.exceptionOrNull()?.message)
+            assertEquals(saved.id, db.profileDao().getAllProfiles().first().single { it.collectionId == preview.source.id }.id)
+            assertEquals(717171L, TunnelOperations.owner)
+        } finally {
+            TunnelOperations.mutex.withLock { TunnelOperations.owner = 0 }
+            repository.detach(preview.source.id)
+            db.profileDao().getAllProfiles().first().filter { it.collectionId == preview.source.id }.forEach { db.profileDao().deleteProfile(it.id) }
+            db.close()
+        }
+    }
     @Test fun updatesAreAtomicPreserveIdentityAndDoNotOverwriteLocalChanges() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()

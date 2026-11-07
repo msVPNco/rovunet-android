@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
   <string name="subscriptions_title">"اشتراک‌ها"</string>
-  <string name="subscription_hint">"لینک HTTPS اشتراک را اضافه و پیش از اعمال بازبینی کنید. دانلود ناموفق کانفیگ‌ها را پاک نمی‌کند. برای اعمال تغییرات، VPN قطع باشد."</string>
+  <string name="subscription_hint">"اشتراک تازه را با «ایمپورت» اضافه کنید. «آپدیت» منبع ذخیره‌شده را تازه می‌کند؛ کنارگذاشتن ورودی‌های قدیمی همچنان بازبینی می‌خواهد. پس از موفقیت، پنجره بسته می‌شود. دانلود ناموفق کانفیگ‌های قبلی را تغییر نمی‌دهد."</string>
   <string name="subscription_name">"نام مجموعه"</string>
   <string name="subscription_url">"لینک خصوصی اشتراک (HTTPS)"</string>
   <string name="subscription_automatic">"تازه‌سازی خودکار با اینترنت بدون محدودیت مصرف"</string>
@@ -19,7 +19,7 @@
   <string name="subscription_https_required">"لینک معتبر HTTPS بدون نام کاربری و رمز در نشانی یا بخش پس از # وارد کنید."</string>
   <string name="subscription_invalid_feed">"اشتراک خالی، ناقص یا پشتیبانی‌نشده است. کانفیگ‌های قبلی حفظ شدند."</string>
   <string name="subscription_too_large">"حجم اشتراک از سقف ۲ مگابایت بیشتر است."</string>
-  <string name="subscription_disconnect">"پیش از اعمال تغییرات اشتراک، VPN را قطع کنید."</string>
+  <string name="subscription_disconnect">"پیش از آپدیت اشتراک قبلی، VPN را قطع کنید."</string>
   <string name="subscription_review_required">"منبع تعدادی کانفیگ را حذف کرده است؛ تغییرات را دستی بازبینی کنید."</string>
   <string name="subscription_source_changed">"منبع هنگام بازبینی تغییر کرد؛ پیش‌نمایش تازه بگیرید."</string>
   <string name="subscription_failed">"تازه‌سازی اشتراک انجام نشد. منبع، شبکه و دسترسی به اطلاعات ذخیره‌شده را بررسی کنید. کانفیگ‌های قبلی حفظ شدند."</string>
@@ -116,4 +116,8 @@
   <string name="data_path_toast">"بررسی اتصال موفق بود ✓"</string>
   <string name="data_path_unknown_short">"بررسی اتصال موفق نبود"</string>
   <string name="connection_check_details">جزئیات بررسی اتصال</string>
+  <string name="subscription_update_action">"آپدیت"</string>
+  <string name="subscription_source_exists">"این اشتراک قبلاً ذخیره شده است؛ از «آپدیت» استفاده کنید."</string>
+  <string name="subscription_source_not_found">"اشتراک ذخیره‌شده‌ای با این لینک پیدا نشد؛ ابتدا آن را ایمپورت کنید."</string>
+  <string name="subscription_import_action">"ایمپورت"</string>
 </resources>

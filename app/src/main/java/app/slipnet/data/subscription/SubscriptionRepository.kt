@@ -53,6 +53,10 @@ class SubscriptionRepository @Inject constructor(
     }
     fun sourceUrl(row: SubscriptionEntity): String = DeviceSecrets.open(row.sourceEnvelope, "subscription:${row.id}")
     fun host(row: SubscriptionEntity): String = runCatching { url(sourceUrl(row)).host }.getOrDefault("—")
+    suspend fun findSource(address: String): SubscriptionEntity? = withContext(Dispatchers.IO) {
+        val normalized = url(address).toString()
+        db.subscriptionDao().all().firstOrNull { runCatching { url(sourceUrl(it)).toString() == normalized }.getOrDefault(false) }
+    }
     private data class Download(val code: Int, val location: String?, val text: String)
     private suspend fun fetch(address: String): String {
         var target = url(address)
@@ -143,14 +147,19 @@ class SubscriptionRepository @Inject constructor(
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
         SubscriptionPreview(source, existing, profiles, removed)
     }
-    /** Retired entries are kept locally. Applying never changes a live native owner. */
+    /** New sources only insert inactive rows. Updates require a disconnected native owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
         mutex.withLock {
             app.slipnet.service.TunnelOperations.mutex.withLock {
-            require(connection.connectionState.value.isDisconnected && app.slipnet.service.TunnelOperations.owner == 0L) { "DISCONNECT_TO_UPDATE" }
+            val addition = preview.expectedSource == null
+            require(addition || (connection.connectionState.value.isDisconnected && app.slipnet.service.TunnelOperations.owner == 0L)) { "DISCONNECT_TO_UPDATE" }
             db.withTransaction {
                 val current = db.subscriptionDao().get(preview.source.id)
                 require(current == preview.expectedSource) { "SOURCE_CHANGED" }
+                if (addition) {
+                    val address = url(sourceUrl(preview.source)).toString()
+                    require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
+                }
                 val old = JSONArray(current?.membersJson ?: "[]")
                 val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
                 var localCollectionName: String? = null
@@ -164,7 +173,7 @@ class SubscriptionRepository @Inject constructor(
                     localCollectionName ?: preview.source.name else preview.source.name
                 val members = JSONArray()
                 preview.profiles.forEach { (key, remote) ->
-                    require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
+                    require(addition || connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
                     val saved = previous[key]
                     val row = saved?.let { db.profileDao().getProfileById(it.getLong("id")) }
                     val local = row?.let(mapper::toDomain)

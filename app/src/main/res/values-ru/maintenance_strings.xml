@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
   <string name="subscriptions_title">"Подписки"</string>
-  <string name="subscription_hint">"Добавьте HTTPS-подписку и проверьте изменения. Ошибка загрузки сохраняет профили. Для применения отключите VPN."</string>
+  <string name="subscription_hint">"Добавьте новую подписку кнопкой «Импорт». «Обновить» обновляет сохранённый источник; удалённые записи по-прежнему требуют проверки. После успеха окно закроется. Ошибка загрузки не меняет существующие профили."</string>
   <string name="subscription_name">"Название коллекции"</string>
   <string name="subscription_url">"Приватный URL подписки (HTTPS)"</string>
   <string name="subscription_automatic">"Автообновление в безлимитной сети"</string>
@@ -19,7 +19,7 @@
   <string name="subscription_https_required">"Введите корректный HTTPS URL без встроенного логина и фрагмента."</string>
   <string name="subscription_invalid_feed">"Подписка пуста, неполна или не поддерживается. Старые профили сохранены."</string>
   <string name="subscription_too_large">"Размер подписки превышает 2 МиБ."</string>
-  <string name="subscription_disconnect">"Перед применением изменений отключите VPN."</string>
+  <string name="subscription_disconnect">"Перед обновлением существующей подписки отключите VPN."</string>
   <string name="subscription_review_required">"Источник удалил профили. Проверьте обновление вручную."</string>
   <string name="subscription_source_changed">"Источник изменился во время проверки. Получите новый предпросмотр."</string>
   <string name="subscription_failed">"Не удалось обновить подписку. Проверьте источник, сеть и сохранённые данные. Старые профили сохранены."</string>
@@ -116,4 +116,8 @@
   <string name="data_path_toast">"Проверка соединения пройдена ✓"</string>
   <string name="data_path_unknown_short">"Проверка соединения не пройдена"</string>
   <string name="connection_check_details">Сведения о проверке соединения</string>
+  <string name="subscription_update_action">"Обновить"</string>
+  <string name="subscription_source_exists">"Эта подписка уже сохранена. Используйте «Обновить»."</string>
+  <string name="subscription_source_not_found">"Сохранённая подписка с этой ссылкой не найдена. Сначала импортируйте её."</string>
+  <string name="subscription_import_action">"Импорт"</string>
 </resources>

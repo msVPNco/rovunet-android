@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
   <string name="subscriptions_title">"订阅"</string>
-  <string name="subscription_hint">"添加 HTTPS 订阅，确认预览后应用。下载失败会保留配置。应用更新前请断开 VPN。"</string>
+  <string name="subscription_hint">"使用“导入”添加新订阅，使用“更新”刷新已保存的来源。移除旧条目仍需审核。操作成功后窗口自动关闭；下载失败不会修改现有配置。"</string>
   <string name="subscription_name">"集合名称"</string>
   <string name="subscription_url">"私密订阅地址（HTTPS）"</string>
   <string name="subscription_automatic">"在不计费网络上自动更新"</string>
@@ -19,7 +19,7 @@
   <string name="subscription_https_required">"请输入有效 HTTPS 地址，不含嵌入式登录信息或片段。"</string>
   <string name="subscription_invalid_feed">"订阅为空、不完整或不受支持，原有配置已保留。"</string>
   <string name="subscription_too_large">"订阅超过 2 MiB 限制。"</string>
-  <string name="subscription_disconnect">"应用订阅更改前请断开 VPN。"</string>
+  <string name="subscription_disconnect">"更新已有订阅前请先断开 VPN。"</string>
   <string name="subscription_review_required">"来源删除了配置，请手动检查更新。"</string>
   <string name="subscription_source_changed">"检查期间来源已更改，请重新预览。"</string>
   <string name="subscription_failed">"订阅更新失败，请检查来源、网络和已保存凭据。原有配置已保留。"</string>
@@ -116,4 +116,8 @@
   <string name="data_path_toast">"连接检查通过 ✓"</string>
   <string name="data_path_unknown_short">"连接检查未通过"</string>
   <string name="connection_check_details">连接检测详情</string>
+  <string name="subscription_update_action">"更新"</string>
+  <string name="subscription_source_exists">"此订阅已保存，请使用“更新”。"</string>
+  <string name="subscription_source_not_found">"没有与此链接匹配的已保存订阅，请先导入。"</string>
+  <string name="subscription_import_action">"导入"</string>
 </resources>

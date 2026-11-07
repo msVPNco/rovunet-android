@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
   <string name="subscriptions_title">"Subscriptions"</string>
-  <string name="subscription_hint">"Add an HTTPS subscription. Preview before applying. Failed downloads preserve your profiles. Updates require a disconnected VPN."</string>
+  <string name="subscription_hint">"Add a new subscription with Import. Update refreshes the saved source; removals still require review. A successful action closes this window. Failed downloads keep existing profiles."</string>
   <string name="subscription_name">"Collection name"</string>
   <string name="subscription_url">"Private subscription URL (HTTPS)"</string>
   <string name="subscription_automatic">"Automatic updates on unmetered networks"</string>
@@ -19,7 +19,7 @@
   <string name="subscription_https_required">"Use a valid HTTPS URL without embedded login details or a fragment."</string>
   <string name="subscription_invalid_feed">"Empty, incomplete or unsupported subscription. Existing profiles were preserved."</string>
   <string name="subscription_too_large">"Subscription exceeds the 2 MiB limit."</string>
-  <string name="subscription_disconnect">"Disconnect the VPN before applying subscription changes."</string>
+  <string name="subscription_disconnect">"Disconnect the VPN before updating an existing subscription."</string>
   <string name="subscription_review_required">"The source removed profiles. Review the update manually."</string>
   <string name="subscription_source_changed">"The source changed during review. Fetch a new preview."</string>
   <string name="subscription_failed">"Could not update this subscription. Check the source, network and saved credentials. Existing profiles were preserved."</string>
@@ -116,4 +116,8 @@
   <string name="data_path_toast">"Connection check passed ✓"</string>
   <string name="data_path_unknown_short">"Connection check did not pass"</string>
   <string name="connection_check_details">Connection check details</string>
+  <string name="subscription_update_action">"Update"</string>
+  <string name="subscription_source_exists">"This subscription is already saved. Use Update."</string>
+  <string name="subscription_source_not_found">"No saved subscription matches this link. Import it first."</string>
+  <string name="subscription_import_action">"Import"</string>
 </resources>
