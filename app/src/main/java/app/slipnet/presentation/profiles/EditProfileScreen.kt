@@ -1398,7 +1398,7 @@ fun EditProfileScreen(
                         OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                             value = uiState.vlessUuid,
                             onValueChange = { viewModel.updateVlessUuid(it) },
-                            label = { Text("UUID") },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_uuid)) },
                             placeholder = { Text("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") },
                             isError = uiState.vlessUuidError != null,
                             supportingText = { Text(uiState.vlessUuidError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_vless_user_id)) },

@@ -32,7 +32,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     expanded: Boolean, connectedProfileId: Long?, manualProfileId: Long?, connecting: Boolean,
     busy: Boolean, canConnect: Boolean, onConnect: () -> Unit, onDetails: () -> Unit,
     onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
-    onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean) {
+    onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean,
+    onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null) {
     if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
@@ -89,6 +90,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                             onClick = { menuOpen = false; onStabilityTest() })
                         HorizontalDivider()
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_manage)
+                        onUpdate?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.subscription_update_review)) }, enabled = !busy, onClick = { menuOpen = false; action() }) }
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_rename_3064d7)) }, enabled = !busy,
                             onClick = { menuOpen = false; onRename() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_move_to_collection_b392f3)) }, enabled = !busy && !connected,
@@ -97,6 +99,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_share)
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_export_share_collection_82ddc2)) }, enabled = !busy,
                             onClick = { menuOpen = false; onExport() })
+                        onShareQr?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.collection_share_qr)) }, enabled = !busy, onClick = { menuOpen = false; action() }) }
                         HorizontalDivider()
                         DropdownMenuItem(text = { Text(stringResource(R.string.delete_collection), color = colors.error) }, enabled = canDelete && !busy,
                             onClick = { menuOpen = false; onDelete() })

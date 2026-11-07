@@ -204,6 +204,7 @@ object RovunetStrings {
         cached = Localized(language, configuration, localized)
         return localized
     }
+    fun resourceId(english: String): Int? = resources[english]
     fun text(context: Context, english: String): String = resources[english]?.let { localizedContext(context).getString(it) } ?: english
     @Composable fun composed(english: String): String = resources[english]?.let { androidx.compose.ui.res.stringResource(it) } ?: english
 }

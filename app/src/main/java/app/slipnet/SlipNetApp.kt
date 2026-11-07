@@ -26,6 +26,7 @@ class SlipNetApp : Application() {
         app.slipnet.tunnel.TransportTrust.initialize(this)
         createNotificationChannels()
         appScope.launch { preferencesDataStore.ensureProxyPortInitialized() }
+        app.slipnet.data.subscription.SubscriptionWorker.schedule(this)
     }
 
     private fun createNotificationChannels() {

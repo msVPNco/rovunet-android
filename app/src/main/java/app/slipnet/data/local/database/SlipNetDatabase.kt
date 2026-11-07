@@ -6,15 +6,22 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProfileEntity::class, ChainEntity::class],
-    version = 47,
+    entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class],
+    version = 48,
     exportSchema = true
 )
 abstract class SlipNetDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
+    abstract fun subscriptionDao(): app.slipnet.data.subscription.SubscriptionDao
     abstract fun chainDao(): ChainDao
 
     companion object {
+        val MIGRATION_47_48 = object : Migration(47, 48) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS subscriptions (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, sourceEnvelope TEXT NOT NULL, membersJson TEXT NOT NULL, lastSuccess INTEGER NOT NULL, lastError TEXT NOT NULL, autoUpdate INTEGER NOT NULL)")
+            }
+        }
+
         val MIGRATION_46_47 = object : Migration(46, 47) {
             override fun migrate(db: SupportSQLiteDatabase) = ProfileSecrets.migrate(db)
         }

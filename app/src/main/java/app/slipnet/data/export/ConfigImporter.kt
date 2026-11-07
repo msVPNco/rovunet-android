@@ -144,7 +144,10 @@ class ConfigImporter @Inject constructor() {
         bundlePassword: String? = null
     ): ImportResult {
         if (input.length > 2 * 1024 * 1024) return ImportResult.Error("Input exceeds 2 MiB")
-        val trimmedInput = ConfigSchemes.canonical(input.trim())
+        val unwrapped = if (input.trim().startsWith(CollectionLink.PREFIX)) {
+            try { CollectionLink.decode(input.trim()) } catch (_: Exception) { return ImportResult.Error("Unsupported or invalid collection QR") }
+        } else input
+        val trimmedInput = ConfigSchemes.canonical(unwrapped.trim())
 
         // Password-encrypted bundle: the whole input is one base64 blob.
         // We unwrap it here and let the normal line-loop parse the decrypted

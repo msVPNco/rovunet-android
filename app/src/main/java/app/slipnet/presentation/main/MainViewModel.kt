@@ -47,6 +47,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -86,6 +87,10 @@ data class MainUiState(
     val exportedJson: String? = null,
     val importPreview: ImportPreview? = null,
     val isImporting: Boolean = false,
+    val subscriptionUrl: String? = null,
+    val subscriptionId: String? = null,
+    val subscriptionIds: Set<String> = emptySet(),
+    val dataPathState: app.slipnet.domain.model.DataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
     val regroupPreview: List<CollectionInference.Group>? = null,
     val regroupUndoAvailable: Boolean = false,
     val regroupBusy: Boolean = false,
@@ -142,6 +147,7 @@ class MainViewModel @Inject constructor(
     private val resolverScannerRepository: ResolverScannerRepository,
     private val configExporter: ConfigExporter,
     private val configImporter: ConfigImporter,
+    internal val subscriptionRepository: app.slipnet.data.subscription.SubscriptionRepository,
     private val preferencesDataStore: PreferencesDataStore,
     internal val connectionHistoryStore: ConnectionHistoryStore
 ) : ViewModel() {
@@ -149,6 +155,30 @@ class MainViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private var dataPathJob: Job? = null
+    private var dataPathOwner: Pair<Long, Long>? = null
+    fun verifyDataPath() {
+        val connected = _uiState.value.connectionState as? ConnectionState.Connected ?: return
+        val owner = connected.connectedAt to connected.profile.id
+        dataPathJob?.cancel()
+        _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.CHECKING)
+        dataPathJob = viewModelScope.launch {
+            val verified = try {
+                // Chain listeners can have a per-layer port override. Do not probe a different listener.
+                if (connected.chainId > 0) false else {
+                    val endpoint = if (connected.profile.tunnelType == TunnelType.XRAY)
+                        app.slipnet.tunnel.XrayBridge.activeEndpoint ?: error("No active endpoint")
+                    else preferencesDataStore.configuredSocksEndpoint()
+                    app.slipnet.core.TunnelProbe.sample({}, successTarget = 1) { host ->
+                        app.slipnet.core.TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 3000)
+                    }.summary != null
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
+            if (dataPathOwner == owner && _uiState.value.connectionState is ConnectionState.Connected) {
+                _uiState.value = _uiState.value.copy(dataPathState = if (verified) app.slipnet.domain.model.DataPathState.VERIFIED else app.slipnet.domain.model.DataPathState.UNKNOWN)
+            }
+        }
+    }
     private var bootstrapPollingJob: Job? = null
     private var trafficPollingJob: Job? = null
     private var sleepTimerJob: Job? = null
@@ -171,6 +201,10 @@ class MainViewModel @Inject constructor(
         override fun onLost(network: android.net.Network) { networkChanged(network, false) }
     }
     init {
+        viewModelScope.launch { subscriptionRepository.observe().catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { rows ->
+            _uiState.value = _uiState.value.copy(subscriptionIds = rows.map { it.id }.toSet())
+        } }
+
         observeConnectionState()
         observeDnsWarning()
         observeDnsPoolScan()
@@ -230,6 +264,12 @@ class MainViewModel @Inject constructor(
                         _uiState.value.pingResults - connectedId else _uiState.value.pingResults,
                     error = if (state is ConnectionState.Error && !_uiState.value.isPingRunning) state.message else _uiState.value.error
                 )
+                val nextOwner = (state as? ConnectionState.Connected)?.let { it.connectedAt to it.profile.id }
+                if (nextOwner != dataPathOwner) {
+                    dataPathJob?.cancel(); dataPathOwner = nextOwner
+                    _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.UNTESTED)
+                    if (nextOwner != null) verifyDataPath()
+                }
                 if (state is ConnectionState.Connecting) {
                     startBootstrapPolling()
                 } else {
@@ -419,7 +459,7 @@ class MainViewModel @Inject constructor(
                 getActiveProfileUseCase()
             ) { profiles, activeProfile ->
                 Pair(profiles, activeProfile)
-            }.collect { (profiles, activeProfile) ->
+            }.catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { (profiles, activeProfile) ->
                 val unchanged = app.slipnet.domain.model.ProbeCache.unchanged(_uiState.value.profiles, profiles)
                 val results = if (!restored) withContext(Dispatchers.Default) {
                     ConnectionHistory.restoreResults(saved, profiles)
@@ -535,7 +575,7 @@ class MainViewModel @Inject constructor(
                 chainRepository.getActiveChain()
             ) { chains, activeChain ->
                 Pair(chains, activeChain)
-            }.collect { (chains, activeChain) ->
+            }.catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { (chains, activeChain) ->
                 _uiState.value = _uiState.value.copy(
                     chains = chains,
                     activeChain = activeChain
@@ -864,7 +904,23 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(exportedJson = null)
     }
 
+    fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null) }
+    fun requestSubscription(id: String) { _uiState.value = _uiState.value.copy(subscriptionId = id) }
+    fun showCollectionQr(profile: ServerProfile) {
+        viewModelScope.launch {
+            try {
+                val payload = withContext(Dispatchers.Default) {
+                    val text = configExporter.exportCollection(_uiState.value.profiles, profile)
+                    app.slipnet.data.export.CollectionLink.encode(text)
+                }
+                _uiState.value = _uiState.value.copy(qrCodeData = QrCodeData(ProfileCollections.name(profile), payload))
+            } catch (_: Exception) { _uiState.value = _uiState.value.copy(error = "Collection export failed") }
+        }
+    }
     fun parseImportConfig(json: String, bundlePassword: String? = null) {
+        if (json.trim().startsWith("https://") && !json.trim().contains('\n')) {
+            _uiState.value = _uiState.value.copy(subscriptionUrl = json.trim()); return
+        }
         if (_uiState.value.isImporting) return
         _uiState.value = _uiState.value.copy(isImporting = true)
         importJob = viewModelScope.launch {
@@ -909,7 +965,7 @@ class MainViewModel @Inject constructor(
                     val name = if (preview.groups.size == 1) preview.collectionName else group.name
                     group.profiles.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
                 }
-                profileRepository.insertCollection(importedProfiles).firstOrNull()?.let { setActiveProfileUseCase(it) }
+                profileRepository.insertCollection(importedProfiles).firstOrNull()?.let { if (_uiState.value.connectionState.isDisconnected) setActiveProfileUseCase(it) }
                 _uiState.value = _uiState.value.copy(selectedCollection = null, manualProfileId = null)
                 _uiState.value = _uiState.value.copy(
                     importPreview = null,

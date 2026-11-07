@@ -3911,7 +3911,11 @@ class SlipNetVpnService : VpnService() {
                     val proxyPort = preferencesDataStore.proxyListenPort.first()
                     repeat(3) {
                         try {
+                            val token = startupCancellation
                             java.net.Socket().use { s ->
+                                val registration = token.register { runCatching { s.close() } }
+                                try {
+                                kotlinx.coroutines.currentCoroutineContext().ensureActive()
                                 s.connect(java.net.InetSocketAddress("127.0.0.1", proxyPort), 3000)
                                 s.soTimeout = 3000
                                 val out = s.getOutputStream()
@@ -3926,6 +3930,7 @@ class SlipNetVpnService : VpnService() {
                                 ))
                                 out.flush()
                                 s.getInputStream().read(ByteArray(10)) // connect response
+                                } finally { registration.close() }
                             }
                         } catch (_: Exception) {}
                         delay(100)

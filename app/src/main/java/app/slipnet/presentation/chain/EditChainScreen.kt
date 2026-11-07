@@ -67,7 +67,7 @@ fun EditChainScreen(
                 title = { Text(if (uiState.isEditing) "Edit Chain" else "New Chain") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.recovery_back))
                     }
                 }
             )
@@ -82,7 +82,7 @@ fun EditChainScreen(
             OutlinedTextField(
                 value = uiState.name,
                 onValueChange = viewModel::setName,
-                label = { Text("Chain Name") },
+                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_chain_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -90,12 +90,12 @@ fun EditChainScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                "Layers",
+                androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_layers),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                "Top layer reaches the Internet. Bottom layer receives your apps.",
+                androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_chain_order),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -192,7 +192,7 @@ fun EditChainScreen(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Add Layer")
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_add_layer))
                     }
 
                     DropdownMenu(

@@ -119,7 +119,7 @@ private fun StatusIndicator(
             is ConnectionState.Connected -> {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Connected",
+                    contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_connected_229655),
                     modifier = Modifier.size(40.dp),
                     tint = statusColor
                 )
@@ -134,7 +134,7 @@ private fun StatusIndicator(
             is ConnectionState.Error -> {
                 Icon(
                     imageVector = Icons.Default.Warning,
-                    contentDescription = "Error",
+                    contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_error_54a0e8),
                     modifier = Modifier.size(40.dp),
                     tint = statusColor
                 )
@@ -142,7 +142,7 @@ private fun StatusIndicator(
             is ConnectionState.Disconnected -> {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Disconnected",
+                    contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_disconnected_04dfac),
                     modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build pinned Xray + lifecycle helpers; preserve SlipNet 2.5.6 Full native engines.
+"""Build pinned Xray, reviewed Hev/JNI and lifecycle helpers; reuse other pinned 2.5.6 Full transports.
 Requires Go (auto toolchain enabled), JDK21, Android SDK36 and NDK29.
 Uses upstream's checked-in full Java bindings with the exact released JNI library.
 """
@@ -42,3 +42,11 @@ with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
   run([GO,'build','-trimpath','-ldflags=-s -w -checklinkname=0','-o',dest/'libveyra_xray.so','./main'],cwd=core,env=env)
   run([cc,'-O2','-fPIE','-pie','-Wl,-z,max-page-size=16384',ROOT/'app/src/main/cpp/veyra-core-launcher.c','-o',dest/'libveyra_core_launcher.so'])
 print('Prepared Full native engines. Build: ./gradlew :app:assembleFullDebug -PveyraPrebuiltNative=true')
+
+# Rebuild the packet engine and JNI lifecycle wrapper from the reviewed source.
+# Other native transports remain the pinned upstream payloads above.
+with tempfile.TemporaryDirectory(prefix='rovunet-hev-') as temp:
+ run([NDK/'ndk-build','NDK_PROJECT_PATH=null',f'APP_BUILD_SCRIPT={ROOT}/app/src/main/cpp/Android.mk',
+      f'NDK_APPLICATION_MK={ROOT}/app/src/main/cpp/Application.mk',f'NDK_OUT={temp}/obj',
+      f'NDK_LIBS_OUT={ROOT}/app/src/main/jniLibs','APP_ABI=arm64-v8a armeabi-v7a x86_64','APP_MODULES=hev-tunnel-jni','-j2'])
+print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs.')

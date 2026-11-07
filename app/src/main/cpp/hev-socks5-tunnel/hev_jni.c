@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <android/log.h>
 
 #include "../hev-socks5-tunnel-src/include/hev-socks5-tunnel.h"
@@ -15,7 +16,9 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 static pthread_t tunnel_thread;
-static volatile int tunnel_running = 0;
+static atomic_int tunnel_running = 0;
+static int thread_joinable = 0;
+static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char *config_content = NULL;
 static int tun_fd_global = -1;
 
@@ -41,14 +44,18 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStart(
     jstring config,
     jint tun_fd
 ) {
+    pthread_mutex_lock (&lifecycle_mutex);
     if (tunnel_running) {
         LOGE("Tunnel already running");
+        pthread_mutex_unlock (&lifecycle_mutex);
         return -1;
     }
+    if (thread_joinable) { pthread_join (tunnel_thread, NULL); thread_joinable = 0; }
 
     const char *config_str = (*env)->GetStringUTFChars(env, config, NULL);
     if (!config_str) {
         LOGE("Failed to get config string");
+        pthread_mutex_unlock (&lifecycle_mutex);
         return -1;
     }
 
@@ -63,6 +70,7 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStart(
 
     if (!config_content) {
         LOGE("Failed to allocate config memory");
+        pthread_mutex_unlock (&lifecycle_mutex);
         return -1;
     }
 
@@ -70,7 +78,8 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStart(
     tunnel_running = 1;
 
     LOGI("Starting tunnel with fd=%d", tun_fd);
-    LOGI("Config:\n%s", config_content);
+    /* Configuration can contain proxy credentials; never log it. */
+    hev_socks5_tunnel_prepare ();
 
     int ret = pthread_create(&tunnel_thread, NULL, tunnel_thread_func, NULL);
     if (ret != 0) {
@@ -78,9 +87,12 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStart(
         tunnel_running = 0;
         free(config_content);
         config_content = NULL;
+        pthread_mutex_unlock (&lifecycle_mutex);
         return -1;
     }
 
+    thread_joinable = 1;
+    pthread_mutex_unlock (&lifecycle_mutex);
     LOGI("Tunnel started successfully");
     return 0;
 }
@@ -90,8 +102,10 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStop(
     JNIEnv *env,
     jclass clazz
 ) {
-    if (!tunnel_running) {
+    pthread_mutex_lock (&lifecycle_mutex);
+    if (!thread_joinable) {
         LOGI("Tunnel not running");
+        pthread_mutex_unlock (&lifecycle_mutex);
         return;
     }
 
@@ -100,6 +114,7 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStop(
 
     // Wait for thread to finish
     pthread_join(tunnel_thread, NULL);
+    thread_joinable = 0;
 
     if (config_content) {
         free(config_content);
@@ -108,6 +123,7 @@ Java_app_slipnet_tunnel_HevSocks5Tunnel_nativeStop(
 
     tunnel_running = 0;
     tun_fd_global = -1;
+    pthread_mutex_unlock (&lifecycle_mutex);
     LOGI("Tunnel stopped");
 }
 
