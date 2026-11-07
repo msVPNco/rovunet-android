@@ -115,4 +115,5 @@
   <string name="subscription_retained">"Kept locally"</string>
   <string name="data_path_toast">"Connection check passed ✓"</string>
   <string name="data_path_unknown_short">"Connection check did not pass"</string>
+  <string name="connection_check_details">Connection check details</string>
 </resources>

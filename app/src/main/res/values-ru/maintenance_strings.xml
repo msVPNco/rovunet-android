@@ -115,4 +115,5 @@
   <string name="subscription_retained">"Сохранено локально"</string>
   <string name="data_path_toast">"Проверка соединения пройдена ✓"</string>
   <string name="data_path_unknown_short">"Проверка соединения не пройдена"</string>
+  <string name="connection_check_details">Сведения о проверке соединения</string>
 </resources>

@@ -190,6 +190,7 @@ fun MainScreen(
             dismissButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(request, false) }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
     }
     var showConnectionGuide by remember { mutableStateOf(false) }
+    var showConnectionDetails by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -382,16 +383,6 @@ fun MainScreen(
         )
     }
 
-    // A passed HTTPS check is shown for three seconds in the session it belongs to, then hidden.
-    var dataPassFresh by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.dataPathState, uiState.connectionState.isConnected) {
-        dataPassFresh = uiState.connectionState.isConnected && uiState.dataPathState == app.slipnet.domain.model.DataPathState.VERIFIED
-        if (dataPassFresh) {
-            kotlinx.coroutines.delay(3_000)
-            dataPassFresh = false
-        }
-    }
-
     val localizedError = uiState.error?.let { app.slipnet.presentation.theme.UiErrors.text(uiResources, it) }
     LaunchedEffect(localizedError) {
         localizedError?.let { error ->
@@ -576,6 +567,10 @@ fun MainScreen(
                                     showOverflowMenu = false
                                     showConnectionGuide = true
                                 }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_check_details)) },
+                                onClick = { showOverflowMenu = false; showConnectionDetails = true }
                             )
                             HorizontalDivider()
                             if (uiState.isPingRunning) {
@@ -892,8 +887,9 @@ fun MainScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                if (uiState.connectionState.isConnected && app.slipnet.domain.model.dataPathNoteVisible(uiState.dataPathState, dataPassFresh)) item(key = "data-path-check") {
-                                    DataPathCheckCard(uiState.dataPathState, viewModel::verifyDataPath)
+                                if (uiState.connectionState.isConnected && app.slipnet.domain.model.dataPathNoteVisible(
+                                        uiState.dataPathState, uiState.dataPathNoticeUntilElapsedMs, android.os.SystemClock.elapsedRealtime())) item(key = "data-path-check") {
+                                    DataPathCheckCard(uiState.dataPathState)
                                 }
                                 items(
                                     items = uiState.profiles.groupBy { ProfileCollections.key(it) }.values.toList(),
@@ -1085,6 +1081,17 @@ fun MainScreen(
                 androidx.compose.ui.res.stringResource(app.slipnet.R.string.probe_204_requirement), modifier = Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_ok_9ce3bd)) } })
     }
+    if (showConnectionDetails) AlertDialog(
+        onDismissRequest = { showConnectionDetails = false },
+        title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_check_details)) },
+        text = { DataPathCheckDetails(uiState.dataPathState) },
+        confirmButton = {
+            TextButton(enabled = uiState.connectionState.isConnected && uiState.dataPathState != app.slipnet.domain.model.DataPathState.CHECKING,
+                onClick = viewModel::verifyDataPath) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.data_path_retry)) }
+        },
+        dismissButton = { TextButton(onClick = { showConnectionDetails = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7)) } }
+    )
+
     // ── Dialogs ─────────────────────────────────────────────────────────
 
     // Debug log sheet
@@ -2055,7 +2062,7 @@ private fun ConnectionStatusStrip(
             isConnected -> ConnectedGreen
             isConnecting -> ConnectingOrange
             isError -> DisconnectedRed
-            else -> MaterialTheme.colorScheme.outline
+            else -> MaterialTheme.colorScheme.onSurface
         },
         animationSpec = tween(300),
         label = "statusColor"
@@ -2075,12 +2082,11 @@ private fun ConnectionStatusStrip(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Status indicator dot
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(statusColor)
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(app.slipnet.service.connectionStatusIcon(connectionState.indicator)),
+                    contentDescription = null, // The adjacent localized status is announced once.
+                    tint = statusColor,
+                    modifier = Modifier.size(24.dp)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))

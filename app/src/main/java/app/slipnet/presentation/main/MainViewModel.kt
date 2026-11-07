@@ -91,6 +91,7 @@ data class MainUiState(
     val subscriptionId: String? = null,
     val subscriptionIds: Set<String> = emptySet(),
     val dataPathState: app.slipnet.domain.model.DataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
+    val dataPathNoticeUntilElapsedMs: Long = 0,
     val regroupPreview: List<CollectionInference.Group>? = null,
     val regroupUndoAvailable: Boolean = false,
     val regroupBusy: Boolean = false,
@@ -156,12 +157,17 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     private var dataPathJob: Job? = null
-    private var dataPathOwner: Pair<Long, Long>? = null
+    private var dataPathExpiryJob: Job? = null
+    private var dataPathGeneration = 0L
+    private var dataPathOwner: Triple<Long, Long, Long>? = null
     fun verifyDataPath() {
         val connected = _uiState.value.connectionState as? ConnectionState.Connected ?: return
-        val owner = connected.connectedAt to connected.profile.id
+        val owner = Triple(connectionManager.currentSessionId, connected.connectedAt, connected.profile.id)
+        val generation = ++dataPathGeneration
         dataPathJob?.cancel()
-        _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.CHECKING)
+        dataPathExpiryJob?.cancel()
+        _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.CHECKING,
+            dataPathNoticeUntilElapsedMs = 0)
         dataPathJob = viewModelScope.launch {
             val verified = try {
                 // Chain listeners can have a per-layer port override. Do not probe a different listener.
@@ -174,8 +180,17 @@ class MainViewModel @Inject constructor(
                     }.summary != null
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
-            if (dataPathOwner == owner && _uiState.value.connectionState is ConnectionState.Connected) {
-                _uiState.value = _uiState.value.copy(dataPathState = if (verified) app.slipnet.domain.model.DataPathState.VERIFIED else app.slipnet.domain.model.DataPathState.UNKNOWN)
+            if (dataPathOwner == owner && generation == dataPathGeneration &&
+                connectionManager.ownsSession(owner.first) && _uiState.value.connectionState is ConnectionState.Connected) {
+                _uiState.value = _uiState.value.copy(
+                    dataPathState = if (verified) app.slipnet.domain.model.DataPathState.VERIFIED else app.slipnet.domain.model.DataPathState.UNKNOWN,
+                    dataPathNoticeUntilElapsedMs = if (verified) android.os.SystemClock.elapsedRealtime() + 3_000L else 0)
+                if (verified) dataPathExpiryJob = viewModelScope.launch {
+                    delay(3_000L)
+                    if (dataPathOwner == owner && generation == dataPathGeneration) {
+                        _uiState.value = _uiState.value.copy(dataPathNoticeUntilElapsedMs = 0)
+                    }
+                }
             }
         }
     }
@@ -267,10 +282,13 @@ class MainViewModel @Inject constructor(
                         _uiState.value.pingResults - connectedId else _uiState.value.pingResults,
                     error = if (state is ConnectionState.Error && !_uiState.value.isPingRunning) state.message else _uiState.value.error
                 )
-                val nextOwner = (state as? ConnectionState.Connected)?.let { it.connectedAt to it.profile.id }
+                val nextOwner = (state as? ConnectionState.Connected)?.let {
+                    Triple(connectionManager.currentSessionId, it.connectedAt, it.profile.id)
+                }
                 if (nextOwner != dataPathOwner) {
-                    dataPathJob?.cancel(); dataPathOwner = nextOwner
-                    _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.UNTESTED)
+                    dataPathJob?.cancel(); dataPathExpiryJob?.cancel(); dataPathGeneration++; dataPathOwner = nextOwner
+                    _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
+                        dataPathNoticeUntilElapsedMs = 0)
                     if (nextOwner != null) verifyDataPath()
                 }
                 if (state is ConnectionState.Connecting) {
@@ -960,17 +978,20 @@ class MainViewModel @Inject constructor(
     }
 
     fun confirmImport() {
+        if (_uiState.value.isImporting) return
         val preview = _uiState.value.importPreview ?: return
+        _uiState.value = _uiState.value.copy(isImporting = true)
         viewModelScope.launch {
             try {
                 // Importing the same list again must not add it a second time.
-                val existing = _uiState.value.profiles
+                val existing = profileRepository.getAllProfiles().first().toMutableList()
                 var skipped = 0
                 val importedProfiles = preview.groups.flatMap { group ->
                     val id = java.util.UUID.randomUUID().toString()
                     val name = if (preview.groups.size == 1) preview.collectionName else group.name
                     val fresh = ProfileDuplicates.withoutExisting(existing, group.profiles)
                     skipped += group.profiles.size - fresh.size
+                    existing += fresh
                     fresh.map { it.copy(collectionId = id, collectionName = name.trim().take(120)) }
                 }
                 if (importedProfiles.isEmpty()) {
@@ -989,7 +1010,7 @@ class MainViewModel @Inject constructor(
                     error = "Failed to import profiles: ${e.message}",
                     importPreview = null
                 )
-            }
+            } finally { _uiState.value = _uiState.value.copy(isImporting = false) }
         }
     }
 
@@ -1214,15 +1235,19 @@ class MainViewModel @Inject constructor(
                 val untested = !connectAfter && !dnsOnly && candidates.any {
                     _uiState.value.pingResults[it.id].let { r -> r is PingResult.Pending || r is PingResult.Testing }
                 }
-                if (untested) _uiState.value = _uiState.value.copy(error = "The test stopped before every path was tested")
                 val needsReview = candidates.any { _uiState.value.pingResults[it.id] == PingResult.ReviewIdentity }
-                if (!passed && !needsReview && !dnsOnly && members.any { ProfileCollections.isDns(it) }) {
-                    _uiState.value = _uiState.value.copy(collectionPrompt = true)
-                } else if (!passed) {
-                    val message = if (needsReview) app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
-                        .getString(app.slipnet.R.string.probe_review_identity)
-                    else "No verified connection found within the test budget. Try again or edit this collection."
-                    _uiState.value = _uiState.value.copy(error = message)
+                when (app.slipnet.domain.model.CollectionPhase.completion(passed, untested, needsReview,
+                        !dnsOnly && members.any { ProfileCollections.isDns(it) })) {
+                    app.slipnet.domain.model.CollectionPhase.Completion.INCOMPLETE ->
+                        _uiState.value = _uiState.value.copy(error = "The test stopped before every path was tested", collectionPrompt = false)
+                    app.slipnet.domain.model.CollectionPhase.Completion.OFFER_DNS ->
+                        _uiState.value = _uiState.value.copy(collectionPrompt = true)
+                    app.slipnet.domain.model.CollectionPhase.Completion.NEEDS_REVIEW ->
+                        _uiState.value = _uiState.value.copy(error = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
+                            .getString(app.slipnet.R.string.probe_review_identity))
+                    app.slipnet.domain.model.CollectionPhase.Completion.NO_VERIFIED_PATH ->
+                        _uiState.value = _uiState.value.copy(error = "No verified connection found within the test budget. Try again or edit this collection.")
+                    app.slipnet.domain.model.CollectionPhase.Completion.COMPLETE -> Unit
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: ProbeInterrupted) { showInterruptedTest(e)

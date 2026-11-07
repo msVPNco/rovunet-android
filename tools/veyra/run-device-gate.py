@@ -14,6 +14,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.service.NotificationStatusDeviceTest", "statusShapesAndAccentFollowActualConnectionState"),
+    ("app.slipnet.presentation.main.DataPathNoteDeviceTest", "reopeningHomeDoesNotRenewAnExpiredSuccess"),
+    ("app.slipnet.presentation.main.DataPathNoteDeviceTest", "failedCheckLivesInDetailsAndDoesNotLeaveAHomeRow"),
     ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "persianSubscriptionFormUsesCurrentResourcesAndRtlWithoutStartingADownload"),
     ("app.slipnet.service.SubscriptionDeviceTest", "updatesAreAtomicPreserveIdentityAndDoNotOverwriteLocalChanges"),
     ("app.slipnet.service.SubscriptionDeviceTest", "collectionQrRoundTripPreservesEveryProfileAndSharingRestrictions"),

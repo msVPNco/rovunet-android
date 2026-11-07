@@ -9,17 +9,38 @@ import androidx.core.app.NotificationCompat
 import app.slipnet.R
 import app.slipnet.SlipNetApp
 import app.slipnet.domain.model.ConnectionState
+import app.slipnet.domain.model.ConnectionIndicator
 import app.slipnet.domain.model.TrafficStats
 import app.slipnet.presentation.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal fun connectionStatusIcon(indicator: ConnectionIndicator): Int = when (indicator) {
+    ConnectionIndicator.CONNECTED -> R.drawable.ic_rovunet_status_connected
+    ConnectionIndicator.ERROR -> R.drawable.ic_rovunet_status_error
+    ConnectionIndicator.CONNECTING -> R.drawable.ic_rovunet_status_connecting
+    ConnectionIndicator.DISCONNECTING -> R.drawable.ic_rovunet_status_disconnecting
+    ConnectionIndicator.DISCONNECTED -> R.drawable.ic_rovunet_status
+}
+
+internal fun connectionStatusColor(indicator: ConnectionIndicator): Int = when (indicator) {
+    ConnectionIndicator.CONNECTED -> 0xFF4CAF50.toInt()
+    ConnectionIndicator.ERROR -> 0xFFF44336.toInt()
+    ConnectionIndicator.CONNECTING, ConnectionIndicator.DISCONNECTING -> 0xFFFF9800.toInt()
+    ConnectionIndicator.DISCONNECTED -> 0xFF9E9E9E.toInt()
+}
+
 @Singleton
 class NotificationHelper @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val localized get() = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+
+    // The status bar uses the icon's alpha mask; the system owns its tint. Color is an accent
+    // for the expanded notification. Keep state readable through shape as well as color.
+    private fun NotificationCompat.Builder.withConnectionIndicator(indicator: ConnectionIndicator) =
+        setSmallIcon(connectionStatusIcon(indicator)).setColor(connectionStatusColor(indicator))
 
     companion object {
         const val VPN_NOTIFICATION_ID = 1
@@ -70,7 +91,7 @@ class NotificationHelper @Inject constructor(
         )
 
         val builder = NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(state.indicator)
             .setBadgeIconType(if (state is ConnectionState.Connected) NotificationCompat.BADGE_ICON_SMALL else NotificationCompat.BADGE_ICON_NONE)
             .setNumber(if (state is ConnectionState.Connected) 1 else 0)
             .setContentIntent(mainPendingIntent)
@@ -175,7 +196,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.ERROR)
             .setContentTitle(localized.getString(R.string.rv_traffic_blocked_kill_switch_active_1b0a8a))
             .setContentText(localized.getString(R.string.notification_reconnecting, profileName))
             .setContentIntent(mainPendingIntent)
@@ -211,7 +232,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.CONNECTING)
             .setContentTitle(localized.getString(R.string.notification_reconnecting, profileName))
             .setContentText(localized.getString(R.string.notification_attempt, attempt, maxAttempts))
             .setContentIntent(mainPendingIntent)
@@ -247,7 +268,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.CONNECTING)
             .setContentTitle(localized.getString(R.string.rv_waiting_for_network_d1c557))
             .setContentText(localized.getString(R.string.notification_attempt, attempt, maxAttempts) + " — " + profileName.ifEmpty { "VPN" })
             .setContentIntent(mainPendingIntent)
@@ -284,7 +305,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.CONNECTING)
             .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "Connection Lost"))
             .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, message))
             .setContentIntent(mainPendingIntent)
@@ -310,7 +331,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_VPN_STATUS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.CONNECTING)
             .setContentTitle(localized.getString(R.string.notification_smart, transportName))
             .setContentText(localized.getString(R.string.notification_attempt, attempt, total))
             .setContentIntent(mainPendingIntent)
@@ -347,7 +368,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.DISCONNECTED)
             .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "VPN Disconnected"))
             .setContentText(localized.getString(R.string.notification_interrupted, profileName))
             .setContentIntent(mainPendingIntent)
@@ -379,7 +400,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, SlipNetApp.CHANNEL_CONNECTION_EVENTS)
-            .setSmallIcon(R.drawable.ic_rovunet_status)
+            .withConnectionIndicator(ConnectionIndicator.DISCONNECTED)
             .setContentTitle(app.slipnet.presentation.theme.RovunetStrings.text(context, "Tunnel not passing traffic"))
             .setContentText(app.slipnet.presentation.theme.RovunetStrings.text(context, "The VPN tunnel appears to be broken"))
             .setContentIntent(mainPendingIntent)

@@ -1,5 +1,7 @@
 package app.slipnet.domain.model
 
+enum class ConnectionIndicator { DISCONNECTED, CONNECTING, CONNECTED, DISCONNECTING, ERROR }
+
 sealed class ConnectionState {
     data object Disconnected : ConnectionState()
     data object Connecting : ConnectionState()
@@ -11,6 +13,15 @@ sealed class ConnectionState {
     ) : ConnectionState()
     data object Disconnecting : ConnectionState()
     data class Error(val message: String, val cause: Throwable? = null) : ConnectionState()
+
+    val indicator: ConnectionIndicator
+        get() = when (this) {
+            Disconnected -> ConnectionIndicator.DISCONNECTED
+            Connecting -> ConnectionIndicator.CONNECTING
+            is Connected -> ConnectionIndicator.CONNECTED
+            Disconnecting -> ConnectionIndicator.DISCONNECTING
+            is Error -> ConnectionIndicator.ERROR
+        }
 
     val isConnected: Boolean
         get() = this is Connected

@@ -48,17 +48,65 @@ class RegressionContractTest {
     }
 
     @Test fun homeScreenHttpsNoteIsShortLivedAndNeverClaimsAnOldPass() {
-        val shown = { state: app.slipnet.domain.model.DataPathState, fresh: Boolean ->
-            app.slipnet.domain.model.dataPathNoteVisible(state, fresh) }
-        val states = app.slipnet.domain.model.DataPathState.values()
-        // A pass is visible only while it is fresh; a failed check stays with its retry.
-        assertTrue(shown(app.slipnet.domain.model.DataPathState.VERIFIED, true))
-        assertFalse(shown(app.slipnet.domain.model.DataPathState.VERIFIED, false))
-        assertTrue(shown(app.slipnet.domain.model.DataPathState.UNKNOWN, false))
-        // Nothing is reserved on screen while untested or checking, or after a pass has aged.
-        for (state in states.filter { it == app.slipnet.domain.model.DataPathState.UNTESTED || it == app.slipnet.domain.model.DataPathState.CHECKING }) {
-            assertFalse(shown(state, true)); assertFalse(shown(state, false))
+        val verified = app.slipnet.domain.model.DataPathState.VERIFIED
+        val deadline = 4_000L // The check passed at elapsed time 1,000.
+        assertTrue(app.slipnet.domain.model.dataPathNoteVisible(verified, deadline, 1_000L))
+        assertTrue(app.slipnet.domain.model.dataPathNoteVisible(verified, deadline, 3_999L))
+        // Re-entering the page or rotating the phone does not create a new deadline.
+        for (now in listOf(4_000L, 4_001L, 50_000L)) {
+            assertFalse(app.slipnet.domain.model.dataPathNoteVisible(verified, deadline, now))
         }
+        // A reset session has no deadline. A failed/background check never reserves a home row.
+        assertFalse(app.slipnet.domain.model.dataPathNoteVisible(verified, 0L, 1_000L))
+        for (state in app.slipnet.domain.model.DataPathState.values().filter { it != verified }) {
+            assertFalse(app.slipnet.domain.model.dataPathNoteVisible(state, deadline, 1_000L))
+        }
+    }
+
+    @Test fun unfinishedCollectionKeepsItsSpecificOutcomeAfterTimeout() = kotlinx.coroutines.runBlocking {
+        val profiles = List(3) { ServerProfile(id = it + 1L, name = "synthetic", tunnelType = TunnelType.XRAY) }
+        val results = profiles.associate { it.id to app.slipnet.domain.model.PingResult.Pending }.toMutableMap<Long, app.slipnet.domain.model.PingResult>()
+        val passed = app.slipnet.domain.model.CollectionPhase.run(profiles, false, 200L,
+            onProgress = { _, _ -> }, onResult = { p, r -> results[p.id] = r }, probe = {
+                if (it.id == 1L) app.slipnet.domain.model.PingResult.Skipped
+                else { kotlinx.coroutines.delay(10_000L); app.slipnet.domain.model.PingResult.Skipped }
+            })
+        val unfinished = results.values.any { it is app.slipnet.domain.model.PingResult.Pending }
+        assertFalse(passed)
+        assertTrue(unfinished)
+        for (hasDns in listOf(false, true)) {
+            assertEquals(app.slipnet.domain.model.CollectionPhase.Completion.INCOMPLETE,
+                app.slipnet.domain.model.CollectionPhase.completion(passed, unfinished, false, hasDns))
+        }
+        assertEquals(app.slipnet.domain.model.CollectionPhase.Completion.NEEDS_REVIEW,
+            app.slipnet.domain.model.CollectionPhase.completion(false, false, true, true))
+    }
+
+    @Test fun everyConnectionStateHasItsOwnIndicator() {
+        val profile = ServerProfile(name = "synthetic")
+        val states = listOf(app.slipnet.domain.model.ConnectionState.Disconnected,
+            app.slipnet.domain.model.ConnectionState.Connecting, app.slipnet.domain.model.ConnectionState.Connected(profile),
+            app.slipnet.domain.model.ConnectionState.Disconnecting, app.slipnet.domain.model.ConnectionState.Error("synthetic"))
+        assertEquals(5, states.map { it.indicator }.toSet().size)
+    }
+
+    @Test fun lockedImportDuplicatesAreSkippedWithoutChangingRestrictions() {
+        val locked = ServerProfile(name = "synthetic", domain = "example.invalid", isLocked = true,
+            lockPasswordHash = "synthetic-hash", expirationDate = 4_000_000_000_000L,
+            allowSharing = false, boundDeviceId = "synthetic-device")
+        val renamed = locked.copy(id = 9, name = "other", collectionId = "other")
+        assertTrue(ProfileDuplicates.withoutExisting(listOf(locked), listOf(renamed)).isEmpty())
+        assertEquals(listOf(locked), ProfileDuplicates.withinImport(listOf(locked, renamed)))
+        assertEquals(listOf(locked), ProfileDuplicates.withoutExisting(emptyList(), listOf(locked, renamed)))
+        for (changed in listOf(locked.copy(lockPasswordHash = "other-hash"),
+                locked.copy(expirationDate = locked.expirationDate + 1), locked.copy(boundDeviceId = "other-device"),
+                locked.copy(allowSharing = true), locked.copy(isLocked = false), locked.copy(sshPassword = "other-password"))) {
+            assertEquals(listOf(changed), ProfileDuplicates.withoutExisting(listOf(locked), listOf(changed)))
+        }
+        // Unreadable stored credentials are not evidence that the full incoming config is present.
+        assertEquals(listOf(locked), ProfileDuplicates.withoutExisting(
+            listOf(locked.copy(unreadableEnvelopeToken = "unreadable")), listOf(locked)))
+        assertTrue(ProfileDuplicates.plan(listOf(locked.copy(id = 1), renamed)).isEmpty())
     }
 
     @Test fun collectionTestsReachUdpCoresAndTcpChecksSkipThem() {

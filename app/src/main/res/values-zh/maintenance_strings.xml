@@ -115,4 +115,5 @@
   <string name="subscription_retained">"本地保留"</string>
   <string name="data_path_toast">"连接检查通过 ✓"</string>
   <string name="data_path_unknown_short">"连接检查未通过"</string>
+  <string name="connection_check_details">连接检测详情</string>
 </resources>

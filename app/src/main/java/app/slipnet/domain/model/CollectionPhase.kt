@@ -5,6 +5,17 @@ import kotlinx.coroutines.ensureActive
 
 /** One bounded phase. Cleanup remains the probe's responsibility, including cancellation. */
 object CollectionPhase {
+    enum class Completion { INCOMPLETE, COMPLETE, NEEDS_REVIEW, OFFER_DNS, NO_VERIFIED_PATH }
+
+    /** Pick exactly one outcome; a budget expiry must not be replaced with a generic failure. */
+    fun completion(passed: Boolean, untested: Boolean, needsReview: Boolean, hasDnsFallback: Boolean): Completion = when {
+        untested -> Completion.INCOMPLETE
+        passed -> Completion.COMPLETE
+        needsReview -> Completion.NEEDS_REVIEW
+        hasDnsFallback -> Completion.OFFER_DNS
+        else -> Completion.NO_VERIFIED_PATH
+    }
+
     suspend fun run(profiles: List<ServerProfile>, connectAfter: Boolean, budgetMs: Long,
                     onProgress: (Int, ServerProfile) -> Unit,
                     onResult: (ServerProfile, PingResult) -> Unit,
