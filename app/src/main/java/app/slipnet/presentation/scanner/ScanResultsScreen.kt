@@ -1,6 +1,7 @@
 package app.slipnet.presentation.scanner
 
 import app.slipnet.presentation.theme.rv
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -164,6 +165,7 @@ fun ScanResultsScreen(
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues()
     var proxyWarningDismissed by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val localizedResources = androidx.compose.ui.platform.LocalResources.current
     val prefs = remember { context.getSharedPreferences("scanner_ui", Context.MODE_PRIVATE) }
     var sortOption by remember {
         val initial = SortOption.entries.find { it.name == prefs.getString("sort_option", null) } ?: SortOption.NONE
@@ -207,11 +209,11 @@ fun ScanResultsScreen(
         var inputValue by remember { mutableStateOf(prismMinProbes.toString()) }
         AlertDialog(
             onDismissRequest = { showPrismFilterDialog = false },
-            title = { Text("Filter by passed probes") },
+            title = { Text(stringResource(app.slipnet.R.string.scanner_filter_title)) },
             text = {
                 Column {
                     Text(
-                        "Show only resolvers with at least this many passed probes. Enter 0 to show all.",
+                        stringResource(app.slipnet.R.string.scanner_filter_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -219,7 +221,7 @@ fun ScanResultsScreen(
                     OutlinedTextField(
                         value = inputValue,
                         onValueChange = { inputValue = it.filter { c -> c.isDigit() } },
-                        label = { Text("Min passed probes") },
+                        label = { Text(stringResource(app.slipnet.R.string.scanner_filter_min)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -241,9 +243,9 @@ fun ScanResultsScreen(
         )
     }
 
-    LaunchedEffect(uiState.error) {
+    LaunchedEffect(uiState.error, localizedResources) {
         uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
+            snackbarHostState.showSnackbar(scannerErrorText(localizedResources, error))
             viewModel.clearError()
         }
     }
@@ -282,10 +284,10 @@ fun ScanResultsScreen(
 
     fun copyIpsToClipboard(ips: List<String>) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("DNS Resolvers", ips.joinToString(", ")))
+        clipboard.setPrimaryClip(ClipData.newPlainText(localizedResources.getString(app.slipnet.R.string.scanner_resolver_list), ips.joinToString(", ")))
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            launch { snackbarHostState.showSnackbar("Copied ${ips.size} IPs") }
+            launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_copied_count, ips.size)) }
             delay(1500)
             snackbarHostState.currentSnackbarData?.dismiss()
         }
@@ -308,7 +310,7 @@ fun ScanResultsScreen(
 
         fun doExport(ips: List<String>) {
             pendingAction = null
-            performExport(context, ips, scope, snackbarHostState)
+            performExport(context, ips, scope, snackbarHostState, localizedResources)
         }
 
         fun doSave(ips: List<String>, label: String) {
@@ -316,7 +318,7 @@ fun ScanResultsScreen(
             viewModel.saveToPool(ips, label)
             scope.launch {
                 snackbarHostState.currentSnackbarData?.dismiss()
-                launch { snackbarHostState.showSnackbar("Saved ${ips.size} IPs to pool") }
+                launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_saved_count, ips.size)) }
                 delay(1800)
                 snackbarHostState.currentSnackbarData?.dismiss()
             }
@@ -324,14 +326,14 @@ fun ScanResultsScreen(
 
         val isSave = action == "save"
         val titleText = when (action) {
-            "copy" -> "Copy IPs"
-            "save" -> "Save to Pool"
-            else -> "Export IPs"
+            "copy" -> stringResource(app.slipnet.R.string.scanner_copy_ips)
+            "save" -> stringResource(app.slipnet.R.string.scanner_save_pool)
+            else -> stringResource(app.slipnet.R.string.scanner_export_ips)
         }
         val promptText = when (action) {
-            "copy" -> "Which IPs do you want to copy?"
-            "save" -> "Choose which IPs to save as the resolver pool:"
-            else -> "Which IPs do you want to export?"
+            "copy" -> stringResource(app.slipnet.R.string.scanner_which_copy)
+            "save" -> stringResource(app.slipnet.R.string.scanner_which_save)
+            else -> stringResource(app.slipnet.R.string.scanner_which_export)
         }
 
         AlertDialog(
@@ -344,33 +346,33 @@ fun ScanResultsScreen(
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(prismPassedIps)
-                                "save" -> doSave(prismPassedIps, "Prism Passed")
+                                "save" -> doSave(prismPassedIps, localizedResources.getString(app.slipnet.R.string.scanner_prism_passed))
                                 else -> doExport(prismPassedIps)
                             }
                         }) {
-                            Text("Prism passed (${prismPassedIps.size})")
+                            Text(stringResource(app.slipnet.R.string.scanner_prism_count , prismPassedIps.size))
                         }
                     }
                     if (hasE2eResults && visibleE2eIps.isNotEmpty()) {
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(visibleE2eIps)
-                                "save" -> doSave(visibleE2eIps, "E2E Passed")
+                                "save" -> doSave(visibleE2eIps, localizedResources.getString(app.slipnet.R.string.scanner_e2e_passed))
                                 else -> doExport(visibleE2eIps)
                             }
                         }) {
-                            Text("E2E passed (${visibleE2eIps.size})")
+                            Text(stringResource(app.slipnet.R.string.scanner_e2e_count , visibleE2eIps.size))
                         }
                     }
                     if (visibleStage1Ips.isNotEmpty()) {
                         TextButton(onClick = {
                             when (action) {
                                 "copy" -> doCopy(visibleStage1Ips)
-                                "save" -> doSave(visibleStage1Ips, "Stage 1 Working")
+                                "save" -> doSave(visibleStage1Ips, localizedResources.getString(app.slipnet.R.string.scanner_stage1_working))
                                 else -> doExport(visibleStage1Ips)
                             }
                         }) {
-                            Text("Stage 1 working (${visibleStage1Ips.size})")
+                            Text(stringResource(app.slipnet.R.string.scanner_stage1_count , visibleStage1Ips.size))
                         }
                     }
                     if (!isSave && selectedIps.isNotEmpty()) {
@@ -380,7 +382,7 @@ fun ScanResultsScreen(
                                 else -> doExport(selectedIps)
                             }
                         }) {
-                            Text("Selected only (${selectedIps.size})")
+                            Text(stringResource(app.slipnet.R.string.scanner_selected_only , selectedIps.size))
                         }
                     }
                 }
@@ -393,14 +395,14 @@ fun ScanResultsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Scan Results",
+                        stringResource(app.slipnet.R.string.scanner_results_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.stopAll(); onNavigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(app.slipnet.R.string.rv_back_76900f))
                     }
                 },
                 actions = {
@@ -415,7 +417,7 @@ fun ScanResultsScreen(
                         ) {
                             Icon(
                                 if (showSearch) Icons.Default.SearchOff else Icons.Default.Search,
-                                contentDescription = if (showSearch) "Hide search" else "Search"
+                                contentDescription = if (showSearch) stringResource(app.slipnet.R.string.scanner_hide_search) else stringResource(app.slipnet.R.string.rv_search_49c266)
                             )
                         }
                     }
@@ -425,7 +427,7 @@ fun ScanResultsScreen(
                         var showOverflowMenu by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = { showOverflowMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(app.slipnet.R.string.scanner_more_options))
                             }
                             DropdownMenu(
                                 expanded = showOverflowMenu,
@@ -451,8 +453,8 @@ fun ScanResultsScreen(
                                         showOverflowMenu = false
                                         when {
                                             hasE2eResults || uiState.selectedResolvers.isNotEmpty() -> pendingAction = "export"
-                                            visibleStage1Ips.isNotEmpty() -> performExport(context, visibleStage1Ips, scope, snackbarHostState)
-                                            else -> performExport(context, visibleE2eIps, scope, snackbarHostState)
+                                            visibleStage1Ips.isNotEmpty() -> performExport(context, visibleStage1Ips, scope, snackbarHostState, localizedResources)
+                                            else -> performExport(context, visibleE2eIps, scope, snackbarHostState, localizedResources)
                                         }
                                     },
                                     leadingIcon = {
@@ -460,7 +462,7 @@ fun ScanResultsScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Save to pool") },
+                                    text = { Text(stringResource(app.slipnet.R.string.scanner_save_pool)) },
                                     onClick = {
                                         showOverflowMenu = false
                                         pendingAction = "save"
@@ -591,7 +593,7 @@ fun ScanResultsScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "Disconnect VPN to run tunnel test",
+                            text = stringResource(app.slipnet.R.string.scanner_disconnect_first),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -628,7 +630,7 @@ fun ScanResultsScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            text = "Transparent DNS interception detected \u2014 your ISP may be redirecting all DNS traffic. Results may be unreliable.",
+                            text = stringResource(app.slipnet.R.string.scanner_interception_warning),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.weight(1f)
@@ -639,7 +641,7 @@ fun ScanResultsScreen(
                         ) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Dismiss",
+                                contentDescription = stringResource(app.slipnet.R.string.scanner_dismiss),
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -666,7 +668,7 @@ fun ScanResultsScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search IP...", style = MaterialTheme.typography.bodySmall) },
+                    placeholder = { Text(stringResource(app.slipnet.R.string.scanner_search_ip), style = MaterialTheme.typography.bodySmall) },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Search,
@@ -677,7 +679,7 @@ fun ScanResultsScreen(
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Close, contentDescription = stringResource(app.slipnet.R.string.rv_clear_83b12c), modifier = Modifier.size(16.dp))
                             }
                         }
                     },
@@ -796,7 +798,7 @@ fun ScanResultsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "\u2190 Swipe left to copy IP",
+                                text = stringResource(app.slipnet.R.string.scanner_swipe_copy),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
@@ -813,7 +815,7 @@ fun ScanResultsScreen(
                                     if (android.os.Build.VERSION.SDK_INT < 33) {
                                         scope.launch {
                                             snackbarHostState.currentSnackbarData?.dismiss()
-                                            launch { snackbarHostState.showSnackbar("Copied ${result.host}") }
+                                            launch { snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_copied_address, result.host)) }
                                             delay(1200)
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                         }
@@ -839,14 +841,14 @@ fun ScanResultsScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            "Copy",
+                                            stringResource(app.slipnet.R.string.rv_copy_e21f93),
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                         Icon(
                                             Icons.Default.ContentCopy,
-                                            contentDescription = "Copy IP",
+                                            contentDescription = stringResource(app.slipnet.R.string.scanner_copy_ip),
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -897,10 +899,10 @@ fun ScanResultsScreen(
                                 onClick = { showSortMenu = true },
                                 label = {
                                     Text(when (sortOption) {
-                                        SortOption.NONE -> "Sort"
-                                        SortOption.SPEED -> "Speed"
+                                        SortOption.NONE -> stringResource(app.slipnet.R.string.scanner_sort)
+                                        SortOption.SPEED -> stringResource(app.slipnet.R.string.scanner_speed)
                                         SortOption.IP -> "IP"
-                                        SortOption.SCORE -> "Score"
+                                        SortOption.SCORE -> stringResource(app.slipnet.R.string.scanner_score)
                                         SortOption.E2E_SPEED -> "E2E"
                                         SortOption.PRISM_SCORE -> "Prism"
                                     })
@@ -919,16 +921,16 @@ fun ScanResultsScreen(
                                 onDismissRequest = { showSortMenu = false }
                             ) {
                                 val sortOptions = if (isPrismMode) listOfNotNull(
-                                    SortOption.NONE to "None",
-                                    SortOption.SPEED to "Speed",
+                                    SortOption.NONE to stringResource(app.slipnet.R.string.scanner_none),
+                                    SortOption.SPEED to stringResource(app.slipnet.R.string.scanner_speed),
                                     SortOption.IP to "IP",
-                                    SortOption.PRISM_SCORE to "Prism Score",
+                                    SortOption.PRISM_SCORE to stringResource(app.slipnet.R.string.scanner_prism_score),
                                     if (hasE2eResults) SortOption.E2E_SPEED to "E2E" else null
                                 ) else listOf(
-                                    SortOption.NONE to "None",
-                                    SortOption.SPEED to "Speed",
+                                    SortOption.NONE to stringResource(app.slipnet.R.string.scanner_none),
+                                    SortOption.SPEED to stringResource(app.slipnet.R.string.scanner_speed),
                                     SortOption.IP to "IP",
-                                    SortOption.SCORE to "Score",
+                                    SortOption.SCORE to stringResource(app.slipnet.R.string.scanner_score),
                                     SortOption.E2E_SPEED to "E2E"
                                 )
                                 sortOptions.forEach { (option, label) ->
@@ -953,7 +955,7 @@ fun ScanResultsScreen(
                             FilterChip(
                                 selected = prismMinProbes > 0,
                                 onClick = { showPrismFilterDialog = true },
-                                label = { Text(if (prismMinProbes > 0) "Probes ${prismMinProbes}+" else "All probes") },
+                                label = { Text(if (prismMinProbes > 0) stringResource(app.slipnet.R.string.scanner_min_probes_label , prismMinProbes) else stringResource(app.slipnet.R.string.scanner_all_probes)) },
                                 trailingIcon = {
                                     Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
                                 },
@@ -970,7 +972,7 @@ fun ScanResultsScreen(
                             FilterChip(
                                 selected = true,
                                 onClick = { showFilterMenu = true },
-                                label = { Text("Score ${scoreFilter.label}") },
+                                label = { Text(stringResource(app.slipnet.R.string.scanner_score_label , scoreFilter.label)) },
                                 trailingIcon = {
                                     Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
                                 },
@@ -986,7 +988,7 @@ fun ScanResultsScreen(
                             ) {
                                 ScoreFilter.entries.forEach { filter ->
                                     DropdownMenuItem(
-                                        text = { Text("Score ${filter.label}") },
+                                        text = { Text(stringResource(app.slipnet.R.string.scanner_score_label , filter.label)) },
                                         onClick = {
                                             scoreFilter = filter
                                             prefs.edit().putString("score_filter", filter.name).apply()
@@ -1004,9 +1006,9 @@ fun ScanResultsScreen(
                         // Probe-pass filter (ADVANCED mode only): require specific DNS probes to pass
                         if (uiState.scanMode == ScanMode.ADVANCED) Box {
                             val probeLabel = when {
-                                probeFilter.isEmpty() -> "Probes"
+                                probeFilter.isEmpty() -> stringResource(app.slipnet.R.string.scanner_probes)
                                 probeFilter.size == 1 -> probeFilter.first().label
-                                else -> "Probes ${probeFilter.size}/6"
+                                else -> stringResource(app.slipnet.R.string.scanner_probes_selected , probeFilter.size)
                             }
                             FilterChip(
                                 selected = probeFilter.isNotEmpty(),
@@ -1060,7 +1062,7 @@ fun ScanResultsScreen(
                             FilterChip(
                                 selected = showAllWorking,
                                 onClick = { showAllWorking = !showAllWorking },
-                                label = { Text("All working") },
+                                label = { Text(stringResource(app.slipnet.R.string.scanner_all_working)) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.tertiary
@@ -1078,7 +1080,8 @@ private fun performExport(
     context: Context,
     ips: List<String>,
     scope: kotlinx.coroutines.CoroutineScope,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    localizedResources: android.content.res.Resources
 ) {
     try {
         val content = ips.joinToString("\n")
@@ -1094,10 +1097,10 @@ private fun performExport(
             putExtra(android.content.Intent.EXTRA_STREAM, uri)
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, "Export DNS list"))
+        context.startActivity(android.content.Intent.createChooser(intent, localizedResources.getString(app.slipnet.R.string.scanner_export_dns_list)))
     } catch (e: Exception) {
         scope.launch {
-            snackbarHostState.showSnackbar("Export failed: ${e.message}")
+            snackbarHostState.showSnackbar(localizedResources.getString(app.slipnet.R.string.scanner_export_failed))
         }
     }
 }
@@ -1184,19 +1187,19 @@ private fun ResultsProgressSection(
                 ) {
                     ResultsStatChip(
                         icon = Icons.Default.Dns,
-                        label = "Total",
+                        label = stringResource(app.slipnet.R.string.scanner_total),
                         value = totalCount.toString(),
                         color = MaterialTheme.colorScheme.primary
                     )
                     ResultsStatChip(
                         icon = Icons.Default.Search,
-                        label = "Scanned",
+                        label = stringResource(app.slipnet.R.string.scanner_scanned),
                         value = scannedCount.toString(),
                         color = MaterialTheme.colorScheme.secondary
                     )
                     ResultsStatChip(
                         icon = Icons.Default.CheckCircle,
-                        label = "Working",
+                        label = stringResource(app.slipnet.R.string.scanner_working),
                         value = workingCount.toString(),
                         color = WorkingGreen
                     )
@@ -1242,7 +1245,7 @@ private fun ResultsProgressSection(
                 ) {
                     Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Stop Tunnel Test", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(app.slipnet.R.string.scanner_stop_tunnel_test), style = MaterialTheme.typography.labelMedium)
                 }
             } else if (canResumeE2e) {
                 Row(
@@ -1270,7 +1273,7 @@ private fun ResultsProgressSection(
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Restart", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(app.slipnet.R.string.scanner_restart), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             } else if (e2eComplete) {
@@ -1282,7 +1285,7 @@ private fun ResultsProgressSection(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Re-test Tunnel", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(app.slipnet.R.string.scanner_retest_tunnel), style = MaterialTheme.typography.labelMedium)
                 }
             } else if (e2eSupported) {
                 Button(
@@ -1298,7 +1301,7 @@ private fun ResultsProgressSection(
                     Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        if (canRunE2e) "Test Tunnel" else "Test Tunnel (waiting for results…)",
+                        if (canRunE2e) stringResource(app.slipnet.R.string.scanner_test_tunnel) else stringResource(app.slipnet.R.string.scanner_test_tunnel_wait),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -1372,14 +1375,14 @@ private fun E2eProgressSection(e2eScannerState: E2eScannerState, e2eConcurrency:
                         )
                     }
                     Text(
-                        text = "Tunnel Test: ${e2eScannerState.testedCount}/${e2eScannerState.totalCount}",
+                        text = stringResource(app.slipnet.R.string.scanner_tunnel_progress , e2eScannerState.testedCount, e2eScannerState.totalCount),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                     if (e2eScannerState.passedCount > 0) {
                         Text(
-                            text = "${e2eScannerState.passedCount} passed",
+                            text = stringResource(app.slipnet.R.string.scanner_passed_count , e2eScannerState.passedCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = WorkingGreen
                         )
@@ -1452,13 +1455,13 @@ private fun SimpleModeProgressSection(
                     ) {
                         ResultsStatChip(
                             icon = Icons.Default.Search,
-                            label = "Scanned",
+                            label = stringResource(app.slipnet.R.string.scanner_scanned),
                             value = "${scannerState.scannedCount}/${scannerState.totalCount}${if (scannerState.focusRangeCount > 0) " + ${scannerState.focusRangeCount}" else ""}",
                             color = MaterialTheme.colorScheme.secondary
                         )
                         ResultsStatChip(
                             icon = Icons.Default.CheckCircle,
-                            label = "Working",
+                            label = stringResource(app.slipnet.R.string.scanner_working),
                             value = scannerState.workingCount.toString(),
                             color = WorkingGreen
                         )
@@ -1499,14 +1502,14 @@ private fun SimpleModeProgressSection(
                         )
                     }
                     Text(
-                        text = "E2E: ${simpleModeE2eState.testedCount}/${simpleModeE2eState.queuedCount}",
+                        text = stringResource(app.slipnet.R.string.scanner_tunnel_progress , simpleModeE2eState.testedCount, simpleModeE2eState.queuedCount),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                     if (simpleModeE2eState.passedCount > 0) {
                         Text(
-                            text = "${simpleModeE2eState.passedCount} passed",
+                            text = stringResource(app.slipnet.R.string.scanner_passed_count , simpleModeE2eState.passedCount),
                             style = MaterialTheme.typography.labelSmall,
                             color = WorkingGreen
                         )
@@ -1575,7 +1578,7 @@ private fun ResultsSelectionControls(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "$selectedCount / $maxCount selected",
+                            text = stringResource(app.slipnet.R.string.scanner_selected_count , selectedCount, maxCount),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isLimitReached) CensoredOrange
@@ -1585,7 +1588,7 @@ private fun ResultsSelectionControls(
 
                     if (isLimitReached) {
                         Text(
-                            text = "Limit reached",
+                            text = stringResource(app.slipnet.R.string.scanner_limit_reached),
                             style = MaterialTheme.typography.labelSmall,
                             color = CensoredOrange
                         )
@@ -1619,7 +1622,7 @@ private fun ActiveResolversList(activeResolvers: Map<String, String>, maxSlots: 
                     if (i < maxSlots) {
                         val entry = entries.getOrNull(i)
                         Text(
-                            text = if (entry != null) "${entry.key} - ${entry.value}" else "Waiting...",
+                            text = if (entry != null) "${entry.key} - ${scannerPhaseName(entry.value)}" else stringResource(app.slipnet.R.string.scanner_waiting),
                             style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                             color = if (entry != null) MaterialTheme.colorScheme.onSurfaceVariant
                                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
@@ -1667,7 +1670,7 @@ private fun ScanControlButton(
 }
 
 @Composable
-private fun ResultsEmptyState(
+internal fun ResultsEmptyState(
     isScanning: Boolean = false,
     isSimpleMode: Boolean = false,
     isSimpleModeRunning: Boolean = false,
@@ -1691,19 +1694,19 @@ private fun ResultsEmptyState(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = if (isSimpleMode) "Scanning for working resolvers\u2026" else "Scanning\u2026",
+                    text = if (isSimpleMode) stringResource(app.slipnet.R.string.scanner_scanning_working) else stringResource(app.slipnet.R.string.scanner_scanning),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = if (isSimpleMode && workingCount > 0)
-                        "$workingCount working so far, testing E2E ($e2eTestedCount tested)\u2026"
+                        stringResource(app.slipnet.R.string.scanner_working_testing , workingCount, e2eTestedCount)
                     else if (isSimpleMode)
-                        "Resolvers that pass the tunnel test will appear here"
+                        stringResource(app.slipnet.R.string.scanner_passed_appear)
                     else if (workingCount > 0)
-                        "$workingCount working so far, waiting for filters to match\u2026"
+                        stringResource(app.slipnet.R.string.scanner_working_filtering , workingCount)
                     else
-                        "Working resolvers will appear here",
+                        stringResource(app.slipnet.R.string.scanner_working_appear),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -1725,14 +1728,14 @@ private fun ResultsEmptyState(
                 }
                 Text(
                     text = if (isSimpleMode)
-                        "No resolvers passed the tunnel test"
+                        stringResource(app.slipnet.R.string.scanner_none_passed)
                     else
-                        "No working resolvers found",
+                        stringResource(app.slipnet.R.string.scanner_none_working),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Try running a new scan or importing a different list",
+                    text = stringResource(app.slipnet.R.string.scanner_try_new_list),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
@@ -1819,7 +1822,7 @@ private fun ResultsResolverItem(
 
                     result.responseTimeMs?.let { ms ->
                         Text(
-                            text = "${ms}ms",
+                            text = stringResource(app.slipnet.R.string.scanner_elapsed_ms , ms),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1864,7 +1867,7 @@ private fun ResultsResolverItem(
 
                 result.errorMessage?.takeIf { result.tunnelTestResult == null }?.let { error ->
                     Text(
-                        text = error,
+                        text = scannerErrorText(androidx.compose.ui.platform.LocalResources.current, error),
                         style = MaterialTheme.typography.labelSmall,
                         color = ErrorRed,
                         maxLines = 1,
@@ -1884,7 +1887,7 @@ private fun ResultsResolverItem(
                             color = MaterialTheme.colorScheme.tertiary
                         )
                         Text(
-                            text = "E2E: ${e2ePhase ?: "testing..."}",
+                            text = stringResource(app.slipnet.R.string.scanner_e2e_phase , scannerPhaseName(e2ePhase)),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -1942,7 +1945,7 @@ private fun E2eResultChip(e2e: E2eTestResult) {
         ) {
             if (e2e.success) {
                 Text(
-                    text = "E2E ${e2e.totalMs}ms",
+                    text = stringResource(app.slipnet.R.string.scanner_tunnel_elapsed , e2e.totalMs),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = textColor
@@ -1955,7 +1958,7 @@ private fun E2eResultChip(e2e: E2eTestResult) {
                     color = textColor
                 )
                 Text(
-                    text = e2e.errorMessage ?: "Failed",
+                    text = stringResource(app.slipnet.R.string.scanner_failed),
                     style = MaterialTheme.typography.labelSmall,
                     color = textColor,
                     maxLines = 1,
@@ -2027,14 +2030,14 @@ private fun ResultsStatusIcon(status: ResolverStatus) {
 }
 
 @Composable
-private fun ResultsStatusLabel(status: ResolverStatus) {
+internal fun ResultsStatusLabel(status: ResolverStatus) {
     val (text, color) = when (status) {
-        ResolverStatus.PENDING -> "Pending" to MaterialTheme.colorScheme.outline
-        ResolverStatus.SCANNING -> "Scanning..." to MaterialTheme.colorScheme.primary
-        ResolverStatus.WORKING -> "Working" to WorkingGreen
-        ResolverStatus.CENSORED -> "Censored" to CensoredOrange
-        ResolverStatus.TIMEOUT -> "Timeout" to TimeoutGray
-        ResolverStatus.ERROR -> "Error" to ErrorRed
+        ResolverStatus.PENDING -> stringResource(app.slipnet.R.string.scanner_pending) to MaterialTheme.colorScheme.outline
+        ResolverStatus.SCANNING -> stringResource(app.slipnet.R.string.scanner_scanning_status) to MaterialTheme.colorScheme.primary
+        ResolverStatus.WORKING -> stringResource(app.slipnet.R.string.scanner_working) to WorkingGreen
+        ResolverStatus.CENSORED -> stringResource(app.slipnet.R.string.scanner_censored) to CensoredOrange
+        ResolverStatus.TIMEOUT -> stringResource(app.slipnet.R.string.scanner_timeout) to TimeoutGray
+        ResolverStatus.ERROR -> stringResource(app.slipnet.R.string.rv_error_54a0e8) to ErrorRed
     }
 
     Text(

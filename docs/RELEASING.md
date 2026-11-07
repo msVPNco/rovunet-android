@@ -1,5 +1,16 @@
 # Release procedure
 
+## Mandatory phone review
+
+The owner requires an installable APK for phone testing before public release.
+CI, emulator success and delivery of that APK are not publication approval.
+Preserve the production package/signer for an owner test intended to update the
+installed public app; identify it as an unpublished review build in its notes.
+Keep private instrumentation candidates separate. After explicit acceptance,
+publish the exact accepted APK and update current README variants, STATUS,
+user/upgrade/build guides, release notes and provenance together. Historical
+records remain historical; never relabel an untested binary as accepted.
+
 ## Production signing certificate
 
 For a public build, provide `storeFile`, `storePassword`, `keyAlias` and `keyPassword` in the private root `keystore.properties`. A relative store path is resolved from the Android app module. Keep the keystore and its passwords outside version control.
@@ -15,6 +26,8 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
+Current alpha15.4/code31 publishes the exact owner-approved review APK with SHA-256 `0c215077f346ffe5aabb81dd6c586a0059434226f7f369853537c3e98f43ae5a`, built from `78d1b14426e675c3e2361152a3f0102d31d22bfc`. CI run [42395755189](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) passed 60 JVM, 51 Debug emulator and two minified Release JNI cases. All 33 native libraries are reused from the 15.3 review. Publication documentation is separate from the application revision. Old public alpha14/alpha15 updaters require one direct-APK transition for dotted alpha revisions; see [UPGRADE](UPGRADE.md). The alpha15 paragraph below is historical.
+
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
 Alpha15 uses the same managed production identity as alpha14 and versionCode 26. Its application build commit is `908253b42082bbd80007677f0369792d324a378f`; [CI run 42215030490](https://github.com/msVPNco/rovunet-android/actions/runs/42215030490) passed verify, 50 JVM tests, 31 private Debug device cases and two minified private Release JNI cases. Source/archive and release documentation revisions are recorded separately; the approved signed APK is not rebuilt for documentation changes.
@@ -23,7 +36,7 @@ For a new application version, update its version code/name, complete relevant c
 
 ## Verification and automation
 
-Pushes, pull requests and version tags run the verify job. Android native builds are an explicit workflow_dispatch choice, because they require original submodule access, SDK/native dependencies and signing material. They do not automatically create a release or overwrite public assets.
+Code pushes, pull requests and version tags run verification and the reusable Android device gate. That gate builds private Debug/minified Release APKs and a public unsigned APK. The separate full native/signing build remains an explicit workflow_dispatch choice. Documentation-only publication commits may use [skip ci] after checking application/build/test inputs against the recorded passing source. No workflow automatically creates a public release or replaces the owner-approved signed APK.
 
 For alpha11 the exact application commit has a successful verify run; the APK was built locally. Do not describe a skipped Android CI build as a successful Android CI build. A tag verification run covers the release documentation/workflow revision separately.
 

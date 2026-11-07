@@ -7,6 +7,7 @@
  ============================================================================
  */
 
+#include <stdatomic.h>
 #include <errno.h>
 #include <assert.h>
 #include <signal.h>
@@ -40,6 +41,7 @@
 #include "hev-socks5-tunnel.h"
 
 static int run;
+static atomic_int stop_requested;
 static int reject_quic = 1;
 static int reject_non_dns_udp = 0;
 static int tun_fd = -1;
@@ -280,7 +282,8 @@ event_task_entry (void *data)
 
     hev_task_add_fd (task_event, event_fds[0], POLLIN);
 
-    hev_task_io_read (event_fds[0], &val, sizeof (val), NULL, NULL);
+    if (!atomic_load (&stop_requested))
+        hev_task_io_read (event_fds[0], &val, sizeof (val), NULL, NULL);
 
     run = 0;
     node = hev_list_first (&session_set);
@@ -291,6 +294,10 @@ event_task_entry (void *data)
         hev_socks5_session_terminate (sd->self);
     }
 
+    /* Both can be asleep without a socket/timer event. Cancellation must wake
+     * them before joining; run=0 is observed by their I/O yielders. */
+    hev_task_wakeup (task_lwip_io);
+    hev_task_wakeup (task_lwip_timer);
     hev_task_join (task_lwip_io);
     hev_task_join (task_lwip_timer);
     hev_task_del_fd (task_event, event_fds[0]);
@@ -826,23 +833,22 @@ hev_socks5_tunnel_run (void)
 }
 
 void
+hev_socks5_tunnel_prepare (void)
+{
+    atomic_store (&stop_requested, 0);
+}
+
+void
 hev_socks5_tunnel_stop (void)
 {
-    int res;
     int fd;
-
-    LOG_D ("socks5 tunnel stop");
-
-    for (;;) {
-        fd = READ_ONCE (event_fds[1]);
-        if (fd >= 0)
-            break;
-        /* Wait for async initialization */
-        usleep (100 * 1000);
-    }
-
-    res = write (fd, &res, 1);
-    assert (res > 0 && "socks5 tunnel write event");
+    int value = 1;
+    atomic_store (&stop_requested, 1);
+    fd = READ_ONCE (event_fds[1]);
+    /* A stop before initialization is retained by stop_requested. A completed
+     * or failed initializer has no pipe; never spin waiting for a dead thread. */
+    if (fd >= 0)
+        (void) write (fd, &value, sizeof (value));
 }
 
 void

@@ -1,5 +1,15 @@
 # Rovunet maintenance instructions
 
+## Owner review before publication
+
+From 2026-11-07, deliver each new installable APK to the owner for testing on
+their phone before any public release. A successful CI run is not publication
+approval. Do not publish, tag a public release or merge release changes until
+the owner explicitly accepts that APK. Update all current GitHub guides,
+four-language release information and artifact provenance together when that
+release is approved. Prioritize remaining product-facing SlipNet/SlipGate
+branding; retain legal attribution and installation/signing identity.
+
 ## Fixed production signing identity
 
 The owner explicitly authorized a new production signer on 2026-11-06, before

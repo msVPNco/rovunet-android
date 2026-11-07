@@ -19,7 +19,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="120dp"
         android:background="@android:color/transparent"
-        android:contentDescription="Pick from gallery"
+        android:contentDescription="@string/qr_pick_from_gallery"
         android:scaleType="centerInside"
         android:src="@android:drawable/ic_menu_gallery"
         android:tint="#CCFFFFFF" />

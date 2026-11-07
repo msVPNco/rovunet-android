@@ -23,6 +23,16 @@ object ProfileDuplicates {
     /** Only called within a proposed collection; metadata from its native members wins. */
     fun withinImport(profiles: List<ServerProfile>): List<ServerProfile> {
         val seen = mutableSetOf<ServerProfile>()
-        return profiles.filter { p -> p.isLocked || seen.add(key(p).copy(collectionId="")) }
+        return profiles.filter { p -> p.needsCredentials || seen.add(key(p).copy(collectionId="")) }
+    }
+    /**
+     * Profiles of an import that are not already in the app. A profile counts as present when every
+     * connection field equals an existing profile's (name, collection and timestamps do not count),
+     * so importing the same list twice adds nothing. Lock and device/expiry restrictions are part
+     * of the key and are never relaxed. Unreadable credentials cannot be compared safely.
+     */
+    fun withoutExisting(existing: List<ServerProfile>, incoming: List<ServerProfile>): List<ServerProfile> {
+        val present = existing.filterNot { it.needsCredentials }.map { key(it).copy(collectionId = "") }.toHashSet()
+        return incoming.filter { p -> p.needsCredentials || present.add(key(p).copy(collectionId = "")) }
     }
 }

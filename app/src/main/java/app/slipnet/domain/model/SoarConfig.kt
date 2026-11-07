@@ -44,6 +44,24 @@ object SoarConfig {
         if (isNew && !explicitlyChosen && type in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH))
             newProfileTcpMode(type) else current
 
+    /**
+     * What a DNS scan says about the chosen resolvers, as the editor receives it:
+     * "UDP", "TCP" or "MIXED" from a scan of both transports, or "TCP_SCAN" from a
+     * scan of TCP alone (UDP was not tried). Soar has no per-profile DNS transport;
+     * its TCP/53 policy is the only knob, so the hint maps onto that. A policy the
+     * user set to TCP-only is never loosened, and a UDP result changes nothing.
+     */
+    fun tcpModeAfterScan(current: String, hint: String): String {
+        val mode = normalizeTcpMode(current)
+        return when (hint) {
+            // Reached over TCP only: let Soar use both paths for every resolver.
+            "TCP_SCAN", "MIXED" -> if (mode == TCP_ONLY || mode == TCP_ON) mode else TCP_ON
+            // Proven on TCP and not on UDP.
+            "TCP" -> TCP_ONLY
+            else -> mode
+        }
+    }
+
     fun normalizeCountry(country: String): String =
         country.trim().uppercase().takeIf { it.length == 2 && it.all { c -> c in 'A'..'Z' } } ?: ""
 

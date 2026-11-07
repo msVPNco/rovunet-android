@@ -1,12 +1,18 @@
-# Rovunet user guide — alpha15 / راهنمای کاربر
+# Rovunet user guide — alpha15.4 / راهنمای کاربر
 
 [English](#english) · [فارسی](#فارسی) · [简体中文](USER_GUIDE.zh-CN.md) · [Русский](USER_GUIDE.ru.md)
 
 ## English
 
+**Upgrading public alpha14/alpha15:** their older updater does not recognize dotted alpha revisions. Download the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) directly and install over the existing app without uninstalling or clearing data. Alpha15.4 understands subsequent dotted revisions. Package and production signer are unchanged.
+
+HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
+
+Soar scanning offers Quick, Advanced, E2E and Prism. Quick/Prism use authenticated Soar handshakes with the configured Ed25519 key; E2E also checks HTTP 204 or the SSH account with existing trust approval. Advanced is diagnostic DNS only. UDP and TCP are tested independently; Soar scanner defaults to both without rewriting saved connection choices. Imported candidates survive discarded foreign/legacy proof.
+
 ### Installation and updates
 
-The version is **0.3.0-alpha15 Full, code 26**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-android/releases/latest). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
+The version is **0.3.0-alpha15.4 Full, code 31**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-android/releases/latest). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
 
 Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
@@ -40,7 +46,7 @@ Stored secrets use Android Keystore-backed encryption. If a record becomes unrea
 
 Locked profiles and collection sharing restrictions remain effective in supported export paths; a lock is a client policy, not a guarantee against a modified client. Use a strong password for portable backups. Verify a backup can actually be imported before relying on it.
 
-Choose Persian/English/Simplified Chinese/Russian and light/dark/AMOLED in Settings. Main settings/editor resources are translated; some inherited advanced scanner text and backend errors may remain English. Protocol identifiers and addresses stay unchanged. The notification/widget/quick-settings controls depend on Android permissions and launcher behavior.
+Choose Persian/English/Simplified Chinese/Russian and light/dark/AMOLED in Settings. Main settings/editor resources are translated; scanner labels, mapped errors and the connection-selection guide use localized resources. Protocol identifiers and addresses stay unchanged. The notification/widget/quick-settings controls depend on Android permissions and launcher behavior.
 
 ### Troubleshooting and limits
 
@@ -48,13 +54,19 @@ Alpha15 fixes Go/JNI members removed by Release shrinking. If a fresh crash occu
 
 Include app/Android versions, protocol, reproduction steps and whether ordinary pages open. The safe connection report records typed stages/codes, configured Soar mode and UI traffic snapshots without address/account/credential fields. It is local and shared only by user action. Detailed inherited debug logs can contain sensitive data; review/redact them before sharing. Do not post real config links, passwords, private keys or device IDs in public Telegram/issues.
 
-Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. SOCKS CONNECT success is not proof of payload transfer; DNS failure does not prove censorship or server ACL. DoH alone encrypts DNS; ordinary SOCKS5 does not encrypt transport. Subscription refresh, automatic path failover and throughput benchmarks are not included. [Status](STATUS.md) · [Telegram](https://t.me/RovunetVPN).
+Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. SOCKS CONNECT success is not proof of payload transfer; DNS failure does not prove censorship or server ACL. DoH alone encrypts DNS; ordinary SOCKS5 does not encrypt transport. Automatic path failover and throughput benchmarks are not included. [Status](STATUS.md) · [Telegram](https://t.me/RovunetVPN).
 
 ## فارسی
 
+**ارتقا از آلفا۱۴/۱۵ عمومی:** آپدیتر قدیمی شمارهٔ اصلاحی اعشاری را نمی‌شناسد. این بار [APK کامل](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) را مستقیم دانلود و روی برنامهٔ فعلی نصب کنید؛ برنامه یا داده‌هایش را حذف نکنید. نسخهٔ ۱۵.۴ شماره‌های اصلاحی بعدی را می‌شناسد. بسته و امضای تولیدی همان قبلی‌اند.
+
+اشتراک HTTPS دو دکمهٔ **آپدیت** و **ایمپورت** دارد. ایمپورت منبع تازه را با یک اقدام ثبت می‌کند و پس از موفقیت کل پنجره بسته می‌شود؛ خطا فرم را حفظ می‌کند و نشانی تکراری دوباره ثبت نمی‌شود. ویرایش‌های محلی حفظ می‌شوند. آپدیت منبع قبلی به قطع VPN نیاز دارد؛ کنارگذاشتن ورودی‌های قدیمی بازبینی می‌خواهد. تازه‌سازی خودکار اختیاری، تقریباً هر ۱۲ ساعت با شرایط مناسب شبکه و باتری انجام می‌شود. QR کل مجموعه و PNG برای مجموعهٔ کوچک وجود دارد؛ مجموعهٔ بزرگ از خروجی فایل استفاده می‌کند.
+
+اسکن Soar چهار حالت سریع، پیشرفته، E2E و Prism دارد. سریع و Prism دست‌دهی معتبر خود Soar و کلید Ed25519 کانفیگ را بررسی می‌کنند؛ E2E پاسخ HTTP 204 یا حساب SSH با هویت ازقبل‌تأییدشده را نیز می‌سنجد. پیشرفته صرفاً تشخیص DNS است. UDP و TCP مستقل آزمایش می‌شوند و پیش‌فرض جست‌وجوی Soar هر دو است؛ سیاست ذخیره‌شدهٔ اتصال عوض نمی‌شود. کنارگذاشتن تأیید قدیمی، فهرست DNS واردشده را پاک نمی‌کند.
+
 ### نصب و به‌روزرسانی
 
-نسخه **آلفا۱۵ Full، کد ۲۶** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-android/releases/latest) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
+نسخه **آلفا۱۵.۴ Full، کد ۳۱** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-android/releases/latest) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
 
 اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 
@@ -88,7 +100,7 @@ Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. 
 
 قفل و محدودیت اشتراک در مسیرهای خروجی پشتیبانی‌شده حفظ می‌شوند؛ قفل سیاست کلاینت است، نه تضمین در برابر کلاینت تغییریافته. برای پشتیبان قابل‌انتقال رمز قوی بگذارید و قبل از اتکا، ورود واقعی آن را بررسی کنید.
 
-زبان فارسی/انگلیسی/چینی ساده/روسی و تم روشن/تیره/AMOLED در تنظیمات انتخاب می‌شوند. منابع اصلی تنظیمات و ویرایشگر ترجمه شده‌اند؛ بعضی متن‌های پیشرفتهٔ اسکنر و خطاهای backend ممکن است انگلیسی باشند. نام پروتکل و آدرس تغییر نمی‌کنند. کنترل اعلان، ویجت و تنظیمات سریع به مجوز اندروید و رفتار لانچر وابسته است.
+زبان فارسی/انگلیسی/چینی ساده/روسی و تم روشن/تیره/AMOLED در تنظیمات انتخاب می‌شوند. منابع اصلی تنظیمات و ویرایشگر ترجمه شده‌اند؛ عنوان‌ها و توضیح‌های اسکنر، خطاهای نگاشت‌شده و راهنمای انتخاب اتصال نیز منابع ترجمه دارند. نام پروتکل و آدرس تغییر نمی‌کنند. کنترل اعلان، ویجت و تنظیمات سریع به مجوز اندروید و رفتار لانچر وابسته است.
 
 ### عیب‌یابی و محدودیت
 
@@ -96,4 +108,4 @@ Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. 
 
 نسخهٔ اپ/اندروید، پروتکل، مراحل تکرار و بازشدن یا بازنشدن صفحهٔ عادی را گزارش کنید. گزارش امن اتصال، مرحله/کد نوع‌دار، سیاست Soar و نمونهٔ آمار رابط را بدون فیلد آدرس/حساب/اعتبارنامه ثبت می‌کند؛ محلی و اشتراک آن اختیاری است. لاگ دیباگ تفصیلیِ به‌ارث‌رسیده ممکن است حساس باشد؛ قبل از ارسال مرور و پاک‌سازی کنید. لینک واقعی، رمز، کلید خصوصی و شناسهٔ دستگاه را در تلگرام یا issue عمومی نگذارید.
 
-مسیر دادهٔ SOCKS، تفاوت auto/on در Soar و شمارنده‌ها روی شبکهٔ گزارش‌شده هنوز بررسی میدانی می‌خواهند. پذیرش CONNECT اثبات عبور داده نیست؛ خطای DNS هم سانسور یا ACL را قطعی نمی‌کند. DoH به‌تنهایی فقط DNS را رمز می‌کند و SOCKS5 معمولی رمزنگاری انتقال ندارد. اشتراک دوره‌ای، تعویض خودکار مسیر و سنجش نرخ دانلود اضافه نشده‌اند. [وضعیت](STATUS.md) · [تلگرام](https://t.me/RovunetVPN).
+مسیر دادهٔ SOCKS و تفاوت auto/on در Soar روی شبکهٔ گزارش‌شده هنوز بررسی میدانی می‌خواهند. پذیرش CONNECT اثبات عبور داده نیست؛ خطای DNS هم سانسور یا ACL را قطعی نمی‌کند. DoH به‌تنهایی فقط DNS را رمز می‌کند و SOCKS5 معمولی رمزنگاری انتقال ندارد. تعویض خودکار مسیر و سنجش نرخ دانلود اضافه نشده‌اند. [وضعیت](STATUS.md) · [تلگرام](https://t.me/RovunetVPN).

@@ -100,7 +100,7 @@ fun AppSelectorScreen(
                         TextField(
                             value = uiState.searchQuery,
                             onValueChange = { viewModel.updateSearchQuery(it) },
-                            placeholder = { Text("Search apps...") },
+                            placeholder = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_search_apps)) },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
@@ -118,21 +118,21 @@ fun AppSelectorScreen(
                             showSearch = false
                             viewModel.updateSearchQuery("")
                         }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close search")
+                            Icon(Icons.Default.Close, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_close_search))
                         }
                     }
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Select Apps") },
+                    title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_select_apps)) },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.recovery_back))
                         }
                     },
                     actions = {
                         IconButton(onClick = { showSearch = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_search_49c266))
                         }
                     }
                 )
@@ -158,11 +158,11 @@ fun AppSelectorScreen(
                 FilterChip(
                     selected = !uiState.showSystemApps,
                     onClick = { viewModel.toggleSystemApps() },
-                    label = { Text("Hide system") }
+                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_hide_system)) }
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "${uiState.selectedApps.size} selected",
+                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_selected_count, uiState.selectedApps.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

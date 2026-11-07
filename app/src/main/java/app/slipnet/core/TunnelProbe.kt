@@ -72,9 +72,29 @@ object TunnelProbe {
         }
     }
 
+    /** A scanner-supplied URL, still through an explicit SOCKS tunnel with no direct fallback. */
+    suspend fun measureUrlCancellable(port: Int, url: String, timeoutMs: Int): Long = withContext(Dispatchers.IO) {
+        val uri = java.net.URI(url)
+        require(uri.scheme in setOf("http", "https") && !uri.host.isNullOrBlank() && uri.userInfo == null)
+        val secure = uri.scheme == "https"
+        val path = uri.rawPath.orEmpty().ifEmpty { "/" } + (uri.rawQuery?.let { "?$it" } ?: "")
+        require(!path.contains('\r') && !path.contains('\n'))
+        suspendCancellableCoroutine { continuation ->
+            val socket = Socket()
+            continuation.invokeOnCancellation { runCatching { socket.close() } }
+            socket.use {
+                if (continuation.isActive) continuation.resumeWith(runCatching {
+                    measureSocket(socket, port, null, null, uri.host.removeSurrounding("[", "]"),
+                        if (uri.port > 0) uri.port else if (secure) 443 else 80, path,
+                        SSLSocketFactory.getDefault() as SSLSocketFactory, timeoutMs, secure)
+                })
+            }
+        }
+    }
+
     private fun measureSocket(socket: Socket, port: Int, username: String?, password: String?,
                               host: String, remotePort: Int, path: String, factory: SSLSocketFactory,
-                              timeoutMs: Int): Long {
+                              timeoutMs: Int, secure: Boolean = true): Long {
         require(timeoutMs in 100..30000)
         val start = System.nanoTime()
         val timer = Timer("veyra-probe-deadline", true)
@@ -105,13 +125,16 @@ object TunnelProbe {
             check(input.readUnsignedByte() == 0)
             val size = when (input.readUnsignedByte()) { 1 -> 4; 4 -> 16; 3 -> input.readUnsignedByte(); else -> error("Invalid SOCKS address") }
             input.readFully(ByteArray(size + 2))
-            (factory.createSocket(socket, host, remotePort, true) as SSLSocket).use { tls ->
-                tls.sslParameters = tls.sslParameters.apply {
-                    if (!host.contains(':') && !host.matches(Regex("[0-9.]+"))) serverNames = listOf(SNIHostName(host))
-                    endpointIdentificationAlgorithm = "HTTPS"
+            val remote = if (secure) factory.createSocket(socket, host, remotePort, true) as SSLSocket else socket
+            remote.use { tls ->
+                if (tls is SSLSocket) {
+                    tls.sslParameters = tls.sslParameters.apply {
+                        if (!host.contains(':') && !host.matches(Regex("[0-9.]+"))) serverNames = listOf(SNIHostName(host))
+                        endpointIdentificationAlgorithm = "HTTPS"
+                    }
+                    tls.soTimeout = timeoutMs
+                    tls.startHandshake()
                 }
-                tls.soTimeout = timeoutMs
-                tls.startHandshake()
                 tls.outputStream.write("GET $path HTTP/1.1\r\nHost: $host\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n".toByteArray(Charsets.US_ASCII))
                 tls.outputStream.flush()
                 val line = StringBuilder()

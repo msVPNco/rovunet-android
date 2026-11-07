@@ -246,4 +246,23 @@
     <string name="recovery_back">Назад</string>
     <string name="proxy_password_unavailable">Не удалось прочитать пароль локального прокси. Чтобы использовать аутентификацию прокси, задайте новый пароль в настройках.</string>
     <string name="collection_needs_credentials">Откройте группу, чтобы проверить конфигурации с недоступными учётными данными.</string>
+    <string name="menu_stop_test">Остановить проверку</string>
+    <string name="dlg_share_qr_title">Поделиться QR-кодом</string>
+    <string name="dlg_export_profile_title">Экспорт профиля</string>
+    <string name="chain_title_edit">Изменить цепочку</string>
+    <string name="chain_title_new">Новая цепочка</string>
+    <string name="chain_save">Сохранить цепочку</string>
+    <string name="chain_create">Создать цепочку</string>
+    <string name="err_stop_test_first">Сначала остановите проверку соединения</string>
+    <string name="err_no_profile_connect">Нет доступного профиля для подключения</string>
+    <string name="err_profile_expired">Срок действия профиля истёк</string>
+    <string name="err_chain_profiles_deleted">Некоторые профили цепочки были удалены</string>
+    <string name="err_remove_chains_first">Удалите цепочки перед удалением всех профилей</string>
+    <string name="err_cleanup_running_no_delete">Очистка соединения ещё выполняется; профили не удалены</string>
+    <string name="err_locked_export">Нельзя экспортировать заблокированный профиль</string>
+    <string name="err_no_exportable">Нет профилей для экспорта</string>
+    <string name="err_vpn_permission_then_https">Подключитесь один раз и дайте разрешение VPN в Android, затем отключитесь и запустите HTTPS-проверку.</string>
+    <string name="test_stopped_early">Проверка остановилась, не дойдя до всех путей</string>
+    <string name="import_all_present">Все профили уже есть в приложении; ничего не добавлено</string>
+    <string name="import_some_present">Профили, уже имеющиеся в приложении, пропущены</string>
 </resources>

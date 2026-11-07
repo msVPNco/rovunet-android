@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="editor_resolver_transport_conflict">Resolverهای انتخاب‌شده روش انتقال یکسانی ندارند؛ UDP یا TCP را دستی انتخاب کنید.</string>
+    <string name="editor_soar_scan_tcp_applied">این resolverها از راه TCP پیدا شده‌اند؛ Soar حالا روی UDP + TCP قرار گرفت.</string>
     <string name="editor_saved_reconnect_hint">کانفیگ ذخیره شد. برای اعمال تغییرات، اتصال VPN را قطع و دوباره برقرار کنید.</string>
     <string name="editor_locked_profile">کانفیگ قفل‌شده</string>
     <string name="editor_add_profile">افزودن کانفیگ</string>

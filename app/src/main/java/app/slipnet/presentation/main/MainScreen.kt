@@ -190,9 +190,11 @@ fun MainScreen(
             dismissButton = { TextButton(onClick = { app.slipnet.tunnel.TransportTrust.answer(request, false) }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
     }
     var showConnectionGuide by remember { mutableStateOf(false) }
+    var showConnectionDetails by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val uiResources = androidx.compose.ui.platform.LocalResources.current
     val clipboardManager = LocalClipboardManager.current
     val activity = context.findActivity()
 
@@ -292,16 +294,20 @@ fun MainScreen(
     ) { result ->
         val contents = result.contents
         if (contents != null) {
-            if (app.slipnet.data.export.ConfigSchemes.accepts(contents)) {
+            if (app.slipnet.data.export.ConfigSchemes.accepts(contents) || contents.startsWith("https://") || contents.startsWith(app.slipnet.data.export.CollectionLink.PREFIX)) {
                 viewModel.parseImportConfig(contents)
             } else {
                 scope.launch {
-                    snackbarHostState.showSnackbar("Unsupported QR code: use a supported link or WireGuard configuration")
+                    snackbarHostState.showSnackbar(app.slipnet.presentation.theme.RovunetStrings.localizedContext(context).getString(app.slipnet.R.string.ui_qr_unsupported))
                 }
             }
         }
     }
 
+    var showSubscriptions by remember { mutableStateOf(false) }
+    if (showSubscriptions || uiState.subscriptionUrl != null || uiState.subscriptionId != null) SubscriptionDialog(
+        viewModel.subscriptionRepository, uiState.subscriptionUrl, uiState.subscriptionId,
+        onDisconnect = viewModel::disconnect, onDismiss = { showSubscriptions = false; viewModel.closeSubscription() })
     if (showLanguage) AlertDialog(
         onDismissRequest = { showLanguage = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_language_a4fe65)) },
         text = { Column {
@@ -360,7 +366,7 @@ fun MainScreen(
                         putExtra(Intent.EXTRA_TEXT, json)
                         type = "text/plain"
                     }
-                    context.startActivity(Intent.createChooser(sendIntent, "Export Profile"))
+                    context.startActivity(Intent.createChooser(sendIntent, app.slipnet.presentation.theme.RovunetStrings.text(context, "Export Profile")))
                     viewModel.clearExportedJson()
                 }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_share_29887a)) }
             },
@@ -369,7 +375,7 @@ fun MainScreen(
                     TextButton(onClick = {
                         clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(json))
                         viewModel.clearExportedJson()
-                        scope.launch { snackbarHostState.showSnackbar("Copied to clipboard") }
+                        scope.launch { snackbarHostState.showSnackbar(uiResources.getString(app.slipnet.R.string.ui_copy_done)) }
                     }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_copy_e21f93)) }
                     TextButton(onClick = { viewModel.clearExportedJson() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
                 }
@@ -377,7 +383,7 @@ fun MainScreen(
         )
     }
 
-    val localizedError = uiState.error?.let { rv(it) }
+    val localizedError = uiState.error?.let { app.slipnet.presentation.theme.UiErrors.text(uiResources, it) }
     LaunchedEffect(localizedError) {
         localizedError?.let { error ->
             snackbarHostState.showSnackbar(error)
@@ -496,13 +502,13 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "Rovunet",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.app_name),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
                         if (BuildConfig.FLAVOR == "lite") {
                             Text(
-                                text = "Lite",
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lite),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -511,7 +517,7 @@ fun MainScreen(
                             IconButton(onClick = { showLiteInfoDialog = true }) {
                                 Icon(
                                     Icons.Default.Info,
-                                    contentDescription = "Lite version info",
+                                    contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lite_info),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -521,57 +527,78 @@ fun MainScreen(
                 actions = {
                     if (uiState.debugLogging) {
                         IconButton(onClick = { showLogSheet = true }) {
-                            Icon(Icons.Default.BugReport, contentDescription = "Debug Logs")
+                            Icon(Icons.Default.BugReport, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_debug_logs))
                         }
                     }
                     IconButton(onClick = { showShareDialog = true }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share App")
+                        Icon(Icons.Default.Share, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_share_app))
                     }
                     IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_settings_74a883))
                     }
                     // Overflow menu (three-dot, rightmost)
                     Box {
                         IconButton(onClick = { showOverflowMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            Icon(Icons.Default.MoreVert, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_more))
                         }
                         DropdownMenu(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false }
                         ) {
+                            // Groups, top to bottom: app, tests and sorting, organising, data, danger.
+                            // A menu action always closes the menu first.
                             DropdownMenuItem(
-                            text = { Text("Language · زبان · 语言 · Язык") },
-                            onClick = { showOverflowMenu = false; showLanguage = true }
-                        )
-                        if (uiState.regroupUndoAvailable) DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_undo_regrouping_dbd472)) },
-                            enabled = !uiState.regroupBusy && !uiState.isPingRunning && uiState.connectionState.isDisconnected,
-                            onClick = viewModel::undoRegroup)
-                        DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
-                            enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
-                            onClick = { viewModel.previewRegroup() })
-                        DropdownMenuItem(text = { Text("Choosing a profile / Test guide") }, onClick = {
-                                showOverflowMenu = false; showConnectionGuide = true
-                            })
-                            DropdownMenuItem(
-                                text = {
-                                    Text(if (uiState.isPingRunning) "Stop HTTPS Test" else "Test selected collection")
-                                },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.subscriptions_title)) },
                                 onClick = {
                                     showOverflowMenu = false
-                                    mainActivity?.requestVpnPermissionAndConnect { viewModel.pingAllProfiles() } ?: viewModel.pingAllProfiles()
-                                },
-                                enabled = uiState.profiles.isNotEmpty()
+                                    showSubscriptions = true
+                                }
                             )
                             DropdownMenuItem(
-                                text = {
-                                    Text(if (uiState.isPingRunning) "Stop TCP Check" else "TCP check · selected collection")
-                                },
+                                text = { Text("Language · زبان · 语言 · Язык") },
                                 onClick = {
                                     showOverflowMenu = false
-                                    viewModel.pingAllProfilesSimple()
-                                },
-                                enabled = uiState.profiles.isNotEmpty()
+                                    showLanguage = true
+                                }
                             )
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_test_guide)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showConnectionGuide = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_check_details)) },
+                                onClick = { showOverflowMenu = false; showConnectionDetails = true }
+                            )
+                            HorizontalDivider()
+                            if (uiState.isPingRunning) {
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.menu_stop_test)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.cancelPing()
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_test_selected_collection_e8f966)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        mainActivity?.requestVpnPermissionAndConnect { viewModel.pingAllProfiles() } ?: viewModel.pingAllProfiles()
+                                    },
+                                    enabled = uiState.profiles.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_tcp_check_selected_collection_a93693)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        viewModel.pingAllProfilesSimple()
+                                    },
+                                    enabled = uiState.profiles.isNotEmpty()
+                                )
+                            }
                             if (uiState.pingResults.isNotEmpty() && !uiState.isPingRunning) {
                                 DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_clear_ping_results_ad461f)) },
@@ -582,23 +609,38 @@ fun MainScreen(
                                 )
                             }
                             // Only show "Sort by HTTPS latency" when at least one profile has a
-                            // successful measurement — otherwise there's nothing to sort by.
+                            // successful measurement; otherwise there is nothing to sort by.
                             if (uiState.pingResults.values.any { it is PingResult.Success && it.verified }) {
-                                DropdownMenuItem(text = { Text("Sort by short-test reliability") }, onClick = {
+                                DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sort_reliability)) }, onClick = {
                                     showOverflowMenu = false; viewModel.sortProfilesByPing(reliability = true)
                                 })
                             }
                             if (uiState.pingResults.values.any { it is PingResult.Success }) {
-                                DropdownMenuItem(
-                                    text = { Text("Sort by HTTPS latency") },
-                                    onClick = {
-                                        showOverflowMenu = false
-                                        viewModel.sortProfilesByPing()
-                                    }
-                                )
+                                DropdownMenuItem(text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sort_latency)) }, onClick = {
+                                    showOverflowMenu = false; viewModel.sortProfilesByPing()
+                                })
                             }
+                            HorizontalDivider()
+                            if (uiState.regroupUndoAvailable) DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_undo_regrouping_dbd472)) },
+                                enabled = !uiState.regroupBusy && !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                                onClick = { showOverflowMenu = false; viewModel.undoRegroup() })
                             DropdownMenuItem(
-                                text = { Text("Export All Profiles") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_regroup_existing_profiles_fdf9b0)) },
+                                enabled = !uiState.isPingRunning && uiState.connectionState.isDisconnected,
+                                onClick = { showOverflowMenu = false; viewModel.previewRegroup() })
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    viewModel.previewDuplicateProfiles()
+                                    showDeleteDuplicatesDialog = true
+                                },
+                                enabled = uiState.profiles.size > 1 && !uiState.isPingRunning && uiState.connectionState.isDisconnected
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_export_all)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     viewModel.exportAllProfiles()
@@ -606,7 +648,7 @@ fun MainScreen(
                                 enabled = uiState.profiles.isNotEmpty()
                             )
                             DropdownMenuItem(
-                                text = { Text("Export All (Encrypted)") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_export_encrypted)) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showExportAllEncryptedDialog = true
@@ -620,17 +662,9 @@ fun MainScreen(
                                     showImportDialog = true
                                 }
                             )
+                            HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.delete_duplicate_profiles)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    viewModel.previewDuplicateProfiles()
-                                    showDeleteDuplicatesDialog = true
-                                },
-                                enabled = uiState.profiles.size > 1 && !uiState.isPingRunning && uiState.connectionState.isDisconnected
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete All Profiles") },
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_all), color = MaterialTheme.colorScheme.error) },
                                 onClick = {
                                     showOverflowMenu = false
                                     showDeleteAllDialog = true
@@ -654,7 +688,7 @@ fun MainScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Profile")
+                    Icon(Icons.Default.Add, contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_add_profile))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -753,7 +787,7 @@ fun MainScreen(
                                             if (isConnected) {
                                                 scope.launch {
                                                     snackbarHostState.showSnackbar(
-                                                        "Disconnect VPN before deleting this chain"
+                                                        uiResources.getString(app.slipnet.R.string.ui_chain_disconnect)
                                                     )
                                                 }
                                             } else {
@@ -834,7 +868,7 @@ fun MainScreen(
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        text = "Pinging via Global DNS: " +
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_ping_global) +
                                             uiState.pingingViaGlobalDns.joinToString { "${it.host}:${it.port}" },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -853,6 +887,10 @@ fun MainScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
+                                if (uiState.connectionState.isConnected && app.slipnet.domain.model.dataPathNoteVisible(
+                                        uiState.dataPathState, uiState.dataPathNoticeUntilElapsedMs, android.os.SystemClock.elapsedRealtime())) item(key = "data-path-check") {
+                                    DataPathCheckCard(uiState.dataPathState)
+                                }
                                 items(
                                     items = uiState.profiles.groupBy { ProfileCollections.key(it) }.values.toList(),
                                     key = { ProfileCollections.key(it.first()) }
@@ -879,6 +917,8 @@ fun MainScreen(
                                             onRename = { renameTarget = representative; renameText = ProfileCollections.name(representative) },
                                             onMove = { moveTarget = representative },
                                             onExport = { viewModel.exportCollection(representative) },
+                                            onShareQr = { viewModel.showCollectionQr(representative) },
+                                            onUpdate = if (representative.collectionId in uiState.subscriptionIds) ({ viewModel.requestSubscription(representative.collectionId) }) else null,
                                             onDelete = { deleteCollectionTarget = collection.toList() },
                                             canDelete = uiState.connectionState.isDisconnected,
                                             onTest = {
@@ -910,7 +950,7 @@ fun MainScreen(
                                             if (isConnected) {
                                                 scope.launch {
                                                     snackbarHostState.showSnackbar(
-                                                        "Disconnect VPN before deleting this profile"
+                                                        uiResources.getString(app.slipnet.R.string.ui_delete_disconnect)
                                                     )
                                                 }
                                             } else {
@@ -1012,8 +1052,8 @@ fun MainScreen(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     AddMenuOption(
                         icon = Icons.Default.Link,
-                        title = "Chain",
-                        description = "Chain multiple profiles",
+                        title = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_chain),
+                        description = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_chain_multiple),
                         onClick = {
                             showAddMenu = false
                             onNavigateToAddChain()
@@ -1021,7 +1061,7 @@ fun MainScreen(
                     )
                     AddMenuOption(
                         icon = Icons.Default.FileDownload,
-                        title = "Import",
+                        title = androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_import_2cff9b),
                         description = "",
                         onClick = {
                             showAddMenu = false
@@ -1036,11 +1076,21 @@ fun MainScreen(
     }
 
     if (showConnectionGuide) {
-        AlertDialog(onDismissRequest = { showConnectionGuide = false }, title = { Text("Choose a connection") },
-            text = { Text(app.slipnet.domain.model.ProfileGuidance.GUIDE + "\n\n" +
-                androidx.compose.ui.res.stringResource(app.slipnet.R.string.probe_204_requirement), modifier = Modifier.verticalScroll(rememberScrollState())) },
-            confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text("OK") } })
+        AlertDialog(onDismissRequest = { showConnectionGuide = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_choose_connection)) },
+            text = { ConnectionSelectionGuide() },
+            confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_ok_9ce3bd)) } })
     }
+    if (showConnectionDetails) AlertDialog(
+        onDismissRequest = { showConnectionDetails = false },
+        title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_check_details)) },
+        text = { DataPathCheckDetails(uiState.dataPathState) },
+        confirmButton = {
+            TextButton(enabled = uiState.connectionState.isConnected && uiState.dataPathState != app.slipnet.domain.model.DataPathState.CHECKING,
+                onClick = viewModel::verifyDataPath) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.data_path_retry)) }
+        },
+        dismissButton = { TextButton(onClick = { showConnectionDetails = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_close_7d9eb7)) } }
+    )
+
     // ── Dialogs ─────────────────────────────────────────────────────────
 
     // Debug log sheet
@@ -1052,25 +1102,25 @@ fun MainScreen(
     if (showLiteInfoDialog) {
         AlertDialog(
             onDismissRequest = { showLiteInfoDialog = false },
-            title = { Text("Rovunet Lite") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lite_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Rovunet Lite is a lightweight version with a smaller app size.")
-                    Text("Included protocols:", fontWeight = FontWeight.Bold)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lite_hint))
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_included), fontWeight = FontWeight.Bold)
                     Text("• Slipstream / Slipstream + SSH")
                     Text("• DNSTT / DNSTT + SSH")
                     Text("• NoizDNS / NoizDNS + SSH")
                     Text("• VayDNS / VayDNS + SSH")
                     Text("• SSH")
                     Text("• DOH (DNS over HTTPS)")
-                    Text("Not included (full version only):", fontWeight = FontWeight.Bold)
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_not_included), fontWeight = FontWeight.Bold)
                     Text("• Tor (Snowflake)")
                     Text("• NaïveProxy / NaïveProxy + SSH")
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showLiteInfoDialog = false }) {
-                    Text("OK")
+                    Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_ok_9ce3bd))
                 }
             }
         )
@@ -1080,11 +1130,11 @@ fun MainScreen(
     if (showShareDialog) {
         AlertDialog(
             onDismissRequest = { showShareDialog = false },
-            title = { Text("Share Rovunet") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_share_title)) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        "How would you like to share the app?",
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_share_how),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1092,7 +1142,7 @@ fun MainScreen(
                     TextButton(
                         onClick = { showShareDialog = false; shareApk(context) },
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("APK File") }
+                    ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_apk_file)) }
 
                 }
             },
@@ -1105,7 +1155,7 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = { profileToDelete = null },
             title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_delete_profile_4e5fc6)) },
-            text = { Text("Are you sure you want to delete \"${profile.name}\"?") },
+            text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_profile_confirm, profile.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1124,9 +1174,9 @@ fun MainScreen(
     if (showDeleteAllDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete All Profiles") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_all)) },
             text = {
-                Text("Are you sure you want to delete all profiles? This cannot be undone.")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_all_confirm))
             },
             confirmButton = {
                 TextButton(
@@ -1202,10 +1252,9 @@ fun MainScreen(
                     }
                 }
             },
-            title = { Text("Disable Battery Optimization") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_battery_title)) },
             text = {
-                Text("For reliable VPN operation, disable battery optimization for Rovunet. " +
-                     "Without this, Android may suspend the VPN when the screen is off.")
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_battery_hint))
             },
             confirmButton = {
                 TextButton(
@@ -1237,7 +1286,7 @@ fun MainScreen(
                             }
                         }
                     }
-                ) { Text("Disable") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_disable)) }
             },
             dismissButton = {
                 TextButton(
@@ -1258,7 +1307,7 @@ fun MainScreen(
                             }
                         }
                     }
-                ) { Text("Skip") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_skip)) }
             }
         )
     }
@@ -1303,14 +1352,14 @@ fun MainScreen(
                     }
                     if (preview.warnings.isNotEmpty()) {
                         Text(
-                            text = "Warnings:",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_warnings),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                         preview.warnings.forEach { warning ->
                             Text(
-                                text = "\u2022 $warning",
+                                text = "• " + app.slipnet.presentation.theme.UiErrors.text(uiResources, warning),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -1351,7 +1400,7 @@ fun MainScreen(
         } else if (!profile.isLocked) {
             AlertDialog(
                 onDismissRequest = { exportLockProfile = null },
-                title = { Text(if (exportLockMode == "qr") "Share QR Code" else "Export Profile") },
+                title = { Text(rv(if (exportLockMode == "qr") "Share QR Code" else "Export Profile")) },
                 text = {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -1382,7 +1431,7 @@ fun MainScreen(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = "This profile contains SSH credentials. Avoid using a root account or password auth — anyone with this profile can access your server. Use a restricted user with key-based authentication instead.",
+                                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_ssh_export_warning),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onErrorContainer
                                     )
@@ -1396,7 +1445,7 @@ fun MainScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Lock for distribution",
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lock_distribution),
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Switch(
@@ -1411,7 +1460,7 @@ fun MainScreen(
                             OutlinedTextField(
                                 value = exportLockPassword,
                                 onValueChange = { exportLockPassword = it },
-                                label = { Text("Lock Password") },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_lock_password)) },
                                 visualTransformation = if (exportLockPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 trailingIcon = {
                                     IconButton(onClick = { exportLockPasswordVisible = !exportLockPasswordVisible }) {
@@ -1430,7 +1479,7 @@ fun MainScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Hide DNS resolver",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_hide_resolver),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Switch(
@@ -1440,7 +1489,7 @@ fun MainScreen(
                             }
                             if (exportHideResolvers) {
                                 Text(
-                                    text = "Resolver addresses will be hidden. Old app versions won't be able to import this profile.",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_resolvers_hidden),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1453,7 +1502,7 @@ fun MainScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Set expiration",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_expiration),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Switch(
@@ -1465,7 +1514,7 @@ fun MainScreen(
                                 OutlinedTextField(
                                     value = exportLockExpiryDays,
                                     onValueChange = { exportLockExpiryDays = it.filter { c -> c.isDigit() } },
-                                    label = { Text("Expires in (days)") },
+                                    label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_expiration_days)) },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -1478,7 +1527,7 @@ fun MainScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Allow re-sharing",
+                                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_resharing),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Switch(
@@ -1491,12 +1540,12 @@ fun MainScreen(
                             OutlinedTextField(
                                 value = exportLockDeviceId,
                                 onValueChange = { exportLockDeviceId = it },
-                                label = { Text("Target Device ID (optional)") },
+                                label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bound_device)) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
-                                text = "Device ID can be found in Settings on the target device",
+                                text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_device_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
@@ -1529,7 +1578,7 @@ fun MainScreen(
                             exportLockProfile = null
                         },
                         enabled = !exportLockEnabled || exportLockPassword.isNotBlank()
-                    ) { Text(if (exportLockMode == "qr") "Share" else "Export") }
+                    ) { Text(rv(if (exportLockMode == "qr") "Share" else "Export")) }
                 },
                 dismissButton = {
                     TextButton(onClick = { exportLockProfile = null }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
@@ -1551,7 +1600,7 @@ fun MainScreen(
         var deviceId by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showExportAllEncryptedDialog = false },
-            title = { Text("Encrypted Export") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_encrypted_export)) },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1560,7 +1609,7 @@ fun MainScreen(
                     OutlinedTextField(
                         value = pw,
                         onValueChange = { pw = it },
-                        label = { Text("Bundle Password") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bundle_password)) },
                         visualTransformation = if (pwVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { pwVisible = !pwVisible }) {
@@ -1574,14 +1623,14 @@ fun MainScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "Required to decrypt the bundle on import.",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bundle_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = profilePw,
                         onValueChange = { profilePw = it },
-                        label = { Text("Per-Config Password (optional)") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_config_password)) },
                         visualTransformation = if (profilePwVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { profilePwVisible = !profilePwVisible }) {
@@ -1595,7 +1644,7 @@ fun MainScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "Locks each profile after bundle decryption. Leave blank to reuse the bundle password.",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_config_password_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1604,12 +1653,12 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Hide DNS resolver", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_hide_resolver), style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = hideRes, onCheckedChange = { hideRes = it })
                     }
                     if (hideRes) {
                         Text(
-                            text = "Resolver addresses will be hidden. Old app versions won't be able to import this bundle.",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bundle_hidden),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1619,14 +1668,14 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Set expiration", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_expiration), style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = expiry, onCheckedChange = { expiry = it })
                     }
                     if (expiry) {
                         OutlinedTextField(
                             value = expiryDays,
                             onValueChange = { expiryDays = it.filter { c -> c.isDigit() } },
-                            label = { Text("Expires in (days)") },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_expiration_days)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -1636,18 +1685,18 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Allow re-sharing", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_resharing), style = MaterialTheme.typography.bodyMedium)
                         Switch(checked = allowSharing, onCheckedChange = { allowSharing = it })
                     }
                     OutlinedTextField(
                         value = deviceId,
                         onValueChange = { deviceId = it },
-                        label = { Text("Target Device ID (optional)") },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bound_device)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "Device ID can be found in Settings on the target device",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_device_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 4.dp, top = 4.dp)
@@ -1686,11 +1735,11 @@ fun MainScreen(
         var pwVisible by remember { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { viewModel.cancelEncryptedImport() },
-            title = { Text("Encrypted Bundle") },
+            title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_encrypted_bundle)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "This bundle is password-protected. Enter the password to decrypt.",
+                        androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_bundle_decrypt_hint),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     OutlinedTextField(
@@ -1719,7 +1768,7 @@ fun MainScreen(
                 TextButton(
                     onClick = { viewModel.parseImportConfig(encryptedInput, pw) },
                     enabled = pw.isNotEmpty()
-                ) { Text("Decrypt") }
+                ) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_decrypt)) }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.cancelEncryptedImport() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) }
@@ -1751,11 +1800,11 @@ fun MainScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Paste a link or WireGuard configuration. Speed is unknown until tested:",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_import_hint),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "VLESS: REALITY / XHTTP / WebSocket • Hysteria2 • WireGuard (.conf)\nLegacy slipnet:// profiles are also supported.",
+                        text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_import_formats),
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedTextField(
@@ -1940,7 +1989,7 @@ private fun ChainListItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${chain.profileIds.size}-layer chain",
+                    text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_chain_count, chain.profileIds.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1955,7 +2004,7 @@ private fun ChainListItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit chain",
+                        contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_edit_chain),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1967,7 +2016,7 @@ private fun ChainListItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete chain",
+                        contentDescription = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_delete_chain),
                         modifier = Modifier.size(18.dp),
                         tint = if (!isConnected)
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -2012,7 +2061,7 @@ private fun ConnectionStatusStrip(
             isConnected -> ConnectedGreen
             isConnecting -> ConnectingOrange
             isError -> DisconnectedRed
-            else -> MaterialTheme.colorScheme.outline
+            else -> MaterialTheme.colorScheme.onSurface
         },
         animationSpec = tween(300),
         label = "statusColor"
@@ -2032,12 +2081,11 @@ private fun ConnectionStatusStrip(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Status indicator dot
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(statusColor)
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(app.slipnet.service.connectionStatusIcon(connectionState.indicator)),
+                    contentDescription = null, // The adjacent localized status is announced once.
+                    tint = statusColor,
+                    modifier = Modifier.size(24.dp)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -2150,7 +2198,7 @@ private fun ConnectionStatusStrip(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Sleep: ${formatCountdown(sleepTimerRemainingSeconds)}",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_sleep_countdown, formatCountdown(sleepTimerRemainingSeconds)),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2205,7 +2253,7 @@ private fun ConnectionStatusStrip(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "DNS ${dnsPoolScan.probed}/${dnsPoolScan.total} · ${dnsPoolScan.alive} alive · ${dnsPoolScan.verified}✓",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_dns_progress, dnsPoolScan.probed, dnsPoolScan.total, dnsPoolScan.alive, dnsPoolScan.verified),
                             style = MaterialTheme.typography.labelSmall,
                             color = ConnectingOrange
                         )
@@ -2236,7 +2284,7 @@ private fun ConnectionStatusStrip(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Tor: $snowflakeBootstrapProgress%",
+                            text = androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_tor_progress, snowflakeBootstrapProgress),
                             style = MaterialTheme.typography.labelSmall,
                             color = ConnectingOrange
                         )

@@ -176,4 +176,22 @@ class CardInteractionDeviceTest {
         assertTrue(layouts.isNotEmpty())
         assertEquals(TextDirection.Ltr, layouts.first().layoutInput.style.textDirection)
     }
+
+    @Test fun collectionMenuBrowsingAndExplicitConnectionRemainSeparate() {
+        var browsed = 0
+        var connected = 0
+        compose.setContent { SlipstreamTheme {
+            CollectionCard(listOf(profile), emptyMap(), selected = true, expanded = false,
+                connectedProfileId = null, manualProfileId = profile.id, connecting = false,
+                busy = false, canConnect = true, onConnect = { connected++ }, onDetails = { browsed++ },
+                onRename = {}, onMove = {}, onTest = {}, onStabilityTest = {}, onExport = {}, onDelete = {}, canDelete = false)
+        } }
+        val menu = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.rv_collection_actions_06a9e8)
+        compose.onNodeWithContentDescription(menu).performClick()
+        compose.onNodeWithTag("collection-menu-paths").performClick()
+        compose.runOnIdle { assertEquals(1, browsed); assertEquals(0, connected) }
+        compose.onNodeWithContentDescription(menu).performClick()
+        compose.onNodeWithTag("collection-menu-connect").performClick()
+        compose.runOnIdle { assertEquals(1, browsed); assertEquals(1, connected) }
+    }
 }

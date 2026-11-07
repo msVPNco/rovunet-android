@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="editor_resolver_transport_conflict">所选解析器的传输方式不同，请手动选择 UDP 或 TCP。</string>
+    <string name="editor_soar_scan_tcp_applied">这些解析器是通过 TCP 扫描到的，Soar 现已改为 UDP + TCP。</string>
     <string name="editor_saved_reconnect_hint">配置已保存。请重新连接 VPN 以应用更改。</string>
     <string name="editor_locked_profile">已锁定的配置</string>
     <string name="editor_add_profile">添加配置</string>

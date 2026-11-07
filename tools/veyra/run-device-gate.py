@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run the private candidate's instrumentation suite on a disposable emulator."""
 import os
+import base64
 import json
 import select
 import tempfile
@@ -14,6 +15,27 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "oneImportOrUpdateClickClosesTheWholeDialogAndFailuresKeepItOpen"),
+    ("app.slipnet.service.SubscriptionDeviceTest", "newSourcePreservesTunnelOwnershipAndDuplicateImportsAreAtomic"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "oldProtocolProofIsDiscardedWithoutLosingImportedResolverCandidates"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "soarTransportDefaultsToBothAndDoesNotChangeTheOtherScannerPreference"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "fourSoarModesAndConnectionGuideUsePersianResources"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "tcpOnlyResolverPassesWhileUdpAndWrongServerKeyFail"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "prismRepeatsRealSoarHandshakesAndRejectsOrdinaryDnsReplies"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "fullHttpAndCancellationLeaveTheExistingSoarClientUntouched"),
+    ("app.slipnet.service.NotificationStatusDeviceTest", "statusShapesAndAccentFollowActualConnectionState"),
+    ("app.slipnet.presentation.main.DataPathNoteDeviceTest", "reopeningHomeDoesNotRenewAnExpiredSuccess"),
+    ("app.slipnet.presentation.main.DataPathNoteDeviceTest", "failedCheckLivesInDetailsAndDoesNotLeaveAHomeRow"),
+    ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "persianSubscriptionFormUsesCurrentResourcesAndRtlWithoutStartingADownload"),
+    ("app.slipnet.service.SubscriptionDeviceTest", "updatesAreAtomicPreserveIdentityAndDoNotOverwriteLocalChanges"),
+    ("app.slipnet.service.SubscriptionDeviceTest", "collectionQrRoundTripPreservesEveryProfileAndSharingRestrictions"),
+    ("app.slipnet.service.PacketStopDeviceTest", "idlePacketEngineStopsAndCanRestartWithoutTraffic"),
+    ("app.slipnet.service.PacketStopDeviceTest", "immediateStopCannotWaitForAnInitializerThatAlreadyExited"),
+    ("app.slipnet.presentation.CardInteractionDeviceTest", "collectionMenuBrowsingAndExplicitConnectionRemainSeparate"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "persianScannerUsesTranslatedLabelsAcrossAllModes"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "changingLanguageUpdatesScannerLabelsWithoutLosingTransportSelection"),
+    ("app.slipnet.presentation.scanner.ScannerLocalizationDeviceTest", "persianResultsAndValidationErrorsDoNotExposeEnglishBackendMessages"),
+
     ("app.slipnet.core.GomobileBindingDeviceTest", "nativeConstructorsAndReferenceCallbacksSurviveMinification"),
     ("app.slipnet.core.GomobileBindingDeviceTest", "nativeErrorConstructorSurvivesMinification"),
     ("app.slipnet.presentation.CardInteractionDeviceTest", "lockedPathDoesNotRevealTheRestoredDestinationLine"),
@@ -61,6 +83,22 @@ def ssh_fixture(adb):
                 process.communicate(timeout=10)
 
 
+@contextmanager
+def soar_fixture():
+    with tempfile.TemporaryDirectory(prefix="rovunet-soar-fixture-") as directory:
+        binary = str(Path(directory) / "server")
+        subprocess.run(["go", "build", "-o", binary, "."], cwd=ROOT / "tools/soar-fixture", check=True, timeout=240)
+        process = subprocess.Popen([binary], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            if not select.select([process.stdout], [], [], 15)[0]:
+                raise RuntimeError("Soar fixture did not announce its loopback ports")
+            peers = json.loads(process.stdout.readline())
+            yield base64.b64encode(json.dumps(peers).encode()).decode()
+        finally:
+            process.terminate()
+            process.communicate(timeout=10)
+
+
 def verified_tests(output, required=REQUIRED):
     status = {}
     passed = set()
@@ -104,13 +142,22 @@ def main():
             raise RuntimeError(f"Could not install {apk.name}")
     adb("shell", "cmd", "appops", "set", PACKAGE, "ACTIVATE_VPN", "allow")
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/app.slipnet.presentation.MainActivity")
-    with ssh_fixture(adb):
+    with ssh_fixture(adb), soar_fixture() as soar_peers:
         print("Running device regressions with local SSH and TLS peers", flush=True)
         result = adb("shell", "am", "instrument", "-w", "-r", "-e", "testVpnMtu", "true",
                      "-e", "sshFixturePort", "39222", "-e", "tlsFixturePort", "39223",
+                     "-e", "soarFixture", soar_peers,
                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=900)
     print(result, flush=True)
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")
+
+    # Synthetic scanner screenshot: no real profile, address or credential data.
+    previews = ROOT / "tools/veyra/device-results"
+    previews.mkdir(exist_ok=True)
+    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png"):
+        with (previews / filename).open("wb") as image:
+            subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
+                            "cat", "files/" + filename], stdout=image, check=True)
 
     # Debug tests cannot detect JNI members removed by R8. Install the minified
     # private candidate and its matching Release instrumentation. Debug tests

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="editor_resolver_transport_conflict">У выбранных резолверов разные транспорты. Выберите UDP или TCP вручную.</string>
+    <string name="editor_soar_scan_tcp_applied">Резолверы найдены через TCP, поэтому Soar теперь использует UDP + TCP.</string>
     <string name="editor_saved_reconnect_hint">Конфигурация сохранена. Переподключите VPN, чтобы применить изменения.</string>
     <string name="editor_locked_profile">Заблокированная конфигурация</string>
     <string name="editor_add_profile">Добавить конфигурацию</string>

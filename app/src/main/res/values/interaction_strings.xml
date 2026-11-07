@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_vpn_toggle_description">Toggle VPN connection</string>
+    <string name="widget_vpn_status_description">VPN connection status</string>
+    <string name="qr_pick_from_gallery">Pick from gallery</string>
+    <string name="qr_image_not_found">No QR code found in this image.</string>
+    <string name="qr_image_read_failed">Could not read this image. Try another image.</string>
+</resources>

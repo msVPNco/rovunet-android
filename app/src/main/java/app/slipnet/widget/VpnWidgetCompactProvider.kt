@@ -53,6 +53,8 @@ class VpnWidgetCompactProvider : AppWidgetProvider() {
 
         private fun buildRemoteViews(context: Context, state: ConnectionState): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.widget_vpn_compact)
+            val localized = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+            views.setContentDescription(R.id.widget_compact_icon, localized.getString(R.string.widget_vpn_toggle_description))
 
             // Set tap action
             val toggleIntent = Intent(context, VpnWidgetToggleReceiver::class.java).apply {

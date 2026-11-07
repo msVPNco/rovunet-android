@@ -145,6 +145,15 @@ fun EditProfileScreen(
     // Apply transport hint from BOTH-mode scan. Only acts when the profile's current
     // transport is UDP/TCP (DoT/DoH choices are left alone). MIXED triggers a warning.
     LaunchedEffect(selectedResolversTransportHint) {
+        if (uiState.isSoarBased && selectedResolversTransportHint != null) {
+            // Soar reads its TCP/53 policy, not the DNS transport the hint is meant for.
+            if (viewModel.applySoarScanHint(selectedResolversTransportHint)) {
+                snackbarHostState.showSnackbar(
+                    messageResources.getString(app.slipnet.R.string.editor_soar_scan_tcp_applied)
+                )
+            }
+            return@LaunchedEffect
+        }
         when (selectedResolversTransportHint) {
             "UDP", "TCP" -> viewModel.applyScanTransportHint(selectedResolversTransportHint)
             "MIXED" -> snackbarHostState.showSnackbar(
@@ -1398,7 +1407,7 @@ fun EditProfileScreen(
                         OutlinedTextField(textStyle = androidx.compose.material3.LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr),
                             value = uiState.vlessUuid,
                             onValueChange = { viewModel.updateVlessUuid(it) },
-                            label = { Text("UUID") },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_uuid)) },
                             placeholder = { Text("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx") },
                             isError = uiState.vlessUuidError != null,
                             supportingText = { Text(uiState.vlessUuidError ?: androidx.compose.ui.res.stringResource(app.slipnet.R.string.editor_vless_user_id)) },
@@ -3252,7 +3261,7 @@ fun EditProfileScreen(
                         onClick = {
                             val intent = android.content.Intent(
                                 android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse("https://github.com/anonvector/slipgate")
+                                android.net.Uri.parse("https://github.com/msVPNco/rovunet-panel")
                             )
                             context.startActivity(intent)
                         },

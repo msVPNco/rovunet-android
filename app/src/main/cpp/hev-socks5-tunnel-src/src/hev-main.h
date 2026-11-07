@@ -67,6 +67,8 @@ int hev_socks5_tunnel_main_from_str (const unsigned char *config_str,
  *
  * Since: 2.4.6
  */
+void hev_socks5_tunnel_prepare (void);
+
 void hev_socks5_tunnel_quit (void);
 
 /**

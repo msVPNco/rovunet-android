@@ -15,6 +15,20 @@ import com.journeyapps.barcodescanner.DecoratedBarcodeView
 
 class QrScannerActivity : CaptureActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        val language = newBase.getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", "system")
+        if (language !in setOf("en", "fa", "zh", "ru")) {
+            super.attachBaseContext(newBase)
+            return
+        }
+        val locale = java.util.Locale.forLanguageTag(if (language == "zh") "zh-Hans" else language)
+        val configuration = android.content.res.Configuration(newBase.resources.configuration).apply {
+            setLocale(locale)
+            setLayoutDirection(locale)
+        }
+        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    }
+
     companion object {
         private const val REQUEST_GALLERY = 1001
     }
@@ -66,9 +80,9 @@ class QrScannerActivity : CaptureActivity() {
             setResult(RESULT_OK, intent)
             finish()
         } catch (_: com.google.zxing.NotFoundException) {
-            Toast.makeText(this, "No QR code found in image", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error reading image: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.qr_image_not_found, Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.qr_image_read_failed, Toast.LENGTH_SHORT).show()
         }
     }
 }

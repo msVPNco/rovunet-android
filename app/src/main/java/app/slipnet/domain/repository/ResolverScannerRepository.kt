@@ -11,6 +11,10 @@ import kotlinx.coroutines.flow.Flow
  * Repository for DNS resolver scanning operations
  */
 interface ResolverScannerRepository {
+    /** Repeated authenticated Soar exchanges; never sends the DNSTT Prism challenge to Soar. */
+    suspend fun verifySoarResolver(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
+                                  probeCount: Int, threshold: Int, transport: DnsTransport): Int = 0
+
     /**
      * Get the default list of resolver IPs to scan
      */

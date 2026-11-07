@@ -244,4 +244,23 @@
     <string name="recovery_back">بازگشت</string>
     <string name="proxy_password_unavailable">خواندن رمز پراکسی محلی ممکن نشد. برای استفاده از احراز هویت پراکسی، در تنظیمات رمز جدید تعیین کنید.</string>
     <string name="collection_needs_credentials">برای بررسی کانفیگ‌های نیازمند بازیابی، این مجموعه را باز کنید.</string>
+    <string name="menu_stop_test">توقف آزمون</string>
+    <string name="dlg_share_qr_title">اشتراک‌گذاری QR</string>
+    <string name="dlg_export_profile_title">خروجی گرفتن از پروفایل</string>
+    <string name="chain_title_edit">ویرایش زنجیره</string>
+    <string name="chain_title_new">زنجیره‌ی جدید</string>
+    <string name="chain_save">ذخیره‌ی زنجیره</string>
+    <string name="chain_create">ساخت زنجیره</string>
+    <string name="err_stop_test_first">ابتدا آزمون اتصال را متوقف کنید</string>
+    <string name="err_no_profile_connect">پروفایلی برای اتصال در دسترس نیست</string>
+    <string name="err_profile_expired">این پروفایل منقضی شده است</string>
+    <string name="err_chain_profiles_deleted">چند پروفایل زنجیره حذف شده‌اند</string>
+    <string name="err_remove_chains_first">پیش از حذف همه‌ی پروفایل‌ها، زنجیره‌ها را حذف کنید</string>
+    <string name="err_cleanup_running_no_delete">پاک‌سازی اتصال هنوز در جریان است؛ هیچ پروفایلی حذف نشد</string>
+    <string name="err_locked_export">پروفایل قفل‌شده قابل خروجی گرفتن نیست</string>
+    <string name="err_no_exportable">پروفایلی برای خروجی گرفتن نیست</string>
+    <string name="err_vpn_permission_then_https">یک بار وصل شوید و مجوز VPN اندروید را بدهید، سپس قطع کنید و آزمون HTTPS را اجرا کنید.</string>
+    <string name="test_stopped_early">آزمون پیش از رسیدن به همه‌ی مسیرها متوقف شد</string>
+    <string name="import_all_present">همه‌ی پروفایل‌ها از قبل در اپ بودند؛ چیزی اضافه نشد</string>
+    <string name="import_some_present">پروفایل‌هایی که از قبل در اپ بودند رد شدند</string>
 </resources>

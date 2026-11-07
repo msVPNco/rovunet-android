@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="editor_resolver_transport_conflict">Selected resolvers don\'t share a transport — pick UDP or TCP manually.</string>
+    <string name="editor_soar_scan_tcp_applied">The scan found these resolvers over TCP, so Soar now uses UDP + TCP.</string>
     <string name="editor_saved_reconnect_hint">Profile saved. Turn VPN off and on to apply changes.</string>
     <string name="editor_locked_profile">Locked Profile</string>
     <string name="editor_add_profile">Add Profile</string>

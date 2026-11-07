@@ -10,9 +10,17 @@
 
 ## Release status
 
-The current release is **0.3.0-alpha15 Full, version code 26**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15-Full.apk) · [Release record](docs/releases/alpha15.md) · [Current status](docs/STATUS.md).
+The current release is **0.3.0-alpha15.4 Full, version code 31**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15.4-Full.apk) · [Release record](docs/releases/alpha15.4.md) · [Current status](docs/STATUS.md).
 
-Alpha15 repairs the Release/R8 packaging of gomobile: required Go/JNI classes, constructors, fields and callbacks are preserved. CI passed 50 JVM tests, 31 private Debug device tests and two additional JNI checks on minified private Release. The final public APK also passes DEX ABI, signature and native-alignment checks. Device evidence is API 30/x86_64; it is not a guarantee for every real network.
+Alpha15.4 fixes Soar scanning, subscription actions, menus, duplicate imports, test budgets and status feedback. The connection-selection guide and scanner use four-language resources. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) passed **60 JVM, 51 Debug emulator and 2 minified Release JNI tests**, with no device skips. All 33 native libraries match the 15.3 reviewed APK; this is not a complete native rebuild. The owner approved publication of the exact reviewed APK; no detailed new physical-network measurements were supplied.
+
+**Upgrading public alpha14/alpha15:** their older updater does not recognize dotted alpha revisions. Download the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) directly and install over the existing app without uninstalling or clearing data. Alpha15.4 understands subsequent dotted revisions. Package and production signer are unchanged.
+
+## Subscriptions, sharing and Soar scanning
+
+HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
+
+Soar scanning offers Quick, Advanced, E2E and Prism. Quick/Prism use authenticated Soar handshakes with the configured Ed25519 key; E2E also checks HTTP 204 or the SSH account with existing trust approval. Advanced is diagnostic DNS only. UDP and TCP are tested independently; Soar scanner defaults to both without rewriting saved connection choices. Imported candidates survive discarded foreign/legacy proof.
 
 Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inherited Naive/Tor binaries are unavailable on x86_64. No 32-bit x86 or new Lite asset is promised. No Rovunet Google Play, App Store or desktop GUI release is available.
 
@@ -28,7 +36,7 @@ Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inher
 | Security | SSH identity approval, validated TLS and saved self-signed identities, encrypted stored credentials, authenticated private Xray SOCKS endpoints and cancellable setup. |
 | Diagnostics | Local safe stage/code reports and traffic snapshots, optionally shared by the user; no automatic upload and no endpoint/account/credential fields in the safe report. |
 
-Persian, English, Simplified Chinese and Russian cover the main interface, settings and profile-editor resources. Some inherited advanced scanner text and backend errors can remain English. Addresses, protocol names and configuration syntax are not translated.
+Persian, English, Simplified Chinese and Russian cover the main interface, settings and profile-editor resources. Scanner labels, mapped errors and the connection guide are localized; protocol names and configuration text remain technical. Addresses, protocol names and configuration syntax are not translated.
 
 ## Protocols
 
@@ -58,7 +66,7 @@ The in-app updater downloads compatible GitHub release APKs and checks checksum,
 
 [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) manages supported Linux services and exports configs. Client support does not imply automatic panel installation; some `core-plan` paths require manual deployment. A server and valid credentials are needed; the app does not provide free accounts.
 
-Subscription refresh, automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
+Automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
 
 ## Source, verification and support
 

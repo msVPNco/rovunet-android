@@ -1,6 +1,6 @@
-# Build and verification — alpha15
+# Build and verification — alpha15.4
 
-Target: 0.3.0-alpha15, versionCode 26. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
+Target: 0.3.0-alpha15.4, versionCode 31. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
 
 ## Source and native provenance
 
@@ -22,7 +22,7 @@ bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:testF
   -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2
 ```
 
-This produces app.veyra.client.candidate / Rovunet Test, code 26, version 0.3.0-alpha15-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
+This produces app.veyra.client.candidate / Rovunet Test, code 31, version 0.3.0-alpha15.4-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
 
 ## Signed public Release
 
@@ -65,10 +65,12 @@ bash gradlew :app:assembleFullRelease :app:assembleFullReleaseAndroidTest \
   -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2
 ```
 
-The default Debug tests use AndroidJUnitRunner. The Release JNI driver uses Android's framework Instrumentation and Java-only shared assertions, with no AndroidX/JUnit/Kotlin runtime dependency in that test APK. `run-device-gate.py` first checks all 31 Debug cases, then installs the minified private Release and matching test APK and requires both JNI cases. It checks actual DEX definitions and rejects incomplete, failed or skipped results. Never substitute a Debug APK as evidence that R8 retained the JNI ABI. The shared gomobile consumer rules must remain in the reconstructed AAR and the app's Release configuration.
+The default Debug tests use AndroidJUnitRunner. The Release JNI driver uses Android's framework Instrumentation and Java-only shared assertions, with no AndroidX/JUnit/Kotlin runtime dependency in that test APK. `run-device-gate.py` first checks all 51 Debug cases, then installs the minified private Release and matching test APK and requires both JNI cases. It checks actual DEX definitions and rejects incomplete, failed or skipped results. Never substitute a Debug APK as evidence that R8 retained the JNI ABI. The shared gomobile consumer rules must remain in the reconstructed AAR and the app's Release configuration.
 
 For a disposable emulator with VPN consent, build the private application/tests and run `tools/veyra/run-device-gate.py` with ANDROID_SERIAL. The gate rejects skipped, failed, incomplete or missing required tests. It exercises cross-UID VPN traffic/MTU, SSH identity and cancellation, scanner lifecycle, migration/recovery, choices/history and UI/RTL. Local fixture success does not prove real Iranian-network availability or every architecture/backend.
 
 Before delivering an APK, verify ZIP integrity, manifest, apksigner output, all native entries and `tools/quality/check-apk-native.py`. Only record checks actually executed on the final source and distinguish the private validation binary from the unsigned/public Release.
 
-Alpha15 application build and passing CI: `908253b42082bbd80007677f0369792d324a378f`, [run 42215030490](https://github.com/msVPNco/rovunet-android/actions/runs/42215030490). Public signing and archive identities are recorded separately in the final release assets. The existing signed APK is reused for publication; documentation-only changes do not rebuild it.
+Alpha15 application build and passing CI: `78d1b14426e675c3e2361152a3f0102d31d22bfc`, [run 42395755189](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189). Public signing and archive identities are recorded separately in the final release assets. The existing signed APK is reused for publication; documentation-only changes do not rebuild it.
+
+The alpha15.4 owner-approved APK is reused byte-for-byte (SHA-256 `0c215077f346ffe5aabb81dd6c586a0059434226f7f369853537c3e98f43ae5a`). The publication revision changes documentation only; the application/build/test inputs remain identical to `78d1b14426e675c3e2361152a3f0102d31d22bfc`. Its CI passed 60 JVM, 51 Debug emulator and two minified Release JNI cases. All 33 native libraries match the 15.3 reviewed APK; no complete native rebuild or new detailed physical-network result is claimed. The device job builds the unsigned public APK even when the separate workflow-dispatch-only `build` job is skipped.

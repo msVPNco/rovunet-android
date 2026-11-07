@@ -25,7 +25,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_vpn_key"
             android:tint="#FF333333"
-            android:contentDescription="VPN status" />
+            android:contentDescription="@string/widget_vpn_status_description" />
 
     </FrameLayout>
 
@@ -41,7 +41,7 @@
             android:id="@+id/widget_status_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Disconnected"
+            android:text="@string/rv_disconnected_04dfac"
             android:textColor="#FF333333"
             android:textSize="15sp"
             android:textStyle="bold"

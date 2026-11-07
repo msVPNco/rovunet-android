@@ -72,6 +72,7 @@
                 <data android:scheme="slipnet" />
                 <data android:scheme="slipnet-enc" />
                 <data android:scheme="rovunet" />
+                <data android:scheme="rovunet-collection" />
                 <data android:scheme="rovunet-enc" />
                 <data android:scheme="rovunet-bundle-enc" />
                 <data android:scheme="veyra" />

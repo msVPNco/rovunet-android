@@ -10,7 +10,7 @@ Key alias: rovunet-release
 Algorithm: RSA-3072 / SHA256withRSA
 ```
 
-Alpha15/code 26 retains this exact certificate and updates public alpha14/code 25 in place; no key rotation is performed.
+Alpha15.4/code 31 retains this exact certificate and updates public alpha14/code 25 and alpha15/code 26 in place; no key rotation is performed. The publication reuses the exact owner-reviewed APK.
 
 The certificate digest is public; the private key and its password are not. The
 release build checks the versioned pin in

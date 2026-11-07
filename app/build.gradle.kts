@@ -21,8 +21,8 @@ require(!minifiedBindingTests || deviceCandidate) { "Minified binding instrument
 // Prepare a non-installable Release artifact for an offline signer; never a debug-signed public APK.
 val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
 require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
-val appVersionName = if (deviceCandidate) "0.3.0-alpha15-review01" else "0.3.0-alpha15"
-val appVersionCode = 26
+val appVersionName = if (deviceCandidate) "0.3.0-alpha15.4-review01" else "0.3.0-alpha15.4"
+val appVersionCode = 31
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"
@@ -459,6 +459,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
 
     // Testing
+    implementation("androidx.work:work-runtime:2.11.2")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
     if (!minifiedBindingTests) {

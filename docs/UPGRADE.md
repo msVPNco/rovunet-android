@@ -1,18 +1,16 @@
 # Signing and upgrade guide / راهنمای امضا و ارتقا
 
-## Alpha15 from public alpha14
+## Alpha15.4 from public alpha14/alpha15
 
-Alpha15 Full (code 26) keeps `app.veyra.client` and exactly the production certificate introduced by alpha14 (code 25). Install the signed Full APK over alpha14; do not uninstall or clear data. Package/version/signer compatibility is verified. This release does not claim a new on-device upgrade-preservation test. Historical alpha11 and private candidate rules below are separate.
+**Upgrading public alpha14/alpha15:** their older updater does not recognize dotted alpha revisions. Download the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) directly and install over the existing app without uninstalling or clearing data. Alpha15.4 understands subsequent dotted revisions. Package and production signer are unchanged.
 
-<div dir="rtl">
+**ارتقا از آلفا۱۴/۱۵ عمومی:** آپدیتر قدیمی شمارهٔ اصلاحی اعشاری را نمی‌شناسد. این بار [APK کامل](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) را مستقیم دانلود و روی برنامهٔ فعلی نصب کنید؛ برنامه یا داده‌هایش را حذف نکنید. نسخهٔ ۱۵.۴ شماره‌های اصلاحی بعدی را می‌شناسد. بسته و امضای تولیدی همان قبلی‌اند.
 
-آلفا۱۵ کامل، کد ۲۶، بسته و امضای تولیدی آلفا۱۴ عمومی، کد ۲۵، را حفظ می‌کند. فایل Full امضاشده را روی همان نصب کنید؛ برنامه یا داده‌هایش را حذف نکنید. تطابق بسته، نسخه و امضا بررسی شده است؛ آزمون تازهٔ حفظ داده در ارتقا روی گوشی ادعا نمی‌شود. قواعد تاریخی آلفا۱۱ و بسته‌های خصوصی در پایین جدا هستند.
+**从公开 alpha14/alpha15 升级：**旧更新器不识别带点的 alpha 修订号。请直接下载 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) 并覆盖安装，不卸载、不清除数据。alpha15.4 支持后续带点修订号，包名和生产签名保持不变。
 
-</div>
+**Обновление публичных alpha14/alpha15:** старый обновлятор не распознаёт дробные alpha-ревизии. Скачайте [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) напрямую и установите поверх без удаления приложения или данных. Alpha15.4 распознаёт следующие дробные ревизии; пакет и производственная подпись прежние.
 
-alpha15/代码 26 沿用公开 alpha14 的包名与生产签名，直接覆盖安装，不卸载/清数据。已核对身份，不宣称新增真机升级测试。
-
-Alpha15/код 26 сохраняет пакет и производственную подпись публичной alpha14. Устанавливайте поверх, без удаления/очистки данных; совместимость идентичности проверена, новый тест обновления на телефоне не заявляется.
+The signed APK is the exact previously reviewed code31 binary. If code31 is already installed from that review, it is already this release; no reinstall is needed. Historical alpha11 and independent candidates remain subject to the rules below.
 
 ## Historical alpha14 signing decision — 2026-11-06
 
