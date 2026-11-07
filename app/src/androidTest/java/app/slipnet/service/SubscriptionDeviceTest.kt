@@ -52,6 +52,11 @@ class SubscriptionDeviceTest {
             assertEquals(1, removal.removed)
             repository.apply(removal)
             assertEquals(sourceId + ":retained", db.profileDao().getProfileById(row.id)?.collectionId)
+            val currentRow = db.profileDao().getAllProfiles().first().single { it.collectionId == sourceId }
+            db.profileDao().updateMembership(currentRow.id, sourceId, "Local collection title")
+            repository.apply(repository.prepareDocument(preview.source.name, "https://example.invalid/sub", sourceId, false, exporter.exportSingleProfile(changed)))
+            assertEquals("Local collection title", db.profileDao().getProfileById(currentRow.id)?.collectionName)
+            assertEquals("Local collection title", db.subscriptionDao().get(sourceId)?.name)
             repository.detach(sourceId)
             assertNotNull(db.profileDao().getProfileById(row.id))
         } finally {

@@ -132,8 +132,8 @@ class SubscriptionRepository @Inject constructor(
             require(parsed is ImportResult.Success && parsed.profiles.isNotEmpty() && parsed.warnings.isEmpty()) { "INVALID_FEED" }
             require(item.key == null || parsed.profiles.size == 1) { "INVALID_FEED" }
             parsed.profiles.map { p ->
-                val identity = item.key ?: listOf(p.tunnelType.value, p.domain, p.sshHost, p.sshPort,
-                    p.socks5ServerPort, p.naivePort, p.sshUsername, p.socksUsername, p.naiveUsername, p.coreLink).joinToString("|")
+                val identity = item.key?.let { "remote-id:$it" } ?: "derived-v1:" + JSONArray(listOf(p.tunnelType.value, p.domain, p.sshHost, p.sshPort,
+                    p.socks5ServerPort, p.naivePort, p.sshUsername, p.socksUsername, p.naiveUsername, p.coreLink)).toString()
                 hash(identity) to p
             }
         }
@@ -153,6 +153,15 @@ class SubscriptionRepository @Inject constructor(
                 require(current == preview.expectedSource) { "SOURCE_CHANGED" }
                 val old = JSONArray(current?.membersJson ?: "[]")
                 val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+                var localCollectionName: String? = null
+                for (saved in previous.values) {
+                    val row = db.profileDao().getProfileById(saved.getLong("id"))
+                    if (row != null && row.collectionId == preview.source.id && row.collectionName.isNotBlank()) {
+                        localCollectionName = row.collectionName; break
+                    }
+                }
+                val resolvedName = if (current != null && preview.source.name == current.name)
+                    localCollectionName ?: preview.source.name else preview.source.name
                 val members = JSONArray()
                 preview.profiles.forEach { (key, remote) ->
                     require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
@@ -161,11 +170,11 @@ class SubscriptionRepository @Inject constructor(
                     val local = row?.let(mapper::toDomain)
                     // A locally edited/locked row is retained in full, never silently overwritten.
                     if (local != null && (local.needsCredentials || local.collectionId != preview.source.id || local.isLocked || digest(local) != saved?.getString("digest"))) {
-                        if (local.collectionId == preview.source.id) db.profileDao().updateMembership(local.id, local.collectionId, preview.source.name)
+                        if (local.collectionId == preview.source.id) db.profileDao().updateMembership(local.id, local.collectionId, resolvedName)
                         members.put(saved)
                     } else {
                         val profile = remote.copy(id = row?.id ?: 0, collectionId = preview.source.id,
-                            collectionName = preview.source.name, isActive = local?.isActive ?: false,
+                            collectionName = resolvedName, isActive = local?.isActive ?: false,
                             isPinned = local?.isPinned ?: false, sortOrder = local?.sortOrder ?: 0,
                             createdAt = local?.createdAt ?: remote.createdAt)
                         val newDigest = digest(profile)
@@ -184,14 +193,15 @@ class SubscriptionRepository @Inject constructor(
                 // Refresh never deletes a saved profile. Retired source entries become
                 // a normal local collection and retain their row, secrets and chain IDs.
                 previous.filterKeys { it !in incoming }.values.forEach { saved ->
+                    require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
                     val row = db.profileDao().getProfileById(saved.getLong("id"))
                     if (row != null && row.collectionId == preview.source.id) {
                         val suffix = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
                             .getString(app.slipnet.R.string.subscription_retained)
-                        db.profileDao().updateMembership(row.id, preview.source.id + ":retained", preview.source.name + " · " + suffix)
+                        db.profileDao().updateMembership(row.id, preview.source.id + ":retained", resolvedName + " · " + suffix)
                     }
                 }
-                db.subscriptionDao().put(preview.source.copy(membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
+                db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
             }
             }
         }
