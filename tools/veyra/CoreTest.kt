@@ -55,5 +55,23 @@ fun main(args: Array<String>) {
         check(protocols == listOf("vless", "vless", "hysteria", "wireguard")) { "panel core protocols: $protocols" }
         println("Core parser: real panel REALITY, XHTTP, Hysteria2 and WireGuard profiles imported")
     }
+    // The same profiles as the panel's users configs prints them: native
+    // "xray" rovunet:// profiles in one user's collection.
+    System.getenv("ROVUNET_CORE_NATIVE_FIXTURE")?.takeIf { it.isNotEmpty() }?.let { path ->
+        val lines = File(path).readLines().map { it.trim() }.filter { it.isNotEmpty() }
+        check(lines.size == 4) { "panel native core fixture: want 4 profiles, got ${lines.size}" }
+        val raw = File(System.getenv("ROVUNET_CORE_FIXTURE")).readText().split(Regex("\\n%%\\n")).map { it.trim() }.filter { it.isNotEmpty() }
+        val profiles = lines.mapIndexed { i, line ->
+            val p = (importer.parseAndImport(line) as ImportResult.Success).profiles.single()
+            check(p.tunnelType == TunnelType.XRAY) { "native core profile ${i + 1} imported as ${p.tunnelType}" }
+            check(p.coreLink == raw[i]) { "native core profile ${i + 1}: core link changed in transit" }
+            check(p.name == "core${i + 1}") { "native core profile ${i + 1}: name ${p.name}" }
+            CoreLink.runtime(p.coreLink, 10900)
+            p
+        }
+        check(profiles.map { it.collectionId }.toSet().size == 1 && profiles[0].collectionId.isNotEmpty()) { "native core profiles are not in one collection" }
+        check(profiles.all { it.collectionName.startsWith("alice") }) { "collection name: ${profiles.map { it.collectionName }}" }
+        println("Core parser: panel's native xray profiles imported into the user's collection")
+    }
     println("Core parser: four protocols, native persistence and invalid-option checks passed")
 }
