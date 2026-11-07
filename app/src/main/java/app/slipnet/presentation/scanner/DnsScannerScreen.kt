@@ -132,6 +132,7 @@ fun DnsScannerScreen(
     viewModel: DnsScannerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val localizedResources = androidx.compose.ui.platform.LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler {
@@ -523,8 +524,7 @@ internal fun ActionSection(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun ScanModeToggle(
     scanMode: ScanMode,
