@@ -37,11 +37,13 @@ class SubscriptionRepository @Inject constructor(
     private val mapper: ProfileMapper,
     private val importer: ConfigImporter,
     private val exporter: ConfigExporter,
-    private val connection: VpnConnectionManager
+    private val connection: VpnConnectionManager,
+    private val preferences: app.slipnet.data.local.datastore.PreferencesDataStore
 ) {
     private val mutex = Mutex()
     private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
         .connectTimeout(10, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()
+    val connectionState get() = connection.connectionState
     fun observe(): Flow<List<SubscriptionEntity>> = db.subscriptionDao().observe()
     private fun hash(value: String) = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
     private fun digest(p: ServerProfile) = hash(exporter.exportSingleProfile(p.copy(isLocked = false,
@@ -54,9 +56,27 @@ class SubscriptionRepository @Inject constructor(
     private data class Download(val code: Int, val location: String?, val text: String)
     private suspend fun fetch(address: String): String {
         var target = url(address)
+        val state = connection.connectionState.value
+        val transport = if (state is app.slipnet.domain.model.ConnectionState.Connected) {
+            require(state.chainId <= 0) { "DISCONNECT_TO_UPDATE" }
+            val endpoint = if (state.profile.tunnelType == app.slipnet.domain.model.TunnelType.XRAY)
+                app.slipnet.tunnel.XrayBridge.activeEndpoint ?: error("DOWNLOAD_FAILED")
+            else preferences.configuredSocksEndpoint()
+            client.newBuilder().proxy(java.net.Proxy.NO_PROXY)
+                .socketFactory(app.slipnet.core.ProxySocketFactory(endpoint))
+                .dns(object : okhttp3.Dns {
+                    override fun lookup(hostname: String): List<java.net.InetAddress> =
+                        listOf(java.net.InetAddress.getByAddress(hostname, byteArrayOf(0, 0, 0, 1)))
+                })
+                .connectionPool(okhttp3.ConnectionPool(0, 1, TimeUnit.SECONDS))
+                .retryOnConnectionFailure(false).build()
+        } else {
+            require(state.isDisconnected) { "DISCONNECT_TO_UPDATE" }
+            client
+        }
         repeat(4) { redirect ->
             val result = suspendCancellableCoroutine<Download> { continuation ->
-                val call = client.newCall(Request.Builder().url(target).header("Accept", "application/json, text/plain").build())
+                val call = transport.newCall(Request.Builder().url(target).header("Accept", "application/json, text/plain").build())
                 continuation.invokeOnCancellation { call.cancel() }
                 call.enqueue(object : Callback {
                     override fun onFailure(call: Call, e: java.io.IOException) {
@@ -194,7 +214,9 @@ class SubscriptionRepository @Inject constructor(
     suspend fun setAutomatic(id: String, enabled: Boolean) = mutex.withLock {
         db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(autoUpdate = enabled)) }
     }
-    suspend fun refreshAutomatic() { db.subscriptionDao().all().filter { it.autoUpdate }.forEach { row ->
+    suspend fun refreshAutomatic() {
+        if (!connection.connectionState.value.isDisconnected) return
+        db.subscriptionDao().all().filter { it.autoUpdate }.forEach { row ->
         try { refresh(row.id) } catch (e: CancellationException) { throw e } catch (_: Exception) { /* Per-source safe code persisted. */ }
     } }
 }

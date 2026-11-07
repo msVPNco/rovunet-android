@@ -13,7 +13,7 @@ approved by compilation, emulator testing or delivery.
   منبع یا همه، ویرایش منبع و جداکردن منبع همراه حفظ کانفیگ‌ها وجود دارد.
 - منبع اشتراک با Keystore محافظت می‌شود. نمایش عادی فقط میزبان را نشان می‌دهد.
   تازه‌سازی خودکار اختیاری، حدود هر ۱۲ ساعت روی شبکهٔ بدون هزینهٔ مصرف و با
-  باتری مناسب است؛ زمان دقیق تضمین نمی‌شود. برای اعمال، VPN قطع باشد.
+  باتری مناسب است؛ زمان دقیق تضمین نمی‌شود. برای اعمال و اجرای خودکار، VPN قطع باشد. دریافتِ پیش‌نمایش در اتصال عادی از پروکسی همان اتصال انجام می‌شود و پس از شکست آن به اتصال مستقیم برنمی‌گردد؛ پیش‌نمایش زنجیره به قطع VPN نیاز دارد.
 - قالب‌های ورودی: فهرست لینک‌های قابل ورود اپ، همان فهرست در Base64 استاندارد،
   و JSON نسخهٔ ۱ با items شامل id و link. JSON آینده و فیلد ناشناخته، HTML،
   ورودی ناقص/خالی و بیش از ۲ MiB رد می‌شود. خطا کانفیگ‌های قبلی را پاک نمی‌کند.
@@ -38,7 +38,7 @@ with encrypted sources, reviewed/transactional refresh, local-edit preservation,
 opt-in periodic unmetered updates, and detach without profile deletion. Supports
 app-compatible link lists, standard Base64 and strict version-1 JSON with stable
 item IDs. Unknown/partial feeds preserve the previous collection. Refresh never deletes saved profiles; removed source entries are retained locally after review. Applying a
-refresh requires a disconnected VPN. Raw lists have documented identity limits.
+refresh and automatic runs require a disconnected VPN. Manual previews on a single connected tunnel use its authenticated local SOCKS endpoint, with remote DNS and no direct fallback; chains require disconnection. Raw lists have documented identity limits.
 Adds offline self-contained collection QR, PNG save/share and capacity handling.
 Non-blocking session-bound HTTPS evidence checks the local proxy only, never gates
 or disconnects a connection. Rebuilds the packet engine/JNI stop fixes from source;

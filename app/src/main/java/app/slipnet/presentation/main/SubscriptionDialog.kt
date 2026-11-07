@@ -17,8 +17,9 @@ import app.slipnet.data.subscription.*
 import kotlinx.coroutines.*
 
 @Composable
-internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: String?, initialId: String?, onDismiss: () -> Unit) {
+internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: String?, initialId: String?, onDisconnect: (() -> Unit)? = null, onDismiss: () -> Unit) {
     val sources by repository.observe().collectAsState(initial = emptyList())
+    val connection by repository.connectionState.collectAsState()
     val hosts by produceState<Map<String, String>>(emptyMap(), sources) {
         value = withContext(Dispatchers.IO) { sources.associate { it.id to repository.host(it) } }
     }
@@ -52,6 +53,9 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
         text = {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(stringResource(R.string.subscription_hint), style = MaterialTheme.typography.bodySmall)
+                if (!connection.isDisconnected && onDisconnect != null) TextButton(
+                    enabled = connection !is app.slipnet.domain.model.ConnectionState.Disconnecting,
+                    onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(url, { url = it }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
@@ -65,7 +69,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error) }
                 HorizontalDivider()
-                TextButton(enabled = !busy && sources.isNotEmpty(), onClick = {
+                TextButton(enabled = !busy && sources.isNotEmpty() && connection.isDisconnected, onClick = {
                     execute { sources.forEach { try { repository.refresh(it.id) } catch (e: CancellationException) { throw e } catch (_: Exception) { /* Source status is shown below. */ } } }
                 }) { Text(stringResource(R.string.subscription_update_all)) }
                 sources.forEach { row ->
@@ -97,9 +101,12 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                     }
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (!connection.isDisconnected && onDisconnect != null) TextButton(
+                    enabled = connection !is app.slipnet.domain.model.ConnectionState.Disconnecting,
+                    onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
                 error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error) }
             } },
-            confirmButton = { TextButton(enabled = !busy, onClick = {
+            confirmButton = { TextButton(enabled = !busy && connection.isDisconnected, onClick = {
                 execute { repository.apply(item); preview = null; editing = null; name = ""; url = "" }
             }) { Text(stringResource(R.string.rv_apply_31e392)) } },
             dismissButton = { TextButton(onClick = { job?.cancel(); preview = null }) { Text(stringResource(android.R.string.cancel)) } })
