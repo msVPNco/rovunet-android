@@ -13,8 +13,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProxySocketFactoryTest {
+    // This is a host-JVM assertion: Android's SDK stubs do not declare the Java 9 getter.
+    private fun currentJvmAuthenticator(): Authenticator? =
+        Authenticator::class.java.getMethod("getDefault").invoke(null) as Authenticator?
+
     @Test fun authenticatesPerSocketAndSendsTheOriginalHostnameWithoutLocalDns() {
-        val original = Authenticator.getDefault()
+        val original = currentJvmAuthenticator()
         val executor = Executors.newSingleThreadExecutor()
         try { ServerSocket(0).use { server ->
             val peer = executor.submit<String> {
@@ -43,7 +47,7 @@ class ProxySocketFactoryTest {
                 assertEquals(107, socket.getInputStream().read())
             }
             assertEquals("example.invalid", peer.get(3, TimeUnit.SECONDS))
-            assertSame(original, Authenticator.getDefault())
+            assertSame(original, currentJvmAuthenticator())
         } } finally { executor.shutdownNow() }
     }
     @Test fun rejectedAuthenticationClosesTheSocketWithoutConnectingDirectly() {
