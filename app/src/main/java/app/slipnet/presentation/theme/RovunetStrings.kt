@@ -188,6 +188,8 @@ object RovunetStrings {
         "The VPN tunnel appears to be broken" to R.string.rv_the_vpn_tunnel_appears_to_be_broken_3d5525,
         "Traffic blocked — Kill switch active" to R.string.rv_traffic_blocked_kill_switch_active_1b0a8a,
         "Waiting for network…" to R.string.rv_waiting_for_network_d1c557,
+        "Soar handshake or verification timed out" to R.string.scanner_soar_timeout,
+        "Soar resolver verification failed" to R.string.scanner_soar_failed,
         "Share QR Code" to R.string.dlg_share_qr_title,
         "Export Profile" to R.string.dlg_export_profile_title,
         "Edit Chain" to R.string.chain_title_edit,

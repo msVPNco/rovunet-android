@@ -1077,8 +1077,7 @@ fun MainScreen(
 
     if (showConnectionGuide) {
         AlertDialog(onDismissRequest = { showConnectionGuide = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.ui_choose_connection)) },
-            text = { Text(app.slipnet.domain.model.ProfileGuidance.GUIDE + "\n\n" +
-                androidx.compose.ui.res.stringResource(app.slipnet.R.string.probe_204_requirement), modifier = Modifier.verticalScroll(rememberScrollState())) },
+            text = { ConnectionSelectionGuide() },
             confirmButton = { TextButton(onClick = { showConnectionGuide = false }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.settings_ok_9ce3bd)) } })
     }
     if (showConnectionDetails) AlertDialog(

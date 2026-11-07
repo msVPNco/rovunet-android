@@ -274,6 +274,7 @@ fun DnsScannerScreen(
                     scanMode = uiState.scanMode,
                     canUseSimpleMode = uiState.canUseSimpleMode,
                     canUsePrismMode = uiState.canUsePrismMode,
+                    isSoarProfile = uiState.isSoarProfile,
                     enabled = !uiState.scannerState.isScanning && !uiState.simpleModeE2eState.isRunning,
                     onModeChange = { viewModel.setScanMode(it) }
                 )
@@ -309,7 +310,8 @@ fun DnsScannerScreen(
                 testUrl = uiState.testUrl,
                 e2eTimeoutMs = uiState.e2eTimeoutMs,
                 e2eConcurrency = uiState.e2eConcurrency,
-                showTestUrl = uiState.profileId != null && uiState.scanMode != ScanMode.PRISM && uiState.scanMode != ScanMode.E2E,
+                showTestUrl = uiState.profileId != null && uiState.scanMode != ScanMode.PRISM &&
+                    (if (uiState.isSoarProfile) uiState.scanMode == ScanMode.E2E else uiState.scanMode != ScanMode.E2E),
                 e2eFullVerification = uiState.e2eFullVerification,
                 scanMode = uiState.scanMode,
                 prismTimeoutMs = uiState.prismTimeoutMs,
@@ -319,7 +321,9 @@ fun DnsScannerScreen(
                 prismPrefilter = uiState.prismPrefilter,
                 prismPrefilterTimeoutMs = uiState.prismPrefilterTimeoutMs,
                 scanTransport = uiState.scanTransport,
-                profileDnsTransport = uiState.profile?.dnsTransport,
+                profileDnsTransport = if (uiState.isSoarProfile) null else uiState.profile?.dnsTransport,
+                isSoarProfile = uiState.isSoarProfile,
+                scanRunning = uiState.scannerState.isScanning || uiState.simpleModeE2eState.isRunning || uiState.e2eScannerState.isRunning,
                 onTestDomainChange = { viewModel.updateTestDomain(it) },
                 onScanPortChange = { viewModel.updateScanPort(it) },
                 onTimeoutChange = { viewModel.updateTimeout(it) },
@@ -531,6 +535,7 @@ internal fun ScanModeToggle(
     canUseSimpleMode: Boolean,
     canUsePrismMode: Boolean = false,
     enabled: Boolean,
+    isSoarProfile: Boolean = false,
     onModeChange: (ScanMode) -> Unit
 ) {
     Column(
@@ -604,7 +609,7 @@ internal fun ScanModeToggle(
             }
         }
 
-        if (scanMode == ScanMode.PRISM) {
+        if (scanMode == ScanMode.PRISM && !isSoarProfile) {
             val uriHandler = LocalUriHandler.current
             val linkColor = MaterialTheme.colorScheme.primary
             val textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -634,7 +639,12 @@ internal fun ScanModeToggle(
             )
         } else {
             Text(
-                text = when (scanMode) {
+                text = if (isSoarProfile) stringResource(when (scanMode) {
+                    ScanMode.SIMPLE -> app.slipnet.R.string.scanner_soar_simple_hint
+                    ScanMode.E2E -> app.slipnet.R.string.scanner_soar_e2e_hint
+                    ScanMode.PRISM -> app.slipnet.R.string.scanner_soar_prism_hint
+                    ScanMode.ADVANCED -> app.slipnet.R.string.scanner_soar_advanced_hint
+                }) else when (scanMode) {
                     ScanMode.SIMPLE -> stringResource(app.slipnet.R.string.scanner_simple_hint)
                     ScanMode.E2E -> stringResource(app.slipnet.R.string.scanner_e2e_hint)
                     else -> stringResource(app.slipnet.R.string.scanner_advanced_hint)
@@ -669,6 +679,8 @@ internal fun ConfigurationSection(
     prismPrefilterTimeoutMs: String = "1500",
     scanTransport: ScanTransportMode = ScanTransportMode.UDP,
     profileDnsTransport: DnsTransport? = null,
+    isSoarProfile: Boolean = false,
+    scanRunning: Boolean = false,
     onTestDomainChange: (String) -> Unit,
     onScanPortChange: (String) -> Unit,
     onTimeoutChange: (String) -> Unit,
@@ -706,7 +718,7 @@ internal fun ConfigurationSection(
             )
 
             // Prism/E2E modes use the profile's tunnel domain — hide the editable field.
-            if (scanMode != ScanMode.PRISM && scanMode != ScanMode.E2E) {
+            if (scanMode != ScanMode.PRISM && scanMode != ScanMode.E2E && (!isSoarProfile || scanMode == ScanMode.ADVANCED)) {
                 OutlinedTextField(
                     value = testDomain,
                     onValueChange = onTestDomainChange,
@@ -773,6 +785,7 @@ internal fun ConfigurationSection(
                     )
                 }
 
+                if (!isSoarProfile) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -793,6 +806,7 @@ internal fun ConfigurationSection(
                         checked = e2eFullVerification,
                         onCheckedChange = onE2eFullVerificationChange
                     )
+                }
                 }
                 if (e2eFullVerification) {
                     OutlinedTextField(
@@ -864,6 +878,7 @@ internal fun ConfigurationSection(
                     ScanTransportMode.entries.forEach { mode ->
                         FilterChip(
                             selected = scanTransport == mode,
+                            enabled = !scanRunning,
                             onClick = { onScanTransportChange(mode) },
                             label = { Text(scannerTransportName(mode.displayName)) },
                             leadingIcon = if (scanTransport == mode) {
@@ -956,6 +971,7 @@ internal fun ConfigurationSection(
                         shape = RoundedCornerShape(12.dp)
                     )
 
+                    if (!isSoarProfile) {
                     OutlinedTextField(
                         value = prismResponseSize,
                         onValueChange = onPrismResponseSizeChange,
@@ -967,8 +983,10 @@ internal fun ConfigurationSection(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
+                    }
                 }
 
+                if (!isSoarProfile) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1000,6 +1018,8 @@ internal fun ConfigurationSection(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
+                }
+
                 }
 
                 OutlinedTextField(

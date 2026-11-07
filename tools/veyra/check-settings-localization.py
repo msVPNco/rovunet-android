@@ -32,6 +32,7 @@ def drop_conditions(text):
 used=set()
 for file in files:
  source=file.read_text()
+ assert "ProfileGuidance.GUIDE" not in source,(file.name,"raw shared guide bypasses resource translation")
  used.update(re.findall(r'(?<!android\.)R\.(?:string|plurals)\.([a-z0-9_]+)',source))
  for match in re.finditer(r'(?:Toast\.makeText\s*\(\s*[^,\n]+,\s*|set(?:TextViewText|ContentDescription)\s*\(\s*[^,\n]+,\s*|showSnackbar\s*\(\s*|set(?:Title|Message)\s*\(\s*)"((?:[^"\\]|\\.)*)"',source):
   assert not re.search('[A-Za-z]',match[1]),(file.name,'raw transient UI text',match[1])

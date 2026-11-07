@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connection_selection_guide">"先尝试在当前网络中通过 HTTPS 测试的配置。仅凭协议名称无法判断速度或连接能否成功。\n\n网页与 TCP 路径：UDP 受限时，可尝试 REALITY、XHTTP、VLESS WebSocket、SSH 和 NaiveProxy，但服务器仍须可达。SOCKS5 的表现取决于代理服务器。\n\nUDP 路径：Hysteria2 和 WireGuard 需要可用的 UDP 路径。如果 UDP 被阻断，请尝试网页或 TCP 配置。\n\nDNS 与替代路径：DNSTT、NoizDNS、VayDNS、Slipstream 和 Soar 可提供替代路径。DNS 隧道通常适合作为轻量流量的后备方式。DoH 和 Tor 的行为取决于各自配置。\n\nHTTPS 测试：通过所选隧道向 www.gstatic.com 发出三次新请求。显示的时间包括 SOCKS 连接、TLS 协商和 HTTP 响应，并非 ICMP 延迟或下载速度。3/3 仅代表这次短测试的三次请求成功，不保证长期稳定。波动值为最大与最小延迟之差。结果取决于测试目标，网络变化后会过时。\n\n断开连接后测试整个集合：配置逐个连接、测试和断开，然后按 HTTPS 延迟排序。测试消耗少量流量，每条无响应路径可能需要约一分钟。TCP 端口可连接并不能证明 VPN 可用。"</string>
+    <string name="scanner_soar_simple_hint">"Soar 快速扫描：通过每个解析器验证服务器的真实握手，不受通用 DNS 评分筛选。可选 UDP、TCP 或两者，不更改已保存的连接策略。"</string>
+    <string name="scanner_soar_e2e_hint">"Soar 完整检查：建立经过认证的隧道，然后请求测试网址，网址应返回 HTTP 204。Soar + SSH 还会使用之前批准的服务器身份验证 SSH 账户。"</string>
+    <string name="scanner_soar_prism_hint">"Soar 的 Prism 模式重复执行经过 Ed25519 认证的真实握手，不使用 DNSTT 的 HMAC 挑战、响应填充或通用 DNS 预筛选，并分别记录 UDP/TCP 路径。"</string>
+    <string name="scanner_soar_advanced_hint">"仅用于 DNS 诊断。DNS 评分不能证明解析器可承载 Soar。请使用快速、E2E 或 Prism 模式验证实际 Soar 服务器。"</string>
+    <string name="scanner_soar_no_hits">"所选传输方式中没有解析器完成 Soar 握手。请检查域名和服务器密钥、同时尝试 UDP/TCP 或增加超时。其他协议成功并不等于该 Soar 服务器通过验证。"</string>
+    <string name="scanner_soar_timeout">"Soar 握手或验证超时"</string>
+    <string name="scanner_soar_failed">"Soar 解析器验证失败"</string>
+</resources>

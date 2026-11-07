@@ -1,0 +1,109 @@
+package app.slipnet.presentation.scanner
+
+import android.content.res.Configuration
+import android.os.SystemClock
+import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.test.platform.app.InstrumentationRegistry
+import app.slipnet.R
+import app.slipnet.domain.model.*
+import app.slipnet.presentation.main.ConnectionSelectionGuide
+import app.slipnet.presentation.theme.SlipstreamTheme
+import app.slipnet.tunnel.SoarBridge
+import app.slipnet.tunnel.SoarResolverProbe
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
+import org.json.JSONObject
+import org.junit.Assert.*
+import org.junit.Rule
+import org.junit.Test
+import java.net.ServerSocket
+import java.util.Locale
+
+class SoarScannerDeviceTest {
+    @get:Rule val compose = createComposeRule()
+    private val fixture get() = JSONObject(String(android.util.Base64.decode(InstrumentationRegistry.getArguments().getString("soarFixture")
+        ?: error("A real loopback Soar peer is required"), android.util.Base64.DEFAULT), Charsets.UTF_8))
+    private val host = "10.0.2.2"
+    private fun profile() = ServerProfile(id = 909, name = "synthetic", tunnelType = TunnelType.SOAR,
+        domain = fixture.getString("zone"), dnsttPublicKey = fixture.getString("publicKey"))
+
+    @Test fun soarTransportDefaultsToBothAndDoesNotChangeTheOtherScannerPreference() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val preferences = app.slipnet.data.local.datastore.PreferencesDataStore(context)
+        val old = preferences.soarScannerTransport.first()
+        val other = preferences.scannerTransport.first()
+        assertEquals("BOTH", old)
+        try {
+            preferences.setSoarScannerTransport("TCP")
+            assertEquals("TCP", preferences.soarScannerTransport.first())
+            assertEquals(other, preferences.scannerTransport.first())
+        } finally { preferences.setSoarScannerTransport(old) }
+    }
+
+    @Test fun fourSoarModesAndConnectionGuideUsePersianResources() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val configuration = Configuration(context.resources.configuration).apply { setLocale(Locale("fa")); setLayoutDirection(Locale("fa")) }
+        val resources = context.createConfigurationContext(configuration).resources
+        val state = DnsScannerUiState(profileId = 909, profile = profile(), scanMode = ScanMode.ADVANCED)
+        assertTrue(state.canUseSimpleMode)
+        assertTrue(state.canUsePrismMode) // A base64 Ed25519 key, not a hex Noise key.
+        assertTrue(state.e2eSupported)
+        val mode = mutableStateOf(ScanMode.SIMPLE)
+        compose.setContent {
+            CompositionLocalProvider(LocalResources provides resources, LocalConfiguration provides configuration,
+                LocalLayoutDirection provides LayoutDirection.Rtl) {
+                SlipstreamTheme {
+                    Column {
+                        ScanModeToggle(mode.value, true, true, isSoarProfile = true, enabled = true) { mode.value = it }
+                        ConnectionSelectionGuide()
+                    }
+                }
+            }
+        }
+        for ((value, key) in listOf(ScanMode.SIMPLE to R.string.scanner_simple, ScanMode.ADVANCED to R.string.rv_advanced_9f088d,
+                ScanMode.E2E to R.string.scanner_e2e, ScanMode.PRISM to 0)) {
+            compose.onNodeWithText(if (key == 0) "Prism" else resources.getString(key)).performClick()
+            compose.runOnIdle { assertEquals(value, mode.value) }
+        }
+        compose.onNodeWithText(resources.getString(R.string.connection_selection_guide), substring = true).assertExists()
+        compose.onAllNodesWithText("Start with a profile", substring = true).assertCountEquals(0)
+    }
+
+    @Test fun tcpOnlyResolverPassesWhileUdpAndWrongServerKeyFail() = runBlocking {
+        val p = profile(); val port = fixture.getInt("tcpOnlyPort")
+        assertFalse(SoarResolverProbe.test(host, port, p, DnsTransport.UDP, 800, "", false).success)
+        assertTrue(SoarResolverProbe.test(host, port, p, DnsTransport.TCP, 6000, "", false).success)
+        val wrong = p.copy(dnsttPublicKey = "00".repeat(32))
+        assertFalse(SoarResolverProbe.test(host, port, wrong, DnsTransport.TCP, 1000, "", false).success)
+    }
+
+    @Test fun prismRepeatsRealSoarHandshakesAndRejectsOrdinaryDnsReplies() = runBlocking {
+        assertEquals(2, SoarResolverProbe.verify(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 2, 2))
+        assertEquals(0, SoarResolverProbe.verify(host, fixture.getInt("fakeTcpPort"), profile(), DnsTransport.TCP, 1000, 1, 1))
+        assertTrue(SoarResolverProbe.test(host, fixture.getInt("udpPort"), profile().copy(dnsttPublicKey = fixture.getString("publicKeyHex")),
+            DnsTransport.UDP, 6000, "", false).success)
+    }
+
+    @Test fun fullHttpAndCancellationLeaveTheExistingSoarClientUntouched() = runBlocking {
+        val p = profile(); val port = fixture.getInt("tcpOnlyPort")
+        val listen = ServerSocket(0).use { it.localPort }
+        assertTrue(SoarBridge.startClient("tcp://$host:$port", p.domain, p.dnsttPublicKey, listen, tcpMode = "only").isSuccess)
+        try {
+            val checked = SoarResolverProbe.test(host, port, p, DnsTransport.TCP, 8000, "http://fixture.invalid/generate_204", true)
+            assertTrue(checked.success); assertEquals(204, checked.httpStatusCode)
+            val pending = launch { SoarResolverProbe.test(host, port, p, DnsTransport.UDP, 15000, "", false) }
+            delay(200)
+            val stopped = SystemClock.elapsedRealtime(); pending.cancelAndJoin()
+            assertTrue("Soar scan cancellation must close its own client promptly", SystemClock.elapsedRealtime() - stopped < 2000)
+            assertEquals(listen, SoarBridge.getClientPort())
+        } finally { SoarBridge.stopClient() }
+    }
+}

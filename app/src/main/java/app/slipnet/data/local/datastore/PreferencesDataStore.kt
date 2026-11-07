@@ -142,6 +142,8 @@ class PreferencesDataStore internal constructor(
         val SCANNER_PRISM_PREFILTER = booleanPreferencesKey("scanner_prism_prefilter")
         val SCANNER_PRISM_PREFILTER_TIMEOUT_MS = stringPreferencesKey("scanner_prism_prefilter_timeout_ms")
         val SCANNER_TRANSPORT = stringPreferencesKey("scanner_transport")
+        val SOAR_SCANNER_TRANSPORT = stringPreferencesKey("soar_scanner_transport")
+        val SOAR_SCANNER_PRISM_TIMEOUT = stringPreferencesKey("soar_scanner_prism_timeout")
         // DNS Scanner Resolver List Selection Keys
         val SCANNER_LIST_SOURCE = stringPreferencesKey("scanner_list_source")
         val SCANNER_COUNTRY = stringPreferencesKey("scanner_country")
@@ -934,6 +936,15 @@ class PreferencesDataStore internal constructor(
 
     val scannerPrismPrefilterTimeoutMs: Flow<String> = dataStore.data.map { prefs ->
         prefs[Keys.SCANNER_PRISM_PREFILTER_TIMEOUT_MS] ?: "1500"
+    }
+
+    val soarScannerTransport: Flow<String> = dataStore.data.map { it[Keys.SOAR_SCANNER_TRANSPORT] ?: "BOTH" }
+    val soarScannerPrismTimeoutMs: Flow<String> = dataStore.data.map { it[Keys.SOAR_SCANNER_PRISM_TIMEOUT] ?: "15000" }
+    suspend fun setSoarScannerTransport(value: String) {
+        dataStore.edit { it[Keys.SOAR_SCANNER_TRANSPORT] = value.takeIf { mode -> mode in setOf("UDP", "TCP", "BOTH") } ?: "BOTH" }
+    }
+    suspend fun setSoarScannerPrismTimeout(value: String) {
+        dataStore.edit { it[Keys.SOAR_SCANNER_PRISM_TIMEOUT] = value }
     }
 
     /** DNS transport used by the scanner. Valid values: "UDP", "TCP", "BOTH". */

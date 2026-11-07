@@ -143,6 +143,35 @@ class RegressionContractTest {
     }
 
     @Test fun explicitChoiceAndHistoricalEvidence() = connectionChoiceRegression()
+    @Test fun scannerHttpUrlUsesTheExplicitSocksTunnelWithoutLocalDns() = kotlinx.coroutines.runBlocking {
+        java.net.ServerSocket(0).use { server ->
+            val observed = java.util.concurrent.CompletableFuture<String>()
+            val peer = Thread {
+                try {
+                    server.accept().use { socket ->
+                        socket.soTimeout = 3000
+                        val input = java.io.DataInputStream(socket.getInputStream())
+                        val out = socket.getOutputStream()
+                        check(input.readUnsignedByte() == 5)
+                        input.readFully(ByteArray(input.readUnsignedByte()))
+                        out.write(byteArrayOf(5, 0)); out.flush()
+                        check(input.readUnsignedByte() == 5 && input.readUnsignedByte() == 1 && input.readUnsignedByte() == 0)
+                        check(input.readUnsignedByte() == 3)
+                        val domain = ByteArray(input.readUnsignedByte()); input.readFully(domain)
+                        check(input.readUnsignedShort() == 80)
+                        out.write(byteArrayOf(5, 0, 0, 1, 127, 0, 0, 1, 0, 0)); out.flush()
+                        val request = socket.getInputStream().bufferedReader().readLine()
+                        observed.complete(String(domain) + " " + request)
+                        out.write("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n".toByteArray()); out.flush()
+                    }
+                } catch (e: Throwable) { observed.completeExceptionally(e) }
+            }.apply { isDaemon = true; start() }
+            assertTrue(app.slipnet.core.TunnelProbe.measureUrlCancellable(server.localPort,
+                "http://never-resolve.invalid/probe?x=1", 2000) >= 0)
+            assertEquals("never-resolve.invalid GET /probe?x=1 HTTP/1.1", observed.get(3, java.util.concurrent.TimeUnit.SECONDS))
+            peer.join(3000)
+        }
+    }
     @Test fun phaseBudgetsCancellationAndApprovalWait() = collectionPhaseRegression()
     @Test fun attemptExpirationCancellationAndReplacement() = attemptWatchdogRegression()
 }

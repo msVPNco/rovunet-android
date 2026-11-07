@@ -132,7 +132,8 @@ data class DnsScannerUiState(
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH,
             TunnelType.DNSTT, TunnelType.DNSTT_SSH,
             TunnelType.NOIZDNS, TunnelType.NOIZDNS_SSH,
-            TunnelType.VAYDNS, TunnelType.VAYDNS_SSH
+            TunnelType.VAYDNS, TunnelType.VAYDNS_SSH,
+            TunnelType.SOAR, TunnelType.SOAR_SSH
         )
         // Reserved for tunnel types where DNS tunnel compatibility scores are irrelevant.
         // Currently empty — all supported tunnel types use DNS encoding.
@@ -166,8 +167,11 @@ data class DnsScannerUiState(
     /** The profile's public key, used directly for Prism mode. */
     val profilePubkey: String get() = profile?.dnsttPublicKey.orEmpty()
 
-    /** True when the profile has a valid 32-byte hex public key for Prism. */
-    val profilePubkeyValid: Boolean get() = isValidPubkey(profilePubkey)
+    val isSoarProfile: Boolean get() = profile?.tunnelType in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH)
+
+    /** The key format belongs to the actual protocol, not merely its byte length. */
+    val profilePubkeyValid: Boolean get() = if (isSoarProfile)
+        app.slipnet.domain.model.SoarConfig.publicKeyIssue(profilePubkey) == null else isValidPubkey(profilePubkey)
 
     /** Prism requires a profile with a valid Noise public key. */
     val canUsePrismMode: Boolean get() = profile != null && profilePubkeyValid
@@ -340,7 +344,10 @@ private data class SavedScanSession(
     val results: List<SavedResult>,
     val customRangeInput: String? = null,
     val scanMode: String? = null,
-    val prismPubkey: String? = null
+    val prismPubkey: String? = null,
+    val scanIdentity: String? = null,
+    val scanTransport: String? = null,
+    val transportSupport: Map<String, Pair<Boolean, Boolean>>? = null
 )
 
 private data class SavedResult(
@@ -500,11 +507,13 @@ class DnsScannerViewModel @Inject constructor(
      */
     private fun restoreFromScanStateHolder() {
         val holder = scanRun.state.value
+        if (profileId != null && holder.profileId != null && holder.profileId != profileId) return
         if (holder.active || holder.results.isNotEmpty()) {
             Log.i("DnsScanner", "Restoring ${holder.results.size} results from ScanStateHolder (profileId=${holder.profileId})")
             _uiState.update { s ->
                 s.copy(
                     profileId = s.profileId ?: holder.profileId,
+                    hostTransportSupport = holder.hostTransportSupport,
                     scannerState = s.scannerState.copy(
                         isScanning = holder.isScanning,
                         scannedCount = holder.scannedCount,
@@ -537,6 +546,7 @@ class DnsScannerViewModel @Inject constructor(
     }
 
     private fun reflectScanState(s: ScanServiceState) {
+        if (s.active && profileId != null && s.profileId != null && s.profileId != profileId) return
         if (!s.active) {
             _uiState.update { ui -> ui.copy(
                 scannerState = ui.scannerState.copy(isScanning = false),
@@ -565,6 +575,7 @@ class DnsScannerViewModel @Inject constructor(
             }
             ui.copy(
                 scannerState = updatedScannerState,
+                hostTransportSupport = ui.hostTransportSupport + s.hostTransportSupport,
                 e2eScannerState = ui.e2eScannerState.copy(
                     isRunning = s.isE2eRunning && s.e2eTotalCount > 0,
                     totalCount = s.e2eTotalCount,
@@ -603,19 +614,21 @@ class DnsScannerViewModel @Inject constructor(
             val prismPrefilterTimeoutMs = preferencesDataStore.scannerPrismPrefilterTimeoutMs.first()
             val transportValue = preferencesDataStore.scannerTransport.first()
             val scanTransport = ScanTransportMode.fromName(transportValue)
+            val soarTransport = ScanTransportMode.fromName(preferencesDataStore.soarScannerTransport.first())
+            val soarPrismTimeout = preferencesDataStore.soarScannerPrismTimeoutMs.first()
             _uiState.value = _uiState.value.copy(
                 timeoutMs = timeout,
                 concurrency = concurrency,
                 e2eTimeoutMs = e2eTimeout,
                 testUrl = testUrl,
                 e2eConcurrency = e2eConcurrency,
-                prismTimeoutMs = prismTimeoutMs,
+                prismTimeoutMs = if (_uiState.value.isSoarProfile) soarPrismTimeout else prismTimeoutMs,
                 prismProbeCount = prismProbeCount,
                 prismPassThreshold = prismPassThreshold,
                 prismResponseSize = prismResponseSize,
                 prismPrefilter = prismPrefilter,
                 prismPrefilterTimeoutMs = prismPrefilterTimeoutMs,
-                scanTransport = scanTransport
+                scanTransport = if (_uiState.value.isSoarProfile) soarTransport else scanTransport
             )
         } catch (e: Exception) {
             Log.w("DnsScanner", "Failed to load scanner settings", e)
@@ -643,13 +656,14 @@ class DnsScannerViewModel @Inject constructor(
         val state = _uiState.value
         viewModelScope.launch {
             try {
+                if (state.isSoarProfile) preferencesDataStore.setSoarScannerPrismTimeout(state.prismTimeoutMs)
                 preferencesDataStore.saveScannerSettings(
                     timeoutMs = state.timeoutMs,
                     concurrency = state.concurrency,
                     e2eTimeoutMs = state.e2eTimeoutMs,
                     testUrl = state.testUrl,
                     e2eConcurrency = state.e2eConcurrency,
-                    prismTimeoutMs = state.prismTimeoutMs,
+                    prismTimeoutMs = if (state.isSoarProfile) preferencesDataStore.scannerPrismTimeoutMs.first() else state.prismTimeoutMs,
                     prismProbeCount = state.prismProbeCount,
                     prismPassThreshold = state.prismPassThreshold,
                     prismResponseSize = state.prismResponseSize,
@@ -692,7 +706,10 @@ class DnsScannerViewModel @Inject constructor(
             try {
                 val profile = profileRepository.getProfileById(id)
                 if (profile != null) {
-                    _uiState.value = _uiState.value.copy(profile = profile)
+                    val soar = profile.tunnelType in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH)
+                    val transport = if (soar) ScanTransportMode.fromName(preferencesDataStore.soarScannerTransport.first()) else _uiState.value.scanTransport
+                    val prismTimeout = if (soar) preferencesDataStore.soarScannerPrismTimeoutMs.first() else _uiState.value.prismTimeoutMs
+                    _uiState.value = _uiState.value.copy(profile = profile, scanTransport = transport, prismTimeoutMs = prismTimeout)
                 }
             } catch (e: Exception) {
                 Log.w("DnsScanner", "Failed to load profile", e)
@@ -736,6 +753,12 @@ class DnsScannerViewModel @Inject constructor(
 
     // --- Saved session persistence ---
 
+    private fun scannerIdentity(profile: ServerProfile?): String {
+        if (profile == null) return "generic"
+        val data = "${profile.id}|${profile.updatedAt}|${profile.tunnelType.value}|${profile.domain}|${profile.dnsttPublicKey}"
+        return java.security.MessageDigest.getInstance("SHA-256").digest(data.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
     private fun loadSavedSession() {
         viewModelScope.launch {
             // Load persisted scanner settings first (timeout, concurrency, etc.)
@@ -763,9 +786,16 @@ class DnsScannerViewModel @Inject constructor(
                     } catch (_: Exception) { null }
                 if (json != null) {
                     val session = gson.fromJson(json, SavedScanSession::class.java)
+                    val actual = profileId?.let { profileRepository.getProfileById(it) }
+                    val soar = actual?.tunnelType in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH)
+                    if ((soar && session.scanIdentity == null) ||
+                        (session.scanIdentity != null && session.scanIdentity != scannerIdentity(actual))) {
+                        loadProfileDomain()
+                        return@launch
+                    }
                     val savedMode = try { session.scanMode?.let { ScanMode.valueOf(it) } } catch (_: Exception) { null }
                     val isSimple = savedMode == ScanMode.SIMPLE
-                    val isE2eOnly = savedMode == ScanMode.E2E
+                    val isE2eOnly = savedMode == ScanMode.E2E || (soar && savedMode == ScanMode.SIMPLE)
                     // In simple/E2E mode, a completed DNS scan is still resumable (E2E may be partial).
                     // In advanced mode, also restore completed DNS scans that have E2E data.
                     val hasE2eData = session.results.any { it.e2eSuccess != null }
@@ -825,6 +855,8 @@ class DnsScannerViewModel @Inject constructor(
                             selectedResolvers = emptySet(),
                             customRangeInput = session.customRangeInput ?: "",
                             scanMode = restoredMode,
+                            scanTransport = session.scanTransport?.let { ScanTransportMode.fromName(it) } ?: _uiState.value.scanTransport,
+                            hostTransportSupport = session.transportSupport ?: emptyMap(),
                             simpleModeE2eState = simpleModeE2e
                         )
                         // Override testDomain with profile domain (profile takes priority)
@@ -894,7 +926,9 @@ class DnsScannerViewModel @Inject constructor(
                     workingCount = workingCount,
                     results = savedResults,
                     customRangeInput = customRange,
-                    scanMode = scanMode
+                    scanMode = scanMode,
+                    scanIdentity = scannerIdentity(state.profile), scanTransport = state.scanTransport.name,
+                    transportSupport = state.hostTransportSupport
                 )
                 preferencesDataStore.saveScanSession(gson.toJson(session))
             } catch (e: Exception) {
@@ -1050,10 +1084,16 @@ class DnsScannerViewModel @Inject constructor(
     }
 
     fun updateScanTransport(mode: ScanTransportMode) {
-        _uiState.value = _uiState.value.copy(scanTransport = mode)
+        val state = _uiState.value
+        if (state.scannerState.isScanning || state.simpleModeE2eState.isRunning || state.e2eScannerState.isRunning) return
+        _uiState.value = if (state.isSoarProfile && state.scanTransport != mode) state.copy(scanTransport = mode,
+            scannerState = ScannerState(), simpleModeE2eState = SimpleModeE2eState(), e2eScannerState = E2eScannerState(),
+            selectedResolvers = emptySet(), hostTransportSupport = emptyMap(), showResumeDialog = false)
+        else state.copy(scanTransport = mode)
         viewModelScope.launch {
             try {
-                preferencesDataStore.setScannerTransport(mode.name)
+                if (_uiState.value.isSoarProfile) preferencesDataStore.setSoarScannerTransport(mode.name)
+                else preferencesDataStore.setScannerTransport(mode.name)
             } catch (e: Exception) {
                 Log.w("DnsScanner", "Failed to save scan transport", e)
             }
@@ -1084,7 +1124,7 @@ class DnsScannerViewModel @Inject constructor(
 
     fun resetPrismSettings() {
         _uiState.value = _uiState.value.copy(
-            prismTimeoutMs = "2000",
+            prismTimeoutMs = if (_uiState.value.isSoarProfile) "15000" else "2000",
             prismProbeCount = "5",
             prismPassThreshold = "2",
             prismResponseSize = "0",
@@ -1493,7 +1533,10 @@ class DnsScannerViewModel @Inject constructor(
     fun setScanMode(mode: ScanMode) {
         val state = _uiState.value
         if (state.scannerState.isScanning || state.e2eScannerState.isRunning || state.simpleModeE2eState.isRunning) return
-        _uiState.value = state.copy(scanMode = mode)
+        _uiState.value = if (state.isSoarProfile && state.scanMode != mode) state.copy(scanMode = mode,
+            scannerState = ScannerState(), simpleModeE2eState = SimpleModeE2eState(), e2eScannerState = E2eScannerState(),
+            selectedResolvers = emptySet(), hostTransportSupport = emptyMap(), showResumeDialog = false)
+        else state.copy(scanMode = mode)
     }
 
     fun loadCustomRangeList() {
@@ -1677,7 +1720,7 @@ class DnsScannerViewModel @Inject constructor(
             _uiState.update { it.copy(error = "No profile loaded") }
             return
         }
-        val isE2eOnlyMode = state.scanMode == ScanMode.E2E
+        val isE2eOnlyMode = state.scanMode == ScanMode.E2E || (state.isSoarProfile && state.scanMode == ScanMode.SIMPLE)
         _uiState.value = _uiState.value.copy(
             resolverList = resolvers,
             scannerState = ScannerState(
@@ -1694,7 +1737,7 @@ class DnsScannerViewModel @Inject constructor(
             e2eScannerState = E2eScannerState()
         )
 
-        val isE2eOnly = state.scanMode == ScanMode.E2E
+        val isE2eOnly = state.scanMode == ScanMode.E2E || (state.isSoarProfile && state.scanMode == ScanMode.SIMPLE)
         session.update {
             ScanServiceState(
                 isScanning = !isE2eOnly,
@@ -1710,7 +1753,7 @@ class DnsScannerViewModel @Inject constructor(
         if (!startScanService(session)) return
 
         when (state.scanMode) {
-            ScanMode.SIMPLE -> launchSimpleScan(
+            ScanMode.SIMPLE -> if (state.isSoarProfile) launchE2eScan(resolvers, scanPort) else launchSimpleScan(
                 hosts = resolvers,
                 allHosts = resolvers,
                 testDomain = state.effectiveTestDomain,
@@ -1724,7 +1767,7 @@ class DnsScannerViewModel @Inject constructor(
                 port = scanPort
             )
             ScanMode.PRISM -> {
-                val pubkeyBytes = state.profilePubkey.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                val pubkeyBytes = if (state.isSoarProfile) byteArrayOf() else state.profilePubkey.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
                 val prismDomain = state.profile?.domain ?: state.effectiveTestDomain
                 val prismTimeout = state.prismTimeoutMs.toLongOrNull() ?: 2000L
                 val probeCount = state.prismProbeCount.toIntOrNull()?.coerceIn(1, 30) ?: 5
@@ -1775,7 +1818,7 @@ class DnsScannerViewModel @Inject constructor(
         }
 
         if (state.scanMode == ScanMode.SIMPLE) {
-            resumeSimpleScan()
+            if (state.isSoarProfile) resumeE2eScan() else resumeSimpleScan()
             return
         }
 
@@ -1789,7 +1832,7 @@ class DnsScannerViewModel @Inject constructor(
             val scanPort = state.scanPort.toIntOrNull()?.coerceIn(1, 65535) ?: 53
             val probeCount = state.prismProbeCount.toIntOrNull()?.coerceIn(1, 30) ?: 5
             val passThreshold = state.prismPassThreshold.toIntOrNull()?.coerceIn(1, probeCount) ?: 2
-            val pubkeyBytes = state.profilePubkey.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+            val pubkeyBytes = if (state.isSoarProfile) byteArrayOf() else state.profilePubkey.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val responseSize = state.prismResponseSize.toIntOrNull()?.let { if (it == 0) 0 else it.coerceIn(200, 4096) } ?: 0
             val existingResults = state.scannerState.results
                 .filter { it.status != ResolverStatus.PENDING && it.status != ResolverStatus.SCANNING }
@@ -2201,6 +2244,7 @@ class DnsScannerViewModel @Inject constructor(
         mode: ScanTransportMode,
         collector: suspend (ResolverScanResult) -> Unit
     ) {
+        val scanOwner = scanRun
         when (mode) {
             ScanTransportMode.UDP, ScanTransportMode.TCP -> {
                 val isTcp = mode == ScanTransportMode.TCP
@@ -2214,6 +2258,7 @@ class DnsScannerViewModel @Inject constructor(
                         _uiState.update { s ->
                             s.copy(hostTransportSupport = s.hostTransportSupport + (result.host to pair))
                         }
+                        scanOwner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (result.host to pair)) }
                     }
                     collector(result)
                 }
@@ -2235,6 +2280,7 @@ class DnsScannerViewModel @Inject constructor(
                     _uiState.update { s ->
                         s.copy(hostTransportSupport = s.hostTransportSupport + (host to (udpOk to tcpOk)))
                     }
+                    scanOwner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to (udpOk to tcpOk))) }
                     // Prefer the WORKING result as the carrier (for responseTimeMs, tunnelTestResult, etc.);
                     // UDP wins the tiebreak so timing is consistent with single-transport UDP scans.
                     val base = when {
@@ -2299,28 +2345,24 @@ class DnsScannerViewModel @Inject constructor(
      */
     private suspend fun verifyResolverWithMode(
         host: String, port: Int, testDomain: String, pubkey: ByteArray, timeoutMs: Long,
-        probeCount: Int, passThreshold: Int, responseSize: Int, mode: ScanTransportMode
-    ): PrismVerifyOutcome = when (mode) {
+        probeCount: Int, passThreshold: Int, responseSize: Int, mode: ScanTransportMode, soarProfile: ServerProfile? = null
+    ): PrismVerifyOutcome {
+        suspend fun verify(transport: DnsTransport): Int = if (soarProfile != null)
+            scannerRepository.verifySoarResolver(host, port, soarProfile, timeoutMs, probeCount, passThreshold, transport)
+        else scannerRepository.verifyResolver(host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, transport)
+        return when (mode) {
         ScanTransportMode.UDP -> PrismVerifyOutcome(
-            scannerRepository.verifyResolver(
-                host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, DnsTransport.UDP
-            )
+            verify(DnsTransport.UDP)
         )
         ScanTransportMode.TCP -> PrismVerifyOutcome(
-            scannerRepository.verifyResolver(
-                host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, DnsTransport.TCP
-            )
+            verify(DnsTransport.TCP)
         )
         ScanTransportMode.BOTH -> coroutineScope {
             val udpD = async {
-                scannerRepository.verifyResolver(
-                    host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, DnsTransport.UDP
-                )
+                verify(DnsTransport.UDP)
             }
             val tcpD = async {
-                scannerRepository.verifyResolver(
-                    host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, DnsTransport.TCP
-                )
+                verify(DnsTransport.TCP)
             }
             val udp = udpD.await()
             val tcp = tcpD.await()
@@ -2330,6 +2372,7 @@ class DnsScannerViewModel @Inject constructor(
                 tcpOk = tcp >= passThreshold
             )
         }
+    }
     }
 
     private suspend fun detectTransparentProxy(testDomain: String) {
@@ -2686,8 +2729,9 @@ class DnsScannerViewModel @Inject constructor(
             launchE2eWorkers(
                 queue = queue, profile = profile,
                 testUrl = _uiState.value.testUrl,
-                e2eTimeout = _uiState.value.e2eTimeoutMs.toLongOrNull() ?: 15000L,
-                fullVerification = _uiState.value.e2eFullVerification,
+                e2eTimeout = if (_uiState.value.isSoarProfile && _uiState.value.scanMode == ScanMode.SIMPLE)
+                    _uiState.value.timeoutMs.toLongOrNull() ?: 3000L else _uiState.value.e2eTimeoutMs.toLongOrNull() ?: 15000L,
+                fullVerification = if (_uiState.value.isSoarProfile) _uiState.value.scanMode == ScanMode.E2E else _uiState.value.e2eFullVerification,
                 startTestedCount = startTestedCount, startPassedCount = startPassedCount,
                 onActiveChanged = { transform -> updateSimpleModeActive(session, transform) },
                 onResult = { host, result, tested, passed ->
@@ -2707,6 +2751,9 @@ class DnsScannerViewModel @Inject constructor(
                             isRunning = false, currentResolver = null, currentPhase = "",
                             activeResolvers = emptyMap()
                         ))
+                    }
+                    if (_uiState.value.isSoarProfile && _uiState.value.simpleModeE2eState.passedCount == 0) {
+                        _uiState.update { it.copy(error = RovunetStrings.localizedContext(appContext).getString(R.string.scanner_soar_no_hits)) }
                     }
                     saveScanSessionToStore()
                     clearSavedSession()
@@ -2780,13 +2827,14 @@ class DnsScannerViewModel @Inject constructor(
             // Per-resolver: optional alive check then prism probes, all in one pass.
             val prefilterDomain = testDomain
             val transport = _uiState.value.scanTransport
-            val semaphore = kotlinx.coroutines.sync.Semaphore(concurrency)
+            val soarProfile = _uiState.value.profile?.takeIf { _uiState.value.isSoarProfile }
+            val semaphore = kotlinx.coroutines.sync.Semaphore(if (soarProfile != null) concurrency.coerceAtMost(8) else concurrency)
             val jobs = hosts.map { host ->
                 launch {
                     semaphore.acquire()
                     try {
                         // Optional pre-filter: skip dead IPs with a quick DNS check
-                        if (prefilter) {
+                        if (prefilter && soarProfile == null) {
                             val pfTimeout = _uiState.value.prismPrefilterTimeoutMs.toLongOrNull()?.coerceAtLeast(200) ?: 1500L
                             val alive = isResolverAliveWithMode(host, port, prefilterDomain, pfTimeout, transport)
                             if (!alive) {
@@ -2798,7 +2846,9 @@ class DnsScannerViewModel @Inject constructor(
                         }
 
                         val start = System.currentTimeMillis()
-                        val probeOutcome = withTimeoutOrNull(timeout) {
+                        val probeOutcome = if (soarProfile != null) {
+                            verifyResolverWithMode(host, port, testDomain, pubkey, timeout, probeCount, passThreshold, responseSize, transport, soarProfile)
+                        } else withTimeoutOrNull(timeout) {
                             verifyResolverWithMode(host, port, testDomain, pubkey, timeout, probeCount, passThreshold, responseSize, transport)
                         }
                         val ms = System.currentTimeMillis() - start
@@ -2829,6 +2879,7 @@ class DnsScannerViewModel @Inject constructor(
                             _uiState.update { s ->
                                 s.copy(hostTransportSupport = s.hostTransportSupport + (host to pair))
                             }
+                            session.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to pair)) }
                         } else {
                             timeoutCount.incrementAndGet()
                         }
@@ -2931,6 +2982,9 @@ class DnsScannerViewModel @Inject constructor(
         val testedCount = java.util.concurrent.atomic.AtomicInteger(startTestedCount)
         val passedCount = java.util.concurrent.atomic.AtomicInteger(startPassedCount)
         val useIsolated = e2eConcurrency > 1
+        val owner = scanRun
+        val soar = profile.tunnelType in setOf(TunnelType.SOAR, TunnelType.SOAR_SSH)
+        val transport = _uiState.value.scanTransport
 
         return (1..e2eConcurrency).map {
             launch {
@@ -2938,27 +2992,41 @@ class DnsScannerViewModel @Inject constructor(
                     val (host, port) = queue.take() ?: break
                     onActiveChanged { it + (host to "Starting...") }
 
-                    val e2eResult = try {
-                        if (useIsolated) {
+                    suspend fun probe(selectedTransport: DnsTransport): E2eTestResult {
+                        return if (useIsolated) {
                             scannerRepository.testResolverE2eIsolated(
                                 resolverHost = host, resolverPort = port,
-                                profile = profile, testUrl = testUrl, timeoutMs = e2eTimeout,
+                                profile = if (soar) profile.copy(dnsTransport = selectedTransport) else profile, testUrl = testUrl, timeoutMs = e2eTimeout,
                                 fullVerification = fullVerification,
                                 onPhaseUpdate = { phase -> onActiveChanged { it + (host to phase) } }
                             )
                         } else {
                             scannerRepository.testResolverE2e(
                                 resolverHost = host, resolverPort = port,
-                                profile = profile, testUrl = testUrl, timeoutMs = e2eTimeout,
+                                profile = if (soar) profile.copy(dnsTransport = selectedTransport) else profile, testUrl = testUrl, timeoutMs = e2eTimeout,
                                 fullVerification = fullVerification,
                                 onPhaseUpdate = { phase -> onActiveChanged { it + (host to phase) } }
                             )
                         }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        E2eTestResult(errorMessage = e.message ?: "Worker error")
                     }
+                    val e2eResult = try {
+                        if (!soar) probe(profile.dnsTransport) else {
+                            val outcomes = coroutineScope {
+                                val udp = if (transport != ScanTransportMode.TCP) async { probe(DnsTransport.UDP) } else null
+                                val tcp = if (transport != ScanTransportMode.UDP) async { probe(DnsTransport.TCP) } else null
+                                (udp?.await()) to (tcp?.await())
+                            }
+                            ensureActive()
+                            if (scanRun !== owner) throw kotlinx.coroutines.CancellationException("Scan replaced")
+                            _uiState.update { s -> s.copy(hostTransportSupport = s.hostTransportSupport +
+                                (host to ((outcomes.first?.success == true) to (outcomes.second?.success == true)))) }
+                            owner.update { it.copy(hostTransportSupport = it.hostTransportSupport +
+                                (host to ((outcomes.first?.success == true) to (outcomes.second?.success == true)))) }
+                            listOfNotNull(outcomes.first, outcomes.second).filter { it.success }.minByOrNull { it.totalMs }
+                                ?: outcomes.first ?: outcomes.second ?: E2eTestResult(errorMessage = "No resolver transport selected")
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    } catch (_: Exception) { E2eTestResult(errorMessage = "Resolver verification failed") }
 
                     val newTested = testedCount.incrementAndGet()
                     val newPassed = if (e2eResult.success) passedCount.incrementAndGet() else passedCount.get()
@@ -3272,7 +3340,9 @@ class DnsScannerViewModel @Inject constructor(
                         workingCount = workingCount,
                         results = savedResults,
                         customRangeInput = customRange,
-                        scanMode = scanMode
+                        scanMode = scanMode,
+                        scanIdentity = scannerIdentity(state.profile), scanTransport = state.scanTransport.name,
+                        transportSupport = state.hostTransportSupport
                     )
                     val json = gson.toJson(session)
                     try {

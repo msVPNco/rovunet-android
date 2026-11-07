@@ -994,6 +994,13 @@ class ResolverScannerRepositoryImpl @Inject constructor(
 
     // ---- E2E tunnel testing ----
 
+    private fun soarProfileAvailable(profile: ServerProfile): Boolean = !profile.needsCredentials && !profile.isExpired &&
+        (profile.boundDeviceId.isEmpty() || profile.boundDeviceId == app.slipnet.util.DeviceIdUtil.getScrambledDeviceId(context))
+
+    override suspend fun verifySoarResolver(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
+        probeCount: Int, threshold: Int, transport: DnsTransport): Int =
+        if (!soarProfileAvailable(profile)) 0 else app.slipnet.tunnel.SoarResolverProbe.verify(host, port, profile, transport, timeoutMs, probeCount, threshold)
+
     override suspend fun testResolverE2e(
         resolverHost: String,
         resolverPort: Int,
@@ -1005,6 +1012,8 @@ class ResolverScannerRepositoryImpl @Inject constructor(
     ): E2eTestResult = withContext(Dispatchers.IO) {
         if (profile.needsCredentials) return@withContext E2eTestResult(errorMessage = SAVED_CREDENTIALS_UNAVAILABLE)
         when (profile.tunnelType) {
+            TunnelType.SOAR, TunnelType.SOAR_SSH -> if (!soarProfileAvailable(profile)) E2eTestResult(errorMessage = "Profile unavailable") else app.slipnet.tunnel.SoarResolverProbe.test(
+                resolverHost, resolverPort, profile, profile.dnsTransport, timeoutMs, testUrl, fullVerification, onPhaseUpdate)
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH ->
                 testResolverSlipstream(resolverHost, resolverPort, profile, testUrl, timeoutMs, onPhaseUpdate, fullVerification)
             TunnelType.DNSTT, TunnelType.DNSTT_SSH ->
@@ -1045,6 +1054,8 @@ class ResolverScannerRepositoryImpl @Inject constructor(
     ): E2eTestResult = withContext(Dispatchers.IO) {
         if (profile.needsCredentials) return@withContext E2eTestResult(errorMessage = SAVED_CREDENTIALS_UNAVAILABLE)
         when (profile.tunnelType) {
+            TunnelType.SOAR, TunnelType.SOAR_SSH -> if (!soarProfileAvailable(profile)) E2eTestResult(errorMessage = "Profile unavailable") else app.slipnet.tunnel.SoarResolverProbe.test(
+                resolverHost, resolverPort, profile, profile.dnsTransport, timeoutMs, testUrl, fullVerification, onPhaseUpdate)
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH ->
                 // Slipstream native lib is singleton — fall back to shared bridge
                 testResolverSlipstream(resolverHost, resolverPort, profile, testUrl, timeoutMs, onPhaseUpdate, fullVerification)
@@ -1060,6 +1071,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
     }
 
     override fun maxE2eConcurrency(profile: ServerProfile): Int = when (profile.tunnelType) {
+        TunnelType.SOAR, TunnelType.SOAR_SSH -> 4
         TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH -> 1
         else -> 10
     }
