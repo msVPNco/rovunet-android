@@ -7,6 +7,8 @@ if [[ "${CI:-}" == true ]]; then
   : "${ROVUNET_ANDROID_FIXTURE:?CI requires the generated panel fixture}"
   : "${TEST_TLS_STORE:?CI requires HTTPS tests}" "${XRAY:?CI requires core lifecycle tests}" "${CORE_LAUNCHER:?CI requires supervisor}"
   test -s "$ROVUNET_ANDROID_FIXTURE"
+  : "${ROVUNET_CORE_FIXTURE:?CI requires the generated panel core fixture}"
+  test -s "$ROVUNET_CORE_FIXTURE"
 fi
 python3 tools/veyra/check-settings-localization.py
 python3 tools/quality/check-editor-localization.py

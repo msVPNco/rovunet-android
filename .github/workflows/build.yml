@@ -31,6 +31,7 @@ jobs:
       TEST_TLS_STORE: ${{ github.workspace }}/../ci/probe.p12
       ROVUNET_PANEL_TEXT_FIXTURE: ${{ github.workspace }}/../ci/panel-text.txt
       ROVUNET_ANDROID_FIXTURE: ${{ github.workspace }}/../ci/panel-fixture.txt
+      ROVUNET_CORE_FIXTURE: ${{ github.workspace }}/../ci/panel-core.txt
       CORE_TEST_JAR: ${{ github.workspace }}/../ci/tests.jar
     steps:
       - uses: actions/checkout@v4
