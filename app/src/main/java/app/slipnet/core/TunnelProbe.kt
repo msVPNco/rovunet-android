@@ -125,7 +125,7 @@ object TunnelProbe {
             check(input.readUnsignedByte() == 0)
             val size = when (input.readUnsignedByte()) { 1 -> 4; 4 -> 16; 3 -> input.readUnsignedByte(); else -> error("Invalid SOCKS address") }
             input.readFully(ByteArray(size + 2))
-            val remote = if (secure) factory.createSocket(socket, host, remotePort, true) else socket
+            val remote = if (secure) factory.createSocket(socket, host, remotePort, true) as SSLSocket else socket
             remote.use { tls ->
                 if (tls is SSLSocket) {
                     tls.sslParameters = tls.sslParameters.apply {
