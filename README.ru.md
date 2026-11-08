@@ -5,7 +5,7 @@
 <p align="center"><b>Несколько путей к вашему серверу в одном Android-приложении</b><br>DNS-туннели, SSH, HTTPS-прокси и профили Xray в именованных группах, с прямым подключением и настоящими тестами HTTPS.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -13,25 +13,25 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.fa.md">فارسی</a> · <b>Русский</b> · <a href="README.zh-CN.md">简体中文</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16">Скачать</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-RU.pdf">Полное руководство (PDF)</a> · <a href="docs/USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/msVPNco/rovunet-panel">Серверная панель</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1">Скачать</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-RU.pdf">Полное руководство (PDF)</a> · <a href="docs/USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/msVPNco/rovunet-panel">Серверная панель</a></p>
 
 ---
 
 **Многопротокольный VPN-клиент Android для нескольких путей к собственному серверу.** Объединяет DNS-туннели, транспорты SSH, HTTPS-прокси и профили Xray. Связанные пути хранятся в коллекциях: подключайте выбранный напрямую или отдельно измеряйте HTTPS через настоящий туннель.
 
-Общий репозиторий приложений Rovunet для Android, Windows и будущей macOS. Android alpha16 опубликован; проверенного публичного GUI-выпуска для настольных систем пока нет. [Платформы и каналы выпуска](docs/PLATFORMS.md).
+Общий репозиторий приложений Rovunet для Android, Windows и будущей macOS. Android alpha16.1 опубликован; проверенного публичного GUI-выпуска для настольных систем пока нет. [Платформы и каналы выпуска](docs/PLATFORMS.md).
 
 ## Состояние выпуска
 
-Текущий выпуск — **0.3.0-alpha16 Full, код 32**. Сохранена [производственная подпись alpha14](docs/SIGNING-IDENTITY.md): устанавливайте поверх публичной alpha14 без удаления. У старой alpha11 и приватной Rovunet Test другие идентичности. [Скачать Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) · [Запись выпуска](docs/releases/alpha16.md) · [Состояние](docs/STATUS.md).
+Текущий выпуск — **0.3.0-alpha16.1 Full, код 33**. Сохранена [производственная подпись alpha14](docs/SIGNING-IDENTITY.md): устанавливайте поверх публичной alpha14 без удаления. У старой alpha11 и приватной Rovunet Test другие идентичности. [Скачать Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) · [Запись выпуска](docs/releases/alpha16.md) · [Состояние](docs/STATUS.md).
 
-Alpha16 раньше показывает успешный UDP/TCP-путь Soar, ограничивает работу сканера, сокращает опрос и запись счётчиков в простое, улучшает завершение VLESS и следует выбранной Android основной сети. Остаток трафика и срок из Panel v1.19 видны в прежней карточке; язык и справка стоят перед подписками. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819): **83 переносимых/JUnit, 86 модульных Gradle, 55 Debug-тестов эмулятора и 2 JNI-теста минифицированного Release**. Владелец одобрил тот же APK. Пересобраны закреплённый Xray и Hev/JNI проекта; остальные native-транспорты повторно использованы. Экономия батареи и ночная работа/смена сети количественно не измерены.
+Alpha16.1 исправляет обновление после переименования репозитория в `rovunet-app`. Android выбирает самый новый совместимый Full/Lite APK из общего списка независимо от Latest Windows/macOS и сохраняет настройку предварительных выпусков. Проверки репозитория, тега, имени файла, хеша, пакета, версии и подписи действуют. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569): **93 переносимых/JUnit, модульные тесты Gradle, 55 Debug-тестов эмулятора и 2 JNI-теста минифицированного Release**. Владелец разрешил публикацию того же проверенного APK. Туннели, энергополитика, сканер, карточки и переводы не менялись.
 
-**Обновление:** установите [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) поверх публичной alpha14 или новее, не удаляя приложение и данные. Пакет, производственная подпись и профили сохранены. Если одобренный alpha16/код32 уже установлен, это тот же файл; повторная установка не нужна.
+**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены. Установленная проверенная alpha16.1/код33 уже является этим файлом; переустановка не нужна.
 
 ## Быстрый старт
 
-1. **Скачайте** Full APK из [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16) и установите. Публичные alpha14 и новее ставятся поверх без удаления.
+1. **Скачайте** Full APK из [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1) и установите. Публичные alpha14 и новее ставятся поверх без удаления.
 2. **Откройте** Rovunet, выберите язык и тему и дайте Android разрешение VPN.
 3. **Импорт**: Подписки → вставьте HTTPS-ссылку подписки → **Импорт**, или **+ → Импорт** для ссылки, QR-кода или файла.
 4. **Подключение**: раскройте группу, коснитесь пути, чтобы выбрать, и ещё раз — чтобы подключиться.
@@ -98,7 +98,7 @@ HTTPS-подписки имеют кнопки **Обновить** и **Имп�
 | [Руководство пользователя](docs/USER_GUIDE.ru.md) | Установка, импорт, подключение, проверки, Soar, учётные данные и диагностика |
 | [Текущее состояние](docs/STATUS.md) · [Обновление](docs/UPGRADE.md) | Состояние выпуска, подпись и миграция |
 
-PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha16](docs/releases/alpha16.md).
+PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha16.1](docs/releases/alpha16.md).
 
 ## Исходники, проверки и поддержка
 

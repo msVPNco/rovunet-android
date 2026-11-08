@@ -1,48 +1,92 @@
 package app.slipnet.core
 
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
 
 data class UpdateAsset(val version: String, val url: String, val size: Long, val digest: String, val checksumsUrl: String, val notes: String)
 
 object UpdateManifest {
-    private const val PREFIX = "https://github.com/msVPNco/rovunet-android/releases/download/"
+    const val RELEASES_URL = "https://github.com/msVPNco/rovunet-app/releases"
+    const val API_URL = "https://api.github.com/repos/msVPNco/rovunet-app/releases"
+    private const val PREFIX = "$RELEASES_URL/download/"
+    private const val DOWNLOAD_PATH = "/msVPNco/rovunet-app/releases/download/"
+    private const val MAX_APK_BYTES = 400_000_000L
+
     fun trustedAsset(url: String): Boolean = runCatching {
         val uri = URI(url)
-        url.startsWith(PREFIX) && uri.host == "github.com" && uri.userInfo == null && uri.fragment == null && uri.query == null &&
-            !uri.path.contains("/../") && uri.path.startsWith("/msVPNco/rovunet-android/releases/download/")
+        url.startsWith(PREFIX) && uri.scheme == "https" && uri.host == "github.com" && uri.port == -1 &&
+            uri.userInfo == null && uri.fragment == null && uri.query == null &&
+            !uri.path.contains("/../") && !uri.path.contains("/./") && !uri.path.contains('\\') &&
+            uri.path.startsWith(DOWNLOAD_PATH)
     }.getOrDefault(false)
-    fun newestPublished(releases: org.json.JSONArray, previous: JSONObject? = null): JSONObject? {
-        var best = previous
+
+    /** GitHub Latest belongs to the whole repository; desktop releases are not Android updates. */
+    fun newestPublished(
+        releases: JSONArray,
+        previous: JSONObject? = null,
+        lite: Boolean = false,
+        includePreview: Boolean = true,
+    ): JSONObject? {
+        fun eligible(release: JSONObject): Boolean = !release.optBoolean("draft") &&
+            (includePreview || !release.optBoolean("prerelease")) &&
+            ReleaseVersion.supports(release.optString("tag_name")) && compatibleApk(release, lite) != null
+        var best = previous?.takeIf(::eligible)
         for (i in 0 until releases.length()) {
-            val release = releases.getJSONObject(i)
-            val version = release.optString("tag_name")
-            if (!release.optBoolean("draft") && ReleaseVersion.supports(version) &&
-                (best == null || ReleaseVersion.isNewer(version, best.getString("tag_name")))) best = release
+            val release = releases.optJSONObject(i) ?: continue
+            if (eligible(release) && (best == null ||
+                    ReleaseVersion.isNewer(release.getString("tag_name"), best.getString("tag_name")))) {
+                best = release
+            }
         }
         return best
     }
+
+    private fun assets(release: JSONObject): List<JSONObject> {
+        val array = release.optJSONArray("assets") ?: return emptyList()
+        return (0 until array.length()).mapNotNull(array::optJSONObject)
+    }
+
+    private fun digest(apk: JSONObject): String = apk.optString("digest").lowercase()
+        .removePrefix("sha256:").takeIf { it.matches(Regex("[a-f0-9]{64}")) }.orEmpty()
+
+    private fun assetInRelease(asset: JSONObject, release: JSONObject): Boolean {
+        val url = asset.optString("browser_download_url")
+        return trustedAsset(url) && URI(url).path ==
+            "$DOWNLOAD_PATH${release.optString("tag_name")}/${asset.optString("name")}"
+    }
+
+    private fun checksumsUrl(release: JSONObject): String = assets(release)
+        .singleOrNull { it.optString("name") == "APK-SHA256.txt" && assetInRelease(it, release) }
+        ?.optString("browser_download_url").orEmpty()
+
+    private fun compatibleApk(release: JSONObject, lite: Boolean): JSONObject? {
+        val apks = assets(release).filter {
+            val name = it.optString("name").lowercase()
+            name.endsWith(".apk") && name.contains(if (lite) "lite" else "full") &&
+                (!name.contains("lite") || lite) &&
+                listOf("unsigned", "candidate", "-debug", "-review", "-private", "-test").none(name::contains)
+        }
+        val apk = apks.singleOrNull { it.optString("name").contains("universal", true) }
+            ?: apks.singleOrNull() ?: return null
+        val size = apk.optLong("size")
+        val state = apk.optString("state")
+        if (!assetInRelease(apk, release) || size !in 1..MAX_APK_BYTES ||
+            (state.isNotEmpty() && state != "uploaded")) return null
+        if (digest(apk).isEmpty() && checksumsUrl(release).isEmpty()) return null
+        return apk
+    }
+
     fun parse(body: String, current: String, lite: Boolean): UpdateAsset? {
         val json = JSONObject(body)
         val version = json.getString("tag_name").removePrefix("v")
         require(!json.optBoolean("draft") && ReleaseVersion.supports(version) && ReleaseVersion.supports(current)) { "Unrecognized release information" }
         if (!ReleaseVersion.isNewer(version, current.removeSuffix("-lite"))) return null
-        val assets = json.getJSONArray("assets")
-        val entries = (0 until assets.length()).map { assets.getJSONObject(it) }
-        val apks = entries.filter {
-            val name = it.optString("name").lowercase()
-            name.endsWith(".apk") && name.contains(if (lite) "lite" else "full") && (!name.contains("lite") || lite)
-        }
-        val apk = apks.singleOrNull { it.optString("name").contains("universal", true) } ?: apks.singleOrNull()
-            ?: error("No compatible universal APK in release")
-        val url = apk.getString("browser_download_url")
-        val size = apk.getLong("size")
-        require(trustedAsset(url) && size in 1..400_000_000) { "Invalid update asset" }
-        val digest = apk.optString("digest").removePrefix("sha256:").lowercase().takeIf { it.matches(Regex("[a-f0-9]{64}")) }.orEmpty()
-        val sums = entries.singleOrNull { it.optString("name") == "APK-SHA256.txt" }?.optString("browser_download_url").orEmpty()
-        require(digest.isNotEmpty() || trustedAsset(sums)) { "Update checksum unavailable" }
-        return UpdateAsset(version, url, size, digest, sums, json.optString("body").take(2000))
+        val apk = compatibleApk(json, lite) ?: error("No compatible verified Android APK in release")
+        return UpdateAsset(version, apk.getString("browser_download_url"), apk.getLong("size"),
+            digest(apk), checksumsUrl(json), json.optString("body").take(2000))
     }
+
     fun checksum(text: String, assetUrl: String): String {
         val filename = URI(assetUrl).path.substringAfterLast('/')
         return text.lineSequence().map { it.trim() }.mapNotNull {

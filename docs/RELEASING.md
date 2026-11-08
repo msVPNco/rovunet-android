@@ -26,7 +26,7 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha16/code32 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a`, application commit `ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4`. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Publication tooling/docs are recorded separately and do not rebuild/re-sign the accepted APK. Detailed battery, overnight/Doze and physical-network handoff measurements are still outstanding. Alpha15/15.4 paragraphs below are historical.
+Current alpha16.1/code33 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `133a0a4f1aa97ddd9eb42c8ec5b0be8ca53c00ed5e33811e0a585ab773e3fc28`, application commit `af237e5e53692862dffb82fe3033e16e9fc83204`. [Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569) and PR CI 42487026297 passed 93 portable/JUnit cases, the Gradle unit task, 55 Debug emulator and two minified Release JNI cases. Publication documentation/tooling does not rebuild or re-sign the APK. Owner authorization does not imply new detailed battery or network measurements. Older version paragraphs below are historical.
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
@@ -71,7 +71,7 @@ old installation until authorized exports/reissue are verified. See UPGRADE.md.
 
 For alpha15, the publication commit changes documentation only. Its application/build/test inputs must compare byte-identically with verified application commit `908253b42082bbd80007677f0369792d324a378f`. A documentation-only `[skip ci]` commit is recorded as not rerun, never as a passing new device run; the binary evidence remains run 42215030490. Run the local documentation/link checks before publication.
 
-## Owner-approved alpha16 publication
+## Historical owner-approved alpha16 publication
 
 `publish/alpha16-approved` (or a numbered `-retryN` branch after a packaging-only correction) is a one-version, explicit publication trigger after owner acceptance and merge. `tools/release/publish_approved_alpha16.py` verifies application/build/test inputs against the successful source, the pinned CI artifact, public APK copy record, production certificate and every final asset. It creates a draft, attaches the Full APK, full/light explicit sources, guide, R8 mapping, CI evidence, certificate/provenance and hashes, verifies server digests, then sets this release Latest. It refuses to replace an existing public release or delete existing assets. No private key, recovery material, unsigned or test APK is published. This authorization does not apply to future versions.
 
@@ -86,8 +86,8 @@ releases for a compatible Full/Lite APK and the Android preview preference.
 See [platform policy](PLATFORMS.md).
 
 The repository rename does not change installed APK bytes or their embedded
-update allowlist. Alpha16/code32 needs a direct install of the forthcoming
-compatibility APK after owner review; repository redirects cannot repair its
+update allowlist. Alpha16/code32 needs a direct install of the published
+alpha16.1 compatibility APK; repository redirects cannot repair its
 embedded old URL check. Do not replace the published code32 APK or rewrite its
 source/checksum/provenance assets. An unpublished compatibility build must have
 a new version/code and retain the fixed Android package and production signer.
@@ -96,3 +96,15 @@ Historical source/provenance JSON, the public APK copy record and archived PDF
 editions remain evidence of their original release. Human-readable navigation
 URLs may be updated to the canonical location without changing historical test
 results or claiming that those binaries contain the new updater.
+
+## Owner-approved alpha16.1 publication
+
+`publish/alpha16-1-approved` (or a numbered `-retryN` after a packaging-only
+correction) is the explicit one-version trigger.
+`tools/release/publish_approved_alpha16_1.py` restores the exact accepted APK from
+the pinned passing CI artifact and public copy/signature record, without a
+private signing key, rebuild or re-sign. It verifies signatures, source identity,
+allowlisted assets and server digests before publishing Latest. It never
+replaces an existing public APK/release. All application/build/test inputs must
+remain identical to `af237e5e53692862dffb82fe3033e16e9fc83204`; publication-only
+AGENTS/README/docs/release-tool changes are checked separately.

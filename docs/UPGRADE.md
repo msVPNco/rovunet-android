@@ -1,26 +1,16 @@
 # Signing and upgrade guide / راهنمای امضا و ارتقا
 
-## Repository rename / تغییر نام مخزن
+## Alpha16.1 after the repository rename
 
-The canonical app repository is now [rovunet-app](https://github.com/msVPNco/rovunet-app). Installed alpha16/code32 still checks the old download prefix. Its next compatibility update requires a direct APK installation after publication; the old updater cannot authorize the renamed asset URL. Keep the installed app and its data. Android package and production signer do not change.
+**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged. If the accepted alpha16.1/code33 review APK is installed, it is this same binary; no reinstall is needed.
 
-مخزن مشترک کلاینت‌ها اکنون `rovunet-app` است. آپدیتر داخل آلفا۱۶/کد۳۲ هنوز نشانی قدیمی را بررسی می‌کند؛ پس نسخهٔ سازگاری بعدی، پس از تأیید و انتشار، باید یک بار مستقیم روی اپ فعلی نصب شود. اپ یا داده‌هایش را حذف نکنید؛ بسته و امضای تولیدی ثابت می‌مانند.
+**ارتقای مستقیم برای آلفا۱۴ تا آلفا۱۶ عمومی (تا کد۳۲):** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) را **بدون حذف اپ یا پاک‌کردن داده‌ها** روی برنامهٔ فعلی نصب کنید. آپدیتر قدیمی نشانی قبلی مخزن را درون خود دارد و تغییر مسیر وب آن بررسی را اصلاح نمی‌کند. بسته و امضای تولیدی ثابت‌اند. اگر APK تأییدشدهٔ آلفا۱۶.۱/کد۳۳ نصب است، همین فایل انتشار را دارید و نصب دوباره لازم نیست.
 
-仓库已更名为 `rovunet-app`。已安装的 alpha16/代码32 仍限制旧下载前缀；兼容更新获批准并发布后，需要直接覆盖安装一次，不卸载、不清除数据。包名与生产签名不变。
+**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。若已安装获批准的 alpha16.1/代码33 测试 APK，就是同一个文件，无需重装。
 
-Репозиторий переименован в `rovunet-app`. Установленная alpha16/код32 проверяет старый префикс; после одобрения и публикации совместимого обновления потребуется одна прямая установка поверх без удаления приложения или данных. Пакет и производственная подпись сохранены.
+**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16.1/Rovunet-v0.3.0-alpha16.1-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены. Установленная проверенная alpha16.1/код33 уже является этим файлом; переустановка не нужна.
 
-## Alpha16 from public alpha14 or later
-
-**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
-
-**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند. اگر APK تأییدشدهٔ آلفا۱۶/کد۳۲ را دارید، همین فایل انتشار است و نصب دوباره لازم نیست.
-
-**升级：**直接覆盖安装 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk)，支持公开 alpha14 及更新版本；不要卸载或清除数据。包名、生产签名和配置保留。如已安装获批准的 alpha16/代码32 测试 APK，这就是同一个文件，无需重装。
-
-**Обновление:** установите [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) поверх публичной alpha14 или новее, не удаляя приложение и данные. Пакет, производственная подпись и профили сохранены. Если одобренный alpha16/код32 уже установлен, это тот же файл; повторная установка не нужна.
-
-VersionCode 32 retains `app.veyra.client` and the canonical production certificate. Room upgrades 48 → 49 add a separate account-status cache; normal subscription updates preserve it. Account metadata does not gate connections. Historical alpha11 and independent candidates remain subject to the identity rules below.
+VersionCode 33 retains `app.veyra.client` and the canonical production certificate. Alpha16.1 keeps the schema already introduced by alpha16 (Room 48 → 49); it adds no new account/profile migration. Account metadata never gates manual connection. Android updates now select compatible APKs independently of desktop Latest. Historical alpha11 and independent candidates remain subject to the identity rules below.
 
 ## Historical alpha14 signing decision — 2026-11-06
 
