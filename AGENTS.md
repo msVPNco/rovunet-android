@@ -7,8 +7,8 @@ repository ID 1445854036). Android, Windows and future macOS clients belong here
 not in a separate `rovunet-windows` repository. See `docs/PLATFORMS.md`.
 
 Android feature development is paused by the owner. The explicitly requested
-repository-rename/update compatibility fix is the current exception; keep other
-feedback in the backlog until the owner resumes it. Do not move the Android tree
+repository-rename/update compatibility fix was completed in alpha16.1; keep new
+feedback in the backlog until the owner resumes development. Do not move the Android tree
 or overwrite desktop work as part of this rename. Preserve the owner's README
 layout, header styling, language order and tables when editing links or prose.
 

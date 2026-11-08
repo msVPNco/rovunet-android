@@ -1,6 +1,6 @@
-# Alpha16.1 repository compatibility — owner review pending
+# Alpha16.1 repository compatibility — accepted for publication
 
-Unpublished Android compatibility build: **0.3.0-alpha16.1 / code33**.
+Owner-approved Android compatibility build: **0.3.0-alpha16.1 / code33**.
 Public alpha16/code32 and all its existing release assets remain unchanged.
 The owner requested the necessary compatibility work after renaming the shared
 repository to `msVPNco/rovunet-app`; general Android feature work remains paused.
@@ -51,7 +51,7 @@ Public-release body navigation was updated by a separate documentation-only
 workflow. It asserted that published asset identities and global Latest stayed
 unchanged; that is not an application build or an APK publication.
 
-## Owner checks for the eventual signed review APK
+## Field checks retained for follow-up
 
 1. Install directly over the existing public app without uninstalling or clearing
    data. Existing code32 embeds the old download prefix, so repository redirects
@@ -59,10 +59,10 @@ unchanged; that is not an application build or an APK publication.
 2. Check that profiles, language, card appearance and manual connection work.
 3. Open Settings → releases/downloads; it must open `msVPNco/rovunet-app`.
 4. Check updates with previews disabled and enabled. A current review build may
-   correctly find no newer published Android APK; there is no public code33 yet.
+   correctly find no newer published Android APK; the public release uses these same accepted code33 bytes.
 5. Desktop/preview/flavour ordering is covered with synthetic release fixtures;
    no fake public desktop release is created for testing.
 
-Do not merge application release changes, tag or publish this new APK until the
-owner explicitly accepts the exact delivered file. The alpha16 release approval
-does not authorize this different binary.
+The owner explicitly authorized publication of this exact delivered APK on
+2026-11-08. Publish its accepted bytes unchanged. This authorization is not a
+claim that every checklist item was measured or that all physical networks pass.
