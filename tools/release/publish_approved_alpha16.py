@@ -14,6 +14,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import struct
 import subprocess
 import tarfile
 import zipfile
@@ -220,13 +221,39 @@ def verify_signature(apk, out):
         sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '/usr/local/lib/android/sdk')))
         candidates = list((sdk / 'build-tools').glob('*/apksigner'))
         if candidates:
-            apksigner = str(sorted(candidates)[-1])
+            pinned = sdk / 'build-tools/36.0.0/apksigner'
+            apksigner = str(pinned if pinned.is_file() else sorted(candidates)[-1])
     if not apksigner:
         raise RuntimeError('apksigner is required for final publication verification')
-    command = [apksigner, 'verify', '--verbose', '--print-certs', '--print-certs-pem', str(apk)]
-    log = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
-    if f'Signer #1 certificate SHA-256 digest: {CERT_SHA}' not in log or 'Verified using v2 scheme (APK Signature Scheme v2): true' not in log or 'Verified using v3 scheme (APK Signature Scheme v3): true' not in log:
-        raise ValueError('Production signature mismatch')
+    # Verify both Android API ranges explicitly. apksigner versions can change
+    # their human-readable signer labels; the certificate DER is authoritative.
+    logs = []
+    for lower, upper in ((24, 27), (28, 35)):
+        command = [apksigner, 'verify', '--min-sdk-version', str(lower), '--max-sdk-version', str(upper),
+                   '--verbose', '--print-certs', '--print-certs-pem', str(apk)]
+        logs.append(subprocess.check_output(command, stderr=subprocess.STDOUT).decode())
+    log = '\n'.join(logs)
+    print(log, flush=True)  # Public certificate/signature diagnostics; no key input.
+    # Also require the actual v2 and v3 signing-block records in the exact APK.
+    data = apk.read_bytes()
+    eocd = data.rfind(b'PK\x05\x06')
+    central = struct.unpack_from('<I', data, eocd + 16)[0]
+    if data[central - 16:central] != b'APK Sig Block 42':
+        raise ValueError('APK signing block missing')
+    size = struct.unpack_from('<Q', data, central - 24)[0]
+    start = central - size - 8
+    if start < 0 or struct.unpack_from('<Q', data, start)[0] != size:
+        raise ValueError('Invalid signing block boundary')
+    ids = set()
+    cursor = start + 8
+    while cursor < central - 24:
+        length = struct.unpack_from('<Q', data, cursor)[0]
+        if length < 4 or cursor + 8 + length > central - 24:
+            raise ValueError('Invalid signing record')
+        ids.add(struct.unpack_from('<I', data, cursor + 8)[0])
+        cursor += 8 + length
+    if cursor != central - 24 or not {0x7109871a, 0xf05368c0}.issubset(ids):
+        raise ValueError('Required v2/v3 signatures missing')
     match = re.search(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', log, re.S)
     if not match:
         raise ValueError('Public certificate missing')
