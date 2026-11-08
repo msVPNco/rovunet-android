@@ -5,7 +5,7 @@
 <p align="center"><b>一个安卓应用，多条通往你自己服务器的路径</b><br>DNS 隧道、SSH、HTTPS 代理和 Xray 配置归入命名配置组，支持直接连接和真实 HTTPS 测试。</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -13,23 +13,25 @@
 
 <p align="center"><a href="README.md">English</a> · <a href="README.fa.md">فارسی</a> · <a href="README.ru.md">Русский</a> · <b>简体中文</b></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">下载</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-ZH.pdf">完整指南（PDF）</a> · <a href="docs/USER_GUIDE.zh-CN.md">用户指南</a> · <a href="https://github.com/msVPNco/rovunet-panel">服务器面板</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16">下载</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-ZH.pdf">完整指南（PDF）</a> · <a href="docs/USER_GUIDE.zh-CN.md">用户指南</a> · <a href="https://github.com/msVPNco/rovunet-panel">服务器面板</a></p>
 
 ---
 
 **通过多种路径访问自有服务器的 Android 多协议 VPN 客户端。** Rovunet 集成 DNS 隧道、SSH 传输、HTTPS 代理和 Xray 配置。相关路径归入命名集合，可直接连接，也可单独运行经过真实隧道的 HTTPS 测试。
 
+此仓库统一承载 Rovunet 的 Android、Windows 及未来 macOS 客户端。Android alpha16 已发布；桌面图形客户端尚无经过验证的公开版本。[平台与发布渠道](docs/PLATFORMS.md)。
+
 ## 发布状态
 
-当前版本为 **0.3.0-alpha16 Full，版本代码 32**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha16-Full.apk) · [发布记录](docs/releases/alpha16.md) · [状态](docs/STATUS.md)。
+当前版本为 **0.3.0-alpha16 Full，版本代码 32**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) · [发布记录](docs/releases/alpha16.md) · [状态](docs/STATUS.md)。
 
-alpha16 更早显示 Soar 已验证的 UDP/TCP 路径，限制扫描工作量，减少空闲轮询和计数器写入，改进 VLESS 资源清理并跟随 Android 选择的默认网络。Panel v1.19 的剩余流量和有效期显示在原有配置组卡片中；语言、帮助排在订阅前。[CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) 通过 **83 项可移植/JUnit、86 项 Gradle 单元、55 项 Debug 模拟器及 2 项精简 Release JNI 测试**。所有者批准发布同一个 APK。重建固定版本 Xray 和项目 Hev/JNI，其余原生传输复用。尚未定量测量省电幅度、整夜连接及网络切换表现。
+alpha16 更早显示 Soar 已验证的 UDP/TCP 路径，限制扫描工作量，减少空闲轮询和计数器写入，改进 VLESS 资源清理并跟随 Android 选择的默认网络。Panel v1.19 的剩余流量和有效期显示在原有配置组卡片中；语言、帮助排在订阅前。[CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) 通过 **83 项可移植/JUnit、86 项 Gradle 单元、55 项 Debug 模拟器及 2 项精简 Release JNI 测试**。所有者批准发布同一个 APK。重建固定版本 Xray 和项目 Hev/JNI，其余原生传输复用。尚未定量测量省电幅度、整夜连接及网络切换表现。
 
-**升级：**直接覆盖安装 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk)，支持公开 alpha14 及更新版本；不要卸载或清除数据。包名、生产签名和配置保留。如已安装获批准的 alpha16/代码32 测试 APK，这就是同一个文件，无需重装。
+**升级：**直接覆盖安装 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk)，支持公开 alpha14 及更新版本；不要卸载或清除数据。包名、生产签名和配置保留。如已安装获批准的 alpha16/代码32 测试 APK，这就是同一个文件，无需重装。
 
 ## 快速开始
 
-1. **下载**：从 [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) 获取 Full APK 并安装。公开 alpha14 及以上版本可直接覆盖安装，无需卸载。
+1. **下载**：从 [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16) 获取 Full APK 并安装。公开 alpha14 及以上版本可直接覆盖安装，无需卸载。
 2. **打开**：选择语言和主题，并在提示时授予安卓 VPN 权限。
 3. **导入**：订阅 → 粘贴 HTTPS 订阅链接 → **导入**；或使用 **+ → 导入** 导入链接、二维码或文件。
 4. **连接**：展开配置组，点击一次路径将其选中，再点击一次即可连接。

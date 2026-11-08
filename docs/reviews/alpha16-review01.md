@@ -33,7 +33,7 @@ The owner explicitly accepted the delivered APK and authorized release on 2026-1
 
 ## Verification boundaries
 
-[Source CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Four-language parity and Kotlin safety passed. One initial parallel PR Soar fixture assertion failed; the unchanged recheck passed and the cause is unestablished. Native rebuild scope and artifact identity are in [provenance](../releases/alpha16-provenance.json). Emulator checks are not physical-network or battery-energy measurements. The checklist below remains useful for continued field feedback.
+[Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Four-language parity and Kotlin safety passed. One initial parallel PR Soar fixture assertion failed; the unchanged recheck passed and the cause is unestablished. Native rebuild scope and artifact identity are in [provenance](../releases/alpha16-provenance.json). Emulator checks are not physical-network or battery-energy measurements. The checklist below remains useful for continued field feedback.
 
 ## Phone acceptance
 

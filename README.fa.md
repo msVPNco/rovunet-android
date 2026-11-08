@@ -7,7 +7,7 @@
 <p align="center"><b>چند مسیر به سرور خودتان، در یک اپ اندروید</b><br>تونل‌های DNS، SSH، پروکسی‌های HTTPS و پروفایل‌های Xray در مجموعه‌های نام‌دار، با اتصال مستقیم و تست واقعی HTTPS.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -15,23 +15,25 @@
 
 <p align="center"><a href="README.md">English</a> · <b>فارسی</b> · <a href="README.ru.md">Русский</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">دانلود</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-FA.pdf">راهنمای جامع (PDF)</a> · <a href="docs/USER_GUIDE.md">راهنمای کاربر</a> · <a href="https://github.com/msVPNco/rovunet-panel">پنل سرور</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16">دانلود</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-FA.pdf">راهنمای جامع (PDF)</a> · <a href="docs/USER_GUIDE.md">راهنمای کاربر</a> · <a href="https://github.com/msVPNco/rovunet-panel">پنل سرور</a></p>
 
 ---
 
 **کلاینت چندپروتکلی اندروید برای دسترسی به سرور شخصی از چند مسیر متفاوت.** رووُنت تونل‌های DNS، روش‌های اتصال SSH، پراکسی‌های HTTPS و کانفیگ‌های مبتنی بر Xray را در یک رابط جمع می‌کند. مسیرهای مرتبط در مجموعه‌های نام‌دار کنار هم می‌مانند؛ مسیر دلخواه را مستقیم وصل کنید یا جداگانه HTTPS را از داخل تونل اندازه بگیرید.
 
+این مخزن مشترک اپ‌های Rovunet برای اندروید، ویندوز و در آینده macOS است. آلفا۱۶ اندروید منتشر شده؛ هنوز انتشار عمومیِ تأییدشده‌ای از رابط دسکتاپ ثبت نشده است. [پلتفرم‌ها و کانال‌های انتشار](docs/PLATFORMS.md).
+
 ## وضعیت نسخه
 
-نسخهٔ فعلی **آلفا۱۶ Full با کد نسخهٔ ۳۲** است و [امضای تولیدی آلفا۱۴](docs/SIGNING-IDENTITY.md) را حفظ می‌کند؛ آن را بدون حذف برنامه روی آلفا۱۴ عمومی نصب کنید. آلفا۱۱ تاریخی و بستهٔ خصوصی Rovunet Test هویت متفاوت دارند. [دانلود مستقیم APK کامل](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha16-Full.apk) · [ثبت انتشار](docs/releases/alpha16.md) · [وضعیت فعلی](docs/STATUS.md).
+نسخهٔ فعلی **آلفا۱۶ Full با کد نسخهٔ ۳۲** است و [امضای تولیدی آلفا۱۴](docs/SIGNING-IDENTITY.md) را حفظ می‌کند؛ آن را بدون حذف برنامه روی آلفا۱۴ عمومی نصب کنید. آلفا۱۱ تاریخی و بستهٔ خصوصی Rovunet Test هویت متفاوت دارند. [دانلود مستقیم APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) · [ثبت انتشار](docs/releases/alpha16.md) · [وضعیت فعلی](docs/STATUS.md).
 
-آلفا۱۶ نتیجهٔ موفق UDP/TCP در Soar را زودتر نشان می‌دهد، کار اسکن را محدود می‌کند، نمونه‌گیری و نوشتن شمارنده‌ها در بیکاری را کاهش می‌دهد و توقف VLESS و پیروی از شبکهٔ پیش‌فرض اندروید را بهبود می‌دهد. حجم و زمان حساب پنل ۱.۱۹ داخل همان کارت مجموعه دیده می‌شود؛ زبان و راهنما پیش از اشتراک قرار دارند. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) با **۸۳ آزمون قابل‌حمل/JUnit، ۸۶ آزمون واحد Gradle، ۵۵ تست Debug شبیه‌ساز و ۲ تست JNI نسخهٔ Release فشرده** موفق شد. مالک انتشار همین APK را تأیید کرد. Xray پین‌شده و Hev/JNI پروژه بازسازی شدند؛ بقیهٔ موتورهای بومی بازاستفاده شده‌اند. صرفه‌جویی باتری و رفتار شبانه/جابه‌جایی شبکه هنوز اندازه‌گیری کمی نشده‌اند.
+آلفا۱۶ نتیجهٔ موفق UDP/TCP در Soar را زودتر نشان می‌دهد، کار اسکن را محدود می‌کند، نمونه‌گیری و نوشتن شمارنده‌ها در بیکاری را کاهش می‌دهد و توقف VLESS و پیروی از شبکهٔ پیش‌فرض اندروید را بهبود می‌دهد. حجم و زمان حساب پنل ۱.۱۹ داخل همان کارت مجموعه دیده می‌شود؛ زبان و راهنما پیش از اشتراک قرار دارند. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) با **۸۳ آزمون قابل‌حمل/JUnit، ۸۶ آزمون واحد Gradle، ۵۵ تست Debug شبیه‌ساز و ۲ تست JNI نسخهٔ Release فشرده** موفق شد. مالک انتشار همین APK را تأیید کرد. Xray پین‌شده و Hev/JNI پروژه بازسازی شدند؛ بقیهٔ موتورهای بومی بازاستفاده شده‌اند. صرفه‌جویی باتری و رفتار شبانه/جابه‌جایی شبکه هنوز اندازه‌گیری کمی نشده‌اند.
 
-**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند. اگر APK تأییدشدهٔ آلفا۱۶/کد۳۲ را دارید، همین فایل انتشار است و نصب دوباره لازم نیست.
+**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند. اگر APK تأییدشدهٔ آلفا۱۶/کد۳۲ را دارید، همین فایل انتشار است و نصب دوباره لازم نیست.
 
 ## شروع سریع
 
-1. **دانلود**: APK کامل را از [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
+1. **دانلود**: APK کامل را از [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
 2. **باز کردن**: زبان و تم را انتخاب کنید و مجوز VPN اندروید را بدهید.
 3. **ورود کانفیگ**: اشتراک‌ها ← لینک اشتراک HTTPS را بچسبانید ← **ایمپورت**؛ یا **+ ← ورود** برای لینک، QR یا فایل.
 4. **اتصال**: مجموعه را باز کنید، مسیر را یک بار لمس کنید تا انتخاب شود و دوباره لمس کنید تا وصل شود.

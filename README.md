@@ -5,7 +5,7 @@
 <p align="center"><b>Several routes to your own server, in one Android app</b><br>DNS tunnels, SSH, HTTPS proxies and Xray profiles in named collections, with direct connection and real HTTPS tests.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-android/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-android?sort=date&display_name=tag&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -13,23 +13,25 @@
 
 <p align="center"><b>English</b> · <a href="README.fa.md">فارسی</a> · <a href="README.ru.md">Русский</a> · <a href="README.zh-CN.md">简体中文</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-android/releases/latest">Download</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="docs/USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16">Download</a> · 📘 <a href="docs/guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="docs/USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
 
 ---
 
 **A multi-protocol Android VPN client for several routes to your own server.** Rovunet brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel.
 
+This is the shared Rovunet app repository for Android, Windows and future macOS work. Android alpha16 is published; desktop clients have no validated public GUI release yet. [Platform and release channels](docs/PLATFORMS.md).
+
 ## Release status
 
-The current release is **0.3.0-alpha16 Full, version code 32**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha16-Full.apk) · [Release record](docs/releases/alpha16.md) · [Current status](docs/STATUS.md).
+The current release is **0.3.0-alpha16 Full, version code 32**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) · [Release record](docs/releases/alpha16.md) · [Current status](docs/STATUS.md).
 
-Alpha16 shows successful Soar UDP/TCP results sooner, bounds scan work, reduces idle polling and counter writes, improves VLESS WebSocket cleanup and follows Android’s selected default network. Panel v1.19 allowance and expiry appear inside existing collection cards; language and help precede subscriptions. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed **83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and 2 minified Release JNI cases**. The owner accepted this exact APK for publication. Pinned Xray and project Hev/JNI were rebuilt; other native transports are reused. Battery savings and overnight/network-handoff behavior have not been quantitatively measured.
+Alpha16 shows successful Soar UDP/TCP results sooner, bounds scan work, reduces idle polling and counter writes, improves VLESS WebSocket cleanup and follows Android’s selected default network. Panel v1.19 allowance and expiry appear inside existing collection cards; language and help precede subscriptions. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) passed **83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and 2 minified Release JNI cases**. The owner accepted this exact APK for publication. Pinned Xray and project Hev/JNI were rebuilt; other native transports are reused. Battery savings and overnight/network-handoff behavior have not been quantitatively measured.
 
-**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
+**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
 
 ## Quick start
 
-1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-android/releases/latest) and install it. Public alpha14 and later install in place, without uninstalling.
+1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16) and install it. Public alpha14 and later install in place, without uninstalling.
 2. **Open** Rovunet, choose language and theme, and grant the Android VPN permission when asked.
 3. **Import**: Subscriptions → paste your HTTPS subscription link → **Import**, or **+ → Import** for a link, QR code or file.
 4. **Connect**: expand the collection, tap a path to select it and tap it again to connect.

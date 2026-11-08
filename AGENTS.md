@@ -1,5 +1,22 @@
 # Rovunet maintenance instructions
 
+## Shared application repository
+
+Canonical repository: `msVPNco/rovunet-app` (the existing repository was renamed;
+repository ID 1445854036). Android, Windows and future macOS clients belong here,
+not in a separate `rovunet-windows` repository. See `docs/PLATFORMS.md`.
+
+Android feature development is paused by the owner. The explicitly requested
+repository-rename/update compatibility fix is the current exception; keep other
+feedback in the backlog until the owner resumes it. Do not move the Android tree
+or overwrite desktop work as part of this rename. Preserve the owner's README
+layout, header styling, language order and tables when editing links or prose.
+
+Published Android tags retain `v<Android version>`. New desktop release tags use
+`windows-v<version>` and `macos-v<version>`. GitHub Latest is repository-wide;
+platform updaters and platform download links must select compatible assets from
+their own channel, never assume Latest is an Android release.
+
 ## Owner review before publication
 
 From 2026-11-07, deliver each new installable APK to the owner for testing on

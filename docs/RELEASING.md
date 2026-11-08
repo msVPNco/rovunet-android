@@ -26,11 +26,11 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha16/code32 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a`, application commit `ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4`. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Publication tooling/docs are recorded separately and do not rebuild/re-sign the accepted APK. Detailed battery, overnight/Doze and physical-network handoff measurements are still outstanding. Alpha15/15.4 paragraphs below are historical.
+Current alpha16/code32 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a`, application commit `ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4`. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Publication tooling/docs are recorded separately and do not rebuild/re-sign the accepted APK. Detailed battery, overnight/Doze and physical-network handoff measurements are still outstanding. Alpha15/15.4 paragraphs below are historical.
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
-Alpha15 uses the same managed production identity as alpha14 and versionCode 26. Its application build commit is `908253b42082bbd80007677f0369792d324a378f`; [CI run 42215030490](https://github.com/msVPNco/rovunet-android/actions/runs/42215030490) passed verify, 50 JVM tests, 31 private Debug device cases and two minified private Release JNI cases. Source/archive and release documentation revisions are recorded separately; the approved signed APK is not rebuilt for documentation changes.
+Alpha15 uses the same managed production identity as alpha14 and versionCode 26. Its application build commit is `908253b42082bbd80007677f0369792d324a378f`; [CI run 42215030490](https://github.com/msVPNco/rovunet-app/actions/runs/42215030490) passed verify, 50 JVM tests, 31 private Debug device cases and two minified private Release JNI cases. Source/archive and release documentation revisions are recorded separately; the approved signed APK is not rebuilt for documentation changes.
 
 For a new application version, update its version code/name, complete relevant checks, record the exact source revision, and verify package, version, signer, native payload and personal-data scan. Do not replace an existing published APK with a different binary under the same version.
 
@@ -74,3 +74,25 @@ For alpha15, the publication commit changes documentation only. Its application/
 ## Owner-approved alpha16 publication
 
 `publish/alpha16-approved` (or a numbered `-retryN` branch after a packaging-only correction) is a one-version, explicit publication trigger after owner acceptance and merge. `tools/release/publish_approved_alpha16.py` verifies application/build/test inputs against the successful source, the pinned CI artifact, public APK copy record, production certificate and every final asset. It creates a draft, attaches the Full APK, full/light explicit sources, guide, R8 mapping, CI evidence, certificate/provenance and hashes, verifies server digests, then sets this release Latest. It refuses to replace an existing public release or delete existing assets. No private key, recovery material, unsigned or test APK is published. This authorization does not apply to future versions.
+
+## Shared repository after rename
+
+`msVPNco/rovunet-app` is the canonical repository for all app platforms. Keep
+Android `v<version>` tags; use `windows-v<version>` and `macos-v<version>` for
+new desktop releases, with platform-specific source/provenance, assets, hashes
+and signing identities. Global Latest can belong to any platform. Android
+download links are pinned to its released tag; its updater must inspect published
+releases for a compatible Full/Lite APK and the Android preview preference.
+See [platform policy](PLATFORMS.md).
+
+The repository rename does not change installed APK bytes or their embedded
+update allowlist. Alpha16/code32 needs a direct install of the forthcoming
+compatibility APK after owner review; repository redirects cannot repair its
+embedded old URL check. Do not replace the published code32 APK or rewrite its
+source/checksum/provenance assets. An unpublished compatibility build must have
+a new version/code and retain the fixed Android package and production signer.
+
+Historical source/provenance JSON, the public APK copy record and archived PDF
+editions remain evidence of their original release. Human-readable navigation
+URLs may be updated to the canonical location without changing historical test
+results or claiming that those binaries contain the new updater.
