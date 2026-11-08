@@ -2318,14 +2318,8 @@ class ResolverScannerRepositoryImpl @Inject constructor(
      * Returns (buffer, length) or null on failure.
      */
     private suspend fun dnsQueryUdp(host: String, port: Int, query: ByteArray, timeoutMs: Long,
-        bufferSize: Int): Pair<ByteArray, Int>? = scannerSocket({ DatagramSocket() }) { socket ->
-        socket.soTimeout = timeoutMs.toInt().coerceIn(100, 30000)
-        socket.connect(InetAddress.getByName(host), port)
-        socket.send(DatagramPacket(query, query.size))
-        val buffer = ByteArray(bufferSize)
-        val response = DatagramPacket(buffer, buffer.size)
-        socket.receive(response)
-        buffer to response.length
+        bufferSize: Int): Pair<ByteArray, Int>? = dnsSlots.withPermit {
+        app.slipnet.util.DnsDatagram.exchange(host, port, query, timeoutMs, bufferSize)
     }
 
     private suspend fun dnsQueryTcp(host: String, port: Int, query: ByteArray,

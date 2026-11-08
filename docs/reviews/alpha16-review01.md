@@ -11,7 +11,9 @@ merging the release. The accepted APK must be published unchanged after approval
   longer hides a successful first path. BOTH and explicit TCP-only settings stay.
 - Resolver lists use fixed worker pools. Native Soar clients share eight slots;
   DNS sockets share 64. Advanced capability checks share one resolver deadline;
-  an unfinished diagnostic is displayed as incomplete. Cancellation closes sockets.
+  an unfinished diagnostic is displayed as incomplete. UDP cancellation wakes an
+  event-driven selector; resource cleanup runs on IO instead of closing a socket
+  synchronously in the cancellation handler. TCP cancellation closes its owned socket.
 - Unchanged traffic counters no longer cause repeated disk writes. Screen-off
   idle sampling backs off to 30/60 seconds; DNS and explicit cover-traffic timing
   retain CPU wake protection. Idle non-DNS transports may sleep after a minute.
@@ -32,7 +34,7 @@ merging the release. The accepted APK must be published unchanged after approval
 
 ## Verification boundaries
 
-Local portable/JVM checks pass 80 JUnit cases, plus parser and lifecycle checks.
+Local portable/JVM checks pass 83 JUnit cases, plus parser and lifecycle checks.
 Four-language resource parity and the Kotlin safety ratchet pass. Android build,
 Room migration, Compose, real loopback Soar and cancellation checks are required
 before delivering an APK; their final results and artifact identity belong in the

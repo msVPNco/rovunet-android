@@ -45,7 +45,8 @@ class ScannerDeadlineDeviceTest {
             delay(150)
             val stopped = SystemClock.elapsedRealtime()
             waiting.cancelAndJoin()
-            assertTrue("Closing a scan cannot wait for a 15-second socket timeout", SystemClock.elapsedRealtime() - stopped < 1500)
+            val cleanupMs = SystemClock.elapsedRealtime() - stopped
+            assertTrue("Closing a scan took $cleanupMs ms; it cannot wait for a 15-second socket timeout", cleanupMs < 1500)
         } finally { peer.close(); responder.join(2000) }
         assertFalse(responder.isAlive)
     }
