@@ -23,6 +23,17 @@ if (localPropsFile.exists()) {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        if (providers.gradleProperty("rovunetVerifiedBuildInputs").orNull == "true") {
+            exclusiveContent {
+                forRepository {
+                    maven {
+                        name = "RovunetVerifiedCompiler"
+                        url = File(gradle.gradleUserHomeDir, "verified-maven").toURI()
+                    }
+                }
+                filter { includeModule("org.jetbrains.kotlin", "kotlin-compiler-embeddable") }
+            }
+        }
         google()
         mavenCentral()
     }

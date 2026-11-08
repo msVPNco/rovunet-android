@@ -32,14 +32,17 @@ else:
     print('Prepared checksum-verified Gradle 8.13 for the wrapper')
 
 # Maven's compiler download can also redirect to the failing release CDN.
-# Populate Gradle 8.13's content-addressed artifact cache with the exact official
-# 2.2.21 artifact. SHA-1 is only Gradle's directory key; SHA-256 verifies the bytes.
+# Serve just this exact official artifact from a verified file repository. A
+# normal Gradle artifact-cache hit still HEADs the unavailable remote URL.
 gradle_home = Path(os.environ.get('GRADLE_USER_HOME', str(Path.home()/'.gradle')))
 compiler = gradle_home/'verified-inputs/kotlin-compiler-embeddable-2.2.21.jar'
 download_verified(compiler, '9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295', [
     'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/kotlin-compiler-embeddable-2.2.21.jar',
     'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587847942?download=1&t=' + str(int(time.time()))], 100*1024*1024)
-cache = gradle_home/'caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.2.21'/hashlib.sha1(compiler.read_bytes()).hexdigest()/compiler.name
-cache.parent.mkdir(parents=True, exist_ok=True)
-shutil.copyfile(compiler, cache)
-print('Prepared checksum-verified Kotlin 2.2.21 compiler cache')
+maven = gradle_home/'verified-maven/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21'
+maven.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(compiler, maven/compiler.name)
+download_verified(maven/'kotlin-compiler-embeddable-2.2.21.pom',
+    '0b33c64f2622ba3bc8283378bdb7505f2be330a2275807038ad54359b33ddf9b',
+    ['https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/kotlin-compiler-embeddable-2.2.21.pom'], 1024*1024)
+print('Prepared checksum-verified Kotlin 2.2.21 file repository')
