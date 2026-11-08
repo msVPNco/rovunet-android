@@ -14,6 +14,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import struct
 import subprocess
 import tarfile
 import zipfile
@@ -31,6 +32,14 @@ APK_SHA = '3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a'
 APK_SIZE = 97282769
 CERT_SHA = '1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416'
 APK_NAME = 'Rovunet-v0.3.0-alpha16-Full.apk'
+ASSET_NAMES = (
+    APK_NAME, 'APK-SHA256.txt', 'APK-SIGNATURE-VERIFICATION.txt',
+    'Rovunet-production-certificate.pem', 'SIGNER-SHA256.txt',
+    'Rovunet-0.3.0-alpha16-source.zip', 'Rovunet-0.3.0-alpha16-source-light.zip',
+    'Rovunet-0.3.0-alpha16-Guide-FA.txt', 'Rovunet-alpha16-public-r8-mapping.zip',
+    'Rovunet-alpha16-CI-evidence.json', 'SOURCE-MANIFEST.json',
+    'VERIFICATION.json', 'SHA256SUMS.txt',
+)
 OLD_ASSET = 721633409
 OLD_SHA = 'fd126cc5b293b2f12ce60a7045f9b6158f9c21e645b0dee7c316ba70d0363b27'
 ROOT = Path(__file__).resolve().parents[2]
@@ -220,13 +229,39 @@ def verify_signature(apk, out):
         sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '/usr/local/lib/android/sdk')))
         candidates = list((sdk / 'build-tools').glob('*/apksigner'))
         if candidates:
-            apksigner = str(sorted(candidates)[-1])
+            pinned = sdk / 'build-tools/36.0.0/apksigner'
+            apksigner = str(pinned if pinned.is_file() else sorted(candidates)[-1])
     if not apksigner:
         raise RuntimeError('apksigner is required for final publication verification')
-    command = [apksigner, 'verify', '--verbose', '--print-certs', '--print-certs-pem', str(apk)]
-    log = subprocess.check_output(command, stderr=subprocess.STDOUT).decode()
-    if f'Signer #1 certificate SHA-256 digest: {CERT_SHA}' not in log or 'Verified using v2 scheme (APK Signature Scheme v2): true' not in log or 'Verified using v3 scheme (APK Signature Scheme v3): true' not in log:
-        raise ValueError('Production signature mismatch')
+    # Verify both Android API ranges explicitly. apksigner versions can change
+    # their human-readable signer labels; the certificate DER is authoritative.
+    logs = []
+    for lower, upper in ((24, 27), (28, 35)):
+        command = [apksigner, 'verify', '--min-sdk-version', str(lower), '--max-sdk-version', str(upper),
+                   '--verbose', '--print-certs', '--print-certs-pem', str(apk)]
+        logs.append(subprocess.check_output(command, stderr=subprocess.STDOUT).decode())
+    log = '\n'.join(logs)
+    print(log, flush=True)  # Public certificate/signature diagnostics; no key input.
+    # Also require the actual v2 and v3 signing-block records in the exact APK.
+    data = apk.read_bytes()
+    eocd = data.rfind(b'PK\x05\x06')
+    central = struct.unpack_from('<I', data, eocd + 16)[0]
+    if data[central - 16:central] != b'APK Sig Block 42':
+        raise ValueError('APK signing block missing')
+    size = struct.unpack_from('<Q', data, central - 24)[0]
+    start = central - size - 8
+    if start < 0 or struct.unpack_from('<Q', data, start)[0] != size:
+        raise ValueError('Invalid signing block boundary')
+    ids = set()
+    cursor = start + 8
+    while cursor < central - 24:
+        length = struct.unpack_from('<Q', data, cursor)[0]
+        if length < 4 or cursor + 8 + length > central - 24:
+            raise ValueError('Invalid signing record')
+        ids.add(struct.unpack_from('<I', data, cursor + 8)[0])
+        cursor += 8 + length
+    if cursor != central - 24 or not {0x7109871a, 0xf05368c0}.issubset(ids):
+        raise ValueError('Required v2/v3 signatures missing')
     match = re.search(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', log, re.S)
     if not match:
         raise ValueError('Public certificate missing')
@@ -274,16 +309,17 @@ def prepare(ci_path, old_path, out, online):
         evidence = {'application_source': SOURCE, 'run': RUN, 'source_evidence': record, 'local_packaging_validation_only': True}
     json_write(out / 'Rovunet-alpha16-CI-evidence.json', evidence)
     (out / 'APK-SHA256.txt').write_text(f'{APK_SHA}  {APK_NAME}\n')
-    lines = [f'{sha(p.read_bytes())}  {p.name}' for p in sorted(out.iterdir())]
+    lines = [f'{sha((out / name).read_bytes())}  {name}'
+             for name in sorted(ASSET_NAMES) if name != 'SHA256SUMS.txt']
     (out / 'SHA256SUMS.txt').write_text('\n'.join(lines) + '\n')
-    print('Prepared', len(list(out.iterdir())), 'assets; approved APK SHA-256', APK_SHA, flush=True)
+    print('Prepared', len(ASSET_NAMES), 'allowlisted assets; approved APK SHA-256', APK_SHA, flush=True)
 
 
 def publish(out, revision):
     verified_file(out / APK_NAME, APK_SHA)
     expected = {line.split('  ', 1)[1]: line.split('  ', 1)[0] for line in (out / 'SHA256SUMS.txt').read_text().splitlines()}
     expected['SHA256SUMS.txt'] = sha((out / 'SHA256SUMS.txt').read_bytes())
-    if set(expected) != {p.name for p in out.iterdir()}:
+    if set(expected) != set(ASSET_NAMES):
         raise ValueError('Unexpected publication file')
     for name, digest in expected.items():
         verified_file(out / name, digest)
