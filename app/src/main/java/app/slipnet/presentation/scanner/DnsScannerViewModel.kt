@@ -2769,6 +2769,7 @@ class DnsScannerViewModel @Inject constructor(
             val workers = if (soarProfile == null) concurrency else concurrency.coerceAtMost(8)
             scanWorkers(hosts, workers) { host ->
                 var counted = false
+                var firstProvenElapsed: Long? = null
                 try {
                     val started = android.os.SystemClock.elapsedRealtime()
                     if (prefilter && soarProfile == null && !isResolverAliveWithMode(host, port, testDomain,
@@ -2782,10 +2783,11 @@ class DnsScannerViewModel @Inject constructor(
                             _uiState.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
                             session.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
                             if (progress.passedProbes >= passThreshold) {
+                                if (firstProvenElapsed == null) firstProvenElapsed = android.os.SystemClock.elapsedRealtime() - started
                                 val first = !counted
                                 if (first) { counted = true; scannedCount.incrementAndGet(); workingCount.incrementAndGet() }
                                 workingResults[host] = ResolverScanResult(host, port, ResolverStatus.WORKING,
-                                    responseTimeMs = android.os.SystemClock.elapsedRealtime() - started,
+                                    responseTimeMs = firstProvenElapsed,
                                     prismVerified = true, prismPassedProbes = progress.passedProbes,
                                     prismTotalProbes = progress.attemptedProbes,
                                     udpWorking = progress.udpOk, tcpWorking = progress.tcpOk,

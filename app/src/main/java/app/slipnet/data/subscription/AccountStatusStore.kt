@@ -43,7 +43,7 @@ internal class AccountStatusStore(private val db: SlipNetDatabase, private val s
                 val elapsed = SystemClock.elapsedRealtime()
                 val now = System.currentTimeMillis()
                 val age = cached?.let { elapsed - it.checkedElapsed }
-                if (!force && age != null && age in 0..120_000 &&
+                if (!force && age != null && source.lastSuccess <= cached.checkedAt && age in 0..120_000 &&
                     kotlin.math.abs((now - cached.checkedAt) - age) <= 5_000) return@scanWorkers
                 val refreshed = try {
                     val response = download(target)
