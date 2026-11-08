@@ -1,6 +1,10 @@
-# Rovunet 用户指南 — alpha15.4
+# Rovunet 用户指南 — alpha16
 
-**从公开 alpha14/alpha15 升级：**旧更新器不识别带点的 alpha 修订号。请直接下载 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) 并覆盖安装，不卸载、不清除数据。alpha15.4 支持后续带点修订号，包名和生产签名保持不变。
+Panel v1.19 状态在原卡片中显示剩余 GiB 与时间。黄色：≤20% 或 ≤3 天；红色：≤5% 或 ≤24 小时。不限量、未知和过期分别显示。404、过旧或不完整的计量不是过期证明。仅主页可见时刷新状态，不阻止手动连接；实际计量和限制以服务器为准。
+
+Prism 达到设定的成功阈值即停止；UDP/TCP 成功结果独立显示。工作线程和客户端有共享上限，高级模式对每个 resolver 共用一次截止时间。保留明确的 TCP-only 和身份确认。关屏空闲时降低统计频率；DNS 与明确启用的掩护流量保留唤醒保护。跟随 Android 默认物理网络，不关闭无线电。安全报告 v5 增加 UTC/采样时间、唤醒锁时长与网络类型，不含地址或凭据。
+
+**升级：**直接覆盖安装 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk)，支持公开 alpha14 及更新版本；不要卸载或清除数据。包名、生产签名和配置保留。如已安装获批准的 alpha16/代码32 测试 APK，这就是同一个文件，无需重装。
 
 HTTPS 订阅提供 **更新** 和 **导入**。新来源一次导入成功后关闭整个窗口；错误保留表单，重复来源地址被拒绝，本地编辑得到保留。更新已有来源前须断开 VPN；移除旧条目仍需审核。可选自动刷新约每 12 小时在合适的网络/电池条件下运行。小集合可用 QR/PNG 分享，过大集合使用文件。
 
@@ -10,7 +14,7 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 
 ## 安装与更新
 
-版本为 **alpha15.4 Full，代码 31**。从[公开发布](https://github.com/msVPNco/rovunet-android/releases/latest)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
+版本为 **alpha16 Full，代码 32**。从[公开发布](https://github.com/msVPNco/rovunet-android/releases/latest)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
 
 需要 Android 7.0/API 24，支持目标 ARM32/ARM64/x86_64，继承的 Naive/Tor 不提供 x86_64。没有承诺新的 Lite 或商店/桌面版本。
 

@@ -21,11 +21,11 @@
 
 ## 发布状态
 
-当前版本为 **0.3.0-alpha15.4 Full，版本代码 31**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15.4-Full.apk) · [发布记录](docs/releases/alpha15.4.md) · [状态](docs/STATUS.md)。
+当前版本为 **0.3.0-alpha16 Full，版本代码 32**，沿用 alpha14 的[生产签名](docs/SIGNING-IDENTITY.md)，可直接覆盖公开 alpha14，无需卸载。旧 alpha11 和私有 Rovunet Test 的身份不同。[下载 Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha16-Full.apk) · [发布记录](docs/releases/alpha16.md) · [状态](docs/STATUS.md)。
 
-alpha15.4 修复 Soar 扫描、订阅操作、菜单、重复导入、测试预算和状态显示。连接选择指南与扫描器使用四语言资源。[CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) 通过 **60 项 JVM、51 项 Debug 模拟器测试及 2 项精简 Release JNI 测试**，设备测试无跳过。33 个原生库与已审阅的 15.3 APK 相同，不宣称完整 native 重建。所有者批准发布同一个审阅 APK，未提供新的详细真实网络测量。
+alpha16 更早显示 Soar 已验证的 UDP/TCP 路径，限制扫描工作量，减少空闲轮询和计数器写入，改进 VLESS 资源清理并跟随 Android 选择的默认网络。Panel v1.19 的剩余流量和有效期显示在原有配置组卡片中；语言、帮助排在订阅前。[CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) 通过 **83 项可移植/JUnit、86 项 Gradle 单元、55 项 Debug 模拟器及 2 项精简 Release JNI 测试**。所有者批准发布同一个 APK。重建固定版本 Xray 和项目 Hev/JNI，其余原生传输复用。尚未定量测量省电幅度、整夜连接及网络切换表现。
 
-**从公开 alpha14/alpha15 升级：**旧更新器不识别带点的 alpha 修订号。请直接下载 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) 并覆盖安装，不卸载、不清除数据。alpha15.4 支持后续带点修订号，包名和生产签名保持不变。
+**升级：**直接覆盖安装 [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk)，支持公开 alpha14 及更新版本；不要卸载或清除数据。包名、生产签名和配置保留。如已安装获批准的 alpha16/代码32 测试 APK，这就是同一个文件，无需重装。
 
 ## 快速开始
 
@@ -38,7 +38,9 @@ alpha15.4 修复 Soar 扫描、订阅操作、菜单、重复导入、测试预�
 
 HTTPS 订阅提供 **更新** 和 **导入**。新来源一次导入成功后关闭整个窗口；错误保留表单，重复来源地址被拒绝，本地编辑得到保留。更新已有来源前须断开 VPN；移除旧条目仍需审核。可选自动刷新约每 12 小时在合适的网络/电池条件下运行。小集合可用 QR/PNG 分享，过大集合使用文件。
 
-Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed25519 密钥验证真实 Soar 握手；E2E 还验证 HTTP 204 或使用已批准服务器身份的 SSH 账户。高级模式只诊断 DNS。UDP/TCP 独立测试，Soar 扫描默认两者，不改写已保存的连接选择；丢弃旧协议的证明时保留导入的候选地址。
+Panel v1.19 状态在原卡片中显示剩余 GiB 与时间。黄色：≤20% 或 ≤3 天；红色：≤5% 或 ≤24 小时。不限量、未知和过期分别显示。404、过旧或不完整的计量不是过期证明。仅主页可见时刷新状态，不阻止手动连接；实际计量和限制以服务器为准。
+
+Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed25519 密钥验证真实 Soar 握手；E2E 还验证 HTTP 204 或使用已批准服务器身份的 SSH 账户。高级模式只诊断 DNS。UDP/TCP 独立测试，Soar 扫描默认两者，不改写已保存的连接选择；丢弃旧协议的证明时保留导入的候选地址。 Prism 达到设定的成功阈值即停止；UDP/TCP 成功结果独立显示。工作线程和客户端有共享上限，高级模式对每个 resolver 共用一次截止时间。保留明确的 TCP-only 和身份确认。关屏空闲时降低统计频率；DNS 与明确启用的掩护流量保留唤醒保护。跟随 Android 默认物理网络，不关闭无线电。安全报告 v5 增加 UTC/采样时间、唤醒锁时长与网络类型，不含地址或凭据。
 
 需要 Android 7.0/API 24 或更新版本。目标架构为 ARM32、ARM64、x86_64；继承的 Naive/Tor 二进制不提供 x86_64。不承诺 32 位 x86 或新的 Lite 包。尚无 Google Play、App Store 或 Rovunet 桌面图形版本。
 
@@ -92,6 +94,8 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 | 📘 完整指南（PDF） | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
 | [用户指南](docs/USER_GUIDE.zh-CN.md) | 安装、导入、连接、测试、Soar、凭据与故障排查 |
 | [当前状态](docs/STATUS.md) · [升级](docs/UPGRADE.md) | 发布状态、签名与迁移说明 |
+
+PDF 保留 alpha15.4 版本和版式；新的账户状态、菜单与空闲行为见当前用户指南及 [alpha16 说明](docs/releases/alpha16.md)。
 
 ## 源码与支持
 

@@ -1,8 +1,7 @@
-# Alpha16 review01 — awaiting phone review
+# Alpha16 review01 — accepted for publication
 
 VersionCode 32; the public package and production certificate remain fixed.
-This branch is a review candidate. CI success does not authorize publication or
-merging the release. The accepted APK must be published unchanged after approval.
+The owner explicitly accepted the delivered APK and authorized release on 2026-11-08. Public filename: `Rovunet-v0.3.0-alpha16-Full.apk`; SHA-256 `3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a`. Publication reuses those exact bytes. The owner supplied a screenshot of limited/unlimited account cards; it is private and is not included. This acceptance is not a quantitative overnight battery or network-handoff measurement.
 
 ## Changes
 
@@ -34,13 +33,7 @@ merging the release. The accepted APK must be published unchanged after approval
 
 ## Verification boundaries
 
-Local portable/JVM checks pass 83 JUnit cases, plus parser and lifecycle checks.
-Four-language resource parity and the Kotlin safety ratchet pass. Android build,
-Room migration, Compose, real loopback Soar and cancellation checks are required
-before delivering an APK; their final results and artifact identity belong in the
-review delivery record. Device tests use a disposable emulator, not a phone or an
-Iranian network. Native provenance must distinguish pinned reused transports
-from freshly compiled project cores. No battery percentage saving is established.
+[Source CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Four-language parity and Kotlin safety passed. One initial parallel PR Soar fixture assertion failed; the unchanged recheck passed and the cause is unestablished. Native rebuild scope and artifact identity are in [provenance](../releases/alpha16-provenance.json). Emulator checks are not physical-network or battery-energy measurements. The checklist below remains useful for continued field feedback.
 
 ## Phone acceptance
 
