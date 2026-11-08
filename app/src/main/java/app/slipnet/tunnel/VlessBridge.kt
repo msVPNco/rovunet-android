@@ -55,6 +55,7 @@ object VlessBridge {
     private var serverSocket: ServerSocket? = null
     private var acceptorThread: Thread? = null
     private val running = AtomicBoolean(false)
+    @Volatile private var resources = RelayResources()
     private val connectionThreads = CopyOnWriteArrayList<Thread>()
     private val tunnelTxBytes = AtomicLong(0)
     private val tunnelRxBytes = AtomicLong(0)
@@ -116,6 +117,8 @@ object VlessBridge {
         Log.i(TAG, "========================================")
 
         stop()
+        val owner = RelayResources()
+        resources = owner
 
         this.cdnIp = cdnIp
         this.cdnPort = cdnPort
@@ -165,11 +168,11 @@ object VlessBridge {
 
             acceptorThread = Thread({
                 logd("SOCKS5 acceptor started")
-                while (running.get() && !Thread.currentThread().isInterrupted) {
+                while (running.get() && resources === owner && !Thread.currentThread().isInterrupted) {
                     try {
-                        val client = ss.accept()
+                        val client = owner.own(ss.accept())
                         val t = Thread({
-                            handleSocks5Connection(client)
+                            handleSocks5Connection(client, owner)
                         }, "vless-conn-${System.nanoTime()}")
                         t.isDaemon = true
                         connectionThreads.add(t)
@@ -193,6 +196,7 @@ object VlessBridge {
     }
 
     fun stop() {
+        resources.close()
         if (!running.getAndSet(false) && fragmentForwarder == null) return
         Log.i(TAG, "Stopping VLESS Bridge")
         try { serverSocket?.close() } catch (_: Exception) {}
@@ -296,7 +300,7 @@ object VlessBridge {
 
     // ── SOCKS5 Handling ──────────────────────────────────────────────
 
-    private fun handleSocks5Connection(client: Socket) {
+    private fun handleSocks5Connection(client: Socket, owner: RelayResources) {
         try {
             Log.d(TAG, "SOCKS5 connection from ${client.remoteSocketAddress}")
             client.tcpNoDelay = true
@@ -373,33 +377,27 @@ object VlessBridge {
             logd("First payload from client: ${initialData.size} bytes for $destHost:$destPort")
 
             // Establish VLESS tunnel to destination
-            handleVlessConnect(client, destHost, destPort, initialData)
+            handleVlessConnect(client, destHost, destPort, initialData, owner)
 
         } catch (e: Exception) {
             Log.e(TAG, "SOCKS5 error: ${e.message}")
         } finally {
-            try { client.close() } catch (_: Exception) {}
+            owner.close(client)
             connectionThreads.remove(Thread.currentThread())
         }
     }
 
     // ── VLESS Connection ─────────────────────────────────────────────
 
-    private fun handleVlessConnect(client: Socket, destHost: String, destPort: Int, initialData: ByteArray = ByteArray(0)) {
+    private fun handleVlessConnect(client: Socket, destHost: String, destPort: Int, initialData: ByteArray, owner: RelayResources) {
         if (DirectRouting.relay(domainRouter, destHost, destPort, client, initialData=initialData, socksReply=false)) return
         // Step 1: TCP connect (through fragment forwarder if enabled, or direct to CDN)
-        val raw: Socket
-        if (fragmentEnabled) {
-            val fragmentPort = (serverSocket?.localPort ?: 0) + 1
-            raw = Socket()
-            raw.connect(InetSocketAddress("127.0.0.1", fragmentPort), TCP_CONNECT_TIMEOUT_MS)
-        } else {
-            raw = Socket()
-            raw.connect(InetSocketAddress(cdnIp, cdnPort), TCP_CONNECT_TIMEOUT_MS)
-        }
-        raw.tcpNoDelay = true
-
+        val raw = owner.own(Socket())
         try {
+            val target = if (fragmentEnabled) InetSocketAddress("127.0.0.1", (serverSocket?.localPort ?: 0) + 1)
+                else InetSocketAddress(cdnIp, cdnPort)
+            raw.connect(target, TCP_CONNECT_TIMEOUT_MS)
+            raw.tcpNoDelay = true
             // Step 2: TLS handshake (or skip for security=none)
             val tunnelIn: InputStream
             val tunnelOut: OutputStream
@@ -427,15 +425,15 @@ object VlessBridge {
             }
 
             if (transport == "tcp") {
-                handleVlessTcp(client, tunnelIn, tunnelOut, destHost, destPort, initialData)
+                handleVlessTcp(client, tunnelIn, tunnelOut, destHost, destPort, initialData, owner)
             } else {
-                handleVlessWs(client, tunnelSocket, tunnelIn, tunnelOut, destHost, destPort, initialData)
+                handleVlessWs(client, tunnelSocket, tunnelIn, tunnelOut, destHost, destPort, initialData, owner)
             }
 
         } catch (e: Exception) {
             Log.e(TAG, "VLESS connect error for $destHost:$destPort: ${e.message}")
         } finally {
-            try { raw.close() } catch (_: Exception) {}
+            owner.close(raw)
         }
     }
 
@@ -449,7 +447,7 @@ object VlessBridge {
      * TLS ClientHello for SNI fragmentation to fragment). Re-expose only if a
      * concrete non-CDN use case shows up.
      */
-    private fun handleVlessTcp(client: Socket, tunnelIn: InputStream, tunnelOut: OutputStream, destHost: String, destPort: Int, initialData: ByteArray = ByteArray(0)) {
+    private fun handleVlessTcp(client: Socket, tunnelIn: InputStream, tunnelOut: OutputStream, destHost: String, destPort: Int, initialData: ByteArray, owner: RelayResources) {
 
         // Send VLESS header + initial payload in one write
         val uuid = parseUUID(vlessUuid)
@@ -478,7 +476,7 @@ object VlessBridge {
         logd("VLESS/TCP session established for $destHost:$destPort")
 
         // Raw bidirectional relay (no WS framing)
-        relayRaw(client, tunnelIn, tunnelOut)
+        relayRaw(client, tunnelIn, tunnelOut, owner)
     }
 
     /**
@@ -486,7 +484,7 @@ object VlessBridge {
      *
      * WebSocket transport: WS upgrade + VLESS header as WS frame.
      */
-    private fun handleVlessWs(client: Socket, tunnelSocket: Socket, tunnelIn: InputStream, tunnelOut: OutputStream, destHost: String, destPort: Int, initialData: ByteArray = ByteArray(0)) {
+    private fun handleVlessWs(client: Socket, tunnelSocket: Socket, tunnelIn: InputStream, tunnelOut: OutputStream, destHost: String, destPort: Int, initialData: ByteArray, owner: RelayResources) {
         val wsKey = generateWsKey()
         val upgrade = buildWsUpgradeRequest(wsKey)
         tunnelOut.write(upgrade.toByteArray(Charsets.US_ASCII))
@@ -572,14 +570,14 @@ object VlessBridge {
         Log.i(TAG, "VLESS/WS session established for $destHost:$destPort")
 
         // Bidirectional relay with WS framing
-        relayVless(client, tunnelIn, tunnelOut)
+        relayVless(client, tunnelIn, tunnelOut, owner)
     }
 
     /**
      * Raw bidirectional relay for TCP transport (no WebSocket framing).
      */
-    private fun relayRaw(client: Socket, tlsIn: InputStream, tlsOut: OutputStream) {
-        val executor = Executors.newFixedThreadPool(2)
+    private fun relayRaw(client: Socket, tlsIn: InputStream, tlsOut: OutputStream, owner: RelayResources) {
+        val executor = owner.own(Executors.newFixedThreadPool(2))
         val clientIn = client.getInputStream()
         val clientOut = client.getOutputStream()
 
@@ -609,11 +607,12 @@ object VlessBridge {
                     tunnelRxBytes.addAndGet(n.toLong())
                 }
             } catch (_: Exception) {}
+            finally { owner.close(client) }
         }
 
-        try { f1.get() } catch (_: Exception) {}
-        try { f2.get() } catch (_: Exception) {}
-        executor.shutdownNow()
+        try { f1.get(); f2.get() }
+        catch (_: InterruptedException) { Thread.currentThread().interrupt() }
+        finally { owner.close(executor) }
     }
 
     /**
@@ -658,9 +657,9 @@ object VlessBridge {
      * Relay data between client and WebSocket-framed VLESS tunnel.
      * Client side is raw TCP; tunnel side uses WebSocket binary frames.
      */
-    private fun relayVless(client: Socket, wsInput: InputStream, wsOutput: OutputStream) {
+    private fun relayVless(client: Socket, wsInput: InputStream, wsOutput: OutputStream, owner: RelayResources) {
         val threadCount = if (wsPaddingEnabled) 3 else 2
-        val executor = Executors.newFixedThreadPool(threadCount)
+        val executor = owner.own(Executors.newFixedThreadPool(threadCount))
         val clientIn = client.getInputStream()
         val clientOut = client.getOutputStream()
 
@@ -683,13 +682,14 @@ object VlessBridge {
         val f2 = executor.submit {
             try {
                 while (!Thread.currentThread().isInterrupted) {
-                    val frame = readWsFrame(wsInput) ?: break
+                    val frame = readWsFrame(wsInput, wsOutput) ?: break
                     if (frame.isEmpty()) continue
                     clientOut.write(frame)
                     clientOut.flush()
                     tunnelRxBytes.addAndGet(frame.size.toLong())
                 }
             } catch (_: Exception) {}
+            finally { owner.close(client) }
         }
 
         // Cover traffic: send random-size WS ping frames at random intervals
@@ -708,10 +708,12 @@ object VlessBridge {
             } catch (_: Exception) {}
         } else null
 
-        try { f1.get() } catch (_: Exception) {}
-        try { f2.get() } catch (_: Exception) {}
-        try { f3?.get() } catch (_: Exception) {}
-        executor.shutdownNow()
+        try { f1.get(); f2.get() }
+        catch (_: InterruptedException) { Thread.currentThread().interrupt() }
+        finally {
+            f3?.cancel(true)
+            owner.close(executor)
+        }
     }
 
     // ── WebSocket Framing (RFC 6455) ─────────────────────────────────
@@ -720,99 +722,10 @@ object VlessBridge {
      * Write a WebSocket frame with masking (client must mask).
      * Default opcode 0x02 = binary, 0x09 = ping.
      */
-    private fun writeWsFrame(out: OutputStream, payload: ByteArray, opcode: Int = 0x02) {
-        val header = ByteArrayOutputStream()
-        // FIN + opcode
-        header.write(0x80 or opcode)
-        // Mask bit set (client) + length
-        val len = payload.size
-        when {
-            len <= 125 -> header.write(0x80 or len)
-            len <= 65535 -> {
-                header.write(0x80 or 126)
-                header.write(len shr 8 and 0xFF)
-                header.write(len and 0xFF)
-            }
-            else -> {
-                header.write(0x80 or 127)
-                for (i in 7 downTo 0) {
-                    header.write((len.toLong() shr (i * 8) and 0xFF).toInt())
-                }
-            }
-        }
-        // Masking key
-        val mask = ByteArray(4)
-        SecureRandom().nextBytes(mask)
-        header.write(mask)
+    private fun writeWsFrame(out: OutputStream, payload: ByteArray, opcode: Int = 0x02) =
+        WebSocketFrames.write(out, payload, opcode)
 
-        // Masked payload
-        val masked = ByteArray(len)
-        for (i in 0 until len) {
-            masked[i] = (payload[i].toInt() xor mask[i % 4].toInt()).toByte()
-        }
-
-        out.write(header.toByteArray())
-        out.write(masked)
-        out.flush()
-    }
-
-    /**
-     * Read a WebSocket frame. Returns payload bytes, or null on EOF/close.
-     */
-    private fun readWsFrame(input: InputStream): ByteArray? {
-        val b0 = input.read()
-        if (b0 < 0) return null
-        val b1 = input.read()
-        if (b1 < 0) return null
-
-        val opcode = b0 and 0x0F
-        val masked = (b1 and 0x80) != 0
-        var payloadLen = (b1 and 0x7F).toLong()
-
-        if (payloadLen == 126L) {
-            val h = input.read()
-            val l = input.read()
-            if (h < 0 || l < 0) return null
-            payloadLen = ((h shl 8) or l).toLong()
-        } else if (payloadLen == 127L) {
-            var len = 0L
-            for (i in 0 until 8) {
-                val b = input.read()
-                if (b < 0) return null
-                len = (len shl 8) or b.toLong()
-            }
-            payloadLen = len
-        }
-
-        var maskKey: ByteArray? = null
-        if (masked) {
-            maskKey = ByteArray(4)
-            readFully(input, maskKey)
-        }
-
-        if (payloadLen > 16 * 1024 * 1024) return null // 16MB sanity limit
-
-        val payload = ByteArray(payloadLen.toInt())
-        if (payloadLen > 0) {
-            readFully(input, payload)
-            if (maskKey != null) {
-                for (i in payload.indices) {
-                    payload[i] = (payload[i].toInt() xor maskKey[i % 4].toInt()).toByte()
-                }
-            }
-        }
-
-        return when (opcode) {
-            0x01, 0x02, 0x00 -> payload // text, binary, continuation
-            0x08 -> null // close
-            0x09 -> { // ping -> pong
-                // Server shouldn't mask, we just read it. Don't reply with pong for simplicity.
-                ByteArray(0)
-            }
-            0x0A -> ByteArray(0) // pong (ignore)
-            else -> payload
-        }
-    }
+    private fun readWsFrame(input: InputStream, output: OutputStream): ByteArray? = WebSocketFrames.read(input, output)
 
     // ── DPI Evasion ──────────────────────────────────────────────────
 

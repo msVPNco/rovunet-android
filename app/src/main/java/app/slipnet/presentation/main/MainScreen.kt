@@ -1,5 +1,9 @@
 package app.slipnet.presentation.main
 
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.runtime.mutableLongStateOf
+import kotlinx.coroutines.isActive
+
 import app.slipnet.BuildConfig
 import app.slipnet.domain.model.TunnelType
 import android.app.Activity
@@ -181,6 +185,22 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val statusLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    var statusClock by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
+    LaunchedEffect(statusLifecycle, uiState.subscriptionIds, uiState.subscriptionVersion) {
+        statusLifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            launch {
+                while (isActive) {
+                    viewModel.refreshAccountStatuses()
+                    kotlinx.coroutines.delay(5 * 60_000L)
+                }
+            }
+            while (isActive) {
+                statusClock = android.os.SystemClock.elapsedRealtime()
+                kotlinx.coroutines.delay(60_000L)
+            }
+        }
+    }
     val trustRequest by app.slipnet.tunnel.TransportTrust.request.collectAsState()
     trustRequest?.let { request ->
         AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(request, false) },
@@ -548,13 +568,6 @@ fun MainScreen(
                             // Groups, top to bottom: app, tests and sorting, organising, data, danger.
                             // A menu action always closes the menu first.
                             DropdownMenuItem(
-                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.subscriptions_title)) },
-                                onClick = {
-                                    showOverflowMenu = false
-                                    showSubscriptions = true
-                                }
-                            )
-                            DropdownMenuItem(
                                 text = { Text("Language · زبان · 语言 · Язык") },
                                 onClick = {
                                     showOverflowMenu = false
@@ -571,6 +584,11 @@ fun MainScreen(
                             DropdownMenuItem(
                                 text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.connection_check_details)) },
                                 onClick = { showOverflowMenu = false; showConnectionDetails = true }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.subscriptions_title)) },
+                                onClick = { showOverflowMenu = false; showSubscriptions = true }
                             )
                             HorizontalDivider()
                             if (uiState.isPingRunning) {
@@ -901,6 +919,8 @@ fun MainScreen(
                                     CollectionStack(expanded = expandedCollection == collectionKey, header = {
                                         CollectionCard(
                                             profiles = collection, results = uiState.pingResults,
+                                            accountStatus = uiState.accountStatuses[representative.collectionId]?.view(
+                                                elapsed = maxOf(statusClock, android.os.SystemClock.elapsedRealtime())),
                                             selected = selected, expanded = expandedCollection == collectionKey,
                                             connectedProfileId = uiState.connectedProfileId?.takeIf { id -> collection.any { it.id == id } },
                                             manualProfileId = viewModel.preferredProfile(collection)?.id,

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_diagnostics_partial">诊断检查尚未完成</string>
+    <string name="account_status_unavailable">账户信息不可用</string>
+    <string name="account_status_partial">流量统计不完整</string>
+    <string name="account_status_waiting">等待首次流量统计</string>
+    <string name="account_status_stale">账户信息需要刷新</string>
+    <string name="account_status_expired">账户已到期</string>
+    <string name="account_status_limit_reached">流量已用尽</string>
+    <string name="account_status_remaining_volume">剩余 %1$s %2$s</string>
+    <string name="account_status_unlimited_volume">不限流量</string>
+    <string name="account_status_no_expiry">永不过期</string>
+    <string name="account_status_days">剩余 %1$d 天</string>
+    <string name="account_status_hours">剩余 %1$d 小时</string>
+    <string name="account_status_minutes">剩余 %1$d 分钟</string>
+    <string name="account_status_summary">%1$s · %2$s</string>
+</resources>

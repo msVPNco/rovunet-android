@@ -15,6 +15,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.data.subscription.AccountStatusDeviceTest", "metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources"),
+    ("app.slipnet.presentation.main.AccountStatusUiDeviceTest", "persianAccountSummaryKeepsTheCollectionCardAndDistinguishesUnknownFromExhausted"),
+    ("app.slipnet.presentation.scanner.ScannerDeadlineDeviceTest", "advancedUsesOneDeadlineAndCancellationClosesAWaitingQuery"),
     ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "oneImportOrUpdateClickClosesTheWholeDialogAndFailuresKeepItOpen"),
     ("app.slipnet.service.SubscriptionDeviceTest", "newSourcePreservesTunnelOwnershipAndDuplicateImportsAreAtomic"),
     ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "oldProtocolProofIsDiscardedWithoutLosingImportedResolverCandidates"),
@@ -154,7 +157,7 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png"):
+    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png"):
         with (previews / filename).open("wb") as image:
             subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
                             "cat", "files/" + filename], stdout=image, check=True)

@@ -90,6 +90,8 @@ data class MainUiState(
     val subscriptionUrl: String? = null,
     val subscriptionId: String? = null,
     val subscriptionIds: Set<String> = emptySet(),
+    val subscriptionVersion: Long = 0,
+    val accountStatuses: Map<String, app.slipnet.data.subscription.AccountStatusEntity> = emptyMap(),
     val dataPathState: app.slipnet.domain.model.DataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
     val dataPathNoticeUntilElapsedMs: Long = 0,
     val regroupPreview: List<CollectionInference.Group>? = null,
@@ -211,6 +213,12 @@ class MainViewModel @Inject constructor(
             ui.pingResults, ui.sortByHttps, ui.sortByReliability))
     }
 
+    suspend fun refreshAccountStatuses() {
+        try { subscriptionRepository.refreshAccountStatuses() }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* Status availability never blocks the main screen or connection. */ }
+    }
+
     private val networkManager = appContext.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
     private val underlyingNetworks = mutableSetOf<android.net.Network>()
     private var networkCallbackRegistered = false
@@ -220,9 +228,14 @@ class MainViewModel @Inject constructor(
     }
     init {
         viewModelScope.launch { subscriptionRepository.observe().catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { rows ->
-            _uiState.value = _uiState.value.copy(subscriptionIds = rows.map { it.id }.toSet())
+            _uiState.value = _uiState.value.copy(subscriptionIds = rows.map { it.id }.toSet(), subscriptionVersion = rows.maxOfOrNull { it.lastSuccess } ?: 0)
         } }
 
+        viewModelScope.launch {
+            subscriptionRepository.observeAccountStatus().catch { emit(emptyList()) }.collect { rows ->
+                _uiState.value = _uiState.value.copy(accountStatuses = rows.associateBy { it.subscriptionId })
+            }
+        }
         observeConnectionState()
         observeDnsWarning()
         observeDnsPoolScan()

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_diagnostics_partial">آزمون‌های تشخیصی کامل نشده‌اند</string>
+    <string name="account_status_unavailable">اطلاعات حساب در دسترس نیست</string>
+    <string name="account_status_partial">شمارش مصرف کامل نیست</string>
+    <string name="account_status_waiting">در انتظار نخستین آمار مصرف</string>
+    <string name="account_status_stale">اطلاعات حساب نیاز به به‌روزرسانی دارد</string>
+    <string name="account_status_expired">زمان حساب تمام شده</string>
+    <string name="account_status_limit_reached">حجم حساب تمام شده</string>
+    <string name="account_status_remaining_volume">%1$s %2$s باقی‌مانده</string>
+    <string name="account_status_unlimited_volume">حجم نامحدود</string>
+    <string name="account_status_no_expiry">بدون انقضا</string>
+    <string name="account_status_days">%1$d روز باقی‌مانده</string>
+    <string name="account_status_hours">%1$d ساعت باقی‌مانده</string>
+    <string name="account_status_minutes">%1$d دقیقه باقی‌مانده</string>
+    <string name="account_status_summary">%1$s · %2$s</string>
+</resources>

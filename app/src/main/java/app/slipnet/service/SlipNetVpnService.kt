@@ -285,6 +285,12 @@ class SlipNetVpnService : VpnService() {
     // WifiLock to prevent Wi-Fi radio from entering low-power mode when screen is off
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLockRenewJob: Job? = null
+    private var needsContinuousCpuWake = true
+    private var lastUserTrafficAtElapsed = 0L
+    private var lastPowerTx = 0L
+    private var lastPowerRx = 0L
+    private var underlyingDefaultDeclared = false
+    private val trafficPollSignal = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     // Doze mode receiver to detect idle state exits
     private var dozeReceiver: BroadcastReceiver? = null
@@ -480,6 +486,7 @@ class SlipNetVpnService : VpnService() {
             }
 
             app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROFILE_LOADED)
+            needsContinuousCpuWake = VpnPowerPolicy.continuous(profile)
             currentProfileId = profileId
             currentProfileName = profile.name
             isUserInitiatedDisconnect = false
@@ -794,6 +801,7 @@ class SlipNetVpnService : VpnService() {
             currentChainId = chainId
             // Use first profile for connection state tracking
             val primaryProfile = profiles.first()
+            needsContinuousCpuWake = profiles.any { VpnPowerPolicy.continuous(it) }
             currentProfileId = primaryProfile.id
             currentProfileName = chain.name
             isUserInitiatedDisconnect = false
@@ -3891,6 +3899,9 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Start health monitoring and network change detection
+        lastUserTrafficAtElapsed = android.os.SystemClock.elapsedRealtime()
+        lastPowerTx = 0
+        lastPowerRx = 0
         startHealthCheck()
         registerNetworkCallback()
         registerDozeReceiver()
@@ -4313,34 +4324,18 @@ class SlipNetVpnService : VpnService() {
      * Tells Android which physical networks the VPN uses, enabling
      * automatic failover during WiFi↔cellular switches without full reconnection.
      */
-    @Suppress("DEPRECATION")
     private fun updateUnderlyingNetworks() {
-        try {
-            val cm = connectivityManager ?: return
-            val networks = cm.allNetworks
-                .mapNotNull { network ->
-                    val caps = cm.getNetworkCapabilities(network) ?: return@mapNotNull null
-                    if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)) {
-                        network
-                    } else null
-                }
-                .sortedByDescending { network ->
-                    val caps = cm.getNetworkCapabilities(network)
-                    when {
-                        caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> 3
-                        caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> 2
-                        caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> 1
-                        else -> 0
-                    }
-                }
-                .toTypedArray()
+        // All unbound upstream sockets use Android's default network. This is a
+        // declaration, not a route selector: listing every available radio was inaccurate.
+        if (!underlyingDefaultDeclared) underlyingDefaultDeclared = runCatching { setUnderlyingNetworks(null) }.getOrDefault(false)
+    }
 
-            setUnderlyingNetworks(if (networks.isNotEmpty()) networks else null)
-            Log.d(TAG, "Updated underlying networks: ${networks.size} available")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to update underlying networks", e)
-        }
+    private fun defaultPhysicalNetwork(): Network? {
+        val cm = connectivityManager ?: return null
+        val network = cm.activeNetwork ?: return null
+        val capabilities = cm.getNetworkCapabilities(network) ?: return null
+        return network.takeIf { capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
     }
 
     /**
@@ -4353,6 +4348,11 @@ class SlipNetVpnService : VpnService() {
         dozeReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (intent.action == Intent.ACTION_SCREEN_ON || intent.action == Intent.ACTION_SCREEN_OFF) {
+                    updateRuntimePowerPolicy(pm.isInteractive)
+                    trafficPollSignal.trySend(Unit)
+                    return
+                }
                 if (pm.isDeviceIdleMode) {
                     Log.d(TAG, "Device entered Doze mode")
                 } else {
@@ -4371,12 +4371,14 @@ class SlipNetVpnService : VpnService() {
                 }
             }
         }
+        val filter = IntentFilter(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED).apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
         @Suppress("UnspecifiedRegisterReceiverFlag")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(dozeReceiver, IntentFilter(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED), Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(dozeReceiver, IntentFilter(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED))
-        }
+            registerReceiver(dozeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else registerReceiver(dozeReceiver, filter)
         Log.d(TAG, "Doze mode receiver registered")
     }
 
@@ -4397,138 +4399,73 @@ class SlipNetVpnService : VpnService() {
      */
     private fun registerNetworkCallback() {
         val callbackRuntime = runtimeJob
-
-        unregisterNetworkCallback() // Clean up any existing callback
-
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-            .build()
-
+        unregisterNetworkCallback()
         networkCallback = object : ConnectivityManager.NetworkCallback() {
-            private var currentNetwork: Network? = null
-            // Ignore onAvailable calls for 2s after registration to let all
-            // initial callbacks settle (WiFi + cellular fire back-to-back)
-            private val registeredAt = System.currentTimeMillis()
-            private val quietPeriodMs = 2000L
+            private var currentNetwork: Network? = defaultPhysicalNetwork()
+            private var initialized = currentNetwork != null
 
-            override fun onAvailable(network: Network) {
-                if (!callbackRuntime.isActive) return
-                Log.d(TAG, "Network available: $network")
-                // A network arrived — cancel any pending "no network" disconnect
+            private fun consider(network: Network, capabilities: NetworkCapabilities) {
+                if (!callbackRuntime.isActive || !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
+                    !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
                 networkLostJob?.cancel()
                 networkLostJob = null
-
-                // Always update underlying networks so the VPN can use the new network
-                updateUnderlyingNetworks()
-
-                if (System.currentTimeMillis() - registeredAt < quietPeriodMs) {
-                    Log.d(TAG, "Initial network detected: $network (quiet period, no reconnection)")
-                    currentNetwork = network
-                    updateTrackedAddresses(network)
-                    return
-                }
-                if (currentNetwork == null) {
-                    Log.i(TAG, "Network restored: $network, triggering reconnection")
-                    debouncedReconnect("network restored")
-                } else if (currentNetwork != network) {
-                    Log.i(TAG, "Network changed from $currentNetwork to $network, triggering reconnection")
-                    debouncedReconnect("network change")
-                }
+                val previous = currentNetwork
                 currentNetwork = network
-                // Update tracked addresses for new network
-                updateTrackedAddresses(network)
-            }
-
-            override fun onLost(network: Network) {
-                if (!callbackRuntime.isActive) return
-                Log.d(TAG, "Network lost: $network")
-                // Update underlying networks to remove the lost network
-                updateUnderlyingNetworks()
-
-                if (network == currentNetwork) {
-                    currentNetwork = null
+                if (previous != network) {
                     lastNetworkAddresses = emptySet()
                     lastNetworkDnsServers = emptySet()
+                    if (initialized) debouncedReconnect(if (previous == null) "physical network restored" else "physical network change")
+                }
+                initialized = true
+                val kind = when {
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> app.slipnet.util.ConnectionDiagnostics.NetworkKind.WIFI
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> app.slipnet.util.ConnectionDiagnostics.NetworkKind.CELLULAR
+                    capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> app.slipnet.util.ConnectionDiagnostics.NetworkKind.ETHERNET
+                    else -> app.slipnet.util.ConnectionDiagnostics.NetworkKind.OTHER
+                }
+                app.slipnet.util.ConnectionDiagnostics.network(serviceSessionId, kind)
+                if (previous != network) trafficPollSignal.trySend(Unit)
+            }
 
-                    // Wait briefly for a replacement network (e.g. WiFi → cellular handoff).
-                    // If no network arrives within the window, treat as full connectivity loss.
-                    networkLostJob?.cancel()
-                    networkLostJob = runtimeScope.launch {
-                        delay(3000)
-                        Log.w(TAG, "No network available after loss of $network — reporting tunnel failure")
-                        runtimeScope.launch { handleTunnelFailure("network lost") }
+            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) = consider(network, capabilities)
+
+            override fun onLost(network: Network) {
+                if (!callbackRuntime.isActive || network != currentNetwork) return
+                currentNetwork = null
+                lastNetworkAddresses = emptySet()
+                lastNetworkDnsServers = emptySet()
+                networkLostJob?.cancel()
+                networkLostJob = runtimeScope.launch {
+                    delay(3000)
+                    if (!callbackRuntime.isActive || currentNetwork != null) return@launch
+                    val replacement = defaultPhysicalNetwork()
+                    if (replacement != null) {
+                        connectivityManager?.getNetworkCapabilities(replacement)?.let { consider(replacement, it) }
+                    } else {
+                        val anyPhysical = connectivityManager?.allNetworks?.any { candidate ->
+                            connectivityManager?.getNetworkCapabilities(candidate)?.let { caps ->
+                                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
+                                    caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                            } == true
+                        } == true
+                        if (!anyPhysical) handleTunnelFailure("network lost")
                     }
                 }
             }
 
-            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                if (!callbackRuntime.isActive) return
-                // Network capabilities changed - check if we still have internet
-                val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                Log.d(TAG, "Network capabilities changed: $network, hasInternet=$hasInternet")
-                // Refresh underlying networks (capabilities like VALIDATED may have changed)
-                updateUnderlyingNetworks()
-            }
-
-            override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
-                if (!callbackRuntime.isActive) return
-                // Link properties changed - check for IP address and DNS server changes
-                val newAddresses = linkProperties.linkAddresses
-                    .mapNotNull { it.address?.hostAddress }
-                    .toSet()
-
-                val newDnsServers = linkProperties.dnsServers
-                    .mapNotNull { it.hostAddress }
-                    .toSet()
-
-                Log.d(TAG, "Link properties changed: $network, addresses=$newAddresses, dns=$newDnsServers")
-
-                // Skip change detection during quiet period
-                if (System.currentTimeMillis() - registeredAt < quietPeriodMs) {
-                    lastNetworkAddresses = newAddresses
-                    lastNetworkDnsServers = newDnsServers
-                    return
-                }
-
-                // If IP addresses changed, we need to reconnect
-                if (lastNetworkAddresses.isNotEmpty() && newAddresses != lastNetworkAddresses) {
-                    val added = newAddresses - lastNetworkAddresses
-                    val removed = lastNetworkAddresses - newAddresses
-                    Log.i(TAG, "IP addresses changed: added=$added, removed=$removed")
-                    debouncedReconnect("IP address change")
-                }
-                // If DNS servers changed (common during WiFi↔cellular handoff), reconnect
-                else if (lastNetworkDnsServers.isNotEmpty() && newDnsServers != lastNetworkDnsServers) {
-                    Log.i(TAG, "DNS servers changed: ${lastNetworkDnsServers} → $newDnsServers")
-                    debouncedReconnect("DNS server change")
-                }
-                lastNetworkAddresses = newAddresses
-                lastNetworkDnsServers = newDnsServers
-            }
-
-            private fun updateTrackedAddresses(network: Network) {
-                try {
-                    val linkProps = connectivityManager?.getLinkProperties(network)
-                    lastNetworkAddresses = linkProps?.linkAddresses
-                        ?.mapNotNull { it.address?.hostAddress }
-                        ?.toSet() ?: emptySet()
-                    lastNetworkDnsServers = linkProps?.dnsServers
-                        ?.mapNotNull { it.hostAddress }
-                        ?.toSet() ?: emptySet()
-                    Log.d(TAG, "Updated tracked addresses: $lastNetworkAddresses, dns: $lastNetworkDnsServers")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to get link properties", e)
-                }
+            override fun onLinkPropertiesChanged(network: Network, properties: LinkProperties) {
+                if (!callbackRuntime.isActive || network != currentNetwork) return
+                val addresses = properties.linkAddresses.mapNotNull { it.address?.hostAddress }.toSet()
+                val dns = properties.dnsServers.mapNotNull { it.hostAddress }.toSet()
+                val changed = lastNetworkAddresses.isNotEmpty() && lastNetworkAddresses != addresses ||
+                    lastNetworkDnsServers.isNotEmpty() && lastNetworkDnsServers != dns
+                lastNetworkAddresses = addresses
+                lastNetworkDnsServers = dns
+                if (changed) debouncedReconnect("physical network properties change")
             }
         }
-
-        try {
-            connectivityManager?.registerNetworkCallback(request, networkCallback!!)
-            Log.d(TAG, "Network callback registered")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to register network callback", e)
-        }
+        try { connectivityManager?.registerDefaultNetworkCallback(requireNotNull(networkCallback)) }
+        catch (error: Exception) { Log.e(TAG, "Failed to register default network callback", error) }
     }
 
     private fun unregisterNetworkCallback() {
@@ -4577,7 +4514,7 @@ class SlipNetVpnService : VpnService() {
             // when the VPN interface is first created, causing the proxy to be
             // torn down before any data flows. Skip unless this is a tunnel
             // recovery (seamless reconnect), which must always proceed.
-            if (!reason.startsWith("tunnel recovery") && connectionEstablishedAt > 0) {
+            if (!reason.startsWith("tunnel recovery") && !reason.startsWith("physical network") && connectionEstablishedAt > 0) {
                 val elapsed = System.currentTimeMillis() - connectionEstablishedAt
                 if (elapsed < NETWORK_CHANGE_GRACE_MS) {
                     Log.d(TAG, "Ignoring network change '$reason' — ${elapsed}ms after connection (grace period ${NETWORK_CHANGE_GRACE_MS}ms)")
@@ -5675,17 +5612,19 @@ class SlipNetVpnService : VpnService() {
                 // Adaptive interval: 1s when active, 5s when idle, 10s when screen off.
                 val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
                 val screenOn = pm.isInteractive
-                val interval = when {
-                    !screenOn -> 10_000L
-                    idleCount >= 3 -> 5_000L // 3+ consecutive idle ticks → slow down
-                    else -> 1_000L
-                }
-                delay(interval)
+                val interval = VpnPowerPolicy.sampleInterval(screenOn, idleCount)
+                kotlinx.coroutines.withTimeoutOrNull(interval) { trafficPollSignal.receive() }
 
                 // Some backends enter JNI or take a bridge lock when reading stats.
                 // Never make the Android main looper wait for a native backend.
                 withContext(Dispatchers.IO) { vpnRepository.refreshTrafficStats() }
                 val current = vpnRepository.trafficStats.value
+                if (current.bytesSent != lastPowerTx || current.bytesReceived != lastPowerRx) {
+                    lastUserTrafficAtElapsed = android.os.SystemClock.elapsedRealtime()
+                    lastPowerTx = current.bytesSent
+                    lastPowerRx = current.bytesReceived
+                }
+                updateRuntimePowerPolicy(pm.isInteractive)
                 val upSpeed = current.uploadSpeed
                 val downSpeed = current.downloadSpeed
 
@@ -6084,8 +6023,31 @@ class SlipNetVpnService : VpnService() {
         bootNetworkCallback = null
     }
 
+    @Synchronized private fun updateRuntimePowerPolicy(screenOn: Boolean) {
+        val idle = (android.os.SystemClock.elapsedRealtime() - lastUserTrafficAtElapsed).coerceAtLeast(0)
+        val hold = VpnPowerPolicy.holdCpu(needsContinuousCpuWake, screenOn, idle)
+        wakeLock?.let { lock ->
+            if (hold && !lock.isHeld) lock.acquire(WAKELOCK_TIMEOUT_MS)
+            else if (!hold && lock.isHeld) lock.release()
+        }
+        // Modern LOW_LATENCY cannot preserve screen-off Wi-Fi. Preserve the older
+        // HIGH_PERF DNS path; don't hold a Wi-Fi lock on a cellular-only connection.
+        val physical = defaultPhysicalNetwork()
+        val caps = physical?.let { connectivityManager?.getNetworkCapabilities(it) }
+        val wifi = caps == null || caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val keepWifi = wifi && (screenOn || needsContinuousCpuWake && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+        wifiLock?.let { lock ->
+            if (keepWifi && !lock.isHeld) lock.acquire()
+            else if (!keepWifi && lock.isHeld) lock.release()
+        }
+        app.slipnet.util.ConnectionDiagnostics.power(serviceSessionId, screenOn, wakeLock?.isHeld == true,
+            wifiLock?.isHeld == true, needsContinuousCpuWake)
+    }
+
     /** Release WakeLock and WifiLock if held. */
-    private fun releaseLocks() {
+    @Synchronized private fun releaseLocks() {
+        app.slipnet.util.ConnectionDiagnostics.power(serviceSessionId, false, false, false, needsContinuousCpuWake)
+        underlyingDefaultDeclared = false
         wakeLockRenewJob?.cancel()
         wakeLockRenewJob = null
         wakeLock?.let {
@@ -6110,10 +6072,12 @@ class SlipNetVpnService : VpnService() {
         wakeLockRenewJob = runtimeScope.launch(Dispatchers.IO) {
             while (isActive) {
                 kotlinx.coroutines.delay(WAKELOCK_RENEW_INTERVAL_MS)
-                wakeLock?.let {
-                    if (it.isHeld) {
-                        it.acquire(WAKELOCK_TIMEOUT_MS)
-                        Log.d(TAG, "WakeLock renewed")
+                synchronized(this@SlipNetVpnService) {
+                    wakeLock?.let {
+                        if (it.isHeld) {
+                            it.acquire(WAKELOCK_TIMEOUT_MS)
+                            Log.d(TAG, "WakeLock renewed")
+                        }
                     }
                 }
             }

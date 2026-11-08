@@ -1755,7 +1755,7 @@ private fun ResultsResolverItem(
     e2ePhase: String? = null,
     onToggleSelection: (() -> Unit)? = null,
     /** (udpOk, tcpOk) — non-null only for BOTH-mode scans. */
-    transportSupport: Pair<Boolean, Boolean>? = null
+    transportSupport: app.slipnet.domain.model.ResolverTransportSupport? = null
 ) {
     val isDisabled = isLimitReached && !isSelected
     val canInteract = showSelection && result.status == ResolverStatus.WORKING && onToggleSelection != null && !isDisabled
@@ -1816,8 +1816,10 @@ private fun ResultsResolverItem(
                     }
 
                     transportSupport?.let { (udpOk, tcpOk) ->
-                        if (udpOk) TransportBadge("UDP")
-                        if (tcpOk) TransportBadge("TCP")
+                        if (udpOk == true) TransportBadge("UDP")
+                        else if (udpOk == null) TransportBadge("UDP ?")
+                        if (tcpOk == true) TransportBadge("TCP")
+                        else if (tcpOk == null) TransportBadge("TCP ?")
                     }
 
                     result.responseTimeMs?.let { ms ->
@@ -1843,7 +1845,7 @@ private fun ResultsResolverItem(
 
                     result.tunnelTestResult?.let { tunnelResult ->
                         Text(
-                            text = "${tunnelResult.score}/${tunnelResult.maxScore}",
+                            text = if (tunnelResult.diagnosticsComplete) "${tunnelResult.score}/${tunnelResult.maxScore}" else "${tunnelResult.score}/${tunnelResult.completedChecks} …",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = when {
@@ -1857,7 +1859,7 @@ private fun ResultsResolverItem(
 
                 result.tunnelTestResult?.let { tunnelResult ->
                     Text(
-                        text = tunnelResult.details,
+                        text = if (tunnelResult.diagnosticsComplete) tunnelResult.details else stringResource(app.slipnet.R.string.scanner_diagnostics_partial),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontFamily = FontFamily.Monospace
                         ),

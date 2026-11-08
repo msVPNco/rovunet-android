@@ -5,4 +5,5 @@
     <string name="widget_compact_description">Compact VPN toggle button (1x1)</string>
     <string name="preview_release_channel">Include public preview releases</string>
     <string name="private_test_channel">Private device test · updates are delivered separately</string>
+
 </resources>

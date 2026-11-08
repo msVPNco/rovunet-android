@@ -10,7 +10,7 @@ data class ScanServiceState(
     val workingCount: Int = 0,
     /** Working scan results preserved across activity recreation. */
     val results: List<ResolverScanResult> = emptyList(),
-    val hostTransportSupport: Map<String, Pair<Boolean, Boolean>> = emptyMap(),
+    val hostTransportSupport: Map<String, app.slipnet.domain.model.ResolverTransportSupport> = emptyMap(),
     /** Profile ID for restoring E2E test context after activity recreation. */
     val profileId: Long? = null,
     // E2E progress (standalone advanced-mode E2E)

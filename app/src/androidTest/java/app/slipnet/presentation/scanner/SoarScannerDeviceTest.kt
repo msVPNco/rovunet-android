@@ -146,7 +146,9 @@ class SoarScannerDeviceTest {
     }
 
     @Test fun prismRepeatsRealSoarHandshakesAndRejectsOrdinaryDnsReplies() = runBlocking {
-        assertEquals(2, SoarResolverProbe.verify(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 2, 2))
+        val verified = SoarResolverProbe.verifyDetailed(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 5, 2)
+        assertEquals(2, verified.passed)
+        assertEquals("Five configured probes must stop after two proven handshakes", 2, verified.attempted)
         assertEquals(0, SoarResolverProbe.verify(host, fixture.getInt("fakeTcpPort"), profile(), DnsTransport.TCP, 1000, 1, 1))
         assertTrue(SoarResolverProbe.test(host, fixture.getInt("udpPort"), profile().copy(dnsttPublicKey = fixture.getString("publicKeyHex")),
             DnsTransport.UDP, 6000, "", false).success)

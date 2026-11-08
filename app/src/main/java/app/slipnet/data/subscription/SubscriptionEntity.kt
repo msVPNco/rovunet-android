@@ -19,6 +19,6 @@ interface SubscriptionDao {
     @Query("SELECT * FROM subscriptions ORDER BY name") fun observe(): Flow<List<SubscriptionEntity>>
     @Query("SELECT * FROM subscriptions ORDER BY name") suspend fun all(): List<SubscriptionEntity>
     @Query("SELECT * FROM subscriptions WHERE id = :id") suspend fun get(id: String): SubscriptionEntity?
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(row: SubscriptionEntity)
+    @Upsert suspend fun put(row: SubscriptionEntity)
     @Query("DELETE FROM subscriptions WHERE id = :id") suspend fun delete(id: String)
 }

@@ -6,16 +6,22 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class],
-    version = 48,
+    entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class, app.slipnet.data.subscription.AccountStatusEntity::class],
+    version = 49,
     exportSchema = true
 )
 abstract class SlipNetDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun subscriptionDao(): app.slipnet.data.subscription.SubscriptionDao
+    abstract fun accountStatusDao(): app.slipnet.data.subscription.AccountStatusDao
     abstract fun chainDao(): ChainDao
 
     companion object {
+        val MIGRATION_48_49 = object : Migration(48, 49) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS account_status (subscriptionId TEXT NOT NULL PRIMARY KEY, sourceFingerprint TEXT NOT NULL, payload TEXT NOT NULL, checkedAt INTEGER NOT NULL, checkedElapsed INTEGER NOT NULL, serverTime INTEGER NOT NULL, error TEXT NOT NULL, FOREIGN KEY(subscriptionId) REFERENCES subscriptions(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }
         val MIGRATION_47_48 = object : Migration(47, 48) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS subscriptions (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, sourceEnvelope TEXT NOT NULL, membersJson TEXT NOT NULL, lastSuccess INTEGER NOT NULL, lastError TEXT NOT NULL, autoUpdate INTEGER NOT NULL)")

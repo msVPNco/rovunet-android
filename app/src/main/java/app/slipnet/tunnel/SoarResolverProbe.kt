@@ -5,10 +5,14 @@ import app.slipnet.domain.model.*
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.ProxySOCKS5
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.net.ServerSocket
 
 /** Each resolver owns an independent native client; never touches the live VPN's SoarBridge. */
 internal object SoarResolverProbe {
+    // One cap for actual native clients, including both UDP/TCP and all scan phases.
+    private val nativeSlots = Semaphore(8)
     suspend fun test(host: String, port: Int, profile: ServerProfile, transport: DnsTransport,
                      timeoutMs: Long, testUrl: String, fullVerification: Boolean,
                      onPhase: (String) -> Unit = {}): E2eTestResult = withContext(Dispatchers.IO) {
@@ -16,11 +20,13 @@ internal object SoarResolverProbe {
         if (profile.needsCredentials || profile.isExpired) return@withContext E2eTestResult(errorMessage = "Profile unavailable")
         var client: soar.SoarClient? = null
         try {
-            val result = withTimeoutOrNull(timeoutMs) {
+            val result = withTimeoutOrNull(timeoutMs) { nativeSlots.withPermit { try {
                 val listenPort = if (fullVerification) ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { it.localPort } else 0
                 val address = if (host.contains(':')) "[$host]:$port" else "$host:$port"
                 val instance = soar.Soar.newClient(address, profile.domain, profile.dnsttPublicKey, "127.0.0.1:$listenPort")
                 client = instance
+                app.slipnet.util.ScanDiagnostics.nativeStarted()
+                app.slipnet.util.ScanDiagnostics.probe()
                 // Test precisely this resolver and this transport. Discovery/fallback could certify a different path.
                 instance.setDiscovery(false, "")
                 instance.setTCPMode(if (transport == DnsTransport.TCP) SoarConfig.TCP_ONLY else SoarConfig.TCP_OFF)
@@ -39,7 +45,14 @@ internal object SoarResolverProbe {
                     http(listenPort, testUrl, remaining)
                 }
                 checked.copy(tunnelSetupMs = setup, totalMs = SystemClock.elapsedRealtime() - started)
-            }
+            } finally {
+                if (client != null) {
+                    try { client?.stop() } finally {
+                        client = null
+                        app.slipnet.util.ScanDiagnostics.nativeFinished()
+                    }
+                }
+            } } }
             result ?: E2eTestResult(totalMs = SystemClock.elapsedRealtime() - started,
                 errorMessage = "Soar handshake or verification timed out", phase = E2eTestPhase.TUNNEL_SETUP)
         } catch (e: CancellationException) { throw e
@@ -54,17 +67,23 @@ internal object SoarResolverProbe {
 
     /** Repeated real Soar handshakes; DNSTT Prism's HMAC packets are not a Soar protocol. */
     suspend fun verify(host: String, port: Int, profile: ServerProfile, transport: DnsTransport,
-                       timeoutMs: Long, probeCount: Int, threshold: Int): Int {
+                       timeoutMs: Long, probeCount: Int, threshold: Int): Int =
+        verifyDetailed(host, port, profile, transport, timeoutMs, probeCount, threshold).passed
+
+    suspend fun verifyDetailed(host: String, port: Int, profile: ServerProfile, transport: DnsTransport,
+                       timeoutMs: Long, probeCount: Int, threshold: Int): ProbeVerification {
         val started = SystemClock.elapsedRealtime()
         var passed = 0
+        var attempted = 0
         for (index in 0 until probeCount) {
             currentCoroutineContext().ensureActive()
             val left = timeoutMs - (SystemClock.elapsedRealtime() - started)
-            if (left <= 0 || passed + probeCount - index < threshold) break
+            if (passed >= threshold || left <= 0 || passed + probeCount - index < threshold) break
             val allowance = minOf(left, (timeoutMs / threshold.coerceAtLeast(1)).coerceAtLeast(200L))
+            attempted++
             if (test(host, port, profile, transport, allowance, "", false).success) passed++
         }
-        return passed
+        return ProbeVerification(passed, attempted)
     }
 
     private suspend fun http(port: Int, url: String, timeoutMs: Long): E2eTestResult {
