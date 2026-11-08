@@ -6,7 +6,7 @@ Target: 0.3.0-alpha15.4, versionCode 31. A source/build record is not a public r
 
 Explicit source ZIPs expand available pinned trees and record revisions in SOURCE-MANIFEST.json. Light archives omit tracked precompiled .so/.aar files; larger archives retain them. Generated dependencies and signing material are not a self-contained build environment. One original dnstt-mobile tree remains unavailable; no other revision is substituted. Automatic GitHub source archives do not expand submodules.
 
-Use Linux, JDK 21, SDK platform 36, build tools, NDK 29.0.14206865, Python 3 and module-compatible Go/Rust tooling. The repository Gradle wrapper is authoritative. Prepare pinned dependencies following [core setup](../VEYRA-CORE.md):
+Use Linux, JDK 21, SDK platform 36, build tools, NDK 29.0.14206865, Python 3 and module-compatible Go/Rust tooling. The repository Gradle wrapper is authoritative. Prepare pinned dependencies following [core setup](history/VEYRA-CORE.md):
 
 ```sh
 python3 tools/veyra/prepare-native.py
