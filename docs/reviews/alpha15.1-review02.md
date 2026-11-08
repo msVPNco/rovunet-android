@@ -4,6 +4,8 @@ The owner reported that review01 only translated PRISM help, leaving the DNS
 scanner largely English. It was not accepted for publication. This second
 review addresses the scanner and results as complete workflows, not one label.
 
+<div dir="rtl">
+
 ## فارسی
 
 - عنوان، راهنما، حالت‌های اسکن، تنظیمات، شمارنده‌ها، بازه‌ها، پنجره‌های ادامه،
@@ -17,6 +19,8 @@ review addresses the scanner and results as complete workflows, not one label.
 - سابسکریپشن و QR کل مجموعه هنوز پیاده نشده‌اند. گزارش آنلاین خطا اضافه نشد.
 - امضا و package ثابت‌اند؛ روی نسخهٔ عمومی آلفا۱۵ یا بستهٔ بررسی کد ۲۷ نصب شود.
   برنامه را حذف نکنید. انتشار عمومی فقط بعد از تأیید مالک است.
+
+</div>
 
 ## English
 

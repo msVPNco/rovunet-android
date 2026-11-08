@@ -4,6 +4,8 @@ Public channel remains alpha15/code 26. This review targets versionCode 27,
 package `app.veyra.client`, with the existing production certificate. Deliver
 the signed Full APK privately to the owner; do not publish it before approval.
 
+<div dir="rtl">
+
 ## فارسی
 
 - نام نمایشی Lite و معرفی هسته به Rovunet اصلاح شد.
@@ -14,6 +16,8 @@ the signed Full APK privately to the owner; do not publish it before approval.
   نصب این بررسی دستی است و مسیر اعلان انتشار عمومی هنوز باید حل شود.
 - تغییرات شبکه، MTU، هسته‌ها و توقف native در این بسته انجام نشده‌اند؛
   مشکل توقف طولانی یا SOCKS بدون داده با این تغییرات رفع‌شده اعلام نمی‌شود.
+
+</div>
 
 ## English
 

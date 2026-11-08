@@ -5,6 +5,8 @@ This combines the remaining owner-requested work. The owner explicitly chose
 `app.veyra.client` with the fixed production certificate. No public release is
 approved by compilation, emulator testing or delivery.
 
+<div dir="rtl">
+
 ## فارسی
 
 - ترجمه و کنترل متن خام به تمام صفحات رابط، خروجی، قفل کانفیگ، زنجیره‌ها و
@@ -30,6 +32,8 @@ approved by compilation, emulator testing or delivery.
 - گزینهٔ قدیمی پاک‌سازی مخرب دیتابیس ۱ تا ۴ حذف شد. دیتابیس‌های بسیار قدیمی
   نیازمند مسیر مهاجرت/پشتیبان سازگارند؛ داده به‌جای حذف حفظ می‌شود.
 - سرویس گزارش خطای آنلاین، تغییر پنل یا تأیید بی‌صدای هویت سرور اضافه نشده است.
+
+</div>
 
 ## English
 
