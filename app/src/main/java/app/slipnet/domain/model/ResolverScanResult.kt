@@ -26,7 +26,9 @@ data class DnsTunnelTestResult(
     /** Maximum EDNS payload size that works (512, 900, or 1232). 0 = not tested or failed. */
     val ednsMaxPayload: Int = 0,
     /** True when resolver returns proper NXDOMAIN for non-existent domains (no hijacking). */
-    val nxdomainCorrect: Boolean = false
+    val nxdomainCorrect: Boolean = false,
+    val diagnosticsComplete: Boolean = true,
+    val completedChecks: Int = 6
 ) {
     val score: Int
         get() = listOf(nsSupport, txtSupport, randomSubdomain, tunnelRealism, edns0Support, nxdomainCorrect).count { it }
@@ -72,7 +74,8 @@ data class E2eTestResult(
     val httpStatusCode: Int = 0,
     val success: Boolean = false,
     val errorMessage: String? = null,
-    val phase: E2eTestPhase = E2eTestPhase.COMPLETED
+    val phase: E2eTestPhase = E2eTestPhase.COMPLETED,
+    val pendingTransport: DnsTransport? = null
 )
 
 /**
@@ -129,7 +132,9 @@ data class ResolverScanResult(
      * Whether the TCP probe succeeded. Only populated when the scanner ran in BOTH mode.
      * Null for single-transport scans.
      */
-    val tcpWorking: Boolean? = null
+    val tcpWorking: Boolean? = null,
+    /** An unfinished second transport is not a negative result. */
+    val pendingTransport: DnsTransport? = null
 )
 
 /**

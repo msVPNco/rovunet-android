@@ -43,6 +43,9 @@ class SubscriptionRepository @Inject constructor(
     private val mutex = Mutex()
     private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
         .connectTimeout(10, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS).callTimeout(25, TimeUnit.SECONDS).build()
+    private val accountStatusStore by lazy { AccountStatusStore(db, this) }
+    fun observeAccountStatus(): Flow<List<AccountStatusEntity>> = accountStatusStore.observe()
+    suspend fun refreshAccountStatuses(force: Boolean = false) = accountStatusStore.refresh(force)
     val connectionState get() = connection.connectionState
     fun observe(): Flow<List<SubscriptionEntity>> = db.subscriptionDao().observe()
     private fun hash(value: String) = MessageDigest.getInstance("SHA-256").digest(value.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -57,8 +60,11 @@ class SubscriptionRepository @Inject constructor(
         val normalized = url(address).toString()
         db.subscriptionDao().all().firstOrNull { runCatching { url(sourceUrl(it)).toString() == normalized }.getOrDefault(false) }
     }
-    private data class Download(val code: Int, val location: String?, val text: String)
-    private suspend fun fetch(address: String): String {
+    internal data class Download(val code: Int, val location: String?, val text: String,
+        val serverTime: Long = 0, val receivedAt: Long = 0)
+    private suspend fun fetch(address: String): String = fetchDocument(address, 2 * 1024 * 1024, false).text
+    internal suspend fun fetchAccountStatus(address: String): Download = fetchDocument(address, 65_536, true)
+    private suspend fun fetchDocument(address: String, maxBytes: Int, account: Boolean): Download {
         var target = url(address)
         val state = connection.connectionState.value
         val transport = if (state is app.slipnet.domain.model.ConnectionState.Connected) {
@@ -89,29 +95,33 @@ class SubscriptionRepository @Inject constructor(
                     override fun onResponse(call: Call, response: Response) {
                         val result = runCatching { response.use {
                             if (it.code in 300..399) Download(it.code, it.header("Location"), "")
+                            else if (account && it.code == 404) Download(404, null, "")
                             else {
                                 require(it.isSuccessful) { "DOWNLOAD_FAILED" }
                                 require(!it.header("Content-Type").orEmpty().contains("text/html", ignoreCase = true)) { "INVALID_FEED" }
                                 val body = it.body ?: error("DOWNLOAD_FAILED")
-                                require(body.contentLength() <= 2 * 1024 * 1024) { "FEED_TOO_LARGE" }
+                                require(body.contentLength() <= maxBytes) { "FEED_TOO_LARGE" }
                                 val text = body.byteStream().use { input ->
                                     val out = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
                                     while (true) {
                                         if (!continuation.isActive) throw CancellationException()
                                         val n = input.read(buffer); if (n < 0) break
-                                        require(out.size() + n <= 2 * 1024 * 1024) { "FEED_TOO_LARGE" }
+                                        require(out.size() + n <= maxBytes) { "FEED_TOO_LARGE" }
                                         out.write(buffer, 0, n)
                                     }
                                     String(out.toByteArray(), Charsets.UTF_8)
                                 }
-                                Download(it.code, null, text)
+                                val serverTime = runCatching {
+                                    java.time.ZonedDateTime.parse(it.header("Date"), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
+                                }.getOrDefault(0L)
+                                Download(it.code, null, text, serverTime, it.receivedResponseAtMillis)
                             }
                         } }
                         if (continuation.isActive) continuation.resumeWith(result)
                     }
                 })
             }
-            if (result.code !in 300..399) return result.text
+            if (result.code !in 300..399) return result
             require(redirect < 3) { "DOWNLOAD_FAILED" }
             target = url(target.resolve(result.location ?: error("DOWNLOAD_FAILED"))?.toString() ?: error("DOWNLOAD_FAILED"))
         }

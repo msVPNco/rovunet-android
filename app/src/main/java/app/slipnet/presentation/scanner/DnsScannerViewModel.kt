@@ -1,5 +1,11 @@
 package app.slipnet.presentation.scanner
 
+import app.slipnet.domain.model.ProbeVerification
+import app.slipnet.domain.model.ResolverTransportSupport
+import app.slipnet.util.scanWorkers
+import app.slipnet.util.scanTransports
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
@@ -121,7 +127,7 @@ data class DnsScannerUiState(
      * Empty outside BOTH mode. Used to render per-row badges and to recommend a
      * transport when selected resolvers are applied to a profile.
      */
-    val hostTransportSupport: Map<String, Pair<Boolean, Boolean>> = emptyMap(),
+    val hostTransportSupport: Map<String, app.slipnet.domain.model.ResolverTransportSupport> = emptyMap(),
     // Saved DNS pool (explicitly saved by user from results screen)
     val savedPoolLabel: String? = null,
     val savedPoolSize: Int = 0,
@@ -313,6 +319,12 @@ enum class ScanTransportMode(val displayName: String) {
     TCP("TCP"),
     BOTH("Both");
 
+    fun transports(): List<DnsTransport> = when (this) {
+        UDP -> listOf(DnsTransport.UDP)
+        TCP -> listOf(DnsTransport.TCP)
+        BOTH -> listOf(DnsTransport.UDP, DnsTransport.TCP)
+    }
+
     companion object {
         fun fromName(value: String?): ScanTransportMode = when (value) {
             "TCP" -> TCP
@@ -348,7 +360,7 @@ private data class SavedScanSession(
     val prismPubkey: String? = null,
     val scanIdentity: String? = null,
     val scanTransport: String? = null,
-    val transportSupport: Map<String, Pair<Boolean, Boolean>>? = null
+    val transportSupport: Map<String, app.slipnet.domain.model.ResolverTransportSupport>? = null
 )
 
 private data class SavedResult(
@@ -2245,10 +2257,9 @@ class DnsScannerViewModel @Inject constructor(
     }
 
     /**
-     * Run scanResolvers honouring [mode]. For BOTH, runs UDP first; hosts that
-     * don't return WORKING are retried over TCP. Each host's result is passed
-     * to [collector] exactly once (UDP result if WORKING, otherwise the TCP
-     * retry result) so downstream counters are not double-incremented.
+     * Publish the first working transport without waiting for the other path.
+     * The second result updates transport support; each host reaches [collector]
+     * once, so counters remain per resolver rather than per transport.
      */
     private suspend fun runScanResolvers(
         hosts: List<String>,
@@ -2261,78 +2272,31 @@ class DnsScannerViewModel @Inject constructor(
         collector: suspend (ResolverScanResult) -> Unit
     ) {
         val scanOwner = scanRun
-        when (mode) {
-            ScanTransportMode.UDP, ScanTransportMode.TCP -> {
-                val isTcp = mode == ScanTransportMode.TCP
-                val t = if (isTcp) DnsTransport.TCP else DnsTransport.UDP
-                scannerRepository.scanResolvers(
-                    hosts, port, testDomain, timeoutMs, concurrency, querySize, t
-                ).collect { result ->
-                    // Tag WORKING hits with the single tested transport so the UI can render a badge.
-                    if (result.status == ResolverStatus.WORKING) {
-                        val pair = if (isTcp) false to true else true to false
-                        _uiState.update { s ->
-                            s.copy(hostTransportSupport = s.hostTransportSupport + (result.host to pair))
-                        }
-                        scanOwner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (result.host to pair)) }
-                    }
-                    collector(result)
+        val slots = Semaphore(concurrency.coerceIn(1, 100))
+        val collectorLock = Mutex()
+        scanWorkers(hosts, concurrency) { host ->
+            var emitted = false
+            scanTransports(mode.transports(), onProgress = { outcomes ->
+                if (scanRun !== scanOwner) throw kotlinx.coroutines.CancellationException("Scan replaced")
+                val support = ResolverTransportSupport(
+                    outcomes[DnsTransport.UDP]?.let { it.status == ResolverStatus.WORKING },
+                    outcomes[DnsTransport.TCP]?.let { it.status == ResolverStatus.WORKING })
+                _uiState.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                scanOwner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                val good = outcomes.values.firstOrNull { it.status == ResolverStatus.WORKING }
+                if (!emitted && (good != null || outcomes.size == mode.transports().size)) {
+                    emitted = true
+                    val result = good ?: outcomes.values.first()
+                    app.slipnet.util.ScanDiagnostics.result()
+                    collectorLock.withLock { collector(result.copy(udpWorking = support.first, tcpWorking = support.second)) }
                 }
-            }
-            ScanTransportMode.BOTH -> coroutineScope {
-                val udpMap = java.util.concurrent.ConcurrentHashMap<String, ResolverScanResult>()
-                val tcpMap = java.util.concurrent.ConcurrentHashMap<String, ResolverScanResult>()
-                val emitted = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-                val collectorLock = Mutex()
-
-                suspend fun maybeEmit(host: String) {
-                    val udp = udpMap[host] ?: return
-                    val tcp = tcpMap[host] ?: return
-                    if (!emitted.add(host)) return
-                    val udpOk = udp.status == ResolverStatus.WORKING
-                    val tcpOk = tcp.status == ResolverStatus.WORKING
-                    // Record per-host transport support so the UI can render badges and
-                    // the profile-apply flow can recommend a transport.
-                    _uiState.update { s ->
-                        s.copy(hostTransportSupport = s.hostTransportSupport + (host to (udpOk to tcpOk)))
-                    }
-                    scanOwner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to (udpOk to tcpOk))) }
-                    // Prefer the WORKING result as the carrier (for responseTimeMs, tunnelTestResult, etc.);
-                    // UDP wins the tiebreak so timing is consistent with single-transport UDP scans.
-                    val base = when {
-                        udpOk -> udp
-                        tcpOk -> tcp
-                        else -> udp
-                    }
-                    collectorLock.withLock { collector(base) }
-                }
-
-                val udpJob = launch {
-                    scannerRepository.scanResolvers(
-                        hosts, port, testDomain, timeoutMs, concurrency, querySize, DnsTransport.UDP
-                    ).collect { r ->
-                        udpMap[r.host] = r
-                        maybeEmit(r.host)
-                    }
-                }
-                val tcpJob = launch {
-                    scannerRepository.scanResolvers(
-                        hosts, port, testDomain, timeoutMs, concurrency, querySize, DnsTransport.TCP
-                    ).collect { r ->
-                        tcpMap[r.host] = r
-                        maybeEmit(r.host)
-                    }
-                }
-                udpJob.join()
-                tcpJob.join()
+            }) { transport ->
+                slots.withPermit { scannerRepository.scanResolver(host, port, testDomain, timeoutMs, querySize, transport) }
             }
         }
     }
 
-    /**
-     * Wrapper for [ResolverScannerRepository.isResolverAlive] that honours [mode].
-     * BOTH probes UDP and TCP concurrently and returns true if either succeeds.
-     */
+    /** Optional reachability check; never used to certify a Soar handshake. */
     private suspend fun isResolverAliveWithMode(
         host: String, port: Int, testDomain: String, timeoutMs: Long, mode: ScanTransportMode
     ): Boolean = when (mode) {
@@ -2349,46 +2313,27 @@ class DnsScannerViewModel @Inject constructor(
      * Prism verification outcome. [passedProbes] is the best count across probed transports.
      * [udpOk] / [tcpOk] record which transports passed the threshold — non-null only in BOTH mode.
      */
-    private data class PrismVerifyOutcome(
-        val passedProbes: Int,
-        val udpOk: Boolean? = null,
-        val tcpOk: Boolean? = null
-    )
+    private data class PrismVerifyOutcome(val passedProbes: Int, val attemptedProbes: Int?,
+        val udpOk: Boolean? = null, val tcpOk: Boolean? = null)
 
-    /**
-     * Wrapper for [ResolverScannerRepository.verifyResolver] that honours [mode].
-     * BOTH probes UDP and TCP concurrently and reports each transport's result separately.
-     */
-    private suspend fun verifyResolverWithMode(
-        host: String, port: Int, testDomain: String, pubkey: ByteArray, timeoutMs: Long,
-        probeCount: Int, passThreshold: Int, responseSize: Int, mode: ScanTransportMode, soarProfile: ServerProfile? = null
-    ): PrismVerifyOutcome {
-        suspend fun verify(transport: DnsTransport): Int = if (soarProfile != null)
-            scannerRepository.verifySoarResolver(host, port, soarProfile, timeoutMs, probeCount, passThreshold, transport)
-        else scannerRepository.verifyResolver(host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, transport)
-        return when (mode) {
-        ScanTransportMode.UDP -> PrismVerifyOutcome(
-            verify(DnsTransport.UDP)
-        )
-        ScanTransportMode.TCP -> PrismVerifyOutcome(
-            verify(DnsTransport.TCP)
-        )
-        ScanTransportMode.BOTH -> coroutineScope {
-            val udpD = async {
-                verify(DnsTransport.UDP)
-            }
-            val tcpD = async {
-                verify(DnsTransport.TCP)
-            }
-            val udp = udpD.await()
-            val tcp = tcpD.await()
-            PrismVerifyOutcome(
-                passedProbes = maxOf(udp, tcp),
-                udpOk = udp >= passThreshold,
-                tcpOk = tcp >= passThreshold
-            )
+    private suspend fun verifyResolverWithMode(host: String, port: Int, testDomain: String, pubkey: ByteArray,
+        timeoutMs: Long, probeCount: Int, passThreshold: Int, responseSize: Int, mode: ScanTransportMode,
+        soarProfile: ServerProfile? = null, slots: Semaphore,
+        onProgress: suspend (PrismVerifyOutcome) -> Unit): PrismVerifyOutcome {
+        fun outcome(results: Map<DnsTransport, ProbeVerification>): PrismVerifyOutcome {
+            val best = results.values.sortedWith(compareByDescending<ProbeVerification> { it.passed }
+                .thenBy { it.attempted ?: Int.MAX_VALUE }).first()
+            return PrismVerifyOutcome(best.passed, best.attempted,
+                results[DnsTransport.UDP]?.let { it.passed >= passThreshold },
+                results[DnsTransport.TCP]?.let { it.passed >= passThreshold })
         }
-    }
+        val results = scanTransports(mode.transports(), onProgress = { onProgress(outcome(it)) }) { transport ->
+            slots.withPermit {
+                if (soarProfile != null) scannerRepository.verifySoarResolverDetailed(host, port, soarProfile, timeoutMs, probeCount, passThreshold, transport)
+                else scannerRepository.verifyResolverDetailed(host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, transport)
+            }
+        }
+        return outcome(results)
     }
 
     private suspend fun detectTransparentProxy(testDomain: String) {
@@ -2796,121 +2741,71 @@ class DnsScannerViewModel @Inject constructor(
     ) {
         val session = scanRun
         session.launch(ScanPhase.DNS) {
-            val workingResults = java.util.concurrent.CopyOnWriteArrayList<ResolverScanResult>()
-            existingResults.values.filter { it.prismVerified == true }.let { workingResults.addAll(it) }
+            val workingResults = java.util.concurrent.ConcurrentHashMap<String, ResolverScanResult>()
+            existingResults.values.filter { it.prismVerified == true }.forEach { workingResults[it.host] = it }
             val scannedCount = AtomicInteger(startScannedCount)
             val workingCount = AtomicInteger(startWorkingCount)
             val timeoutCount = AtomicInteger(0)
             val errorCount = AtomicInteger(0)
-            val uiUpdateCounter = AtomicInteger(0)
-            var lastEmitTimeMs = 0L
-
-            fun emitState(scanning: Boolean, force: Boolean = false) {
-                // If the job was cancelled (stop pressed), never set isScanning back to true
-                val actuallyScanning = scanning && isActive
-                if (!force) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastEmitTimeMs < 500L) return
-                    lastEmitTimeMs = now
-                }
-                val currentResults = workingResults.toList()
-                _uiState.update { s ->
-                    // Preserve E2E data that onResult may have written
-                    val existingE2e = s.scannerState.results.associateBy({ it.host }, { it.e2eTestResult })
-                    val mergedResults = if (existingE2e.any { it.value != null }) {
-                        currentResults.map { r -> existingE2e[r.host]?.let { r.copy(e2eTestResult = it) } ?: r }
-                    } else currentResults
-                    s.copy(scannerState = ScannerState(
-                        isScanning = actuallyScanning,
-                        totalCount = allHosts.size,
-                        scannedCount = scannedCount.get(),
-                        workingCount = workingCount.get(),
-                        timeoutCount = timeoutCount.get(),
-                        errorCount = errorCount.get(),
-                        results = mergedResults
-                    ))
-                }
-                session.update { it.copy(
-                    isScanning = actuallyScanning,
-                    scannedCount = scannedCount.get(),
-                    totalCount = allHosts.size,
-                    workingCount = workingCount.get(),
-                    results = _uiState.value.scannerState.results
-                ) }
+            val emitLock = Any()
+            var lastEmit = 0L
+            fun emitState(scanning: Boolean, force: Boolean = false) = synchronized(emitLock) {
+                if (scanRun !== session) return@synchronized
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (!force && now - lastEmit < 500) return@synchronized
+                lastEmit = now
+                val results = workingResults.values.toList()
+                _uiState.update { state -> state.copy(scannerState = ScannerState(
+                    isScanning = scanning && isActive, totalCount = allHosts.size,
+                    scannedCount = scannedCount.get(), workingCount = workingCount.get(),
+                    timeoutCount = timeoutCount.get(), errorCount = errorCount.get(), results = results)) }
+                session.update { it.copy(isScanning = scanning && isActive, totalCount = allHosts.size,
+                    scannedCount = scannedCount.get(), workingCount = workingCount.get(), results = results) }
                 periodicSaveIfNeeded()
             }
-
-            // Per-resolver: optional alive check then prism probes, all in one pass.
-            val prefilterDomain = testDomain
             val transport = _uiState.value.scanTransport
             val soarProfile = _uiState.value.profile?.takeIf { _uiState.value.isSoarProfile }
-            val semaphore = kotlinx.coroutines.sync.Semaphore(if (soarProfile != null) concurrency.coerceAtMost(8) else concurrency)
-            val jobs = hosts.map { host ->
-                launch {
-                    semaphore.acquire()
-                    try {
-                        // Optional pre-filter: skip dead IPs with a quick DNS check
-                        if (prefilter && soarProfile == null) {
-                            val pfTimeout = _uiState.value.prismPrefilterTimeoutMs.toLongOrNull()?.coerceAtLeast(200) ?: 1500L
-                            val alive = isResolverAliveWithMode(host, port, prefilterDomain, pfTimeout, transport)
-                            if (!alive) {
-                                scannedCount.incrementAndGet()
-                                timeoutCount.incrementAndGet()
-                                if (uiUpdateCounter.incrementAndGet() >= 10) { uiUpdateCounter.set(0); emitState(true) }
-                                return@launch
+            val slots = Semaphore(concurrency.coerceIn(1, 100))
+            val workers = if (soarProfile == null) concurrency else concurrency.coerceAtMost(8)
+            scanWorkers(hosts, workers) { host ->
+                var counted = false
+                var firstProvenElapsed: Long? = null
+                try {
+                    val started = android.os.SystemClock.elapsedRealtime()
+                    if (prefilter && soarProfile == null && !isResolverAliveWithMode(host, port, testDomain,
+                        _uiState.value.prismPrefilterTimeoutMs.toLongOrNull()?.coerceAtLeast(200) ?: 1500L, transport)) {
+                        scannedCount.incrementAndGet(); timeoutCount.incrementAndGet(); counted = true
+                    } else {
+                        verifyResolverWithMode(host, port, testDomain, pubkey, timeout,
+                            probeCount, passThreshold, responseSize, transport, soarProfile, slots) { progress ->
+                            if (scanRun !== session) throw kotlinx.coroutines.CancellationException("Scan replaced")
+                            val support = ResolverTransportSupport(progress.udpOk, progress.tcpOk)
+                            _uiState.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                            session.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                            if (progress.passedProbes >= passThreshold) {
+                                if (firstProvenElapsed == null) firstProvenElapsed = android.os.SystemClock.elapsedRealtime() - started
+                                val first = !counted
+                                if (first) { counted = true; scannedCount.incrementAndGet(); workingCount.incrementAndGet() }
+                                workingResults[host] = ResolverScanResult(host, port, ResolverStatus.WORKING,
+                                    responseTimeMs = firstProvenElapsed,
+                                    prismVerified = true, prismPassedProbes = progress.passedProbes,
+                                    prismTotalProbes = progress.attemptedProbes,
+                                    udpWorking = progress.udpOk, tcpWorking = progress.tcpOk,
+                                    pendingTransport = transport.transports().firstOrNull { if (it == DnsTransport.UDP) progress.udpOk == null else progress.tcpOk == null })
+                                app.slipnet.util.ScanDiagnostics.result()
+                                emitState(true, force = first)
                             }
                         }
-
-                        val start = System.currentTimeMillis()
-                        val probeOutcome = if (soarProfile != null) {
-                            verifyResolverWithMode(host, port, testDomain, pubkey, timeout, probeCount, passThreshold, responseSize, transport, soarProfile)
-                        } else withTimeoutOrNull(timeout) {
-                            verifyResolverWithMode(host, port, testDomain, pubkey, timeout, probeCount, passThreshold, responseSize, transport)
+                        if (!counted) {
+                            scannedCount.incrementAndGet(); timeoutCount.incrementAndGet(); counted = true
                         }
-                        val ms = System.currentTimeMillis() - start
-                        val passedProbes = probeOutcome?.passedProbes
-                        val verified = passedProbes != null && passedProbes >= passThreshold
-                        scannedCount.incrementAndGet()
-                        if (verified) {
-                            workingCount.incrementAndGet()
-                            workingResults.add(ResolverScanResult(
-                                host = host, port = port,
-                                status = ResolverStatus.WORKING,
-                                responseTimeMs = ms,
-                                prismVerified = true,
-                                prismPassedProbes = passedProbes!!,
-                                prismTotalProbes = probeCount
-                            ))
-                            // Tag transport support for the badge. BOTH mode reports both flags;
-                            // single-transport modes tag only the transport that was actually probed.
-                            val pair: Pair<Boolean, Boolean> = when (transport) {
-                                ScanTransportMode.BOTH -> {
-                                    val udpOk = probeOutcome!!.udpOk ?: false
-                                    val tcpOk = probeOutcome.tcpOk ?: false
-                                    udpOk to tcpOk
-                                }
-                                ScanTransportMode.TCP -> false to true
-                                ScanTransportMode.UDP -> true to false
-                            }
-                            _uiState.update { s ->
-                                s.copy(hostTransportSupport = s.hostTransportSupport + (host to pair))
-                            }
-                            session.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to pair)) }
-                        } else {
-                            timeoutCount.incrementAndGet()
-                        }
-                        if (verified || uiUpdateCounter.incrementAndGet() >= 10) {
-                            uiUpdateCounter.set(0); emitState(true)
-                        }
-                    } catch (e: Exception) {
-                        if (e is kotlinx.coroutines.CancellationException) throw e
-                        scannedCount.incrementAndGet(); errorCount.incrementAndGet()
-                    } finally {
-                        semaphore.release()
                     }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+                } catch (_: Exception) {
+                    if (!counted) { scannedCount.incrementAndGet(); errorCount.incrementAndGet() }
                 }
+                emitState(true)
             }
-            jobs.forEach { it.join() }
             emitState(false, force = true)
             saveScanSessionToStore()
             clearSavedSession()
@@ -3025,31 +2920,35 @@ class DnsScannerViewModel @Inject constructor(
                             )
                         }
                     }
+                    var counted = false
+                    var passed = false
+                    suspend fun publish(result: E2eTestResult) = withContext(Dispatchers.Main) {
+                        if (scanRun !== owner) throw kotlinx.coroutines.CancellationException("Scan replaced")
+                        if (!counted) { counted = true; testedCount.incrementAndGet() }
+                        if (result.success && !passed) { passed = true; passedCount.incrementAndGet() }
+                        app.slipnet.util.ScanDiagnostics.result()
+                        onResult(host, result, testedCount.get(), passedCount.get())
+                    }
                     val e2eResult = try {
                         if (!soar) probe(profile.dnsTransport) else {
-                            val outcomes = coroutineScope {
-                                val udp = if (transport != ScanTransportMode.TCP) async { probe(DnsTransport.UDP) } else null
-                                val tcp = if (transport != ScanTransportMode.UDP) async { probe(DnsTransport.TCP) } else null
-                                (udp?.await()) to (tcp?.await())
-                            }
-                            ensureActive()
-                            if (scanRun !== owner) throw kotlinx.coroutines.CancellationException("Scan replaced")
-                            _uiState.update { s -> s.copy(hostTransportSupport = s.hostTransportSupport +
-                                (host to ((outcomes.first?.success == true) to (outcomes.second?.success == true)))) }
-                            owner.update { it.copy(hostTransportSupport = it.hostTransportSupport +
-                                (host to ((outcomes.first?.success == true) to (outcomes.second?.success == true)))) }
-                            listOfNotNull(outcomes.first, outcomes.second).filter { it.success }.minByOrNull { it.totalMs }
-                                ?: outcomes.first ?: outcomes.second ?: E2eTestResult(errorMessage = "No resolver transport selected")
+                            val outcomes = scanTransports(transport.transports(), onProgress = { ready ->
+                                ensureActive()
+                                if (scanRun !== owner) throw kotlinx.coroutines.CancellationException("Scan replaced")
+                                val support = ResolverTransportSupport(ready[DnsTransport.UDP]?.success, ready[DnsTransport.TCP]?.success)
+                                _uiState.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                                owner.update { it.copy(hostTransportSupport = it.hostTransportSupport + (host to support)) }
+                                ready.values.filter { it.success }.minByOrNull { it.totalMs }?.let { good ->
+                                    publish(good.copy(pendingTransport = transport.transports().firstOrNull { it !in ready }))
+                                }
+                            }) { probe(it) }
+                            outcomes.values.filter { it.success }.minByOrNull { it.totalMs }
+                                ?: outcomes.values.firstOrNull() ?: E2eTestResult(errorMessage = "No resolver transport selected")
                         }
-                    } catch (e: kotlinx.coroutines.CancellationException) { throw e
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
                     } catch (_: Exception) { E2eTestResult(errorMessage = "Resolver verification failed") }
-
-                    val newTested = testedCount.incrementAndGet()
-                    val newPassed = if (e2eResult.success) passedCount.incrementAndGet() else passedCount.get()
+                    publish(e2eResult)
                     onActiveChanged { it - host }
-                    withContext(Dispatchers.Main) {
-                        onResult(host, e2eResult, newTested, newPassed)
-                    }
+
                 }
             }
         }.also { workers ->
@@ -3292,10 +3191,10 @@ class DnsScannerViewModel @Inject constructor(
         if (selected.isEmpty()) return null
         val support = state.hostTransportSupport
         val entries = selected.mapNotNull { support[it] }
-        if (entries.isEmpty()) return null
-        val allUdp = entries.all { it.first }
+        if (entries.size != selected.size || entries.any { it.first != true && it.second != true }) return null
+        val allUdp = entries.all { it.first == true }
         if (allUdp) return "UDP"
-        val allTcp = entries.all { it.second }
+        val allTcp = entries.all { it.second == true }
         if (allTcp) return "TCP"
         return "MIXED"
     }

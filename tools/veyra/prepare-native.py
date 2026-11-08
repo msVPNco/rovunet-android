@@ -3,7 +3,8 @@
 Requires Go (auto toolchain enabled), JDK21, Android SDK36 and NDK29.
 Uses upstream's checked-in full Java bindings with the exact released JNI library.
 """
-import hashlib,os,pathlib,subprocess,tempfile,urllib.request,zipfile
+import hashlib,os,pathlib,subprocess,tempfile,time,zipfile
+from fetch_verified import download_verified
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 PIN='63ca2e0c1d31b89f67700c33842431f541fedd25'
 APK_URL='https://github.com/anonvector/SlipNet/releases/download/v2.5.6/SlipNet-v2.5.6-full-release-universal.apk'
@@ -12,7 +13,8 @@ SDK=pathlib.Path(os.environ['ANDROID_HOME']);NDK=pathlib.Path(os.environ.get('AN
 JAVA=pathlib.Path(os.environ['JAVA_HOME'])/'bin';GO=os.environ.get('GO','go')
 def run(args,**kw):subprocess.run([str(x) for x in args],check=True,**kw)
 with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
- temp=pathlib.Path(tmp);apk=temp/'slipnet.apk';urllib.request.urlretrieve(APK_URL,apk)
+ temp=pathlib.Path(tmp);apk=temp/'slipnet.apk'
+ download_verified(apk,APK_SHA,[APK_URL,'https://api.github.com/repos/anonvector/SlipNet/releases/assets/704535849?download=1&t='+str(int(time.time()))],200*1024*1024)
  if hashlib.sha256(apk.read_bytes()).hexdigest()!=APK_SHA:raise SystemExit('Upstream APK hash mismatch')
  with zipfile.ZipFile(apk) as z:
   for name in z.namelist():

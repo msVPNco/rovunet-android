@@ -33,7 +33,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     busy: Boolean, canConnect: Boolean, onConnect: () -> Unit, onDetails: () -> Unit,
     onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
     onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean,
-    onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null) {
+    onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null,
+    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null) {
     if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
@@ -106,6 +107,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                     }
                 }
             }
+            accountStatus?.let { AccountStatusSummary(it) }
             if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),
                 color = colors.error, style = MaterialTheme.typography.bodySmall)
             if (completed.isNotEmpty()) Text(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),

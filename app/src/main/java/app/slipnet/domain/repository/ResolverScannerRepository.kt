@@ -11,6 +11,14 @@ import kotlinx.coroutines.flow.Flow
  * Repository for DNS resolver scanning operations
  */
 interface ResolverScannerRepository {
+    suspend fun verifySoarResolverDetailed(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
+        probeCount: Int, threshold: Int, transport: DnsTransport): app.slipnet.domain.model.ProbeVerification =
+        app.slipnet.domain.model.ProbeVerification(verifySoarResolver(host, port, profile, timeoutMs, probeCount, threshold, transport), null)
+
+    suspend fun verifyResolverDetailed(host: String, port: Int, testDomain: String, pubkey: ByteArray,
+        timeoutMs: Long, probeCount: Int, threshold: Int, responseSize: Int, transport: DnsTransport): app.slipnet.domain.model.ProbeVerification =
+        app.slipnet.domain.model.ProbeVerification(verifyResolver(host, port, testDomain, pubkey, timeoutMs, probeCount, threshold, responseSize, transport), null)
+
     /** Repeated authenticated Soar exchanges; never sends the DNSTT Prism challenge to Soar. */
     suspend fun verifySoarResolver(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
                                   probeCount: Int, threshold: Int, transport: DnsTransport): Int = 0

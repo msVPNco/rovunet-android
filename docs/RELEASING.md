@@ -26,7 +26,7 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha15.4/code31 publishes the exact owner-approved review APK with SHA-256 `0c215077f346ffe5aabb81dd6c586a0059434226f7f369853537c3e98f43ae5a`, built from `78d1b14426e675c3e2361152a3f0102d31d22bfc`. CI run [42395755189](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) passed 60 JVM, 51 Debug emulator and two minified Release JNI cases. All 33 native libraries are reused from the 15.3 review. Publication documentation is separate from the application revision. Old public alpha14/alpha15 updaters require one direct-APK transition for dotted alpha revisions; see [UPGRADE](UPGRADE.md). The alpha15 paragraph below is historical.
+Current alpha16/code32 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a`, application commit `ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4`. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed 83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and two minified Release JNI cases. Publication tooling/docs are recorded separately and do not rebuild/re-sign the accepted APK. Detailed battery, overnight/Doze and physical-network handoff measurements are still outstanding. Alpha15/15.4 paragraphs below are historical.
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
@@ -36,7 +36,7 @@ For a new application version, update its version code/name, complete relevant c
 
 ## Verification and automation
 
-Code pushes, pull requests and version tags run verification and the reusable Android device gate. That gate builds private Debug/minified Release APKs and a public unsigned APK. The separate full native/signing build remains an explicit workflow_dispatch choice. Documentation-only publication commits may use [skip ci] after checking application/build/test inputs against the recorded passing source. No workflow automatically creates a public release or replaces the owner-approved signed APK.
+Code pushes, pull requests and version tags run verification and the reusable Android device gate. That gate builds private Debug/minified Release APKs and a public unsigned APK. The separate full native/signing build remains an explicit workflow_dispatch choice. Documentation-only publication commits may use [skip ci] after checking application/build/test inputs against the recorded passing source. The ordinary build workflow does not publish. The narrowly scoped alpha16 publication workflow is enabled only by the owner-approved release branch; it restores and verifies the exact accepted APK, uploads a draft, checks every asset digest, then publishes Latest. It has no signing key and cannot publish a different version or rebuild the accepted APK.
 
 For alpha11 the exact application commit has a successful verify run; the APK was built locally. Do not describe a skipped Android CI build as a successful Android CI build. A tag verification run covers the release documentation/workflow revision separately.
 
@@ -70,3 +70,7 @@ provide an in-place alpha11 upgrade. Preserve locked/device-bound profiles and r
 old installation until authorized exports/reissue are verified. See UPGRADE.md.
 
 For alpha15, the publication commit changes documentation only. Its application/build/test inputs must compare byte-identically with verified application commit `908253b42082bbd80007677f0369792d324a378f`. A documentation-only `[skip ci]` commit is recorded as not rerun, never as a passing new device run; the binary evidence remains run 42215030490. Run the local documentation/link checks before publication.
+
+## Owner-approved alpha16 publication
+
+`publish/alpha16-approved` is a one-version, explicit publication trigger after owner acceptance and merge. `tools/release/publish_approved_alpha16.py` verifies application/build/test inputs against the successful source, the pinned CI artifact, public APK copy record, production certificate and every final asset. It creates a draft, attaches the Full APK, full/light explicit sources, guide, R8 mapping, CI evidence, certificate/provenance and hashes, verifies server digests, then sets this release Latest. It refuses to replace an existing public release or delete existing assets. No private key, recovery material, unsigned or test APK is published. This authorization does not apply to future versions.

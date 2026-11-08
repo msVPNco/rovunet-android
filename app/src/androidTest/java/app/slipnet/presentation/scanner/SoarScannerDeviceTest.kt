@@ -146,10 +146,74 @@ class SoarScannerDeviceTest {
     }
 
     @Test fun prismRepeatsRealSoarHandshakesAndRejectsOrdinaryDnsReplies() = runBlocking {
-        assertEquals(2, SoarResolverProbe.verify(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 2, 2))
+        val verified = SoarResolverProbe.verifyDetailed(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 5, 2)
+        assertEquals(2, verified.passed)
+        assertEquals("Five configured probes must stop after two proven handshakes", 2, verified.attempted)
         assertEquals(0, SoarResolverProbe.verify(host, fixture.getInt("fakeTcpPort"), profile(), DnsTransport.TCP, 1000, 1, 1))
         assertTrue(SoarResolverProbe.test(host, fixture.getInt("udpPort"), profile().copy(dnsttPublicKey = fixture.getString("publicKeyHex")),
             DnsTransport.UDP, 6000, "", false).success)
+    }
+
+    @Test fun prismPublishesUdpBeforeTcpAndKeepsTheFirstProofTime() = runBlocking {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val preferences = app.slipnet.data.local.datastore.PreferencesDataStore(context)
+        val previous = preferences.getSavedScanSession()
+        val resolver = "192.0.2.44"
+        val selected = profile()
+        val tcp = CompletableDeferred<Unit>()
+        val scanner = object : app.slipnet.domain.repository.ResolverScannerRepository by app.slipnet.data.repository.ResolverScannerRepositoryImpl(context) {
+            override fun getDefaultResolvers() = listOf(resolver)
+            override suspend fun verifySoarResolverDetailed(host: String, port: Int, profile: ServerProfile,
+                timeoutMs: Long, probeCount: Int, threshold: Int, transport: DnsTransport): ProbeVerification {
+                if (transport == DnsTransport.UDP) { delay(50); return ProbeVerification(threshold, threshold) }
+                tcp.await(); return ProbeVerification(0, 1)
+            }
+        }
+        val profiles = java.lang.reflect.Proxy.newProxyInstance(javaClass.classLoader,
+            arrayOf(app.slipnet.domain.repository.ProfileRepository::class.java)) { _, method, _ ->
+            when (method.name) { "getProfileById" -> selected; else -> error("Unexpected profile operation: ${method.name}") }
+        } as app.slipnet.domain.repository.ProfileRepository
+        val vpn = object : app.slipnet.domain.repository.VpnRepository {
+            override val connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+            override val trafficStats = MutableStateFlow(TrafficStats.EMPTY)
+            override suspend fun connect(profile: ServerProfile): Result<Unit> = error("A scan must not connect the VPN")
+            override suspend fun disconnect(): Result<Unit> = error("A scan must not disconnect the VPN")
+            override fun isConnected() = false
+            override fun getConnectedProfile(): ServerProfile? = null
+        }
+        val store = ViewModelStore()
+        lateinit var vm: DnsScannerViewModel
+        var created = false
+        try {
+            preferences.saveScanSession(com.google.gson.Gson().toJson(mapOf("resolverList" to listOf(resolver),
+                "testDomain" to "old.invalid", "listSource" to "IMPORTED", "scanMode" to "PRISM",
+                "timeoutMs" to "3000", "concurrency" to "2", "scanTransport" to "BOTH")))
+            app.slipnet.service.ScanStateHolder.begin()
+            instrumentation.runOnMainSync {
+                vm = DnsScannerViewModel(SavedStateHandle(mapOf("profileId" to selected.id)), scanner, profiles, preferences, vpn, context)
+                created = true
+                store.put("progress", vm)
+            }
+            withTimeout(5000) { vm.uiState.first { it.profile != null && it.resolverList == listOf(resolver) && it.testDomain == selected.domain } }
+            instrumentation.runOnMainSync { vm.setScanMode(ScanMode.PRISM); vm.startScan() }
+            val first = withTimeout(5000) { vm.uiState.first { it.scannerState.results.singleOrNull()?.prismVerified == true } }
+            assertEquals(1, first.scannerState.scannedCount)
+            assertEquals(1, first.scannerState.workingCount)
+            assertEquals(true, first.hostTransportSupport[resolver]?.first)
+            assertNull(first.hostTransportSupport[resolver]?.second)
+            assertTrue(first.scannerState.isScanning)
+            delay(250)
+            tcp.complete(Unit)
+            val complete = withTimeout(5000) { vm.uiState.first { !it.scannerState.isScanning && it.hostTransportSupport[resolver]?.second == false } }
+            assertEquals(first.scannerState.results.single().responseTimeMs, complete.scannerState.results.single().responseTimeMs)
+            assertEquals(1, complete.scannerState.scannedCount)
+            assertEquals(1, complete.scannerState.workingCount)
+        } finally {
+            tcp.complete(Unit)
+            instrumentation.runOnMainSync { if (created) vm.stopAll(); store.clear() }
+            if (previous == null) preferences.clearScanSession() else preferences.saveScanSession(previous)
+        }
     }
 
     @Test fun fullHttpAndCancellationLeaveTheExistingSoarClientUntouched() = runBlocking {

@@ -24,11 +24,16 @@ import app.slipnet.tunnel.VaydnsBridge
 import com.jcraft.jsch.JSch
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
@@ -51,6 +56,7 @@ import kotlin.random.Random
 class ResolverScannerRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ResolverScannerRepository {
+    private val dnsSlots = Semaphore(64)
 
     private var cachedResolvers: List<String>? = null
     private var cachedTierBoundaries: List<Int> = emptyList()
@@ -199,9 +205,10 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         transport: DnsTransport
     ): ResolverScanResult = withContext(Dispatchers.IO) {
         val startTime = SystemClock.elapsedRealtime()
-
+        app.slipnet.util.ScanDiagnostics.probe()
         try {
             scanResolverDnsTunnel(host, port, testDomain, timeoutMs, startTime, querySize, transport)
+        } catch (e: CancellationException) { throw e
         } catch (e: Exception) {
             val responseTime = SystemClock.elapsedRealtime() - startTime
             ResolverScanResult(
@@ -226,68 +233,33 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         querySize: Int = 0,
         transport: DnsTransport = DnsTransport.UDP
     ): ResolverScanResult = withContext(Dispatchers.IO) {
-        // For tunnel subdomains like "t.example.com", queries hit the DNSTT server
-        // which can't answer generic DNS queries. Use the parent zone for basic/NS/TXT
-        // tests and the actual tunnel domain for random subdomain tests (which prove
-        // the delegation chain works).
         val parentDomain = getParentDomain(testDomain)
-
-        // First, do a basic connectivity check (against the parent zone)
-        val basicCheck = withTimeoutOrNull(timeoutMs) {
-            val randSub = generateRandomSubdomain()
-            performDnsQuery(host, port, "$randSub.$parentDomain", DNS_TYPE_A, timeoutMs, transport)
-        }
-
-        if (basicCheck == null) {
-            val responseTime = SystemClock.elapsedRealtime() - startTime
-            return@withContext ResolverScanResult(
-                host = host,
-                port = port,
-                status = ResolverStatus.TIMEOUT,
-                responseTimeMs = responseTime
-            )
-        }
-
-        // Run all tunnel compatibility tests in parallel
-        val nsDeferred = async { testNsDelegation(host, port, testDomain, timeoutMs, transport) }
-        val txtDeferred = async { testRecordType(host, port, parentDomain, DNS_TYPE_TXT, timeoutMs, transport) }
-        val rndDeferred = async {
-            testRandomSubdomain(host, port, testDomain, timeoutMs, transport)
-                || testRandomSubdomain(host, port, testDomain, timeoutMs, transport)
-        }
-        val tunnelRealismDeferred = async { testTunnelRealism(host, port, testDomain, timeoutMs, querySize, transport) }
-        val ednsDeferred = async { probeEdnsMaxPayload(host, port, testDomain, timeoutMs, transport) }
-        val nxdomainDeferred = async { testNxdomainCorrect(host, port, timeoutMs, transport) }
-
-        val nsSupport = nsDeferred.await()
-        val txtSupport = txtDeferred.await()
-        val randomSubdomain = rndDeferred.await()
-        val tunnelRealism = tunnelRealismDeferred.await()
-        val ednsMaxPayload = ednsDeferred.await()
-        val edns0Support = ednsMaxPayload > 0
-        val nxdomainCorrect = nxdomainDeferred.await()
-
-        val responseTime = SystemClock.elapsedRealtime() - startTime
-
-        val tunnelResult = DnsTunnelTestResult(
-            nsSupport = nsSupport,
-            txtSupport = txtSupport,
-            randomSubdomain = randomSubdomain,
-            tunnelRealism = tunnelRealism,
-            edns0Support = edns0Support,
-            ednsMaxPayload = ednsMaxPayload,
-            nxdomainCorrect = nxdomainCorrect
-        )
-
-        // Mark as WORKING if resolver responded (basic check passed above)
-        // Score indicates tunnel compatibility quality (5/5 = fully compatible)
-        ResolverScanResult(
-            host = host,
-            port = port,
-            status = ResolverStatus.WORKING,
-            responseTimeMs = responseTime,
-            tunnelTestResult = tunnelResult
-        )
+        val checks = java.util.concurrent.ConcurrentHashMap<String, Any>()
+        var reachable = false
+        val complete = withTimeoutOrNull(timeoutMs) {
+            val basic = performDnsQuery(host, port, "${generateRandomSubdomain()}.$parentDomain", DNS_TYPE_A, timeoutMs, transport)
+            reachable = basic.success || basic.responseCode != 0
+            if (!reachable) return@withTimeoutOrNull false
+            // One deadline covers the whole resolver, including sequential EDNS sizes.
+            listOf(
+                async { checks["ns"] = testNsDelegation(host, port, testDomain, timeoutMs, transport) },
+                async { checks["txt"] = testRecordType(host, port, parentDomain, DNS_TYPE_TXT, timeoutMs, transport) },
+                async { checks["random"] = testRandomSubdomain(host, port, testDomain, timeoutMs, transport) || testRandomSubdomain(host, port, testDomain, timeoutMs, transport) },
+                async { checks["realism"] = testTunnelRealism(host, port, testDomain, timeoutMs, querySize, transport) },
+                async { checks["edns"] = probeEdnsMaxPayload(host, port, testDomain, timeoutMs, transport) },
+                async { checks["nxdomain"] = testNxdomainCorrect(host, port, timeoutMs, transport) }
+            ).forEach { it.await() }
+            true
+        } == true
+        val edns = checks["edns"] as? Int ?: 0
+        ResolverScanResult(host = host, port = port,
+            status = if (reachable) ResolverStatus.WORKING else ResolverStatus.TIMEOUT,
+            responseTimeMs = SystemClock.elapsedRealtime() - startTime,
+            tunnelTestResult = if (!reachable) null else DnsTunnelTestResult(
+                nsSupport = checks["ns"] == true, txtSupport = checks["txt"] == true,
+                randomSubdomain = checks["random"] == true, tunnelRealism = checks["realism"] == true,
+                edns0Support = edns > 0, ednsMaxPayload = edns, nxdomainCorrect = checks["nxdomain"] == true,
+                diagnosticsComplete = complete, completedChecks = checks.size))
     }
 
     /**
@@ -751,35 +723,27 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun verifyResolver(
-        host: String,
-        port: Int,
-        testDomain: String,
-        pubkey: ByteArray,
-        timeoutMs: Long,
-        probeCount: Int,
-        passThreshold: Int,
-        responseSize: Int,
-        transport: DnsTransport
-    ): Int = withContext(Dispatchers.IO) {
+    override suspend fun verifyResolver(host: String, port: Int, testDomain: String, pubkey: ByteArray,
+        timeoutMs: Long, probeCount: Int, passThreshold: Int, responseSize: Int, transport: DnsTransport): Int =
+        verifyResolverDetailed(host, port, testDomain, pubkey, timeoutMs, probeCount, passThreshold, responseSize, transport).passed
+
+    override suspend fun verifyResolverDetailed(host: String, port: Int, testDomain: String, pubkey: ByteArray,
+        timeoutMs: Long, probeCount: Int, threshold: Int, responseSize: Int, transport: DnsTransport): app.slipnet.domain.model.ProbeVerification = withContext(Dispatchers.IO) {
         var passed = 0
-        val maxFailures = probeCount - passThreshold
-        var failures = 0
-        val perProbeTimeout = (timeoutMs / passThreshold).coerceIn(200, 30000)
-        for (i in 1..probeCount) {
-            if (!coroutineContext.isActive) break
-            if (verifyResolverOnce(host, port, testDomain, pubkey, perProbeTimeout, responseSize, transport)) {
-                passed++
-                if (passed >= passThreshold) break // already verified
-            } else {
-                failures++
-                if (failures > maxFailures) break // can't reach threshold anymore
+        var attempted = 0
+        withTimeoutOrNull(timeoutMs) {
+            val perProbeTimeout = (timeoutMs / threshold.coerceAtLeast(1)).coerceIn(200, 30000)
+            repeat(probeCount) { index ->
+                ensureActive()
+                if (passed >= threshold || passed + probeCount - index < threshold) return@withTimeoutOrNull
+                attempted++
+                if (verifyResolverOnce(host, port, testDomain, pubkey, perProbeTimeout, responseSize, transport)) passed++
             }
         }
-        passed
+        app.slipnet.domain.model.ProbeVerification(passed, attempted)
     }
 
-    private fun verifyResolverOnce(
+    private suspend fun verifyResolverOnce(
         host: String,
         port: Int,
         testDomain: String,
@@ -977,18 +941,8 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         querySize: Int,
         transport: DnsTransport
     ): Flow<ResolverScanResult> = channelFlow {
-        val semaphore = Semaphore(concurrency)
-
-        hosts.forEach { host ->
-            launch {
-                semaphore.acquire()
-                try {
-                    val result = scanResolver(host, port, testDomain, timeoutMs, querySize, transport)
-                    send(result)
-                } finally {
-                    semaphore.release()
-                }
-            }
+        app.slipnet.util.scanWorkers(hosts, concurrency) { host ->
+            send(scanResolver(host, port, testDomain, timeoutMs, querySize, transport))
         }
     }
 
@@ -996,6 +950,11 @@ class ResolverScannerRepositoryImpl @Inject constructor(
 
     private fun soarProfileAvailable(profile: ServerProfile): Boolean = !profile.needsCredentials && !profile.isExpired &&
         (profile.boundDeviceId.isEmpty() || profile.boundDeviceId == app.slipnet.util.DeviceIdUtil.getScrambledDeviceId(context))
+
+    override suspend fun verifySoarResolverDetailed(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
+        probeCount: Int, threshold: Int, transport: DnsTransport): app.slipnet.domain.model.ProbeVerification =
+        if (!soarProfileAvailable(profile)) app.slipnet.domain.model.ProbeVerification(0, 0)
+        else app.slipnet.tunnel.SoarResolverProbe.verifyDetailed(host, port, profile, transport, timeoutMs, probeCount, threshold)
 
     override suspend fun verifySoarResolver(host: String, port: Int, profile: ServerProfile, timeoutMs: Long,
         probeCount: Int, threshold: Int, transport: DnsTransport): Int =
@@ -2348,6 +2307,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
                     rawLength = responseLen
                 )
             }
+        } catch (e: CancellationException) { throw e
         } catch (e: Exception) {
             DnsQueryResult(success = false, error = e.message)
         }
@@ -2357,70 +2317,42 @@ class ResolverScannerRepositoryImpl @Inject constructor(
      * Send a raw DNS query over UDP and receive the response.
      * Returns (buffer, length) or null on failure.
      */
-    private fun dnsQueryUdp(
-        host: String,
-        port: Int,
-        query: ByteArray,
-        timeoutMs: Long,
-        bufferSize: Int
-    ): Pair<ByteArray, Int>? {
-        var socket: DatagramSocket? = null
-        return try {
-            socket = DatagramSocket()
-            socket.soTimeout = timeoutMs.toInt().coerceIn(500, 30000)
-            val serverAddress = InetAddress.getByName(host)
-            socket.send(DatagramPacket(query, query.size, serverAddress, port))
-            val buf = ByteArray(bufferSize)
-            val pkt = DatagramPacket(buf, buf.size)
-            socket.receive(pkt)
-            buf to pkt.length
-        } catch (_: Exception) {
-            null
-        } finally {
-            socket?.close()
+    private suspend fun dnsQueryUdp(host: String, port: Int, query: ByteArray, timeoutMs: Long,
+        bufferSize: Int): Pair<ByteArray, Int>? = dnsSlots.withPermit {
+        app.slipnet.util.DnsDatagram.exchange(host, port, query, timeoutMs, bufferSize)
+    }
+
+    private suspend fun dnsQueryTcp(host: String, port: Int, query: ByteArray,
+        timeoutMs: Long): Pair<ByteArray, Int>? = scannerSocket({ Socket() }) { socket ->
+        val timeout = timeoutMs.toInt().coerceIn(100, 30000)
+        socket.connect(java.net.InetSocketAddress(host, port), timeout)
+        socket.soTimeout = timeout
+        socket.getOutputStream().apply {
+            write(byteArrayOf((query.size shr 8).toByte(), query.size.toByte()))
+            write(query)
+            flush()
+        }
+        val input = socket.getInputStream()
+        val prefix = ByteArray(2)
+        if (readExact(input, prefix, 2) == null) null else {
+            val size = ((prefix[0].toInt() and 255) shl 8) or (prefix[1].toInt() and 255)
+            if (size <= 0) null else {
+                val response = ByteArray(size)
+                if (readExact(input, response, size) == null) null else response to size
+            }
         }
     }
 
-    /**
-     * Send a raw DNS query over TCP using RFC 1035 §4.2.2 framing
-     * (2-byte big-endian length prefix). Returns (buffer, length) or null on failure.
-     * Buffer is sized large enough for max TCP DNS response (64KB).
-     */
-    private fun dnsQueryTcp(
-        host: String,
-        port: Int,
-        query: ByteArray,
-        timeoutMs: Long
-    ): Pair<ByteArray, Int>? {
-        var socket: Socket? = null
-        return try {
-            socket = Socket()
-            val tm = timeoutMs.toInt().coerceIn(500, 30000)
-            socket.connect(java.net.InetSocketAddress(host, port), tm)
-            socket.soTimeout = tm
-
-            val out = socket.getOutputStream()
-            val prefix = byteArrayOf(
-                ((query.size shr 8) and 0xFF).toByte(),
-                (query.size and 0xFF).toByte()
-            )
-            out.write(prefix)
-            out.write(query)
-            out.flush()
-
-            val input = socket.getInputStream()
-            val lenBuf = ByteArray(2)
-            readExact(input, lenBuf, 2) ?: return null
-            val respLen = ((lenBuf[0].toInt() and 0xFF) shl 8) or (lenBuf[1].toInt() and 0xFF)
-            if (respLen <= 0 || respLen > 65535) return null
-            val respBuf = ByteArray(respLen)
-            readExact(input, respBuf, respLen) ?: return null
-            respBuf to respLen
-        } catch (_: Exception) {
-            null
-        } finally {
-            try { socket?.close() } catch (_: Exception) {}
-        }
+    /** Cancellation closes blocking reads/connects, including the previous run's drain. */
+    private suspend fun <T : java.io.Closeable> scannerSocket(create: () -> T,
+        exchange: (T) -> Pair<ByteArray, Int>?): Pair<ByteArray, Int>? = withContext(Dispatchers.IO) {
+        ensureActive()
+        dnsSlots.withPermit { suspendCancellableCoroutine { continuation ->
+            val socket = create()
+            continuation.invokeOnCancellation { runCatching { socket.close() } }
+            val result = runCatching { socket.use { exchange(it) } }.getOrNull()
+            if (continuation.isActive) continuation.resume(result)
+        } }
     }
 
     private fun readExact(input: InputStream, buf: ByteArray, len: Int): Unit? {

@@ -21,11 +21,11 @@
 
 ## Release status
 
-The current release is **0.3.0-alpha15.4 Full, version code 31**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha15.4-Full.apk) · [Release record](docs/releases/alpha15.4.md) · [Current status](docs/STATUS.md).
+The current release is **0.3.0-alpha16 Full, version code 32**. It retains the [production signing identity](docs/SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-android/releases/latest/download/Rovunet-v0.3.0-alpha16-Full.apk) · [Release record](docs/releases/alpha16.md) · [Current status](docs/STATUS.md).
 
-Alpha15.4 fixes Soar scanning, subscription actions, menus, duplicate imports, test budgets and status feedback. The connection-selection guide and scanner use four-language resources. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42395755189) passed **60 JVM, 51 Debug emulator and 2 minified Release JNI tests**, with no device skips. All 33 native libraries match the 15.3 reviewed APK; this is not a complete native rebuild. The owner approved publication of the exact reviewed APK; no detailed new physical-network measurements were supplied.
+Alpha16 shows successful Soar UDP/TCP results sooner, bounds scan work, reduces idle polling and counter writes, improves VLESS WebSocket cleanup and follows Android’s selected default network. Panel v1.19 allowance and expiry appear inside existing collection cards; language and help precede subscriptions. [CI](https://github.com/msVPNco/rovunet-android/actions/runs/42471804819) passed **83 portable/JUnit, 86 Gradle unit, 55 Debug emulator and 2 minified Release JNI cases**. The owner accepted this exact APK for publication. Pinned Xray and project Hev/JNI were rebuilt; other native transports are reused. Battery savings and overnight/network-handoff behavior have not been quantitatively measured.
 
-**Upgrading public alpha14/alpha15:** their older updater does not recognize dotted alpha revisions. Download the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha15.4/Rovunet-v0.3.0-alpha15.4-Full.apk) directly and install over the existing app without uninstalling or clearing data. Alpha15.4 understands subsequent dotted revisions. Package and production signer are unchanged.
+**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
 
 ## Quick start
 
@@ -38,7 +38,9 @@ Alpha15.4 fixes Soar scanning, subscription actions, menus, duplicate imports, t
 
 HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
 
-Soar scanning offers Quick, Advanced, E2E and Prism. Quick/Prism use authenticated Soar handshakes with the configured Ed25519 key; E2E also checks HTTP 204 or the SSH account with existing trust approval. Advanced is diagnostic DNS only. UDP and TCP are tested independently; Soar scanner defaults to both without rewriting saved connection choices. Imported candidates survive discarded foreign/legacy proof.
+Panel v1.19 account status shows remaining GiB and time in the existing collection card. Amber means ≤20% remaining or ≤3 days; red means ≤5% or ≤24 hours. Unlimited, unknown and expired are distinct. A 404 or stale/incomplete counting is unavailable information, not proof of expiry. Status refresh runs while Home is visible and never blocks manual connection. Server-side metering and limits remain authoritative.
+
+Soar scanning offers Quick, Advanced, E2E and Prism. Quick/Prism use authenticated Soar handshakes with the configured Ed25519 key; E2E also checks HTTP 204 or the SSH account with existing trust approval. Advanced is diagnostic DNS only. UDP and TCP are tested independently; Soar scanner defaults to both without rewriting saved connection choices. Imported candidates survive discarded foreign/legacy proof. Prism stops after the configured passing threshold; successful UDP/TCP paths appear independently. Bounded workers, shared client limits and one Advanced resolver deadline reduce scan overhead. Saved TCP-only choices and trust approval remain intact. Screen-off idle statistics back off; DNS/explicit cover traffic keep wake protection. Android’s default physical network is followed; the app does not turn either radio off. Safe report v5 adds UTC/sample times, wake-lock durations and the selected network without addresses or credentials.
 
 Requires Android 7.0/API 24 or later. Build targets: ARM32, ARM64, x86_64; inherited Naive/Tor binaries are unavailable on x86_64. No 32-bit x86 or new Lite asset is promised. No Rovunet Google Play, App Store or desktop GUI release is available.
 
@@ -93,6 +95,8 @@ Automatic collection failover, download-throughput testing and desktop/store ver
 | 📘 Complete guide (PDF) | [English](docs/guides/Rovunet-App-Guide-EN.pdf) · [فارسی](docs/guides/Rovunet-App-Guide-FA.pdf) · [Русский](docs/guides/Rovunet-App-Guide-RU.pdf) · [简体中文](docs/guides/Rovunet-App-Guide-ZH.pdf) |
 | [User guide](docs/USER_GUIDE.md) | Installation, import, connection, tests, Soar, credentials and troubleshooting |
 | [Current status](docs/STATUS.md) · [Upgrade](docs/UPGRADE.md) | Release state, signer and migration notes |
+
+The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha16 notes](docs/releases/alpha16.md) for the new status, menu and idle behavior.
 
 ## Source, verification and support
 

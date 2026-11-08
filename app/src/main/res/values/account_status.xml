@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_diagnostics_partial">Diagnostic checks are incomplete</string>
+    <string name="account_status_unavailable">Account information unavailable</string>
+    <string name="account_status_partial">Traffic counting is incomplete</string>
+    <string name="account_status_waiting">Waiting for the first traffic sample</string>
+    <string name="account_status_stale">Account information needs refreshing</string>
+    <string name="account_status_expired">Account expired</string>
+    <string name="account_status_limit_reached">Traffic limit reached</string>
+    <string name="account_status_remaining_volume">%1$s %2$s remaining</string>
+    <string name="account_status_unlimited_volume">Unlimited traffic</string>
+    <string name="account_status_no_expiry">No expiry</string>
+    <string name="account_status_days">%1$d days left</string>
+    <string name="account_status_hours">%1$d hours left</string>
+    <string name="account_status_minutes">%1$d minutes left</string>
+    <string name="account_status_summary">%1$s · %2$s</string>
+</resources>

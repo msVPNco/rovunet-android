@@ -22,7 +22,7 @@ internal object ScanStateHolder {
     @Synchronized fun begin(): ScanRun {
         val previous = current
         previous.stop()
-        return ScanRun(previous.drained).also { current = it }
+        return ScanRun(previous.drained).also { current = it; app.slipnet.util.ScanDiagnostics.begin(it.id) }
     }
 
     fun drain(previous: Job?, worker: Job): Job = cleanupScope.launch {
@@ -56,6 +56,7 @@ internal class ScanRun(private val predecessor: Job?) {
         workers[phase]?.cancel()
         val worker = scope.launch(start = CoroutineStart.LAZY) {
             before?.join()
+            app.slipnet.util.ScanDiagnostics.working(id)
             work()
         }
         workers[phase] = worker
@@ -78,10 +79,12 @@ internal class ScanRun(private val predecessor: Job?) {
     }
 
     private fun markFinished(phase: ScanPhase) = update {
-        when (phase) {
+        val next = when (phase) {
             ScanPhase.DNS -> it.copy(isScanning = false)
             ScanPhase.E2E -> it.copy(isE2eRunning = false, e2eActiveResolvers = emptyMap())
         }
+        if (!next.active) app.slipnet.util.ScanDiagnostics.finish(id)
+        next
     }
 
     @Synchronized fun stop(clearResults: Boolean = false) {
@@ -89,5 +92,6 @@ internal class ScanRun(private val predecessor: Job?) {
         mutableState.value = if (clearResults) ScanServiceState() else mutableState.value.copy(
             isScanning = false, isE2eRunning = false, e2eActiveResolvers = emptyMap()
         )
+        drained.invokeOnCompletion { app.slipnet.util.ScanDiagnostics.finish(id) }
     }
 }
