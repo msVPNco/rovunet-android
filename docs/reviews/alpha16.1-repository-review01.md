@@ -18,14 +18,34 @@ repository to `msVPNco/rovunet-app`; general Android feature work remains paused
 - No tunnel, scanner, power policy, account status, card layout or translation
   behavior changes. Package and fixed production signing identity are preserved.
 
-## Validation status
+## Validation and exact delivered artifact
 
-Local portable/JVM checks passed **93 JUnit cases**, including ten new updater
-regression cases, plus parser, version and session/lifecycle entry points.
-Four-language resource parity, editor localization, Kotlin safety and the device
-result gate pass. This does not claim a fresh Android build, emulator pass,
-physical-network result or signed review APK yet. Record final CI and binary
-identity in the delivered verification report after those steps finish.
+Application source: `af237e5e53692862dffb82fe3033e16e9fc83204`, tree
+`4248606f432bd11d441c6a1ce12bdbebb7bc3f6e`.
+[Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569)
+and [PR CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487026297)
+passed verification and Android device checks: 93 portable/JUnit cases, the
+Gradle unit-test task, 55 Debug emulator cases and two minified Release JNI cases.
+Four-language parity, editor localization, Kotlin safety and real loopback/panel
+contracts passed. The optional separately dispatched complete native/signing
+build was skipped, not counted as a pass.
+
+The privately delivered `Rovunet-0.3.0-alpha16.1-code33-review01.apk` is
+97,282,769 bytes. SHA-256:
+`133a0a4f1aa97ddd9eb42c8ec5b0be8ca53c00ed5e33811e0a585ab773e3fc28`.
+It retains `app.veyra.client`, code33 and the pinned production certificate
+`1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416`.
+V2/v3 signatures, identical unsigned-CI ZIP payload, 16KB ZIP/ELF64 alignment,
+JNI definitions and the canonical repository in DEX passed. No obsolete repository
+URL remains in DEX. Pinned Xray, launcher and project Hev/JNI were rebuilt in CI;
+other transports reuse the checksum-pinned SlipNet 2.5.6 payload. There is no claim
+of a complete native rebuild or physical-phone validation.
+
+The live canonical GitHub release fixture also selected the actual code32 APK
+and its correct digest, with previews both enabled and disabled. Documentation
+completion after these runs does not rebuild the APK; application/build/test
+inputs must remain identical to the source above. Full verification and the
+exact production R8 mapping accompany the private review delivery.
 
 Public-release body navigation was updated by a separate documentation-only
 workflow. It asserted that published asset identities and global Latest stayed
