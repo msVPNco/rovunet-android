@@ -32,6 +32,14 @@ APK_SHA = '3950b602865c55a6dfc8bec4cbb13da4585dca0c28ad4842afd6d8b273618b7a'
 APK_SIZE = 97282769
 CERT_SHA = '1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416'
 APK_NAME = 'Rovunet-v0.3.0-alpha16-Full.apk'
+ASSET_NAMES = (
+    APK_NAME, 'APK-SHA256.txt', 'APK-SIGNATURE-VERIFICATION.txt',
+    'Rovunet-production-certificate.pem', 'SIGNER-SHA256.txt',
+    'Rovunet-0.3.0-alpha16-source.zip', 'Rovunet-0.3.0-alpha16-source-light.zip',
+    'Rovunet-0.3.0-alpha16-Guide-FA.txt', 'Rovunet-alpha16-public-r8-mapping.zip',
+    'Rovunet-alpha16-CI-evidence.json', 'SOURCE-MANIFEST.json',
+    'VERIFICATION.json', 'SHA256SUMS.txt',
+)
 OLD_ASSET = 721633409
 OLD_SHA = 'fd126cc5b293b2f12ce60a7045f9b6158f9c21e645b0dee7c316ba70d0363b27'
 ROOT = Path(__file__).resolve().parents[2]
@@ -301,16 +309,17 @@ def prepare(ci_path, old_path, out, online):
         evidence = {'application_source': SOURCE, 'run': RUN, 'source_evidence': record, 'local_packaging_validation_only': True}
     json_write(out / 'Rovunet-alpha16-CI-evidence.json', evidence)
     (out / 'APK-SHA256.txt').write_text(f'{APK_SHA}  {APK_NAME}\n')
-    lines = [f'{sha(p.read_bytes())}  {p.name}' for p in sorted(out.iterdir())]
+    lines = [f'{sha((out / name).read_bytes())}  {name}'
+             for name in sorted(ASSET_NAMES) if name != 'SHA256SUMS.txt']
     (out / 'SHA256SUMS.txt').write_text('\n'.join(lines) + '\n')
-    print('Prepared', len(list(out.iterdir())), 'assets; approved APK SHA-256', APK_SHA, flush=True)
+    print('Prepared', len(ASSET_NAMES), 'allowlisted assets; approved APK SHA-256', APK_SHA, flush=True)
 
 
 def publish(out, revision):
     verified_file(out / APK_NAME, APK_SHA)
     expected = {line.split('  ', 1)[1]: line.split('  ', 1)[0] for line in (out / 'SHA256SUMS.txt').read_text().splitlines()}
     expected['SHA256SUMS.txt'] = sha((out / 'SHA256SUMS.txt').read_bytes())
-    if set(expected) != {p.name for p in out.iterdir()}:
+    if set(expected) != set(ASSET_NAMES):
         raise ValueError('Unexpected publication file')
     for name, digest in expected.items():
         verified_file(out / name, digest)
