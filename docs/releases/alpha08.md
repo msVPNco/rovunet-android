@@ -28,7 +28,7 @@ The Full APK reuses the existing native binaries and signing identity for compat
 
 ## Downloads and source
 
-Use the assets on [the release page](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha08). Keep `APK-SHA256.txt` with the APK. The source asset contains application sources, licenses and the available pinned native source trees; see its source manifest for any retrieval limitations. Build instructions and pinned dependencies remain in the repository. [Native source provenance and the unavailable DNSTT wrapper revision](alpha08-native-sources.md) are recorded explicitly.
+Use the assets on [the release page](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha08). Keep `APK-SHA256.txt` with the APK. The source asset contains application sources, licenses and the available pinned native source trees; see its source manifest for any retrieval limitations. Build instructions and pinned dependencies remain in the repository. [Native source provenance and the unavailable DNSTT wrapper revision](alpha08-native-sources.md) are recorded explicitly.
 
 Subscriptions, automatic switching between collection paths, complete translation of inherited advanced screens and desktop/iOS clients are not included in this repair release.
 

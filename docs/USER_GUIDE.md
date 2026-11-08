@@ -4,7 +4,7 @@
 
 ## English
 
-**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
+**Upgrade:** install the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) over public alpha14 or later, without uninstalling or clearing data. Package, production signer and saved profiles are retained. If the accepted alpha16/code32 review APK is already installed, it is this same binary; no reinstall is needed.
 
 HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
 
@@ -17,7 +17,7 @@ Prism stops after the configured passing threshold; successful UDP/TCP paths app
 
 ### Installation and updates
 
-The version is **0.3.0-alpha16 Full, code 32**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-android/releases/latest). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
+The version is **0.3.0-alpha16 Full, code 32**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-app/releases/latest). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
 
 Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
@@ -68,7 +68,7 @@ Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. 
 Prism بعد از رسیدن به آستانهٔ موفقیت انتخاب‌شده متوقف می‌شود؛ نتیجهٔ موفق UDP/TCP مستقل نمایش داده می‌شود. تعداد workerها و کلاینت‌ها محدود است و تشخیص پیشرفته یک مهلت مشترک برای هر resolver دارد. انتخاب صریح TCP و تأیید هویت حفظ می‌شوند. نمونه‌گیری در بیکاری با صفحهٔ خاموش کندتر می‌شود؛ تونل DNS و پوشش ترافیکی صریح حفاظت بیداری را نگه می‌دارند. اپ شبکهٔ پیش‌فرض اندروید را دنبال می‌کند و هیچ رادیویی را خاموش نمی‌کند. گزارش امن نسخهٔ ۵، زمان UTC و نمونهٔ شمارنده، مدت قفل‌ها و نوع شبکه را بدون نشانی یا اعتبار ثبت می‌کند.
 
 
-**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-android/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند. اگر APK تأییدشدهٔ آلفا۱۶/کد۳۲ را دارید، همین فایل انتشار است و نصب دوباره لازم نیست.
+**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha16/Rovunet-v0.3.0-alpha16-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند. اگر APK تأییدشدهٔ آلفا۱۶/کد۳۲ را دارید، همین فایل انتشار است و نصب دوباره لازم نیست.
 
 اشتراک HTTPS دو دکمهٔ **آپدیت** و **ایمپورت** دارد. ایمپورت منبع تازه را با یک اقدام ثبت می‌کند و پس از موفقیت کل پنجره بسته می‌شود؛ خطا فرم را حفظ می‌کند و نشانی تکراری دوباره ثبت نمی‌شود. ویرایش‌های محلی حفظ می‌شوند. آپدیت منبع قبلی به قطع VPN نیاز دارد؛ کنارگذاشتن ورودی‌های قدیمی بازبینی می‌خواهد. تازه‌سازی خودکار اختیاری، تقریباً هر ۱۲ ساعت با شرایط مناسب شبکه و باتری انجام می‌شود. QR کل مجموعه و PNG برای مجموعهٔ کوچک وجود دارد؛ مجموعهٔ بزرگ از خروجی فایل استفاده می‌کند.
 
@@ -76,7 +76,7 @@ Prism بعد از رسیدن به آستانهٔ موفقیت انتخاب‌ش�
 
 ### نصب و به‌روزرسانی
 
-نسخه **آلفا۱۶ Full، کد ۳۲** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-android/releases/latest) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
+نسخه **آلفا۱۶ Full، کد ۳۲** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-app/releases/latest) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
 
 اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 

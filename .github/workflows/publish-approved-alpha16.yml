@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.repository == 'msVPNco/rovunet-android' && github.event.ref_type == 'branch' && startsWith(github.event.ref, 'publish/alpha16-approved')
+    if: github.repository == 'msVPNco/rovunet-app' && github.event.ref_type == 'branch' && startsWith(github.event.ref, 'publish/alpha16-approved')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

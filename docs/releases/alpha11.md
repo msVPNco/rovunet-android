@@ -28,7 +28,7 @@ The APK is built as Full Release with the existing signer and unchanged native e
 
 Published version: **0.3.0-alpha11 Full**, code **17**, replacing the alpha09 public release. Alpha10 was an intermediate device-validation build; its changes are included here.
 
-Application source: `91f2c0e9a9fd94eb72e30236bc965293b5303762`. The release tag also includes later documentation/workflow changes, which do not rebuild the APK. [Exact application-commit CI](https://github.com/msVPNco/rovunet-android/actions/runs/41984862024) passed verification; its Android build job was skipped. Full Release compilation was completed locally.
+Application source: `91f2c0e9a9fd94eb72e30236bc965293b5303762`. The release tag also includes later documentation/workflow changes, which do not rebuild the APK. [Exact application-commit CI](https://github.com/msVPNco/rovunet-app/actions/runs/41984862024) passed verification; its Android build job was skipped. Full Release compilation was completed locally.
 
 APK SHA-256: `0640b684cf1f07e6645aa536698a4b3820f2973b19e17fe5083017d80b825e98`.
 
@@ -36,4 +36,4 @@ Signer certificate SHA-256: `7d9eac2c155ae6c6d57dffa27e325858375016e88f9de1546a1
 
 Assets include the Full APK, expanded available-source ZIP, lightweight source ZIP, Persian guide, verification report and checksums. Existing 33 native libraries are byte-identical to alpha10. One pinned upstream dnstt-mobile source tree remains unavailable; see SOURCE-MANIFEST.json. The APK is non-debuggable but retains the existing debug signing identity for upgrade compatibility. No store release or production-key migration is claimed.
 
-[Download](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha11) · [User guide](../USER_GUIDE.md) · [Status](../STATUS.md) · [Telegram](https://t.me/RovunetVPN)
+[Download](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha11) · [User guide](../USER_GUIDE.md) · [Status](../STATUS.md) · [Telegram](https://t.me/RovunetVPN)

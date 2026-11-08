@@ -20,7 +20,7 @@ import tarfile
 import zipfile
 import zlib
 
-REPO = 'msVPNco/rovunet-android'
+REPO = 'msVPNco/rovunet-app'
 TAG = 'v0.3.0-alpha16'
 SOURCE = 'ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4'
 TREE = 'e60347cdd9deb4b433ff88fe340ad44898b3059c'

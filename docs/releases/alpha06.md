@@ -1,6 +1,6 @@
 # Rovunet 0.3.0-alpha06 Full
 
-[Release and assets](https://github.com/msVPNco/rovunet-android/releases/tag/v0.3.0-alpha06)
+[Release and assets](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha06)
 
 Source commit: `bb8d78b82fba44188add499d5984996747379eec`  
 Version code: 12  

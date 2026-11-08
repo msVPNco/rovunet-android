@@ -132,8 +132,8 @@ By default `soar-server` only lets streams reach public addresses on ports 80 an
 
 1. **Clone the repository**
    ```bash
-   git clone --recursive https://github.com/msVPNco/rovunet-android.git
-   cd rovunet-android
+   git clone --recursive https://github.com/msVPNco/rovunet-app.git
+   cd rovunet-app
    ```
 
 2. **Initialize submodules**
@@ -399,7 +399,7 @@ Running `./slipnet` with no arguments launches an interactive menu with all mode
 ### Building CLI from Source
 
 ```bash
-git clone --recursive https://github.com/msVPNco/rovunet-android.git
+git clone --recursive https://github.com/msVPNco/rovunet-app.git
 cd Rovunet
 git submodule update --init --recursive
 cd cli
