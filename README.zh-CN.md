@@ -101,7 +101,7 @@ PDF 保留 alpha15.4 版本和版式；新的账户状态、菜单与空闲行�
 
 显式源码 ZIP 包含代码、资源、测试、许可证和可获取的固定原生源码。轻量包省略预编译 `.so`/`.aar`。`SOURCE-MANIFEST.json` 记录版本、复用二进制及无法获取的旧 `dnstt-mobile` 树；不宣称可独立完整重建全部原生组件。
 
-[构建](docs/BUILDING.md) · [发布](docs/RELEASING.md) · [安全](SECURITY.md) · [内核格式](VEYRA-CORE.md)。
+[构建](docs/BUILDING.md) · [发布](docs/RELEASING.md) · [安全](SECURITY.md) · [内核格式](docs/history/VEYRA-CORE.md)。
 
 反馈请提供应用/Android 版本、协议、步骤和本地安全报告。不要公开配置链接、密码、私钥或设备标识。社区：[t.me/RovunetVPN](https://t.me/RovunetVPN)。
 

@@ -1,8 +1,8 @@
-> Current release, signing and source provenance: [STATUS](docs/STATUS.md) (the single reference for the current version), [BUILDING](docs/BUILDING.md), [UPGRADE](docs/UPGRADE.md). Version examples below are engineering history, not the identity of a current release.
+> Current release, signing and source provenance: [STATUS](../STATUS.md) (the single reference for the current version), [BUILDING](../BUILDING.md), [UPGRADE](../UPGRADE.md). Version examples below are engineering history, not the identity of a current release.
 
 # Rovunet — core protocol integration
 
-Historical document: it was written for [alpha11](docs/releases/alpha11.md); see [STATUS](docs/STATUS.md) for the current release. This document retains the original integration history; current install, test and release behavior is documented in [the user guide](docs/USER_GUIDE.md) and [build notes](docs/BUILDING.md). Native export is now v33; references to v31 below describe the initial integration.
+Historical document: it was written for [alpha11](../releases/alpha11.md); see [STATUS](../STATUS.md) for the current release. This document retains the original integration history; current install, test and release behavior is documented in [the user guide](../USER_GUIDE.md) and [build notes](../BUILDING.md). Native export is now v33; references to v31 below describe the initial integration.
 
 Base: SlipNet 2.5.6 Full, commit 2ed00fd0072ad0b558e30ec6b5e8b30948f98894.
 Includes the earlier Veyra foundation. This file supersedes the earlier foundation's

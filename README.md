@@ -102,7 +102,7 @@ The PDF guides retain their alpha15.4 edition and layout; use the current user g
 
 Explicit source ZIPs contain app code, resources, tests, licenses and available pinned native sources. Light ZIPs omit tracked precompiled `.so`/`.aar` assets. `SOURCE-MANIFEST.json` records revisions, reused binaries and an unavailable old `dnstt-mobile` tree. Neither ZIP is a complete independent native rebuild kit.
 
-[Build](docs/BUILDING.md) · [Release procedure](docs/RELEASING.md) · [Security](SECURITY.md) · [Core formats](VEYRA-CORE.md).
+[Build](docs/BUILDING.md) · [Release procedure](docs/RELEASING.md) · [Security](SECURITY.md) · [Core formats](docs/history/VEYRA-CORE.md).
 
 For support, provide app/Android versions, protocol, reproduction steps and the local safe report. Do not publicly post configuration links, passwords, private keys or device identifiers. Community: [t.me/RovunetVPN](https://t.me/RovunetVPN).
 
