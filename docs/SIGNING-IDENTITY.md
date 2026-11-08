@@ -38,6 +38,8 @@ another explicit rotation and its installation consequences are reviewed.
 Play App Signing is not configured. Before adding a store, decide its signing
 model explicitly; do not assume the upload key is the installed app signing key.
 
+<div dir="rtl">
+
 ## فارسی
 
 از آلفا۱۴، کد ۲۵، هویت تولیدی بالا برای بستهٔ عمومی ثابت است. مالک پروژه تعویض
@@ -46,6 +48,8 @@ model explicitly; do not assume the upload key is the installed app signing key.
 اگر محیط عوض شد، کلید را از دو فایل خصوصی بازیابی کنید و اثرانگشت را با مقدار
 بالا بسنجید. کلید/رمز در گیت‌هاب یا سورس عمومی قرار نمی‌گیرد. نصب روی آلفا۱۱ با
 امضای قبلی، ارتقای مستقیم محسوب نمی‌شود؛ راهنما در [UPGRADE](UPGRADE.md) است.
+
+</div>
 
 ## 简体中文
 

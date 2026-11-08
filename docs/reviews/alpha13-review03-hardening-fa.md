@@ -1,3 +1,5 @@
+<div dir="rtl">
+
 # پیگیری بازبینی چهارم alpha13 — فقط سورس
 
 این پیگیری روی `7cc7f0e362911dea4a862ef33e97f95bf4852b36`، پایهٔ دقیق سورس review03، انجام شد. گزارش پیوست و نکته‌های تازه با کد تطبیق داده شدند؛ بازرسی مستقل APK در این دور دوباره انجام نشد. هیچ APK، نسخه، تگ، push، انتشار عمومی یا اجرای تازهٔ workflow گیت‌هاب برای این پیگیری ساخته یا انجام نشده است.
@@ -63,3 +65,5 @@
 - قرارداد padding اختیاری Android Base64: https://developer.android.com/reference/android/util/Base64
 - تبدیل متداول آدرس‌های IPv4-mapped در Java: https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/Inet6Address.html
 - کد و نمونه‌ها: `ProxyAuthLimiter.kt`، `WireBase64.kt`، `ConfigImporter.kt`، `ImportCorpusTest.kt`، `WireBase64Test.kt` و راهنمای corpus کنار نمونه‌ها.
+
+</div>

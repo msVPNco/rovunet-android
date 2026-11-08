@@ -7,6 +7,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 | --- | --- | --- | --- |
 | Android | alpha16.1/code33 public; repository-rename compatibility released | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
 | Windows | Development in this repository; no validated public GUI release recorded here | `windows-v<version>` | Windows-specific installer/portable package |
+| Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
 | macOS | Planned for this repository | `macos-v<version>` | macOS-specific package, when implemented |
 
 This records repository organization, not a claim of desktop protocol support,
@@ -33,6 +34,8 @@ appropriate for new desktop code; coordinate its path with the existing work.
 - Public alpha16 assets remain unchanged. Historical manifests, APK reconstruction
   records and archived PDF editions keep their original release identities.
 
+<div dir="rtl">
+
 ## فارسی
 
 همهٔ کلاینت‌ها در همین مخزن قرار می‌گیرند؛ مخزن مستقل ویندوز ساخته نمی‌شود.
@@ -41,6 +44,8 @@ appropriate for new desktop code; coordinate its path with the existing work.
 «آخرین انتشار» گیت‌هاب می‌تواند متعلق به هر پلتفرم باشد؛ آپدیتر و لینک دانلود هر
 کلاینت باید نسخهٔ سازگار خودش را انتخاب کند. انتشار نسخهٔ تازه به تأیید مالک نیاز
 دارد. قالب فعلی READMEها و سابقهٔ انتشارهای قبلی حفظ می‌شوند.
+
+</div>
 
 ## Русский
 
