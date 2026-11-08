@@ -56,7 +56,10 @@ def api(path, method='GET', payload=None, binary_path=None):
     if payload is not None:
         command += ['--input', '-']
     if binary_path is not None:
-        command += ['-H', 'Accept: application/octet-stream']
+        # Actions artifact redirects require the JSON media type; release assets
+        # negotiate their binary bytes using octet-stream.
+        media_type = 'application/octet-stream' if path.startswith('releases/assets/') else 'application/vnd.github+json'
+        command += ['-H', 'Accept: ' + media_type]
         with binary_path.open('wb') as out:
             subprocess.run(command, stdout=out, check=True)
         return None
@@ -325,7 +328,7 @@ def main():
     options = parser.parse_args()
     revision = validate_publication_revision()
     if options.publish:
-        if os.environ.get('GITHUB_REPOSITORY') != REPO or os.environ.get('GITHUB_REF') != 'refs/heads/publish/alpha16-approved' or os.environ.get('GITHUB_SHA') != revision:
+        if os.environ.get('GITHUB_REPOSITORY') != REPO or re.fullmatch(r'refs/heads/publish/alpha16-approved(?:-retry[0-9]+)?', os.environ.get('GITHUB_REF', '')) is None or os.environ.get('GITHUB_SHA') != revision:
             raise ValueError('Not the explicitly approved alpha16 publication trigger')
         if not options.ci_zip.is_file():
             api(f'actions/artifacts/{ARTIFACT}/zip', binary_path=options.ci_zip)
