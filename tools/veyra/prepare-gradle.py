@@ -3,6 +3,7 @@
 import hashlib
 import os
 from pathlib import Path
+import shutil
 import time
 from fetch_verified import download_verified
 
@@ -22,13 +23,23 @@ directory.mkdir(parents=True, exist_ok=True)
 archive = directory/'gradle-8.13-bin.zip'
 if (directory/'gradle-8.13-bin.zip.ok').is_file() and (directory/'gradle-8.13/lib/gradle-launcher-8.13.jar').is_file():
     print('Using wrapper-verified Gradle 8.13 cache')
-    raise SystemExit(0)
-if archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest() == expected:
+elif archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest() == expected:
     print('Verified cached Gradle 8.13 archive')
-    raise SystemExit(0)
+else:
+    # The same official release asset through a fresh API redirect, not a mirror.
+    sources = [url, 'https://api.github.com/repos/gradle/gradle-distributions/releases/assets/232373824?download=1&t=' + str(int(time.time()))]
+    download_verified(archive, expected, sources, 200*1024*1024)
+    print('Prepared checksum-verified Gradle 8.13 for the wrapper')
 
-# The ordinary release redirect can fail with a stale CDN response. The second
-# URL is the same official release asset through GitHub's public API, not a mirror.
-sources = [url, 'https://api.github.com/repos/gradle/gradle-distributions/releases/assets/232373824?download=1&t=' + str(int(time.time()))]
-download_verified(archive, expected, sources, 200*1024*1024)
-print('Prepared checksum-verified Gradle 8.13 for the wrapper')
+# Maven's compiler download can also redirect to the failing release CDN.
+# Populate Gradle 8.13's content-addressed artifact cache with the exact official
+# 2.2.21 artifact. SHA-1 is only Gradle's directory key; SHA-256 verifies the bytes.
+gradle_home = Path(os.environ.get('GRADLE_USER_HOME', str(Path.home()/'.gradle')))
+compiler = gradle_home/'verified-inputs/kotlin-compiler-embeddable-2.2.21.jar'
+download_verified(compiler, '9588fa696ac5507af764fd5660df6894185e12704ec1bc3f5cb772af4987f295', [
+    'https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/kotlin-compiler-embeddable-2.2.21.jar',
+    'https://api.github.com/repos/JetBrains/kotlin/releases/assets/587847942?download=1&t=' + str(int(time.time()))], 100*1024*1024)
+cache = gradle_home/'caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.2.21'/hashlib.sha1(compiler.read_bytes()).hexdigest()/compiler.name
+cache.parent.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(compiler, cache)
+print('Prepared checksum-verified Kotlin 2.2.21 compiler cache')
