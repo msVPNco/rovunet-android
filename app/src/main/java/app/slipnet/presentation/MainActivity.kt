@@ -81,8 +81,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.SYSTEM)
             val firstLaunchDone by preferencesDataStore.firstLaunchDone.collectAsState(initial = null)
-            val languageChosen = getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", null) in setOf("fa", "en", "ru", "zh")
-            val ready = languageChosen || firstLaunchDone == true
+            val ready = languageReady(getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", null), firstLaunchDone)
             androidx.compose.runtime.LaunchedEffect(ready) { if (ready) requestNotificationPermissionIfNeeded() }
 
             app.slipnet.presentation.theme.RovunetLocale {

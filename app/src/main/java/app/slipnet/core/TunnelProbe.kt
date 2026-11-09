@@ -50,8 +50,8 @@ object TunnelProbe {
     }
 
     /** Three valid samples on one reachable destination, at most five requests. */
-    suspend fun medianVerified(valid: () -> Boolean, request: suspend (String) -> Long): Long? {
-        var target = HOST
+    suspend fun medianVerified(valid: () -> Boolean, initialHost: String = HOST, allowFallback: Boolean = true, request: suspend (String) -> Long): Long? {
+        var target = initialHost
         val samples = mutableListOf<Long>()
         var failures = 0
         repeat(5) {
@@ -65,7 +65,7 @@ object TunnelProbe {
             } catch (e: CancellationException) { throw e
             } catch (_: Exception) {
                 failures++
-                if (failures >= 2) return null
+                if (!allowFallback || failures >= 2) return null
                 // Restart the sample set so destinations with different routes are never mixed.
                 samples.clear()
                 target = if (target == HOST) FALLBACK_HOST else HOST

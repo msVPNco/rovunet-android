@@ -10,6 +10,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.slipnet.R
 
+internal fun languageReady(language: String?, firstLaunchDone: Boolean?) =
+    language in setOf("fa", "en", "ru", "zh") || firstLaunchDone == true
+
 /** No navigation, import, network work or permission dialog is created before a choice. */
 @Composable
 internal fun LanguageWelcome(onChoose: (String) -> Unit) {

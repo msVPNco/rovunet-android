@@ -976,7 +976,7 @@ fun MainScreen(
                                             }
                                         )
                                     }
-                                    if (expandedCollection == collectionKey) items(collection, key = { "collection-path:${it.id}" }, contentType = "collection-path") { profile ->
+                                    if (expandedCollection == collectionKey) collectionPathItems(collection) { profile ->
                                         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp)
                                             .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(10.dp)) {
                                             val isConnected = uiState.connectedProfileId == profile.id

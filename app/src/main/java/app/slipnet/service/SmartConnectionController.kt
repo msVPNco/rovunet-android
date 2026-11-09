@@ -56,13 +56,16 @@ class SmartConnectionController @Inject constructor(
         _results.value = _results.value + (profile.id to if (value == null) PingResult.Error("HTTPS_FAILED")
             else PingResult.Success(value, verified = true, successes = 3, attempts = 3))
     }
-    private suspend fun live(profile: ServerProfile, session: Long): Long? {
+    private data class LivePing(val ms: Long, val host: String)
+    private suspend fun live(profile: ServerProfile, session: Long): LivePing? {
         val endpoint = if (profile.tunnelType == TunnelType.XRAY) app.slipnet.tunnel.XrayBridge.activeEndpoint else preferences.configuredSocksEndpoint()
         if (endpoint == null) return null
-        return TunnelProbe.medianVerified({
+        var target = TunnelProbe.HOST
+        val measured = TunnelProbe.medianVerified({
             val state = connection.connectionState.value as? ConnectionState.Connected
-            connection.ownsSession(session) && state?.profile?.id == profile.id && state.chainId == 0L
-        }) { host -> TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 8_000) }
+            connection.ownsSession(session) && state?.profile?.id == profile.id && state.chainId <= 0L
+        }) { host -> target = host; TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 8_000) }
+        return measured?.let { LivePing(it, target) }
     }
 
     private suspend fun disconnectOwned(session: Long) {
@@ -109,7 +112,7 @@ class SmartConnectionController @Inject constructor(
                     val stamp = physicalNetwork()
                     val delay = live(profile, ownedSession)
                     if (stamp == null || stamp != physicalNetwork()) { disconnectOwned(ownedSession); ownedSession = 0; continue }
-                    record(profile, delay)
+                    record(profile, delay?.ms)
                     if (delay != null) { current = profile; established = true; break }
                     disconnectOwned(ownedSession); ownedSession = 0
                 }
@@ -127,7 +130,9 @@ class SmartConnectionController @Inject constructor(
                     if (failed == null && power?.isInteractive == false) continue
                     val stamp = physicalNetwork()
                     val active = current ?: break
-                    val currentDelay = if (failed == null) live(active, ownedSession) else null
+                    var currentPing = if (failed == null) live(active, ownedSession) else null
+                    if (currentPing == null && failed == null) { delay(3_000); currentPing = live(active, ownedSession) }
+                    val currentDelay = currentPing?.ms
                     if (stamp != physicalNetwork()) { clearResults(); continue }
                     record(active, currentDelay)
                     failures = if (currentDelay == null) failures + 1 else 0
@@ -140,7 +145,7 @@ class SmartConnectionController @Inject constructor(
                     var replacement: ServerProfile? = null
                     for (candidate in shortlist) {
                         val session = ownedSession
-                        val result = probe.measure(candidate) {
+                        val result = probe.measure(candidate, currentPing?.host ?: TunnelProbe.HOST) {
                             owner == generation && connection.ownsSession(session) && stamp == physicalNetwork() &&
                                 ProbeBypass.allows(session)
                         }
@@ -155,7 +160,7 @@ class SmartConnectionController @Inject constructor(
                         ownedSession = establish(replacement)
                         if (ownedSession == 0L) { _status.value = Status(message = R.string.alpha17_exhausted); break }
                         val confirmed = live(replacement, ownedSession)
-                        record(replacement, confirmed)
+                        record(replacement, confirmed?.ms)
                         if (confirmed == null) {
                             disconnectOwned(ownedSession); ownedSession = 0
                             start(key)

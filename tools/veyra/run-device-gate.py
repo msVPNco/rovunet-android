@@ -15,6 +15,10 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.Alpha17PreferencesDeviceTest", "freshPreferencesFollowSystemAndPreserveExplicitTheme"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "languageWelcomeHasFourExplicitChoicesAndNoImportOrConnection"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "expandedThreeThousandPathsComposeOnlyVisibleRowsAndScrollToLast"),
+    ("app.slipnet.core.CoreDeviceSmokeTest", "stoppingIndependentCandidateLeavesLiveCoreAndPrivateEndpointWorking"),
     ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "prismWaitsForBothTransportsAndCountsResolverOnce"),
     ("app.slipnet.data.subscription.AccountStatusDeviceTest", "metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources"),
     ("app.slipnet.presentation.main.AccountStatusUiDeviceTest", "persianAccountSummaryKeepsTheCollectionCardAndDistinguishesUnknownFromExhausted"),

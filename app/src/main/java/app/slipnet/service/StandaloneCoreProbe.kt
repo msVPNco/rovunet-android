@@ -16,7 +16,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 class StandaloneCoreProbe @Inject constructor(@ApplicationContext private val context: Context) {
     private val slot = Mutex()
     fun supports(profile: ServerProfile) = profile.tunnelType == TunnelType.XRAY && profile.coreLink.isNotBlank()
-    suspend fun measure(profile: ServerProfile, valid: () -> Boolean): Long? = slot.withLock {
+    suspend fun measure(profile: ServerProfile, host: String, valid: () -> Boolean): Long? = slot.withLock {
         if (!supports(profile) || !valid()) return@withLock null
         val core = CoreProcess(diagnostics = false)
         val endpoint = LocalSocksEndpoint.privateCore()
@@ -27,7 +27,7 @@ class StandaloneCoreProbe @Inject constructor(@ApplicationContext private val co
                 check(valid())
                 core.start(File(dir, "libveyra_xray.so"), config, File(dir, "libveyra_core_launcher.so"), 6_000).getOrThrow()
             }
-            TunnelProbe.medianVerified(valid) { host ->
+            TunnelProbe.medianVerified(valid, initialHost = host, allowFallback = false) { host ->
                 TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 8_000)
             }
         } catch (e: CancellationException) { throw e
