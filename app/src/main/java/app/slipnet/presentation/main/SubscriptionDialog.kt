@@ -72,7 +72,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         execute {
                             val row = editing?.let { id -> sources.firstOrNull { it.id == id } } ?: repository.findSource(url) ?: error("SOURCE_NOT_FOUND")
                             val item = prepare(name, url, row.id, if (editing != null || automaticEdited) automatic else row.autoUpdate)
-                            if (item.removed > 0) preview = item else { repository.apply(item); onDismiss() }
+                            if (item.removed > 0 || item.source.id.startsWith("public:")) preview = item else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_update_action)) }
                     Button(modifier = Modifier.weight(1f).testTag("subscription-import"),
@@ -87,7 +87,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 }
                 if (editing != null) TextButton(enabled = !busy, onClick = { editing = null; name = ""; url = ""; automatic = false; automaticEdited = false }) { Text(stringResource(R.string.subscription_add)) }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error) }
+                error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("subscription-error")) }
                 HorizontalDivider()
                 TextButton(enabled = !busy && sources.isNotEmpty() && connection.isDisconnected, onClick = {
                     execute { sources.forEach { try { repository.refresh(it.id) } catch (e: CancellationException) { throw e } catch (_: Exception) { /* Source status is shown below. */ } } }
@@ -115,6 +115,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
             title = { Text(stringResource(R.string.subscription_preview)) },
             text = { Column {
                 Text(stringResource(R.string.subscription_preview_summary, item.profiles.size, item.removed))
+                if (item.source.id.startsWith("public:")) Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
                 LazyColumn(Modifier.heightIn(max = 220.dp)) {
                     items(item.profiles, key = { it.first }) { (_, profile) ->
                         Text(profile.name + " · " + profile.tunnelType.displayName, style = MaterialTheme.typography.bodySmall)
@@ -124,7 +125,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 if (!connection.isDisconnected && onDisconnect != null) TextButton(
                     enabled = connection !is app.slipnet.domain.model.ConnectionState.Disconnecting,
                     onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
-                error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error) }
+                error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("subscription-error")) }
             } },
             confirmButton = { TextButton(enabled = !busy && connection.isDisconnected, onClick = {
                 execute { repository.apply(item); preview = null; onDismiss() }
@@ -135,6 +136,8 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
 
 @Composable
 private fun subscriptionError(code: String): String = stringResource(when (code) {
+    "PUBLIC_FEED_EMPTY" -> R.string.alpha17_public_empty
+    "PUBLIC_FEED_LIMIT" -> R.string.alpha17_public_limit
     "HTTPS_REQUIRED" -> R.string.subscription_https_required
     "INVALID_FEED", "UNSUPPORTED_FEED" -> R.string.subscription_invalid_feed
     "FEED_TOO_LARGE" -> R.string.subscription_too_large

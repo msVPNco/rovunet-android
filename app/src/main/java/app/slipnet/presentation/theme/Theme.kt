@@ -57,7 +57,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun SlipstreamTheme(
-    darkMode: DarkMode = DarkMode.LIGHT,
+    darkMode: DarkMode = DarkMode.SYSTEM,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

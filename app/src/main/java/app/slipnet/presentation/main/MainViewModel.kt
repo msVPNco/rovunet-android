@@ -90,6 +90,8 @@ data class MainUiState(
     val subscriptionUrl: String? = null,
     val subscriptionId: String? = null,
     val subscriptionIds: Set<String> = emptySet(),
+    val smartStatus: app.slipnet.service.SmartConnectionController.Status = app.slipnet.service.SmartConnectionController.Status(),
+    val smartVersion: Long = 0,
     val subscriptionVersion: Long = 0,
     val accountStatuses: Map<String, app.slipnet.data.subscription.AccountStatusEntity> = emptyMap(),
     val dataPathState: app.slipnet.domain.model.DataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
@@ -152,7 +154,8 @@ class MainViewModel @Inject constructor(
     private val configImporter: ConfigImporter,
     internal val subscriptionRepository: app.slipnet.data.subscription.SubscriptionRepository,
     private val preferencesDataStore: PreferencesDataStore,
-    internal val connectionHistoryStore: ConnectionHistoryStore
+    internal val connectionHistoryStore: ConnectionHistoryStore,
+    internal val smartConnections: app.slipnet.service.SmartConnectionController
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -200,6 +203,7 @@ class MainViewModel @Inject constructor(
     private var trafficPollingJob: Job? = null
     private var sleepTimerJob: Job? = null
     private var pingJob: Job? = null
+    private val testBatchOffsets = mutableMapOf<String, Int>()
     private var importJob: Job? = null
     // Cached Room flows may emit synchronously during construction. State used
     // by observers must exist before the init block launches them.
@@ -227,6 +231,10 @@ class MainViewModel @Inject constructor(
         override fun onLost(network: android.net.Network) { networkChanged(network, false) }
     }
     init {
+        viewModelScope.launch { smartConnections.status.collect { _uiState.value = _uiState.value.copy(smartStatus = it) } }
+        viewModelScope.launch { smartConnections.results.collect { results ->
+            if (results.isNotEmpty()) _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + results)
+        } }
         viewModelScope.launch { subscriptionRepository.observe().catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { rows ->
             _uiState.value = _uiState.value.copy(subscriptionIds = rows.map { it.id }.toSet(), subscriptionVersion = rows.maxOfOrNull { it.lastSuccess } ?: 0)
         } }
@@ -259,6 +267,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val changed = if (available) underlyingNetworks.add(network) else underlyingNetworks.remove(network)
             if (!changed) return@launch
+            smartConnections.clearResults()
             pingJob?.cancelAndJoin()
             discoveredProfiles.clear()
             // Preserve the user's evidence; a different underlying network only makes it historical.
@@ -272,6 +281,21 @@ class MainViewModel @Inject constructor(
         if (networkCallbackRegistered) runCatching { networkManager.unregisterNetworkCallback(networkCallback) }
         super.onCleared()
     }
+
+    fun automaticMode(profile: ServerProfile) = smartConnections.mode(ProfileCollections.key(profile))
+    fun setAutomaticMode(profile: ServerProfile, mode: app.slipnet.domain.model.SmartPathPolicy.Mode) {
+        smartConnections.setMode(ProfileCollections.key(profile), mode)
+        _uiState.value = _uiState.value.copy(smartVersion = _uiState.value.smartVersion + 1)
+    }
+    fun connectCollection(profile: ServerProfile) {
+        if (automaticMode(profile) == app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) connect(preferredProfile(listOf(profile)) ?: profile)
+        else smartConnections.start(ProfileCollections.key(profile))
+    }
+    fun addFreeTor() { viewModelScope.launch {
+        val name = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.alpha17_free_tor)
+        profileRepository.insertCollection(listOf(ServerProfile(name = name, domain = "tor", tunnelType = TunnelType.SNOWFLAKE,
+            collectionId = java.util.UUID.randomUUID().toString(), collectionName = "Tor / Snowflake")))
+    } }
 
     // ── Connection ──────────────────────────────────────────────────────
 
@@ -1226,7 +1250,11 @@ class MainViewModel @Inject constructor(
         if (onlyUnavailable(selected)) return
         val members = selected.filter { !it.needsCredentials && !it.isExpired && it.tunnelType.isAvailable() }
         if (members.isEmpty()) { _uiState.value = _uiState.value.copy(error = "Select a collection with an available, unexpired profile"); return }
-        val candidates = ProfileCollections.ordered(members, _uiState.value.pingResults).filter { ProfileCollections.isDns(it) == dnsOnly }
+        val ordered = members.filter { ProfileCollections.isDns(it) == dnsOnly }.sortedBy { it.id }
+        val batchKey = ProfileCollections.key(members.first()) + ":" + dnsOnly
+        val offset = (testBatchOffsets[batchKey] ?: 0).coerceAtMost((ordered.size - 1).coerceAtLeast(0))
+        val candidates = (ordered.drop(offset) + ordered.take(offset)).take(50)
+        if (ordered.isNotEmpty()) testBatchOffsets[batchKey] = (offset + candidates.size) % ordered.size
         val originalResults = _uiState.value.pingResults
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",

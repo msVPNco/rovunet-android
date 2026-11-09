@@ -49,6 +49,31 @@ object TunnelProbe {
             failures.entries.joinToString("; ") { "${it.key}: ${it.value}" })
     }
 
+    /** Three valid samples on one reachable destination, at most five requests. */
+    suspend fun medianVerified(valid: () -> Boolean, request: suspend (String) -> Long): Long? {
+        var target = HOST
+        val samples = mutableListOf<Long>()
+        var failures = 0
+        repeat(5) {
+            currentCoroutineContext().ensureActive()
+            if (!valid()) return null
+            try {
+                val value = request(target)
+                if (value <= 0) return null
+                samples.add(value)
+                if (samples.size == 3) return if (valid()) samples.sorted()[1] else null
+            } catch (e: CancellationException) { throw e
+            } catch (_: Exception) {
+                failures++
+                if (failures >= 2) return null
+                // Restart the sample set so destinations with different routes are never mixed.
+                samples.clear()
+                target = if (target == HOST) FALLBACK_HOST else HOST
+            }
+        }
+        return null
+    }
+
     fun measure(port: Int, username: String? = null, password: String? = null,
                 host: String = HOST, remotePort: Int = 443, path: String = PATH,
                 factory: SSLSocketFactory = SSLSocketFactory.getDefault() as SSLSocketFactory,

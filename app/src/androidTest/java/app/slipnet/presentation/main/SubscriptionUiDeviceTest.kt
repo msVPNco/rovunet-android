@@ -103,8 +103,8 @@ class SubscriptionUiDeviceTest {
             compose.runOnIdle { open.value = true }
             compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("Failed update")
             compose.onNodeWithTag("subscription-update").performScrollTo().performClick()
-            compose.waitUntil(8000) { compose.onAllNodesWithText(resources.getString(R.string.subscription_failed)).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText(resources.getString(R.string.subscription_failed)).assertExists()
+            compose.waitUntil(8000) { compose.onAllNodesWithTag("subscription-error").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("subscription-error").performScrollTo().assertTextEquals(resources.getString(R.string.subscription_failed))
             assertTrue(open.value); assertEquals(2, dismissed.get())
             assertEquals("Updated source", repository.findSource(address)?.name)
             assertNotNull(db.profileDao().getProfileById(stored.id))

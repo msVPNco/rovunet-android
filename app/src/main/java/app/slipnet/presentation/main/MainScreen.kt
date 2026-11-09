@@ -255,6 +255,24 @@ fun MainScreen(
     var importText by remember { mutableStateOf("") }
     var showExportAllEncryptedDialog by remember { mutableStateOf(false) }
     var showAddMenu by remember { mutableStateOf(false) }
+    var showFreeConnections by remember { mutableStateOf(false) }
+    var automaticTarget by remember { mutableStateOf<app.slipnet.domain.model.ServerProfile?>(null) }
+    if (showFreeConnections) FreeConnectionsSheet(viewModel.subscriptionRepository,
+        onTor = { viewModel.addFreeTor(); showFreeConnections = false }, onDismiss = { showFreeConnections = false })
+    automaticTarget?.let { target ->
+        AlertDialog(onDismissRequest = { automaticTarget = null }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha17_smart_title)) },
+            text = { Column {
+                Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha17_smart_hint), style = MaterialTheme.typography.bodySmall)
+                for ((mode, label) in listOf(
+                    app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL to app.slipnet.R.string.alpha17_manual,
+                    app.slipnet.domain.model.SmartPathPolicy.Mode.FAILOVER to app.slipnet.R.string.alpha17_failover,
+                    app.slipnet.domain.model.SmartPathPolicy.Mode.SMART to app.slipnet.R.string.alpha17_smart)) {
+                    TextButton(onClick = { viewModel.setAutomaticMode(target, mode); automaticTarget = null }) {
+                        Text((if (viewModel.automaticMode(target) == mode) "✓ " else "") + androidx.compose.ui.res.stringResource(label))
+                    }
+                }
+            } }, confirmButton = { TextButton(onClick = { automaticTarget = null }) { Text(androidx.compose.ui.res.stringResource(android.R.string.cancel)) } })
+    }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showDeleteDuplicatesDialog by remember { mutableStateOf(false) }
     var deleteCollectionTarget by remember { mutableStateOf<List<ServerProfile>?>(null) }
@@ -591,7 +609,14 @@ fun MainScreen(
                                 onClick = { showOverflowMenu = false; showSubscriptions = true }
                             )
                             HorizontalDivider()
-                            if (uiState.isPingRunning) {
+                            if (uiState.smartStatus.message != 0) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val progress = uiState.smartStatus
+                    Text(if (progress.message == app.slipnet.R.string.alpha17_trying)
+                        androidx.compose.ui.res.stringResource(progress.message, progress.index, progress.total)
+                        else androidx.compose.ui.res.stringResource(progress.message), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    if (progress.running) TextButton(onClick = { viewModel.smartConnections.cancel() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5)) }
+                }
+                if (uiState.isPingRunning) {
                                 DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.menu_stop_test)) },
                                     onClick = {
@@ -909,14 +934,11 @@ fun MainScreen(
                                         uiState.dataPathState, uiState.dataPathNoticeUntilElapsedMs, android.os.SystemClock.elapsedRealtime())) item(key = "data-path-check") {
                                     DataPathCheckCard(uiState.dataPathState)
                                 }
-                                items(
-                                    items = uiState.profiles.groupBy { ProfileCollections.key(it) }.values.toList(),
-                                    key = { ProfileCollections.key(it.first()) }
-                                ) { collection ->
+                                uiState.profiles.groupBy { ProfileCollections.key(it) }.values.forEach { collection ->
                                     val representative = collection.first()
                                     val collectionKey = ProfileCollections.key(representative)
                                     val selected = collectionKey == uiState.selectedCollection
-                                    CollectionStack(expanded = expandedCollection == collectionKey, header = {
+                                    item(key = "collection-header:$collectionKey", contentType = "collection-header") {
                                         CollectionCard(
                                             profiles = collection, results = uiState.pingResults,
                                             accountStatus = uiState.accountStatuses[representative.collectionId]?.view(
@@ -930,10 +952,13 @@ fun MainScreen(
                                                 (!uiState.connectionState.isConnecting || collection.any { it.id == uiState.connectingProfileId }),
                                             onConnect = {
                                                 if (collection.any { it.id == uiState.connectedProfileId || it.id == uiState.connectingProfileId }) viewModel.disconnect()
+                                                else if (viewModel.automaticMode(representative) != app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL)
+                                                    mainActivity?.requestVpnPermissionAndConnect { viewModel.connectCollection(representative) }
                                                 else viewModel.preferredProfile(collection)?.let { proceedWithConnect(it) }
                                                     ?: run { expandedCollection = collectionKey }
                                             },
                                             onDetails = { expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
+                                            onAutomatic = { automaticTarget = representative },
                                             onRename = { renameTarget = representative; renameText = ProfileCollections.name(representative) },
                                             onMove = { moveTarget = representative },
                                             onExport = { viewModel.exportCollection(representative) },
@@ -950,8 +975,10 @@ fun MainScreen(
                                                 else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative, detailed = true) }
                                             }
                                         )
-                                    }) {
-                                        collection.forEach { profile ->
+                                    }
+                                    if (expandedCollection == collectionKey) items(collection, key = { "collection-path:${it.id}" }, contentType = "collection-path") { profile ->
+                                        Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp)
+                                            .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(10.dp)) {
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
@@ -1051,6 +1078,11 @@ fun MainScreen(
                             "DNS / alternative paths" to listOf(Triple("DNSTT", "dnstt", Icons.Default.Dns), Triple("NoizDNS", TunnelType.NOIZDNS.value, Icons.Default.VisibilityOff), Triple("VayDNS", "vaydns", Icons.Default.Air), Triple("Soar", "soar", Icons.Default.FlightTakeoff), Triple("Slipstream", "slipstream", Icons.Default.Waves), Triple("DOH", "doh", Icons.Default.Language)) +
                                 (if (BuildConfig.INCLUDE_TOR) listOf(Triple("Tor", "snowflake", TorIcon)) else emptyList())
                         )
+                    Button(onClick = { showAddMenu = false; showFreeConnections = true },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("free-connections")) {
+                        Icon(Icons.Default.Language, null); Spacer(Modifier.width(8.dp))
+                        Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha17_free_title))
+                    }
                     val pickerConfig = androidx.compose.ui.platform.LocalConfiguration.current
                     val pickerColumns = when {
                         pickerConfig.fontScale >= 1.8f -> 1

@@ -7,7 +7,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 
 /** One owned child. Config stays on stdin; readiness requires a real local SOCKS response. */
-class CoreProcess {
+class CoreProcess(private val diagnostics: Boolean = true) {
     private companion object {
         val STARTED = Regex("""[0-9/]+ [0-9:.]+ \[Warning] core: Xray [0-9]+(?:\.[0-9]+)+ started\r?""")
     }
@@ -33,7 +33,7 @@ class CoreProcess {
     @Synchronized
     fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000): Result<Unit> = runCatching {
         stop()
-        ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
+        if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
         require(binary.isFile && binary.canExecute()) { "Xray binary missing for this ABI" }
         require(startupTimeoutMs in 100..60_000)
         val settings = JSONObject(config)
@@ -98,7 +98,7 @@ class CoreProcess {
                 check(System.nanoTime() < deadline) { "Core proxy startup timed out" }
                 check(!awaitExit(process, 25)) { "Core stopped during startup" }
             }
-            ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_READY)
+            if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_READY)
         } catch (e: Exception) { stop(); throw e }
     }
 
@@ -119,6 +119,6 @@ class CoreProcess {
         check(outputThread?.isAlive != true) { "Previous core output reader did not stop" }
         outputThread = null
         child = null
-        ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_STOP)
+        if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_STOP)
     }
 }

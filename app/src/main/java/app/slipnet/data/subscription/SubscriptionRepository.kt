@@ -28,7 +28,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 data class SubscriptionPreview(val source: SubscriptionEntity, val expectedSource: SubscriptionEntity?,
-    val profiles: List<Pair<String, ServerProfile>>, val removed: Int)
+    val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0)
 
 @Singleton
 class SubscriptionRepository @Inject constructor(
@@ -62,7 +62,7 @@ class SubscriptionRepository @Inject constructor(
     }
     internal data class Download(val code: Int, val location: String?, val text: String,
         val serverTime: Long = 0, val receivedAt: Long = 0)
-    private suspend fun fetch(address: String): String = fetchDocument(address, 2 * 1024 * 1024, false).text
+    private suspend fun fetch(address: String, limit: Int = 2 * 1024 * 1024): String = fetchDocument(address, limit, false).text
     internal suspend fun fetchAccountStatus(address: String): Download = fetchDocument(address, 65_536, true)
     private suspend fun fetchDocument(address: String, maxBytes: Int, account: Boolean): Download {
         var target = url(address)
@@ -129,19 +129,30 @@ class SubscriptionRepository @Inject constructor(
     }
     suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
         val initial = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val document = fetch(address)
+        val document = fetch(address, if (initial?.id?.startsWith("public:") == true) PublicFeed.MAX_BYTES else 2 * 1024 * 1024)
         val preview = prepareDocument(name, address, existingId, auto, document)
         require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
         preview
     }
 
-    internal suspend fun prepareDocument(name: String, address: String, existingId: String?, auto: Boolean, document: String): SubscriptionPreview = withContext(Dispatchers.IO) {
+    suspend fun preparePublic(name: String, address: String): SubscriptionPreview = withContext(Dispatchers.IO) {
+        require(findSource(address) == null) { "SOURCE_EXISTS" }
+        prepareDocument(name, address, null, false, fetch(address, PublicFeed.MAX_BYTES), publicMode = true)
+    }
+
+    internal suspend fun prepareDocument(name: String, address: String, existingId: String?, auto: Boolean, document: String,
+        publicMode: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
         require(name.isNotBlank() && name.length <= 120) { "NAME_REQUIRED" }
         val existing = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val id = existing?.id ?: UUID.randomUUID().toString()
+        val public = publicMode || existing?.id?.startsWith("public:") == true
+        val id = existing?.id ?: (if (public) "public:" else "") + UUID.randomUUID().toString()
         val source = (existing ?: SubscriptionEntity(id, name.trim(), "")).copy(name = name.trim(),
-            sourceEnvelope = DeviceSecrets.seal(url(address).toString(), "subscription:$id"), autoUpdate = auto)
-        val profiles = SubscriptionPayload.read(document).flatMap { item ->
+            sourceEnvelope = DeviceSecrets.seal(url(address).toString(), "subscription:$id"), autoUpdate = auto && !public)
+        val publicResult = if (public) PublicFeed.parse(document, importer, connection.getDeviceId()) else null
+        val profiles = if (publicResult != null) publicResult.profiles.map { profile ->
+            val stable = app.slipnet.domain.model.ProfileDuplicates.key(profile).copy(collectionId = "")
+            hash(exporter.exportSingleProfile(stable)) to profile
+        } else SubscriptionPayload.read(document).flatMap { item ->
             val parsed = importer.parseAndImport(item.link, connection.getDeviceId())
             require(parsed is ImportResult.Success && parsed.profiles.isNotEmpty() && parsed.warnings.isEmpty()) { "INVALID_FEED" }
             require(item.key == null || parsed.profiles.size == 1) { "INVALID_FEED" }
@@ -151,11 +162,11 @@ class SubscriptionRepository @Inject constructor(
                 hash(identity) to p
             }
         }
-        require(profiles.size in 1..1000 && profiles.map { it.first }.distinct().size == profiles.size) { "INVALID_FEED" }
+        require(profiles.size in 1..(if (public) PublicFeed.MAX_ENTRIES else 1000) && profiles.map { it.first }.distinct().size == profiles.size) { "INVALID_FEED" }
         val old = JSONArray(existing?.membersJson ?: "[]")
         val incoming = profiles.map { it.first }.toSet()
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
-        SubscriptionPreview(source, existing, profiles, removed)
+        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0)
     }
     /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
@@ -234,7 +245,7 @@ class SubscriptionRepository @Inject constructor(
         val row = db.subscriptionDao().get(id) ?: return
         try {
             val preview = prepare(row.name, sourceUrl(row), row.id, row.autoUpdate)
-            require(preview.removed == 0) { "REVIEW_REQUIRED" }
+            require(preview.removed == 0 && !row.id.startsWith("public:")) { "REVIEW_REQUIRED" }
             apply(preview)
         }
         catch (e: CancellationException) { throw e }
@@ -246,11 +257,11 @@ class SubscriptionRepository @Inject constructor(
     }
     suspend fun detach(id: String) = mutex.withLock { db.subscriptionDao().delete(id) }
     suspend fun setAutomatic(id: String, enabled: Boolean) = mutex.withLock {
-        db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(autoUpdate = enabled)) }
+        db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(autoUpdate = enabled && !id.startsWith("public:"))) }
     }
     suspend fun refreshAutomatic() {
         if (!connection.connectionState.value.isDisconnected) return
-        db.subscriptionDao().all().filter { it.autoUpdate }.forEach { row ->
+        db.subscriptionDao().all().filter { it.autoUpdate && !it.id.startsWith("public:") }.forEach { row ->
         try { refresh(row.id) } catch (e: CancellationException) { throw e } catch (_: Exception) { /* Per-source safe code persisted. */ }
     } }
 }

@@ -146,15 +146,15 @@ class SoarScannerDeviceTest {
     }
 
     @Test fun prismRepeatsRealSoarHandshakesAndRejectsOrdinaryDnsReplies() = runBlocking {
-        val verified = SoarResolverProbe.verifyDetailed(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 8000, 5, 2)
-        assertEquals(2, verified.passed)
-        assertEquals("Five configured probes must stop after two proven handshakes", 2, verified.attempted)
+        val verified = SoarResolverProbe.verifyDetailed(host, fixture.getInt("tcpOnlyPort"), profile(), DnsTransport.TCP, 30_000, 5, 2)
+        assertEquals(5, verified.passed)
+        assertEquals("Restored scanner performs the configured probe series", 5, verified.attempted)
         assertEquals(0, SoarResolverProbe.verify(host, fixture.getInt("fakeTcpPort"), profile(), DnsTransport.TCP, 1000, 1, 1))
         assertTrue(SoarResolverProbe.test(host, fixture.getInt("udpPort"), profile().copy(dnsttPublicKey = fixture.getString("publicKeyHex")),
             DnsTransport.UDP, 6000, "", false).success)
     }
 
-    @Test fun prismPublishesUdpBeforeTcpAndKeepsTheFirstProofTime() = runBlocking {
+    @Test fun prismWaitsForBothTransportsAndCountsResolverOnce() = runBlocking {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val preferences = app.slipnet.data.local.datastore.PreferencesDataStore(context)
@@ -164,10 +164,10 @@ class SoarScannerDeviceTest {
         val tcp = CompletableDeferred<Unit>()
         val scanner = object : app.slipnet.domain.repository.ResolverScannerRepository by app.slipnet.data.repository.ResolverScannerRepositoryImpl(context) {
             override fun getDefaultResolvers() = listOf(resolver)
-            override suspend fun verifySoarResolverDetailed(host: String, port: Int, profile: ServerProfile,
-                timeoutMs: Long, probeCount: Int, threshold: Int, transport: DnsTransport): ProbeVerification {
-                if (transport == DnsTransport.UDP) { delay(50); return ProbeVerification(threshold, threshold) }
-                tcp.await(); return ProbeVerification(0, 1)
+            override suspend fun verifySoarResolver(host: String, port: Int, profile: ServerProfile,
+                timeoutMs: Long, probeCount: Int, threshold: Int, transport: DnsTransport): Int {
+                if (transport == DnsTransport.UDP) { delay(50); return threshold }
+                tcp.await(); return 0
             }
         }
         val profiles = java.lang.reflect.Proxy.newProxyInstance(javaClass.classLoader,
@@ -197,16 +197,12 @@ class SoarScannerDeviceTest {
             }
             withTimeout(5000) { vm.uiState.first { it.profile != null && it.resolverList == listOf(resolver) && it.testDomain == selected.domain } }
             instrumentation.runOnMainSync { vm.setScanMode(ScanMode.PRISM); vm.startScan() }
-            val first = withTimeout(5000) { vm.uiState.first { it.scannerState.results.singleOrNull()?.prismVerified == true } }
-            assertEquals(1, first.scannerState.scannedCount)
-            assertEquals(1, first.scannerState.workingCount)
-            assertEquals(true, first.hostTransportSupport[resolver]?.first)
-            assertNull(first.hostTransportSupport[resolver]?.second)
-            assertTrue(first.scannerState.isScanning)
             delay(250)
+            assertTrue("Restored BOTH mode waits for both results", vm.uiState.value.scannerState.results.isEmpty())
             tcp.complete(Unit)
             val complete = withTimeout(5000) { vm.uiState.first { !it.scannerState.isScanning && it.hostTransportSupport[resolver]?.second == false } }
-            assertEquals(first.scannerState.results.single().responseTimeMs, complete.scannerState.results.single().responseTimeMs)
+            assertEquals(true, complete.hostTransportSupport[resolver]?.first)
+            assertTrue(complete.scannerState.results.single().prismVerified == true)
             assertEquals(1, complete.scannerState.scannedCount)
             assertEquals(1, complete.scannerState.workingCount)
         } finally {

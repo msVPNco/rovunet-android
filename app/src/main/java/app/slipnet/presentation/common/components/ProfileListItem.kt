@@ -56,7 +56,7 @@ fun ProfileListItem(
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
                     if (pingResult is PingResult.Success && pingResult.verified) {
                         val green = if (pingResult.currentNetwork) ConnectedGreen else colors.onSurfaceVariant
-                        Text("HTTPS ${pingResult.latencyMs} ms", Modifier.testTag("profile-latency-${profile.id}")
+                        Text(stringResource(R.string.alpha17_ping, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
                             .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                             color = green, style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
                             fontWeight = FontWeight.SemiBold)
@@ -142,6 +142,7 @@ fun ProfileListItem(
                     java.text.DateFormat.getTimeInstance().format(java.util.Date(pingResult.measuredAt)), pingResult.message)
                 else -> stringResource(R.string.ui_not_verified)
             }
+            if (pingResult is PingResult.Success) Text(stringResource(R.string.alpha17_ping_hint), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
             Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             if ((pingResult is PingResult.Success && !pingResult.currentNetwork) || (pingResult is PingResult.Error && !pingResult.currentNetwork)) {
                 Text(stringResource(R.string.probe_previous_network), Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),

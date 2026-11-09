@@ -526,7 +526,7 @@ class SlipNetVpnService : VpnService() {
             // Acquire WifiLock to keep Wi-Fi radio active when screen is off.
             // Chinese OEMs (Xiaomi, Huawei, etc.) kill apps using WIFI_MODE_FULL_LOW_LATENCY,
             // so fall back to WIFI_MODE_FULL on those devices.
-            if (wifiLock == null) {
+            if (wifiLock == null && defaultPhysicalNetwork()?.let { connectivityManager?.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } == true) {
                 val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
                 @Suppress("DEPRECATION")
                 val wifiMode = when {
@@ -834,7 +834,7 @@ class SlipNetVpnService : VpnService() {
                 }
             }
             startWakeLockRenewal()
-            if (wifiLock == null) {
+            if (wifiLock == null && defaultPhysicalNetwork()?.let { connectivityManager?.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } == true) {
                 val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
                 @Suppress("DEPRECATION")
                 val wifiMode = when {
@@ -5435,6 +5435,7 @@ class SlipNetVpnService : VpnService() {
             val fallback = preferencesDataStore.getEffectiveRemoteDnsFallback().first()
             fallback.takeIf { !it.contains(':') && DomainRouter.isIpAddress(it) } ?: DEFAULT_DNS
         } else dnsServer
+        var selfExcludedForProbe = false
         val builder = Builder()
             .setSession("Rovunet VPN")
             .addAddress(VPN_ADDRESS, 32)
@@ -5482,6 +5483,7 @@ class SlipNetVpnService : VpnService() {
                     if (needsSelfExclusion) {
                         try {
                             builder.addDisallowedApplication(packageName)
+                            selfExcludedForProbe = true
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to exclude self from VPN", e)
                         }
@@ -5497,12 +5499,15 @@ class SlipNetVpnService : VpnService() {
                 SplitTunnelingMode.ALLOW -> {
                     // Only selected apps use VPN. Self is automatically excluded
                     // (not in the allowed list) — which is what tunnel types need.
+                    var allowedApps = 0
                     for (pkg in splitApps) {
                         if (pkg == packageName) continue // don't route our own traffic through VPN
                         try {
                             builder.addAllowedApplication(pkg)
+                            allowedApps++
                         } catch (_: Exception) { }
                     }
+                    selfExcludedForProbe = allowedApps > 0
                     Log.d(TAG, "Split tunneling: allow mode, ${splitApps.size} apps use VPN")
                 }
             }
@@ -5511,6 +5516,7 @@ class SlipNetVpnService : VpnService() {
             if (needsSelfExclusion) {
                 try {
                     builder.addDisallowedApplication(packageName)
+                            selfExcludedForProbe = true
                     Log.d(TAG, "Excluded app from VPN: $packageName")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to exclude app from VPN", e)
@@ -5549,7 +5555,9 @@ class SlipNetVpnService : VpnService() {
             }
         }
 
-        return EstablishedTun.establish(builder, mtu)
+        val established = EstablishedTun.establish(builder, mtu)
+        ProbeBypass.established(serviceSessionId, established != null && selfExcludedForProbe)
+        return established
     }
 
     private fun observeConnectionState() {
@@ -6034,8 +6042,18 @@ class SlipNetVpnService : VpnService() {
         // HIGH_PERF DNS path; don't hold a Wi-Fi lock on a cellular-only connection.
         val physical = defaultPhysicalNetwork()
         val caps = physical?.let { connectivityManager?.getNetworkCapabilities(it) }
-        val wifi = caps == null || caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-        val keepWifi = wifi && (screenOn || needsContinuousCpuWake && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
+        val wifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        val keepWifi = VpnPowerPolicy.holdWifi(wifi, needsContinuousCpuWake, screenOn, Build.VERSION.SDK_INT)
+        if (keepWifi && wifiLock == null) {
+            val manager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            @Suppress("DEPRECATION")
+            val mode = when {
+                isChineseOem() -> WifiManager.WIFI_MODE_FULL
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                else -> WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            }
+            wifiLock = manager?.createWifiLock(mode, "Rovunet:VpnWifiLock")?.apply { setReferenceCounted(false) }
+        }
         wifiLock?.let { lock ->
             if (keepWifi && !lock.isHeld) lock.acquire()
             else if (!keepWifi && lock.isHeld) lock.release()
@@ -6162,6 +6180,7 @@ class SlipNetVpnService : VpnService() {
             Log.e(TAG, "Error closing VPN interface", e)
         }
         vpnInterface = null
+        ProbeBypass.clear(serviceSessionId)
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.TUN_CLOSED, serviceSessionId)
 
         currentProfileId = -1
@@ -6278,6 +6297,7 @@ class SlipNetVpnService : VpnService() {
             Log.e(TAG, "Error closing VPN interface", e)
         }
         vpnInterface = null
+        ProbeBypass.clear(serviceSessionId)
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.TUN_CLOSED, serviceSessionId)
 
         currentProfileId = -1

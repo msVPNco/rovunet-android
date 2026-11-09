@@ -37,6 +37,7 @@ class VpnConnectionManager @Inject constructor(
     private val chainRepository: ChainRepository,
     private val preferencesDataStore: PreferencesDataStore
 ) {
+    internal var cancelAutomatic: (() -> Unit)? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val startupWatchdog = app.slipnet.domain.model.AttemptWatchdog(scope)
     private val abortedStarts = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
@@ -170,7 +171,8 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun connect(profile: ServerProfile, profileResolvers: Boolean = false, testMode: Boolean = false,
-                allowTrustPrompt: Boolean = !testMode): Long {
+                allowTrustPrompt: Boolean = !testMode, automatic: Boolean = false): Long {
+        if (!automatic) cancelAutomatic?.invoke()
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting ||
             _connectionState.value is ConnectionState.Disconnecting) {
@@ -223,7 +225,8 @@ class VpnConnectionManager @Inject constructor(
         return sessionId
     }
 
-    fun reconnect(profile: ServerProfile) {
+    fun reconnect(profile: ServerProfile, automatic: Boolean = false) {
+        if (!automatic) cancelAutomatic?.invoke()
         if (_connectionState.value is ConnectionState.Disconnecting) return
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.RECONNECT_REQUEST)
         if (profile.needsCredentials) {
@@ -264,6 +267,7 @@ class VpnConnectionManager @Inject constructor(
     }
 
     fun connectChain(chain: ProfileChain, firstProfile: ServerProfile) {
+        cancelAutomatic?.invoke()
         if (_connectionState.value is ConnectionState.Connected ||
             _connectionState.value is ConnectionState.Connecting ||
             _connectionState.value is ConnectionState.Disconnecting) {
@@ -291,7 +295,8 @@ class VpnConnectionManager @Inject constructor(
         dispatchConnect(intent, sessionId)
     }
 
-    fun disconnect(keepServiceAlive: Boolean = false, expectedSessionId: Long = currentSessionId) {
+    fun disconnect(keepServiceAlive: Boolean = false, expectedSessionId: Long = currentSessionId, automatic: Boolean = false) {
+        if (!automatic) cancelAutomatic?.invoke()
         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.DISCONNECT_REQUEST, expectedSessionId)
         if (!ownsSession(expectedSessionId)) return
         startupWatchdog.cancel()

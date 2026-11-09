@@ -34,7 +34,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
     onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean,
     onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null,
-    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null) {
+    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null,
+    onAutomatic: (() -> Unit)? = null) {
     if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
@@ -89,6 +90,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !busy,
                             onClick = { menuOpen = false; onStabilityTest() })
+                        onAutomatic?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.alpha17_smart_title)) },
+                            onClick = { menuOpen = false; action() }) }
                         HorizontalDivider()
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_manage)
                         onUpdate?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.subscription_update_review)) }, enabled = !busy, onClick = { menuOpen = false; action() }) }
