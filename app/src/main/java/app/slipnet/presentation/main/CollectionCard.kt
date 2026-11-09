@@ -40,8 +40,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     val connected = connectedProfileId != null
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
     val completed = profiles.mapNotNull { results[it.id] }
-    val verified = completed.count { it is PingResult.Success && it.verified }
-    val failed = completed.count { it is PingResult.Error }
+    val verified = completed.count { it is PingResult.Success && it.verified && ProbeCache.fresh(it) }
+    val failed = completed.count { it is PingResult.Error && ProbeCache.fresh(it) }
     var menuOpen by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val tones = collectionTones

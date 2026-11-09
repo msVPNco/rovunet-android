@@ -224,11 +224,14 @@ class MainViewModel @Inject constructor(
     }
 
     private val networkManager = appContext.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-    private val underlyingNetworks = mutableSetOf<android.net.Network>()
+    private val physicalNetworkTracker = app.slipnet.domain.model.PhysicalNetworkTracker(physicalNetworkSnapshot())
+    private var networkChangeJob: Job? = null
     private var networkCallbackRegistered = false
     private val networkCallback = object : android.net.ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: android.net.Network) { networkChanged(network, true) }
         override fun onLost(network: android.net.Network) { networkChanged(network, false) }
+        override fun onCapabilitiesChanged(network: android.net.Network, capabilities: android.net.NetworkCapabilities) { networkChanged(network, true) }
+        override fun onLinkPropertiesChanged(network: android.net.Network, properties: android.net.LinkProperties) { networkChanged(network, true) }
     }
     init {
         viewModelScope.launch { smartConnections.status.collect { _uiState.value = _uiState.value.copy(smartStatus = it) } }
@@ -263,18 +266,35 @@ class MainViewModel @Inject constructor(
             .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build()
         runCatching { networkManager.registerNetworkCallback(request, networkCallback); networkCallbackRegistered = true }
     }
+    private fun physicalNetworkSnapshot(): String? {
+        val network = networkManager.activeNetwork ?: return null
+        val caps = networkManager.getNetworkCapabilities(network) ?: return null
+        if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
+            !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) return null
+        val links = networkManager.getLinkProperties(network)
+        return network.toString() + ":" + links?.interfaceName.orEmpty() + ":" +
+            links?.linkAddresses.orEmpty().map { it.toString() }.sorted().joinToString(",")
+    }
     private fun networkChanged(network: android.net.Network, available: Boolean) {
-        viewModelScope.launch {
-            val changed = if (available) underlyingNetworks.add(network) else underlyingNetworks.remove(network)
-            if (!changed) return@launch
-            smartConnections.clearResults()
-            pingJob?.cancelAndJoin()
-            discoveredProfiles.clear()
-            // Preserve the user's evidence; a different underlying network only makes it historical.
-            _uiState.value = _uiState.value.copy(collectionPrompt = false,
-                pingResults = app.slipnet.domain.model.ProbeCache.historical(_uiState.value.pingResults))
-            rememberHistory()
+        // Ignore the event's network: only the selected physical route matters.
+        networkChangeJob?.cancel()
+        networkChangeJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(500)
+            if (physicalNetworkSnapshot() == null) kotlinx.coroutines.delay(1000)
+            applyPhysicalNetworkSnapshot(physicalNetworkSnapshot())
         }
+    }
+    internal suspend fun applyPhysicalNetworkSnapshot(snapshot: String?) {
+        if (!physicalNetworkTracker.update(snapshot)) return
+        val testing = _uiState.value.isPingRunning
+        smartConnections.clearResults()
+        pingJob?.cancelAndJoin()
+        discoveredProfiles.clear()
+        _uiState.value = _uiState.value.copy(collectionPrompt = false,
+            error = if (testing) app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
+                .getString(app.slipnet.R.string.review02_network_changed) else _uiState.value.error,
+            pingResults = app.slipnet.domain.model.ProbeCache.historical(_uiState.value.pingResults))
+        rememberHistory()
     }
     override fun onCleared() {
         rememberHistory()
@@ -289,7 +309,7 @@ class MainViewModel @Inject constructor(
     }
     fun connectCollection(profile: ServerProfile) {
         if (automaticMode(profile) == app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) connect(preferredProfile(listOf(profile)) ?: profile)
-        else smartConnections.start(ProfileCollections.key(profile), replaceCurrent = true)
+        else { selectCollection(profile); smartConnections.start(ProfileCollections.key(profile), replaceCurrent = true) }
     }
     fun addFreeTor() { viewModelScope.launch {
         val name = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.alpha17_free_tor)
@@ -561,12 +581,12 @@ class MainViewModel @Inject constructor(
             }
         }
         val targetProfile = profile ?: when (val choice = app.slipnet.domain.model.ConnectionChoice.resolve(
-            _uiState.value.manualProfileId, _uiState.value.profiles)) {
+            _uiState.value.manualProfileId, selectedMembers())) {
             app.slipnet.domain.model.ConnectionChoice.Target.Automatic -> {
                 val selected = selectedMembers()
                 if (onlyUnavailable(selected)) return
                 val members = selected.filter { !it.needsCredentials && !it.isExpired && it.tunnelType.isAvailable() }
-                val candidate = app.slipnet.domain.model.ConnectionChoice.initialPath(members, _uiState.value.pingResults)
+                val candidate = preferredProfile(members)
                 if (candidate == null) {
                     if (members.any { ProfileCollections.isDns(it) }) {
                         _uiState.value = _uiState.value.copy(collectionPrompt = true, collectionConnect = true)
@@ -695,8 +715,21 @@ class MainViewModel @Inject constructor(
 
     fun preferredProfile(collection: List<ServerProfile>): ServerProfile? {
         val first = collection.firstOrNull() ?: return null
-        val id = ConnectionChoice.rememberedPath(ProfileCollections.key(first), manualChoices, _uiState.value.profiles)
-        return collection.firstOrNull { it.id == id } ?: collection.singleOrNull()
+        val id = ConnectionChoice.rememberedPath(ProfileCollections.key(first), manualChoices, collection)
+        return collection.firstOrNull { it.id == id } ?: ConnectionChoice.initialPath(
+            collection.filter { it.tunnelType.isAvailable() }, _uiState.value.pingResults) ?:
+            collection.firstOrNull { !it.isExpired && !it.needsCredentials && it.tunnelType.isAvailable() }
+    }
+
+    fun selectCollection(profile: ServerProfile) {
+        if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
+        val key = ProfileCollections.key(profile)
+        val members = _uiState.value.profiles.filter { ProfileCollections.key(it) == key }
+        if (members.isEmpty()) return
+        val remembered = ConnectionChoice.rememberedPath(key, manualChoices, members)
+        _uiState.value = _uiState.value.copy(selectedCollection = key, manualProfileId = remembered)
+        rememberHistory()
+        viewModelScope.launch { setActiveProfileUseCase(remembered ?: members.first().id) }
     }
 
     fun selectProfileOnly(profile: ServerProfile) {
@@ -1241,7 +1274,8 @@ class MainViewModel @Inject constructor(
 
     private fun finishTestResults(original: Map<Long, PingResult>): Map<Long, PingResult> =
         _uiState.value.pingResults.mapValues { (id, result) ->
-            if (result is PingResult.Pending || result is PingResult.Testing) original[id] ?: PingResult.Skipped else result
+            if (result is PingResult.Pending || result is PingResult.Testing)
+                original[id]?.let { app.slipnet.domain.model.ProbeCache.historical(mapOf(id to it))[id] } ?: PingResult.Skipped else result
         }
 
     private fun runCollection(connectAfter: Boolean, dnsOnly: Boolean = false, detailed: Boolean = false) {
@@ -1262,22 +1296,29 @@ class MainViewModel @Inject constructor(
         val batchKey = ProfileCollections.key(members.first()) + ":" + dnsOnly
         val offset = (testBatchOffsets[batchKey] ?: 0).coerceAtMost((ordered.size - 1).coerceAtLeast(0))
         val candidates = (ordered.drop(offset) + ordered.take(offset)).take(50)
-        if (ordered.isNotEmpty()) testBatchOffsets[batchKey] = (offset + candidates.size) % ordered.size
         val originalResults = _uiState.value.pingResults
+        smartConnections.cancel(); smartConnections.clearResults()
+        val memberIds = members.map { it.id }.toSet()
+        val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { it in memberIds })
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",
-            pingResults = _uiState.value.pingResults + candidates.associate { it.id to PingResult.Pending })
+            pingResults = _uiState.value.pingResults + historical + candidates.associate { it.id to PingResult.Pending })
         pingJob = viewModelScope.launch {
             var passed = false
+            var completedInBatch = 0
             try {
                 passed = app.slipnet.domain.model.CollectionPhase.run(candidates, connectAfter,
                     when {
                         dnsOnly -> 180_000L
                         connectAfter -> 90_000L // stop at the first verified path
-                        else -> app.slipnet.domain.model.ProbePolicy.testAllBudgetMs(candidates)
+                        else -> app.slipnet.domain.model.ProbePolicy.testAllBudgetMs(candidates, detailed)
                     },
                     onProgress = { index, p -> _uiState.value = _uiState.value.copy(collectionProgress = "${index + 1}/${candidates.size} · ${p.name}") },
-                    onResult = { p, result -> _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (p.id to result)) },
+                    onResult = { p, result ->
+                        completedInBatch++
+                        if (ordered.isNotEmpty()) testBatchOffsets[batchKey] = (offset + completedInBatch) % ordered.size
+                        _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (p.id to result))
+                    },
                     pausedNanos = { app.slipnet.tunnel.TransportTrust.decisionWaitNanos },
                     probe = { p -> probeThroughService(p, keepConnected = connectAfter, profileResolvers = dnsOnly, detailed = detailed) })
                 if (!passed && dnsOnly) passed = discoverCollectionDns(candidates, connectAfter, detailed)

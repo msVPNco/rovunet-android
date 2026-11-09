@@ -430,6 +430,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     // Split Tunneling Settings
+    fun configureSelectedAppsBypass(onReady: () -> Unit) {
+        viewModelScope.launch {
+            preferencesDataStore.configureSelectedAppsBypass()
+            onReady()
+        }
+    }
+
     fun setSplitTunnelingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesDataStore.setSplitTunnelingEnabled(enabled)

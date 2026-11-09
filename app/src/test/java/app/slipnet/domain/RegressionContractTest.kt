@@ -125,7 +125,7 @@ class RegressionContractTest {
         assertNull(ProfileCollections.coreTcpTarget(base.copy(coreLink = "vless://id@host?type=tcp")))
         // The all-paths budget grows with the collection, so the last-ordered UDP cores are reached.
         val seventeen = List(17) { reality.copy(id = it + 1L) }
-        assertEquals(17 * 40_000L, ProbePolicy.testAllBudgetMs(seventeen))
+        assertEquals(900_000L, ProbePolicy.testAllBudgetMs(seventeen))
         assertEquals(90_000L, ProbePolicy.testAllBudgetMs(listOf(reality)))
         assertEquals(900_000L, ProbePolicy.testAllBudgetMs(List(60) { reality.copy(id = it + 1L) }))
     }

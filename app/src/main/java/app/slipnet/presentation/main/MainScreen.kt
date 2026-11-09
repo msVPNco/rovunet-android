@@ -203,6 +203,7 @@ fun MainScreen(
             }
         }
     }
+    val measurementClockMillis = remember(statusClock) { System.currentTimeMillis() }
     val trustRequest by app.slipnet.tunnel.TransportTrust.request.collectAsState()
     trustRequest?.let { request ->
         AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(request, false) },
@@ -260,7 +261,8 @@ fun MainScreen(
     var showFreeConnections by remember { mutableStateOf(false) }
     var automaticTarget by remember { mutableStateOf<app.slipnet.domain.model.ServerProfile?>(null) }
     if (showFreeConnections) FreeConnectionsSheet(viewModel.subscriptionRepository,
-        onTor = { viewModel.addFreeTor(); showFreeConnections = false }, onDismiss = { showFreeConnections = false })
+        onTor = { viewModel.addFreeTor(); showFreeConnections = false },
+        onImport = { showFreeConnections = false; showImportDialog = true }, onDismiss = { showFreeConnections = false })
     automaticTarget?.let { target ->
         AlertDialog(onDismissRequest = { automaticTarget = null }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha17_smart_title)) },
             text = { Column {
@@ -930,7 +932,7 @@ fun MainScreen(
                                     top = 8.dp,
                                     bottom = 200.dp + navBarPadding.calculateBottomPadding()
                                 ),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 if (uiState.connectionState.isConnected && app.slipnet.domain.model.dataPathNoteVisible(
@@ -960,7 +962,7 @@ fun MainScreen(
                                                 else viewModel.preferredProfile(collection)?.let { proceedWithConnect(it) }
                                                     ?: run { expandedCollection = collectionKey }
                                             },
-                                            onDetails = { expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
+                                            onDetails = { viewModel.selectCollection(representative); expandedCollection = if (expandedCollection == collectionKey) null else collectionKey },
                                             onAutomatic = { automaticTarget = representative },
                                             onRename = { renameTarget = representative; renameText = ProfileCollections.name(representative) },
                                             onMove = { moveTarget = representative },
@@ -981,13 +983,13 @@ fun MainScreen(
                                     }
                                     if (expandedCollection == collectionKey) collectionPathItems(collection) { profile ->
                                         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp)
-                                            .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(10.dp)) {
+                                            .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
                                         isSelected = profile.id == uiState.manualProfileId,
                                         isConnected = isConnected,
-                                        pingResult = uiState.pingResults[profile.id],
+                                        pingResult = uiState.pingResults[profile.id], measurementNowMillis = measurementClockMillis,
                                         onClick = { viewModel.selectProfileOnly(profile) },
                                         isConnecting = uiState.connectionState.isConnecting && uiState.connectingProfileId == profile.id,
                                         connectionBusy = uiState.connectionState.isConnecting || uiState.connectionState is ConnectionState.Disconnecting,

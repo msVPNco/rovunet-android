@@ -537,6 +537,14 @@ class PreferencesDataStore internal constructor(
         }
     }
 
+    /** One explicit user action; retain the selected application list. Applies on reconnect. */
+    suspend fun configureSelectedAppsBypass() {
+        dataStore.edit { prefs ->
+            prefs[Keys.SPLIT_TUNNELING_MODE] = SplitTunnelingMode.DISALLOW.value
+            prefs[Keys.SPLIT_TUNNELING_ENABLED] = true
+        }
+    }
+
     // Split Tunneling Settings
     val splitTunnelingEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[Keys.SPLIT_TUNNELING_ENABLED] ?: false

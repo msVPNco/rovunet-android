@@ -16,38 +16,38 @@ import app.slipnet.BuildConfig
 import app.slipnet.R
 import app.slipnet.data.subscription.SubscriptionPreview
 import app.slipnet.data.subscription.SubscriptionRepository
+import app.slipnet.data.subscription.PublicProviders
 import kotlinx.coroutines.*
 
 /** This catalog neither downloads nor connects until an explicit user action. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () -> Unit, onDismiss: () -> Unit) {
-    val context = LocalContext.current
+internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () -> Unit, onImport: () -> Unit, onDismiss: () -> Unit) {
     var showPublic by remember { mutableStateOf(false) }
-    fun open(address: String) { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(address))) }
+    var provider by remember { mutableStateOf<PublicProviders.Provider?>(null) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.alpha17_free_title), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.alpha17_free_hint), style = MaterialTheme.typography.bodyMedium)
             if (BuildConfig.INCLUDE_TOR) OutlinedButton(onClick = onTor, modifier = Modifier.fillMaxWidth().testTag("free-tor")) { Text(stringResource(R.string.alpha17_free_tor)) }
-            OutlinedButton(onClick = { open("https://protonvpn.com/support/wireguard-configurations") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.alpha17_free_proton)) }
+            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().testTag("free-proton-import")) { Text(stringResource(R.string.review02_proton_import)) }
             HorizontalDivider()
             Text(stringResource(R.string.alpha17_public_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
-            // Provider pages are references, not a claim of permission to redistribute their relays.
-            OutlinedButton(onClick = { open("https://github.com/4n0nymou3/multi-proxy-config-fetcher") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.alpha17_free_anon) + " · " + stringResource(R.string.alpha17_free_details)) }
-            OutlinedButton(onClick = { open("https://github.com/mahsanet/MahsaFreeConfig") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.alpha17_free_mahsa)) }
-            Button(onClick = { showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("public-source")) { Text(stringResource(R.string.alpha17_free_other)) }
+            OutlinedButton(onClick = { provider = PublicProviders.Provider.ANONYMOUS; showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("free-anonymous")) { Text(stringResource(R.string.review02_anonymous)) }
+            OutlinedButton(onClick = { provider = PublicProviders.Provider.MAHSA; showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("free-mahsa")) { Text(stringResource(R.string.review02_mahsa)) }
+            Button(onClick = { provider = null; showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("public-source")) { Text(stringResource(R.string.alpha17_free_other)) }
             Spacer(Modifier.height(18.dp))
         }
     }
-    if (showPublic) PublicSourceDialog(repository, onDismiss = { showPublic = false }, onImported = onDismiss)
+    if (showPublic) PublicSourceDialog(repository, provider = provider, onDismiss = { showPublic = false }, onImported = onDismiss)
 }
 
 @Composable
-internal fun PublicSourceDialog(repository: SubscriptionRepository, onDismiss: () -> Unit, onImported: () -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
+internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: PublicProviders.Provider? = null, onDismiss: () -> Unit, onImported: () -> Unit) {
+    val presetName = if (provider == PublicProviders.Provider.MAHSA) stringResource(R.string.review02_mahsa) else stringResource(R.string.review02_anonymous)
+    var name by remember(provider) { mutableStateOf(if (provider == null) "" else presetName) }
+    var address by remember(provider) { mutableStateOf(provider?.address.orEmpty()) }
     var agreed by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<SubscriptionPreview?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
@@ -69,10 +69,11 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, onDismiss: (
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (preview == null) {
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(address, { address = it }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(address, { address = it }, enabled = !busy && provider == null, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
                 Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
                 Row { Checkbox(agreed, { agreed = it }, enabled = !busy); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
             } else preview?.let { item ->
+                Text(item.source.name, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
                 Text(stringResource(R.string.alpha17_public_refresh_warning), style = MaterialTheme.typography.bodySmall)
             }
@@ -81,14 +82,14 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, onDismiss: (
                 "PUBLIC_FEED_LIMIT", "FEED_TOO_LARGE" -> R.string.alpha17_public_limit
                 "SOURCE_EXISTS" -> R.string.subscription_source_exists
                 "HTTPS_REQUIRED" -> R.string.subscription_https_required
-                else -> R.string.subscription_failed
+                else -> if (provider != null) R.string.review02_provider_failed else R.string.subscription_failed
             }), color = MaterialTheme.colorScheme.error) }
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         } },
         confirmButton = {
             TextButton(enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank(), onClick = {
                 execute { val ready = preview
-                    if (ready == null) preview = repository.preparePublic(name, address)
+                    if (ready == null) preview = repository.preparePublic(name, address, updateExisting = provider != null)
                     else { repository.apply(ready); onImported() }
                 }
             }) { Text(stringResource(if (preview == null) R.string.subscription_preview else R.string.alpha17_public_import)) }

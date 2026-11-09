@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="review02_network_changed">Интернет-маршрут изменился. Проверка остановлена; незавершённые результаты показаны как предыдущие измерения.</string>
+    <string name="review02_ping_fresh">Новое · %1$s</string>
+    <string name="review02_ping_previous">Предыдущее · %1$s</string>
+    <string name="review02_proton_import">Импорт личной конфигурации Proton</string>
+    <string name="review02_anonymous">Anonymous X</string>
+    <string name="review02_mahsa">Mahsa</string>
+    <string name="review02_app_bypass_title">Исключить выбранные приложения из VPN</string>
+    <string name="review02_app_bypass_hint">Для банковских приложений используйте обход VPN целиком. Маршрутизация страны меняет только назначения.</string>
+    <string name="review02_app_bypass_message">Будет включён режим «выбранные приложения обходят VPN». Текущий список сохранится. Выберите приложения и переподключитесь. Это не скрывает активный VPN; некоторые приложения всё равно могут его отклонить. Настройка Android «блокировать подключения без VPN» также может блокировать обход.</string>
+    <string name="review02_app_bypass_choose">Настроить и выбрать приложения</string>
+    <string name="review02_provider_failed">Не удалось загрузить источник. Повторите с рабочим соединением; прежние профили сохранены.</string>
+</resources>

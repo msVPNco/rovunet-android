@@ -129,15 +129,19 @@ class SubscriptionRepository @Inject constructor(
     }
     suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
         val initial = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val document = fetch(address, if (initial?.id?.startsWith("public:") == true) PublicFeed.MAX_BYTES else 2 * 1024 * 1024)
+        val document = if (initial?.id?.startsWith("public:") == true) PublicProviders.download(url(address).toString(), ::fetch) else fetch(address)
         val preview = prepareDocument(name, address, existingId, auto, document)
         require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
         preview
     }
 
-    suspend fun preparePublic(name: String, address: String): SubscriptionPreview = withContext(Dispatchers.IO) {
-        require(findSource(address) == null) { "SOURCE_EXISTS" }
-        prepareDocument(name, address, null, false, fetch(address, PublicFeed.MAX_BYTES), publicMode = true)
+    suspend fun preparePublic(name: String, address: String, updateExisting: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
+        val existing = findSource(address)
+        require(existing == null || (updateExisting && existing.id.startsWith("public:"))) { "SOURCE_EXISTS" }
+        val document = PublicProviders.download(url(address).toString(), ::fetch)
+        val preview = prepareDocument(existing?.name ?: name, address, existing?.id, false, document, publicMode = true)
+        require(preview.expectedSource == existing) { "SOURCE_CHANGED" }
+        preview
     }
 
     internal suspend fun prepareDocument(name: String, address: String, existingId: String?, auto: Boolean, document: String,

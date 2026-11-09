@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="review02_network_changed">The internet route changed. The test stopped; unfinished results are shown as previous measurements.</string>
+    <string name="review02_ping_fresh">Fresh · %1$s</string>
+    <string name="review02_ping_previous">Previous · %1$s</string>
+    <string name="review02_proton_import">Import a personal Proton configuration</string>
+    <string name="review02_anonymous">Anonymous X</string>
+    <string name="review02_mahsa">Mahsa</string>
+    <string name="review02_app_bypass_title">Exclude selected apps from VPN</string>
+    <string name="review02_app_bypass_hint">For banking apps, choose whole-app bypass. Country routing only changes destinations.</string>
+    <string name="review02_app_bypass_message">This switches app routing to “selected apps bypass VPN” and keeps your current app selection. Choose the apps, then reconnect. It does not hide an active VPN; some apps may still refuse it. Android’s “block connections without VPN” can block bypassed apps.</string>
+    <string name="review02_app_bypass_choose">Configure and choose apps</string>
+    <string name="review02_provider_failed">The source could not be downloaded. Try with a working connection; your previous profiles are preserved.</string>
+</resources>

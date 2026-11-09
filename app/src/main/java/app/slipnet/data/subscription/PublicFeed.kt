@@ -13,7 +13,7 @@ internal object PublicFeed {
     const val MAX_BYTES = 8 * 1024 * 1024
     const val MAX_ENTRIES = 10_000
     data class Result(val profiles: List<ServerProfile>, val unsupported: Int, val duplicates: Int)
-    suspend fun parse(document: String, importer: ConfigImporter, deviceId: String): Result {
+    fun expand(document: String): String {
         require(document.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "PUBLIC_FEED_LIMIT" }
         val text = document.removePrefix("\uFEFF").trim()
         require(!text.startsWith("<") && !text.startsWith("{") && !text.startsWith("[")) { "INVALID_FEED" }
@@ -21,6 +21,10 @@ internal object PublicFeed {
             String(WireBase64.decode(text), Charsets.UTF_8)
         } catch (_: Exception) { error("INVALID_FEED") }
         require(expanded.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "PUBLIC_FEED_LIMIT" }
+        return expanded
+    }
+    suspend fun parse(document: String, importer: ConfigImporter, deviceId: String): Result {
+        val expanded = expand(document)
         val seen = HashSet<ServerProfile>()
         val profiles = ArrayList<ServerProfile>()
         var unsupported = 0
