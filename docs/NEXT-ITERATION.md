@@ -1,8 +1,24 @@
 # Next update after alpha17
 
-- Owner request, 2026-11-09: move Patterniha beside Anonymous and Mahsa in the provider group; do not change the owner-accepted alpha17 APK for this cosmetic adjustment.
-- Investigate the inherited intermittent subscription error-display UI test timeout without hiding failures.
-- If the physical-phone 120-second Hev stop recurs, use its redacted report; do not claim the screen-state reporting fix resolved it.
+Owner-approved backlog; implementation and release have not been authorized by this record. Keep the published alpha17/code36 APK unchanged. Current decisions below supersede older planning notes, including the old request to move Patterniha beside other providers.
+
+| Priority | Item | Scope and acceptance |
+| --- | --- | --- |
+| P0 | Fix intermittent Disconnecting / Hev native stop stall | Recurred in alpha17/code36: report attempt 13 stops at STOP_HEV_BEGIN (+484 ms), with no STOP_HEV_END about 45 seconds later. Screen was on. Earlier screen-state reporting correction did not fix this stall. Reproduce stalled SOCKS handshakes, active TCP/UDP and rapid collection-test cancellation; fix native cancellation and verify complete resource teardown before another engine starts. Never merely hide Disconnecting or declare success while an old native owner remains. Root cause is not yet established. |
+| P1 | Remove built-in Patterniha provider | Replaces the previous cosmetic regrouping request. Its modified configurations can require a companion client/local endpoint that this app does not provide. Remove the built-in entry in the next update; preserve existing user-imported profiles unless explicitly deleted. Do not weaken TLS or globally reject legitimate local/private manual imports. Provider failures are not proof of the Hev stall's cause. |
+| P1 | Diagnose Slipstream and Slipstream+SSH connectivity | Separate DNS resolution, QUIC readiness, SOCKS/SSH authentication and actual data transfer. A local listener or TUN alone is not tunnel success. Compare installed client/server versions and actual selected resolvers. Investigate IPv4-only socket handling as a hypothesis, not an established cause. Add support for the tunnel's public certificate/pin through panel export, app import and native client; it is separate from the SSH host key and HTTPS certificate. Missing optional pin support alone does not explain the failed connections. |
+| P1 | Four parallel full Slipstream resolver tests | Owner requested concurrency 4 for both Slipstream variants. Create four genuinely isolated full E2E workers before raising the current cap of 1: the shared native singleton cannot safely be reused by concurrent tests. Candidate tests must neither stop nor reuse the active connection. Measure completion time, stability, CPU, memory and data on a physical phone; do not promise fourfold speed or raise the cap to 10 without evidence. |
+| P2 | Extend Chain to Xray-backed transports | Plan support for SSH carried over an outer Xray transport, including Hy2/WireGuard where the first hop is reachable. Current Chain validation and startup do not support XRAY. Validate capabilities per transport and independent lifecycle/port ownership rather than merely enabling the enum. The reverse direction, carrying Hy2/WireGuard through SSH, requires UDP relay/IP tunneling beyond TCP-only SSH forwarding and is a separate feasibility item. No claim that chaining fixes an unreachable first hop or automatically increases speed. |
+| P2 | Investigate intermittent subscription error-display UI test timeout | Keep the failure visible; reproduce and correct timing/lifecycle behavior without hiding failures or removing coverage. |
+| Investigation | Hysteria2 and WireGuard physical-network failures | Still reported; local interoperability tests do not establish operation on the affected mobile network. Collect protocol-specific diagnostics before promising a fix. |
+
+## When to propose another version
+
+- Severity takes precedence over item count. The repeated connection-blocking Hev stall already warrants proposing a focused maintenance update; do not delay its correction solely to bundle Chain or other features.
+- A reproducible security/trust failure, data loss, or inability to connect/disconnect merits prompt release planning. Otherwise bundle several validated user-impact improvements.
+- A proposal is not release authorization. Implement only when authorized, validate the correction and regressions, provide the exact candidate APK to the owner, and publish only after acceptance and explicit release approval.
+- During backlog review, notify only on a new material release recommendation or a meaningful change to an existing recommendation; do not repeat unchanged alerts.
+- Preserve the current README layout, four-language presentation and existing desktop work.
 
 ## Historical source-only planning record
 
