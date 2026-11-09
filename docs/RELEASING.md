@@ -26,7 +26,9 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha16.1/code33 publishes the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `133a0a4f1aa97ddd9eb42c8ec5b0be8ca53c00ed5e33811e0a585ab773e3fc28`, application commit `af237e5e53692862dffb82fe3033e16e9fc83204`. [Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569) and PR CI 42487026297 passed 93 portable/JUnit cases, the Gradle unit task, 55 Debug emulator and two minified Release JNI cases. Publication documentation/tooling does not rebuild or re-sign the APK. Owner authorization does not imply new detailed battery or network measurements. Older version paragraphs below are historical.
+Current alpha17/code36: owner accepted the exact APK on 2026-11-09. APK SHA-256 `eb5ac7bd474b37e361e8ca126c8e2f7d445faaf876ddd7b9ecd158548324a871`; application source `bbb30d7146c3f308f37943a0e3c9456b185167f0`. PR CI 42626133278 passed 119 JVM, Gradle unit task, 64 Debug device, two minified JNI and nine TCP/UDP modes. Parallel push UI timeout remains disclosed. Publication restores the exact accepted bytes without rebuilding or re-signing. [Record](releases/alpha17.md).
+
+Historical alpha16.1/code33 published the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `133a0a4f1aa97ddd9eb42c8ec5b0be8ca53c00ed5e33811e0a585ab773e3fc28`, application commit `af237e5e53692862dffb82fe3033e16e9fc83204`. [Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569) and PR CI 42487026297 passed 93 portable/JUnit cases, the Gradle unit task, 55 Debug emulator and two minified Release JNI cases. Publication documentation/tooling does not rebuild or re-sign the APK. Owner authorization does not imply new detailed battery or network measurements. Older version paragraphs below are historical.
 
 The alpha11 Full APK and explicit source assets use application commit 91f2c0e9a9fd94eb72e30236bc965293b5303762. The release tag includes later documentation/workflow changes; they do not rebuild the APK. Record both identities when packaging.
 
@@ -108,3 +110,7 @@ allowlisted assets and server digests before publishing Latest. It never
 replaces an existing public APK/release. All application/build/test inputs must
 remain identical to `af237e5e53692862dffb82fe3033e16e9fc83204`; publication-only
 AGENTS/README/docs/release-tool changes are checked separately.
+
+## Owner-approved alpha17 publication
+
+The one-version branch trigger is `publish/alpha17-approved` (or a numbered retry after a packaging-only correction). `tools/release/publish_approved_alpha17.py` verifies the passing CI artifact, public copy record, signer and every asset before publishing Latest. Application/build/test inputs must match the accepted source. No private signing key is used.

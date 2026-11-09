@@ -1,3 +1,5 @@
+Owner accepted review03/code36 on 2026-11-09. The sections below are historical review-stage notes; current publication record: [alpha17](alpha17.md).
+
 # Alpha17 owner review (not published)
 
 Android 0.3.0-alpha17 / versionCode 35. Owner resumed Android development explicitly.
