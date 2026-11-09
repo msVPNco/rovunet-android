@@ -203,7 +203,7 @@ fun MainScreen(
             }
         }
     }
-    val measurementClockMillis = remember(statusClock) { System.currentTimeMillis() }
+    val measurementClockMillis = rememberMeasurementClock(statusClock, uiState.pingResults)
     val trustRequest by app.slipnet.tunnel.TransportTrust.request.collectAsState()
     trustRequest?.let { request ->
         AlertDialog(onDismissRequest = { app.slipnet.tunnel.TransportTrust.answer(request, false) },

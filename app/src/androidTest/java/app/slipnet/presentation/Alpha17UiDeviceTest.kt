@@ -55,19 +55,28 @@ class Alpha17UiDeviceTest {
     }
     @Test fun pingShowsFreshOrPreviousTimestampAndAppBypassNeedsConfirmation() {
         val context=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
-        var result by androidx.compose.runtime.mutableStateOf<app.slipnet.domain.model.PingResult>(app.slipnet.domain.model.PingResult.Success(648,true,measuredAt=1000))
+        val measuredAt=System.currentTimeMillis()-1000
+        var result by androidx.compose.runtime.mutableStateOf<app.slipnet.domain.model.PingResult>(app.slipnet.domain.model.PingResult.Success(648,true,measuredAt=measuredAt))
         var showHelp by androidx.compose.runtime.mutableStateOf(false)
         var confirmed=0
         compose.setContent { SlipstreamTheme {
             if(showHelp) app.slipnet.presentation.settings.AppBypassHelpDialog(onConfirm={confirmed++;showHelp=false},onDismiss={showHelp=false})
-            else app.slipnet.presentation.common.components.ProfileListItem(ServerProfile(id=991,name="Synthetic timestamp"),false,false,
-                pingResult=result,measurementNowMillis=2000,onClick={},onConnectClick={},onEditClick={},onDeleteClick={},
-                onExportClick={},onShareQrClick={},onPinClick={},onPingClick={})
+            else {
+                val now=app.slipnet.presentation.main.rememberMeasurementClock(1L,mapOf(991L to result))
+                app.slipnet.presentation.common.components.ProfileListItem(ServerProfile(id=991,name="Synthetic timestamp"),false,false,
+                    pingResult=result,measurementNowMillis=now,onClick={},onConnectClick={},onEditClick={},onDeleteClick={},
+                    onExportClick={},onShareQrClick={},onPinClick={},onPingClick={})
+            }
         } }
-        val time=java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,context.resources.configuration.locales[0]).format(java.util.Date(1000))
+        val time=java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,context.resources.configuration.locales[0]).format(java.util.Date(measuredAt))
         compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,time))
+        // No minute tick occurs: the arriving result alone must refresh the display clock.
+        android.os.SystemClock.sleep(25)
+        compose.runOnIdle { result=(result as app.slipnet.domain.model.PingResult.Success).copy(measuredAt=System.currentTimeMillis()) }
+        val freshTime=java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,context.resources.configuration.locales[0]).format(java.util.Date((result as app.slipnet.domain.model.PingResult.Success).measuredAt))
+        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,freshTime))
         compose.runOnIdle { result=(result as app.slipnet.domain.model.PingResult.Success).copy(currentNetwork=false) }
-        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_previous,time))
+        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_previous,freshTime))
         compose.runOnIdle { showHelp=true }
         compose.runOnIdle { assertEquals(0,confirmed) }
         compose.onNodeWithTag("configure-app-bypass").performClick()
