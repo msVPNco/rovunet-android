@@ -30,7 +30,7 @@ internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () 
             Text(stringResource(R.string.alpha17_free_title), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.alpha17_free_hint), style = MaterialTheme.typography.bodyMedium)
             if (BuildConfig.INCLUDE_TOR) OutlinedButton(onClick = onTor, modifier = Modifier.fillMaxWidth().testTag("free-tor")) { Text(stringResource(R.string.alpha17_free_tor)) }
-            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().testTag("free-proton-import")) { Text(stringResource(R.string.review02_proton_import)) }
+            OutlinedButton(onClick = { provider = PublicProviders.Provider.PATTERNIHA; showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("free-patterniha")) { Text(stringResource(R.string.review03_patterniha)) }
             HorizontalDivider()
             Text(stringResource(R.string.alpha17_public_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
@@ -47,7 +47,11 @@ internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () 
 internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: PublicProviders.Provider? = null,
     prepare: suspend (String, String, Boolean) -> SubscriptionPreview = { name,address,update -> repository.preparePublic(name,address,update) },
     onDismiss: () -> Unit, onImported: () -> Unit) {
-    val presetName = if (provider == PublicProviders.Provider.MAHSA) stringResource(R.string.review02_mahsa) else stringResource(R.string.review02_anonymous)
+    val presetName = stringResource(when (provider) {
+        PublicProviders.Provider.MAHSA -> R.string.review02_mahsa
+        PublicProviders.Provider.PATTERNIHA -> R.string.review03_patterniha
+        else -> R.string.review02_anonymous
+    })
     var name by remember(provider) { mutableStateOf(if (provider == null) "" else presetName) }
     var address by remember(provider) { mutableStateOf(provider?.address.orEmpty()) }
     var agreed by remember { mutableStateOf(false) }
@@ -72,11 +76,13 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
             if (preview == null) {
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(address, { address = it }, enabled = !busy && provider == null, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
+                if (provider == PublicProviders.Provider.PATTERNIHA) Text(stringResource(R.string.review03_patterniha_hint), style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
                 Row { Checkbox(agreed, { agreed = it }, enabled = !busy, modifier = Modifier.testTag("public-source-consent")); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
             } else preview?.let { item ->
                 Text(item.source.name, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
+                PublicImportDetails(item)
                 Text(stringResource(R.string.alpha17_public_refresh_warning), style = MaterialTheme.typography.bodySmall)
             }
             failure?.let { code -> Text(stringResource(when (code) {
@@ -89,11 +95,38 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         } },
         confirmButton = {
-            TextButton(modifier = Modifier.testTag("public-source-confirm"), enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank(), onClick = {
+            TextButton(modifier = Modifier.testTag("public-source-confirm"), enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank() && (preview == null || preview?.profiles?.isNotEmpty() == true), onClick = {
                 execute { val ready = preview
                     if (ready == null) preview = prepare(name, address, provider != null)
                     else { repository.apply(ready); onImported() }
                 }
             }) { Text(stringResource(if (preview == null) R.string.subscription_preview else R.string.alpha17_public_import)) }
         }, dismissButton = { TextButton(onClick = { work?.cancel(); onDismiss() }) { Text(stringResource(android.R.string.cancel)) } })
+}
+
+@Composable
+internal fun PublicImportDetails(item: SubscriptionPreview) {
+    if (item.profiles.isEmpty()) Text(stringResource(R.string.alpha17_public_empty), color = MaterialTheme.colorScheme.error)
+    for (warning in item.importWarnings) Text(stringResource(if (warning == "REVIEW03_JSON_CONNECTIONS_ONLY") R.string.review03_json_connections else R.string.review03_json_unsupported), style = MaterialTheme.typography.bodySmall)
+    for (stat in item.publicStats) {
+        val label = when (stat.protocol) {
+            "OTHER" -> stringResource(R.string.review03_other)
+            "SS" -> stringResource(R.string.review02_shadowsocks)
+            "VMESS" -> stringResource(R.string.review03_vmess)
+            "TROJAN" -> stringResource(R.string.review03_trojan)
+            else -> stat.protocol
+        }
+        Text(stringResource(R.string.review03_protocol_summary, label, stat.accepted, stat.rejected), style = MaterialTheme.typography.bodySmall)
+        for ((reason, count) in stat.reasons) {
+            val label = stringResource(when (reason) {
+                app.slipnet.data.subscription.PublicFeed.Reason.FORMAT -> R.string.review03_reason_format
+                app.slipnet.data.subscription.PublicFeed.Reason.PROTOCOL -> R.string.review03_reason_protocol
+                app.slipnet.data.subscription.PublicFeed.Reason.TRANSPORT -> R.string.review03_reason_transport
+                app.slipnet.data.subscription.PublicFeed.Reason.TLS -> R.string.review03_reason_tls
+                app.slipnet.data.subscription.PublicFeed.Reason.OPTIONS -> R.string.review03_reason_options
+                app.slipnet.data.subscription.PublicFeed.Reason.PROTECTED -> R.string.review03_reason_protected
+            })
+            Text(stringResource(R.string.review03_reason_count, label, count), style = MaterialTheme.typography.bodySmall)
+        }
+    }
 }

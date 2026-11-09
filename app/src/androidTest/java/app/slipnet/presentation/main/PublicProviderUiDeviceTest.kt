@@ -65,4 +65,23 @@ class PublicProviderUiDeviceTest {
             db.close()
         }
     }
+    @Test fun allRejectedPreviewShowsReasonAndCannotCreateOrReplaceSource() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = EntryPointAccessors.fromApplication(context,SubscriptionWorkerEntryPoint::class.java).subscriptions()
+        val address = "https://example.invalid/all-rejected-public-source"
+        var open by mutableStateOf(true)
+        compose.setContent { SlipstreamTheme {
+            if (open) PublicSourceDialog(repository, provider = PublicProviders.Provider.PATTERNIHA,
+                prepare = { name, _, _ -> repository.prepareDocument(name, address, null, false, "unknown://synthetic", publicMode = true) },
+                onDismiss = { open = false }, onImported = { fail("An all-rejected preview must not be applied") })
+        } }
+        compose.onNodeWithTag("public-source-consent").performScrollTo().performClick()
+        compose.onNodeWithTag("public-source-confirm").performClick()
+        val reason = context.getString(R.string.review03_reason_count, context.getString(R.string.review03_reason_protocol), 1)
+        compose.waitUntil(8000) { compose.onAllNodesWithText(reason).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("public-source-confirm").assertIsNotEnabled()
+        assertNull(repository.findSource(address))
+        compose.runOnIdle { open = false }
+    }
+
 }

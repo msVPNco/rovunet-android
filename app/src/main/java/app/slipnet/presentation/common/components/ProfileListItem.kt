@@ -94,8 +94,12 @@ fun ProfileListItem(
                     }
                     Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
-                    val protocolLabel = if (profile.tunnelType == TunnelType.XRAY && profile.coreLink.startsWith("ss://", true))
-                        stringResource(R.string.review02_shadowsocks) else profile.tunnelType.displayName
+                    val protocolLabel = if (profile.tunnelType == TunnelType.XRAY) when (profile.coreLink.substringBefore("://").lowercase()) {
+                        "ss" -> stringResource(R.string.review02_shadowsocks)
+                        "trojan" -> stringResource(R.string.review03_trojan)
+                        "vmess" -> stringResource(R.string.review03_vmess)
+                        else -> profile.tunnelType.displayName
+                    } else profile.tunnelType.displayName
                     Text(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
                         maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
                         color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)

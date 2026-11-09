@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     u.sendto(frame,relay);out,_=u.recvfrom(65535);assert out.endswith(msg)
   finally:control.close()
  uid='00000000-0000-4000-8000-000000000001'
- for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks').split(','):
+ for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade').split(','):
   sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','wireguard'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[]
   inbound={'listen':'127.0.0.1','port':sp}
   tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode=='hysteria2' else ['h2','http/1.1']}
@@ -78,6 +78,24 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
    inbound.update(protocol='shadowsocks',settings={'method':'aes-256-gcm','password':'synthetic-aead-password','network':'tcp,udp'})
    credentials=base64.urlsafe_b64encode(b'aes-256-gcm:synthetic-aead-password').decode().rstrip('=')
    link=f'ss://{credentials}@127.0.0.1:{sp}#Synthetic-AEAD'
+  elif mode in ['trojan','vmess-ws','vless-grpc','vless-httpupgrade']:
+   protocol='trojan' if mode=='trojan' else 'vmess' if mode=='vmess-ws' else 'vless'
+   network='raw' if mode=='trojan' else 'ws' if mode=='vmess-ws' else 'grpc' if mode=='vless-grpc' else 'httpupgrade'
+   settings={'clients':[{'password':'synthetic-password'}]} if protocol=='trojan' else {'clients':[{'id':uid}]}
+   if protocol=='vless':settings['decryption']='none'
+   stream={'network':network,'security':'tls','tlsSettings':tls}
+   if network=='ws':stream['wsSettings']={'path':'/fixture','headers':{'Host':'localhost'}}
+   if network=='grpc':stream['grpcSettings']={'serviceName':'fixture'}
+   if network=='httpupgrade':stream['httpupgradeSettings']={'path':'/fixture','host':'localhost'}
+   inbound.update(protocol=protocol,settings=settings,streamSettings=stream)
+   if protocol=='vmess':
+    payload={'v':'2','ps':'Synthetic VMess','add':'127.0.0.1','port':str(sp),'id':uid,'aid':'0','scy':'auto','net':'ws','type':'none','host':'localhost','path':'/fixture','tls':'tls','sni':'localhost'}
+    link='vmess://'+base64.b64encode(json.dumps(payload).encode()).decode()
+   else:
+    auth='synthetic-password' if protocol=='trojan' else uid
+    link=f'{protocol}://{auth}@127.0.0.1:{sp}?security=tls&type={network}&sni=localhost&host=localhost&path=%2Ffixture'
+    if network=='grpc':link=f'{protocol}://{auth}@127.0.0.1:{sp}?security=tls&type=grpc&sni=localhost&serviceName=fixture'
+    link+='#Synthetic display name'
   elif mode=='hysteria2':
    inbound.update(protocol='hysteria',settings={'version':2,'users':[{'auth':'test-password'}]},streamSettings={'network':'hysteria','security':'tls','tlsSettings':tls,'hysteriaSettings':{'version':2},'finalmask':{'udp':[{'type':'salamander','settings':{'password':'obfs-test'}}]}})
    link=f'hysteria2://test-password@127.0.0.1:{sp}?sni=localhost&obfs=salamander&obfs-password=obfs-test'
@@ -94,7 +112,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   server=start({'log':{'loglevel':'debug'},'inbounds':[inbound],'outbounds':[{'protocol':'freedom','settings':{'redirect':'127.0.0.1:0','finalRules':[{'action':'allow','ip':['127.0.0.1/32']}]}}]},mode+'-server')
   clientCfg=json.loads(clientFile.read_text())
   clientCfg['log']={'loglevel':'debug'}
-  if mode in ['xhttp','hysteria2']:
+  if mode in ['xhttp','hysteria2','trojan','vmess-ws','vless-grpc','vless-httpupgrade']:
    clientCfg['outbounds'][0]['streamSettings']['tlsSettings']['certificates']=[{'certificateFile':str(cert),'usage':'verify'}]
   client=start(clientCfg,mode+'-client');processes=[client,server]+extra
   clientPorts=[cp]

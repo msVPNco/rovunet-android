@@ -501,41 +501,20 @@ fun MainScreen(
 
     // Helper to request VPN permission and connect
     fun requestConnectOrToggle() {
-        if (uiState.isPingRunning) { viewModel.cancelPing(); return }
-        when (val current = uiState.connectionState) {
-            is ConnectionState.Connected -> {
-                if (selectedTab == 0 && current.chainId < 0 && uiState.selectedCollection != null &&
-                    uiState.selectedCollection != ProfileCollections.key(current.profile)) proceedWithConnect()
-                else viewModel.disconnect()
+        viewModel.toggleGlobalConnection {
+            if (activity == null) return@toggleGlobalConnection
+            val prefs = context.getSharedPreferences("vpn_service_state", Context.MODE_PRIVATE)
+            val prompted = prefs.getBoolean("battery_opt_prompted", false)
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!prompted && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                pendingConnectAfterBatteryPrompt = true
+                pendingProfileAfterBatteryPrompt = null
+                pendingChainAfterBatteryPrompt = if (selectedTab == 1 && hasChains) uiState.activeChain else null
+                showBatteryOptDialog = true
+                return@toggleGlobalConnection
             }
-            is ConnectionState.Connecting -> viewModel.disconnect()
-            is ConnectionState.Disconnecting -> Unit
-            else -> {
-                if (activity != null) {
-                    // Check battery optimization on first connect
-                    val prefs = context.getSharedPreferences("vpn_service_state", Context.MODE_PRIVATE)
-                    val prompted = prefs.getBoolean("battery_opt_prompted", false)
-                    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-                    if (!prompted && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
-                        pendingConnectAfterBatteryPrompt = true
-                        pendingProfileAfterBatteryPrompt = null
-                        // If on Chains tab, remember the active chain for after the battery dialog
-                        pendingChainAfterBatteryPrompt = if (selectedTab == 1 && hasChains) uiState.activeChain else null
-                        showBatteryOptDialog = true
-                        return
-                    }
-
-                    // If on Chains tab, connect the active chain; otherwise connect active profile
-                    if (selectedTab == 1 && hasChains) {
-                        val chain = uiState.activeChain
-                        if (chain != null) {
-                            proceedWithChainConnect(chain)
-                        }
-                    } else {
-                        proceedWithConnect()
-                    }
-                }
-            }
+            if (selectedTab == 1 && hasChains) uiState.activeChain?.let { proceedWithChainConnect(it) }
+            else proceedWithConnect()
         }
     }
 
@@ -738,11 +717,8 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Connect / Disconnect FAB
-                val connectedPath = uiState.connectionState as? ConnectionState.Connected
-                val selectedDifferentCollection = selectedTab == 0 && connectedPath != null && connectedPath.chainId < 0 &&
-                    uiState.selectedCollection != null && uiState.selectedCollection != ProfileCollections.key(connectedPath.profile)
                 ConnectFab(
-                    connectionState = if (selectedDifferentCollection) ConnectionState.Disconnected else uiState.connectionState,
+                    connectionState = uiState.connectionState,
                     hasProfile = uiState.activeProfile != null || uiState.activeChain != null || uiState.profiles.isNotEmpty(),
                     snowflakeBootstrapProgress = uiState.snowflakeBootstrapProgress,
                     onToggleConnection = { requestConnectOrToggle() },
@@ -1084,7 +1060,10 @@ fun MainScreen(
                         }
                     }
                         val groups = listOf(
-                            "Web / TCP paths" to listOf(Triple("REALITY", "reality", Icons.Default.Shield), Triple("XHTTP", "xhttp", Icons.Default.Language), Triple("VLESS WS", "vless", VlessIcon), Triple("SSH", "ssh", Icons.Default.Lock), Triple("SOCKS5", "socks5", Icons.Default.Share)) +
+                            "Web / TCP paths" to listOf(Triple("REALITY", "reality", Icons.Default.Shield), Triple("XHTTP", "xhttp", Icons.Default.Language), Triple("VLESS WS", "vless", VlessIcon), Triple("SSH", "ssh", Icons.Default.Lock), Triple("SOCKS5", "socks5", Icons.Default.Share),
+                                Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_trojan), "trojan", Icons.Default.Shield),
+                                Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_vmess), "vmess", Icons.Default.Shield),
+                                Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks), "ss", Icons.Default.Shield)) +
                                 (if (BuildConfig.INCLUDE_NAIVE) listOf(Triple("NaiveProxy", "naive", Icons.Default.Shield)) else emptyList()),
                             "UDP paths" to listOf(Triple("Hysteria2", "hysteria2", Icons.Default.Waves), Triple("WireGuard", "wireguard", Icons.Default.Lock)),
                             "DNS / alternative paths" to listOf(Triple("DNSTT", "dnstt", Icons.Default.Dns), Triple("NoizDNS", TunnelType.NOIZDNS.value, Icons.Default.VisibilityOff), Triple("VayDNS", "vaydns", Icons.Default.Air), Triple("Soar", "soar", Icons.Default.FlightTakeoff), Triple("Slipstream", "slipstream", Icons.Default.Waves), Triple("DOH", "doh", Icons.Default.Language)) +
@@ -1423,7 +1402,11 @@ fun MainScreen(
                         )
                         preview.warnings.forEach { warning ->
                             Text(
-                                text = "• " + app.slipnet.presentation.theme.UiErrors.text(uiResources, warning),
+                                text = "• " + when (warning) {
+                                    "REVIEW03_JSON_CONNECTIONS_ONLY" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_json_connections)
+                                    "REVIEW03_JSON_UNSUPPORTED" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_json_unsupported)
+                                    else -> app.slipnet.presentation.theme.UiErrors.text(uiResources, warning)
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )

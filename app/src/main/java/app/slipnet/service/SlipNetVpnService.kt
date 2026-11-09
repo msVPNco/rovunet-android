@@ -6064,7 +6064,8 @@ class SlipNetVpnService : VpnService() {
 
     /** Release WakeLock and WifiLock if held. */
     @Synchronized private fun releaseLocks() {
-        app.slipnet.util.ConnectionDiagnostics.power(serviceSessionId, false, false, false, needsContinuousCpuWake)
+        app.slipnet.util.ConnectionDiagnostics.power(serviceSessionId,
+            (getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive, false, false, needsContinuousCpuWake)
         underlyingDefaultDeclared = false
         wakeLockRenewJob?.cancel()
         wakeLockRenewJob = null

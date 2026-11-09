@@ -86,3 +86,49 @@ Tor and Soar engines/scanner code are unchanged from the tested code34 revision.
 
 Validation is pending on the review02 commit until its CI results are recorded with
 its exact signed APK. README formatting and desktop sources remain untouched.
+
+
+## Review03: broader imports and a predictable main stop control
+
+Code36 is an unpublished owner-test successor to code35. The main control now always
+stops/cancels the live session, independently of the selected card. Card-specific connect
+still targets that card; browsing never changes an active connection. A device regression
+checks stop from another selected card and a subsequent explicit connect.
+
+The bounded teardown investigation found a definite reporting bug: releaseLocks recorded
+screenOn=false regardless of the actual screen. It now samples PowerManager.isInteractive.
+The reported 120-second Hev/native stop has not been reproduced or proved to be caused by
+hardware, CPU sleep or the native join. No continuous wake lock or fake disconnected state
+was added. Existing native ownership/cleanup barriers remain. Don't claim this fixes the
+physical-phone stall; retain it as a targeted follow-up if it recurs.
+
+The importer separates cosmetic URI fragments from endpoint/query validation. Existing
+public source links are preserved for stable refresh identity. VLESS common no-op aliases,
+verified-TLS Hy2, Trojan and AEAD VMess share the existing pinned Xray backend. TCP, WebSocket,
+gRPC and HTTPUpgrade are supported where valid; XHTTP remains VLESS. Nonzero VMess alterId,
+unsafe ciphers, disabled TLS verification, unknown effective options and unsupported
+transports are rejected with a category. Manual connection still never depends on a probe.
+Editor, native export, endpoint extraction and collection ranking cover the new formats.
+
+Public previews show accepted/rejected counts per protocol and typed rejection reasons.
+An all-rejected preview cannot be applied, create a source or replace existing profiles.
+Public updates stay explicit. Proton's duplicate personal-import shortcut was removed from
+the free catalog and replaced with Patterniha's public subscription after consent. Its
+MIT-licensed repository documents provider-client-specific features; unsupported options
+are reported rather than silently stripped. No WARP/security overlay, relay ownership
+clearance or Iranian-network connectivity guarantee is implied.
+Source: https://github.com/patterniha/Free-Configs (MIT; copyright 2026 patterniha).
+
+JSON imports extract supported Xray/sing-box outbounds into the app's own profiles, with
+an explicit review notice that file-level DNS, routing and listeners are not applied.
+Other outbounds are reported as excluded. Custom trust files, proxy chaining, effective
+unknown headers and unsupported options are rejected instead of weakened. This is a
+connection converter, not an arbitrary external-config runtime. Private panel v1 JSON
+still uses its existing strict envelope validation. There is no automatic execution of
+scripts or plugins from any import.
+
+Validation: pending exact-source CI and owner review delivery. Verify includes the portable
+interop/security corpus and actual TCP/UDP loopback for Trojan, VMess/WS, VLESS/gRPC and
+VLESS/HTTPUpgrade in addition to the five existing protocol modes. Device tests include
+new-core smoke, main-stop scope and all-rejected-preview protection. Preserve all README
+layout and desktop trees; leave Tor/Soar native and scanner behavior unchanged.

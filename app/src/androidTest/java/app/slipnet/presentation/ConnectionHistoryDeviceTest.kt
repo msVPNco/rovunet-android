@@ -192,7 +192,11 @@ class ConnectionHistoryDeviceTest {
                 assertEquals(b.collectionId,vm.uiState.value.selectedCollection)
                 assertNull(vm.uiState.value.manualProfileId)
                 assertEquals("Browsing a card changed the live connection",a.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
-                onMain { vm.connect() }
+                onMain { vm.toggleGlobalConnection { fail("Main stop tried to connect the selected card") } }
+                withTimeout(30000) { manager.awaitSessionDisconnected(manager.currentSessionId) }
+                delay(150)
+                assertTrue("Main stop unexpectedly connected another card", manager.connectionState.value.isDisconnected)
+                onMain { vm.toggleGlobalConnection { vm.connect() } }
                 try {
                     withTimeout(45000) {
                         while(manager.connectionState.value !is ConnectionState.Connected) {

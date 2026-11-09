@@ -573,6 +573,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    /** The main control acts on the live session; browsing another card never turns Stop into Connect. */
+    fun toggleGlobalConnection(onConnect: () -> Unit) {
+        if (_uiState.value.isPingRunning) { cancelPing(); return }
+        when (connectionManager.connectionState.value) {
+            is ConnectionState.Connected, is ConnectionState.Connecting -> disconnect()
+            is ConnectionState.Disconnecting -> Unit
+            else -> onConnect()
+        }
+    }
+
     fun connect(profile: ServerProfile? = null) {
         if (_uiState.value.isLoading) return
         if (_uiState.value.isPingRunning) { _uiState.value = _uiState.value.copy(error = "Stop the connection test first"); return }

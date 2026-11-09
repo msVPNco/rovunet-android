@@ -72,7 +72,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         execute {
                             val row = editing?.let { id -> sources.firstOrNull { it.id == id } } ?: repository.findSource(url) ?: error("SOURCE_NOT_FOUND")
                             val item = prepare(name, url, row.id, if (editing != null || automaticEdited) automatic else row.autoUpdate)
-                            if (item.removed > 0 || item.source.id.startsWith("public:")) preview = item else { repository.apply(item); onDismiss() }
+                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.importWarnings.isNotEmpty()) preview = item else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_update_action)) }
                     Button(modifier = Modifier.weight(1f).testTag("subscription-import"),
@@ -80,8 +80,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         execute {
                             require(repository.findSource(url) == null) { "SOURCE_EXISTS" }
                             val item = prepare(name, url, null, automatic)
-                            repository.apply(item)
-                            onDismiss()
+                            if (item.importWarnings.isNotEmpty()) preview = item else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_import_action)) }
                 }
@@ -113,9 +112,12 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
     preview?.let { item ->
         AlertDialog(onDismissRequest = { if (!busy) preview = null },
             title = { Text(stringResource(R.string.subscription_preview)) },
-            text = { Column {
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.subscription_preview_summary, item.profiles.size, item.removed))
-                if (item.source.id.startsWith("public:")) Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
+                if (item.source.id.startsWith("public:")) {
+                    Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
+                }
+                PublicImportDetails(item)
                 LazyColumn(Modifier.heightIn(max = 220.dp)) {
                     items(item.profiles, key = { it.first }) { (_, profile) ->
                         Text(profile.name + " · " + profile.tunnelType.displayName, style = MaterialTheme.typography.bodySmall)
@@ -127,7 +129,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                     onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
                 error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("subscription-error")) }
             } },
-            confirmButton = { TextButton(enabled = !busy && connection.isDisconnected, onClick = {
+            confirmButton = { TextButton(enabled = !busy && connection.isDisconnected && item.profiles.isNotEmpty(), onClick = {
                 execute { repository.apply(item); preview = null; onDismiss() }
             }) { Text(stringResource(R.string.rv_apply_31e392)) } },
             dismissButton = { TextButton(onClick = { job?.cancel(); preview = null }) { Text(stringResource(android.R.string.cancel)) } })
