@@ -90,7 +90,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     inbound['settings']['peers'].append({'publicKey':devicePublic,'allowedIPs':[address+'/32']})
     additionalLinks.append(f'[Interface]\nPrivateKey = {devicePrivate}\nAddress = {address}/32\n[Peer]\nPublicKey = {serverPub}\nEndpoint = 127.0.0.1:{sp}\nAllowedIPs = 0.0.0.0/0\n')
   source=root/(mode+'.link');source.write_text(link);clientFile=root/(mode+'-client.json')
-  subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar','CoreFixtureKt',str(source),str(clientFile),str(cp)],check=True)
+  subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar:{JARS}/bcprov-jdk18on-1.80.jar','CoreFixtureKt',str(source),str(clientFile),str(cp)],check=True)
   server=start({'log':{'loglevel':'debug'},'inbounds':[inbound],'outbounds':[{'protocol':'freedom','settings':{'redirect':'127.0.0.1:0','finalRules':[{'action':'allow','ip':['127.0.0.1/32']}]}}]},mode+'-server')
   clientCfg=json.loads(clientFile.read_text())
   clientCfg['log']={'loglevel':'debug'}
@@ -100,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   clientPorts=[cp]
   for n,extraLink in enumerate(additionalLinks):
    p=port();clientPorts.append(p);linkFile=root/f'device-{n}.conf';linkFile.write_text(extraLink);configFile=root/f'device-{n}.json'
-   subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar','CoreFixtureKt',str(linkFile),str(configFile),str(p)],check=True)
+   subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar:{JARS}/bcprov-jdk18on-1.80.jar','CoreFixtureKt',str(linkFile),str(configFile),str(p)],check=True)
    processes.append(start(json.loads(configFile.read_text()),f'device-{n}'))
   try:
    time.sleep(.6)
