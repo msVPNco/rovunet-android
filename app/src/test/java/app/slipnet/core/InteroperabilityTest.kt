@@ -76,6 +76,15 @@ class InteroperabilityTest {
             assertEquals("127.0.0.1",runtime.getJSONArray("inbounds").getJSONObject(0).getString("listen"))
         }
     }
+    @Test fun nativePanelEnvelopeCannotBeReclassifiedAsExternalJsonByAnExtraKey() {
+        val base=JSONObject().put("version",1).put("items",org.json.JSONArray().put(JSONObject().put("id","fixture").put("link","trojan://synthetic@example.invalid:443?security=tls")))
+        assertEquals(1,app.slipnet.data.subscription.SubscriptionPayload.read(base.toString()).size)
+        for (key in listOf("type","protocol","outbounds")) {
+            val changed=JSONObject(base.toString()).put(key,"unexpected")
+            assertTrue(runCatching { app.slipnet.data.subscription.SubscriptionPayload.read(changed.toString()) }.isFailure)
+            assertTrue(ConfigImporter().parseAndImport(changed.toString()) is ImportResult.Error)
+        }
+    }
     @Test fun jsonCannotSilentlyDropChainsCustomTrustOrEffectiveHeaders() {
         val template="""{"protocol":"trojan","settings":{"address":"example.invalid","port":443,"password":"synthetic"},"streamSettings":{"network":"ws","security":"tls","tlsSettings":{"serverName":"example.invalid"},"wsSettings":{"headers":{"Authorization":"private"}}}}"""
         assertTrue(ConfigImporter().parseAndImport(template) is ImportResult.Error)

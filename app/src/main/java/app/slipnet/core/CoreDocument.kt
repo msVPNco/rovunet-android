@@ -20,17 +20,32 @@ internal object CoreDocument {
         }
         require(depth == 0 && !quoted) { "INVALID_FEED" }
         val root = if (text.trimStart().startsWith("[")) JSONArray(text) else JSONObject(text)
+        val nativeEnvelope = root is JSONObject && (root.has("version") || root.has("items"))
+        if (nativeEnvelope) {
+            val envelope = root as JSONObject
+            keys(envelope, "version", "items", "name")
+            require(envelope.get("version") is Number && envelope.get("version").toString() == "1") { "INVALID_FEED" }
+        }
         val array = when (root) {
             is JSONArray -> root
             is JSONObject -> when {
+                nativeEnvelope -> root.getJSONArray("items")
                 root.has("outbounds") -> root.getJSONArray("outbounds")
-                root.has("items") && root.optInt("version") == 1 -> root.getJSONArray("items")
                 root.has("protocol") || root.has("type") -> JSONArray().put(root)
                 else -> error("INVALID_FEED")
             }
             else -> error("INVALID_FEED")
         }
         require(array.length() in 1..1000) { "INVALID_FEED" }
+        if (nativeEnvelope) {
+            val ids = HashSet<String>()
+            for (i in 0 until array.length()) {
+                val item = array.getJSONObject(i); keys(item, "id", "link")
+                require(item.opt("id") is String && item.opt("link") is String) { "INVALID_FEED" }
+                val id = item.getString("id")
+                require(id.isNotBlank() && id.length <= 200 && ids.add(id)) { "INVALID_FEED" }
+            }
+        }
         val links = ArrayList<String>(); var rejected = 0
         for (i in 0 until array.length()) {
             try {

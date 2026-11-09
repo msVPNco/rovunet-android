@@ -21,7 +21,7 @@ object SubscriptionPayload {
                 }
             }
             val root = JSONObject(text)
-            if (root.has("outbounds") || root.has("protocol") || root.has("type")) return listOf(Item(null, text))
+            if (!root.has("version") && !root.has("items") && (root.has("outbounds") || root.has("protocol") || root.has("type"))) return listOf(Item(null, text))
             require(root.get("version") is Number && root.get("version").toString() == "1" && root.keys().asSequence().all { it in setOf("version", "items", "name") }) { "UNSUPPORTED_FEED" }
             val array = root.getJSONArray("items")
             require(array.length() in 1..1000) { "INVALID_FEED" }
