@@ -38,7 +38,6 @@ internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () 
             OutlinedButton(onClick = { open("https://github.com/4n0nymou3/multi-proxy-config-fetcher") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.alpha17_free_anon) + " · " + stringResource(R.string.alpha17_free_details)) }
             OutlinedButton(onClick = { open("https://github.com/mahsanet/MahsaFreeConfig") }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.alpha17_free_mahsa)) }
             Button(onClick = { showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("public-source")) { Text(stringResource(R.string.alpha17_free_other)) }
-            Text(stringResource(R.string.alpha17_free_pending), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(18.dp))
         }
     }

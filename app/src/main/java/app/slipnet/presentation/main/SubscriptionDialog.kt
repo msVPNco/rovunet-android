@@ -104,7 +104,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                             execute { preview = prepare(row.name, url, row.id, row.autoUpdate) }
                         }) { Text(stringResource(R.string.subscription_update_review)) }
                         TextButton(enabled = !busy, onClick = { editing = row.id; name = row.name; automatic = row.autoUpdate; url = runCatching { repository.sourceUrl(row) }.getOrDefault("") }) { Text(stringResource(R.string.subscription_edit_source)) }
-                        TextButton(enabled = !busy, onClick = { execute { repository.setAutomatic(row.id, !row.autoUpdate) } }) { Text(stringResource(if (row.autoUpdate) R.string.subscription_auto_off else R.string.subscription_auto_on)) }
+                        if (!row.id.startsWith("public:")) TextButton(enabled = !busy, onClick = { execute { repository.setAutomatic(row.id, !row.autoUpdate) } }) { Text(stringResource(if (row.autoUpdate) R.string.subscription_auto_off else R.string.subscription_auto_on)) }
                         TextButton(enabled = !busy, onClick = { execute { repository.detach(row.id) } }) { Text(stringResource(R.string.subscription_detach)) }
                     } }
                 }

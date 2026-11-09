@@ -88,6 +88,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
@@ -609,13 +611,6 @@ fun MainScreen(
                                 onClick = { showOverflowMenu = false; showSubscriptions = true }
                             )
                             HorizontalDivider()
-                            if (uiState.smartStatus.message != 0) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val progress = uiState.smartStatus
-                    Text(if (progress.message == app.slipnet.R.string.alpha17_trying)
-                        androidx.compose.ui.res.stringResource(progress.message, progress.index, progress.total)
-                        else androidx.compose.ui.res.stringResource(progress.message), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    if (progress.running) TextButton(onClick = { viewModel.smartConnections.cancel() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5)) }
-                }
                 if (uiState.isPingRunning) {
                                 DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.menu_stop_test)) },
@@ -790,6 +785,14 @@ fun MainScreen(
                         Text(rv(uiState.collectionProgress), modifier = Modifier.weight(1f).padding(12.dp), style = MaterialTheme.typography.bodySmall)
                         TextButton(onClick = { viewModel.cancelPing() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5)) }
                     }
+                }
+
+                            if (uiState.smartStatus.message != 0) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val progress = uiState.smartStatus
+                    Text(if (progress.message == app.slipnet.R.string.alpha17_trying)
+                        androidx.compose.ui.res.stringResource(progress.message, progress.index, progress.total)
+                        else androidx.compose.ui.res.stringResource(progress.message), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    if (progress.running) TextButton(onClick = { viewModel.smartConnections.cancel() }) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_stop_cae7d5)) }
                 }
 
                 // ── Tab Content ─────────────────────────────────────────

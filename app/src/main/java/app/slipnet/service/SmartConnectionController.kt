@@ -118,7 +118,6 @@ class SmartConnectionController @Inject constructor(
                 }
                 if (current == null) { _status.value = Status(message = R.string.alpha17_exhausted); return@launch }
                 var switchedAt = SystemClock.elapsedRealtime()
-                var failures = 0
                 while (owner == generation && connection.ownsSession(ownedSession)) {
                     _status.value = Status(true, R.string.alpha17_monitoring)
                     // A real service failure wakes this immediately. Screen-off idle causes no extra probes.
@@ -135,10 +134,8 @@ class SmartConnectionController @Inject constructor(
                     val currentDelay = currentPing?.ms
                     if (stamp != physicalNetwork()) { clearResults(); continue }
                     record(active, currentDelay)
-                    failures = if (currentDelay == null) failures + 1 else 0
-                    if (currentDelay == null && failures < 2 && failed == null) { delay(3_000); continue }
                     if (currentDelay != null && (selectedMode == SmartPathPolicy.Mode.FAILOVER || currentDelay < SmartPathPolicy.SLOW_MS)) continue
-                    val options = members(key).filter { it.id != active.id && probe.supports(it) }
+                    val options = if (!ProbeBypass.allows(ownedSession)) emptyList() else members(key).filter { it.id != active.id && probe.supports(it) }
                     val start = (cursor[key] ?: 0).coerceAtMost((options.size - 1).coerceAtLeast(0))
                     val shortlist = (options.drop(start) + options.take(start)).take(SmartPathPolicy.MAX_CANDIDATES)
                     if (options.isNotEmpty()) cursor[key] = (start + shortlist.size) % options.size
@@ -166,7 +163,7 @@ class SmartConnectionController @Inject constructor(
                             start(key)
                             return@launch
                         }
-                        current = replacement; switchedAt = SystemClock.elapsedRealtime(); failures = 0
+                        current = replacement; switchedAt = SystemClock.elapsedRealtime()
                     } else if (currentDelay == null) {
                         disconnectOwned(ownedSession); ownedSession = 0
                         start(key) // bounded fresh batch; ordinary native paths are tried only after the live path died

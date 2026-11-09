@@ -552,6 +552,14 @@ class MainViewModel @Inject constructor(
     fun connect(profile: ServerProfile? = null) {
         if (_uiState.value.isLoading) return
         if (_uiState.value.isPingRunning) { _uiState.value = _uiState.value.copy(error = "Stop the connection test first"); return }
+        if (profile == null && _uiState.value.manualProfileId == null) {
+            selectedMembers().firstOrNull()?.let { selected ->
+                if (automaticMode(selected) != app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) {
+                    smartConnections.start(ProfileCollections.key(selected))
+                    return
+                }
+            }
+        }
         val targetProfile = profile ?: when (val choice = app.slipnet.domain.model.ConnectionChoice.resolve(
             _uiState.value.manualProfileId, _uiState.value.profiles)) {
             app.slipnet.domain.model.ConnectionChoice.Target.Automatic -> {
