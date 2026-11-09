@@ -87,15 +87,21 @@ class SmartConnectionController @Inject constructor(
         } finally { if (!ready) withContext(NonCancellable) { disconnectOwned(id) } }
     }
 
-    fun start(key: String) {
+    fun start(key: String, replaceCurrent: Boolean = false) {
         val selectedMode = mode(key)
-        if (selectedMode == SmartPathPolicy.Mode.MANUAL || !connection.connectionState.value.isDisconnected) return
+        if (selectedMode == SmartPathPolicy.Mode.MANUAL || (!replaceCurrent && !connection.connectionState.value.isDisconnected)) return
         cancel()
         val owner = generation
         job = scope.launch {
             var ownedSession = 0L
             var established = false
             try {
+                if (replaceCurrent && !connection.connectionState.value.isDisconnected) {
+                    ownedSession = connection.currentSessionId
+                    disconnectOwned(ownedSession)
+                    ownedSession = 0L
+                    ensureActive()
+                }
                 var current: ServerProfile? = null
                 val list = members(key)
                 val offset = (cursor[key] ?: 0).coerceAtMost((list.size - 1).coerceAtLeast(0))

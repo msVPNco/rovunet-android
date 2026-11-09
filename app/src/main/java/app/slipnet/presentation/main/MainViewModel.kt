@@ -289,7 +289,7 @@ class MainViewModel @Inject constructor(
     }
     fun connectCollection(profile: ServerProfile) {
         if (automaticMode(profile) == app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) connect(preferredProfile(listOf(profile)) ?: profile)
-        else smartConnections.start(ProfileCollections.key(profile))
+        else smartConnections.start(ProfileCollections.key(profile), replaceCurrent = true)
     }
     fun addFreeTor() { viewModelScope.launch {
         val name = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.alpha17_free_tor)

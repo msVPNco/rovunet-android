@@ -611,7 +611,7 @@ fun MainScreen(
                                 onClick = { showOverflowMenu = false; showSubscriptions = true }
                             )
                             HorizontalDivider()
-                if (uiState.isPingRunning) {
+                            if (uiState.isPingRunning) {
                                 DropdownMenuItem(
                                     text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.menu_stop_test)) },
                                     onClick = {
@@ -787,7 +787,7 @@ fun MainScreen(
                     }
                 }
 
-                            if (uiState.smartStatus.message != 0) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (uiState.smartStatus.message != 0) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     val progress = uiState.smartStatus
                     Text(if (progress.message == app.slipnet.R.string.alpha17_trying)
                         androidx.compose.ui.res.stringResource(progress.message, progress.index, progress.total)
