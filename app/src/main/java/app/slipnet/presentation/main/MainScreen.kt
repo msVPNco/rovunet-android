@@ -502,8 +502,12 @@ fun MainScreen(
     // Helper to request VPN permission and connect
     fun requestConnectOrToggle() {
         if (uiState.isPingRunning) { viewModel.cancelPing(); return }
-        when (uiState.connectionState) {
-            is ConnectionState.Connected,
+        when (val current = uiState.connectionState) {
+            is ConnectionState.Connected -> {
+                if (selectedTab == 0 && current.chainId < 0 && uiState.selectedCollection != null &&
+                    uiState.selectedCollection != ProfileCollections.key(current.profile)) proceedWithConnect()
+                else viewModel.disconnect()
+            }
             is ConnectionState.Connecting -> viewModel.disconnect()
             is ConnectionState.Disconnecting -> Unit
             else -> {
@@ -734,8 +738,11 @@ fun MainScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Connect / Disconnect FAB
+                val connectedPath = uiState.connectionState as? ConnectionState.Connected
+                val selectedDifferentCollection = selectedTab == 0 && connectedPath != null && connectedPath.chainId < 0 &&
+                    uiState.selectedCollection != null && uiState.selectedCollection != ProfileCollections.key(connectedPath.profile)
                 ConnectFab(
-                    connectionState = uiState.connectionState,
+                    connectionState = if (selectedDifferentCollection) ConnectionState.Disconnected else uiState.connectionState,
                     hasProfile = uiState.activeProfile != null || uiState.activeChain != null || uiState.profiles.isNotEmpty(),
                     snowflakeBootstrapProgress = uiState.snowflakeBootstrapProgress,
                     onToggleConnection = { requestConnectOrToggle() },

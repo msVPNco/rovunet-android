@@ -176,12 +176,22 @@ class ConnectionHistoryDeviceTest {
             openScreen { vm,manager ->
                 val a=vm.uiState.value.profiles.single { it.id==ids[0] }
                 val b=vm.uiState.value.profiles.single { it.id==ids[1] }
+                try {
                 onMain { vm.selectProfileOnly(a) }
                 withTimeout(5000) { repository.getActiveProfile().first { it?.id==a.id } }
+                onMain { vm.connect() }
+                withTimeout(45000) {
+                    while(manager.connectionState.value !is ConnectionState.Connected) {
+                        assertFalse(manager.connectionState.value.toString(),manager.connectionState.value is ConnectionState.Error)
+                        TransportTrust.request.value?.let { TransportTrust.answer(it,true) }
+                        delay(25)
+                    }
+                }
+                assertEquals(a.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
                 onMain { vm.selectCollection(b) }
                 assertEquals(b.collectionId,vm.uiState.value.selectedCollection)
                 assertNull(vm.uiState.value.manualProfileId)
-                assertTrue(manager.connectionState.value.isDisconnected)
+                assertEquals("Browsing a card changed the live connection",a.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
                 onMain { vm.connect() }
                 try {
                     withTimeout(45000) {
@@ -196,6 +206,13 @@ class ConnectionHistoryDeviceTest {
                 onMain { vm.selectCollection(a) }
                 assertEquals(a.id,vm.uiState.value.manualProfileId)
                 assertEquals(a.id,vm.preferredProfile(listOf(a))?.id)
+                } finally {
+                    if (!manager.connectionState.value.isDisconnected) {
+                        val session=manager.currentSessionId
+                        onMain { manager.disconnect(expectedSessionId=session) }
+                        withTimeout(30000) { manager.awaitSessionDisconnected(session) }
+                    }
+                }
             }
         } finally {
             ids.forEach { repository.deleteProfile(it) }

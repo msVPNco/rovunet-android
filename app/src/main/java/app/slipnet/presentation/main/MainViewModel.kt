@@ -308,8 +308,12 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(smartVersion = _uiState.value.smartVersion + 1)
     }
     fun connectCollection(profile: ServerProfile) {
-        if (automaticMode(profile) == app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) connect(preferredProfile(listOf(profile)) ?: profile)
-        else { selectCollection(profile); smartConnections.start(ProfileCollections.key(profile), replaceCurrent = true) }
+        if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
+        selectCollection(profile)
+        val members = _uiState.value.profiles.filter { ProfileCollections.key(it) == ProfileCollections.key(profile) }
+        if (automaticMode(profile) == app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL)
+            preferredProfile(members)?.let { connect(it) }
+        else smartConnections.start(ProfileCollections.key(profile), replaceCurrent = true)
     }
     fun addFreeTor() { viewModelScope.launch {
         val name = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext).getString(app.slipnet.R.string.alpha17_free_tor)
@@ -575,7 +579,7 @@ class MainViewModel @Inject constructor(
         if (profile == null && _uiState.value.manualProfileId == null) {
             selectedMembers().firstOrNull()?.let { selected ->
                 if (automaticMode(selected) != app.slipnet.domain.model.SmartPathPolicy.Mode.MANUAL) {
-                    smartConnections.start(ProfileCollections.key(selected))
+                    smartConnections.start(ProfileCollections.key(selected), replaceCurrent = connectionManager.connectionState.value is ConnectionState.Connected)
                     return
                 }
             }
