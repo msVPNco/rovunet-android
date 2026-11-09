@@ -74,7 +74,7 @@ class CoreDeviceSmokeTest {
         try {
             for (link in links) {
                 val parsed = CoreLink.parse(link)
-                assertTrue(parsed.outbound.similar(CoreLink.parse(CoreForm.decode(link).encode(parsed.name)).outbound))
+                assertEquals(parsed.outbound.toString(), CoreLink.parse(CoreForm.decode(link).encode(parsed.name)).outbound.toString())
                 val endpoint = LocalSocksEndpoint.privateCore()
                 process.start(binary, CoreLink.runtime(link, endpoint.port, endpoint.user, endpoint.password), launcher).getOrThrow()
                 Socket("127.0.0.1", endpoint.port).use { socket ->

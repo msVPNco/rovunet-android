@@ -25,7 +25,8 @@ object CoreLink {
             val kv = it.split('=', limit = 2)
             decode(kv[0]) to decode(kv.getOrElse(1) { "" })
         }
-        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority") } || params["security"] == "reality" || (params["type"] ?: "tcp") !in setOf("ws", "websocket")
+        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority") } ||
+            Regex("[?&]ed=").containsMatchIn(params["path"].orEmpty()) || params["security"] == "reality" || (params["type"] ?: "tcp") !in setOf("ws", "websocket")
     }
 
     private fun shadowsocks(text: String): Parsed {
@@ -172,9 +173,17 @@ object CoreLink {
     private fun addTransport(stream: JSONObject, transport: String, q: Map<String, String>, host: String) {
         when (transport) {
             "ws" -> {
-                val settings = obj("path" to (q["path"] ?: "/"), "headers" to obj("Host" to (q["host"]?.ifBlank { host } ?: host)))
-                q["ed"]?.let { val n = it.toInt(); require(n in 0..65535); settings.put("maxEarlyData", n); settings.put("earlyDataHeaderName", q["eh"] ?: "Sec-WebSocket-Protocol") }
+                var path = q["path"]?.ifBlank { "/" } ?: "/"
+                require(path.startsWith("/")) { "UNSUPPORTED_OPTION" }
+                require(q["eh"].orEmpty() in setOf("", "Sec-WebSocket-Protocol")) { "UNSUPPORTED_OPTION" }
+                q["ed"]?.let {
+                    val n = it.toInt(); require(n in 0..65535)
+                    require(!Regex("[?&]ed=").containsMatchIn(path)) { "UNSUPPORTED_OPTION" }
+                    // The pinned Xray reads early data from path?ed=N, not legacy JSON fields.
+                    path += (if ('?' in path) "&" else "?") + "ed=" + n
+                }
                 require(q["eh"].isNullOrEmpty() || q.containsKey("ed")) { "UNSUPPORTED_OPTION" }
+                val settings = obj("path" to path, "headers" to obj("Host" to (q["host"]?.ifBlank { host } ?: host)))
                 stream.put("wsSettings", settings)
             }
             "grpc" -> {

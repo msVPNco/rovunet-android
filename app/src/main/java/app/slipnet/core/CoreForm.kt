@@ -51,7 +51,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
                 .put("tls", this["security"].ifBlank { "none" })
             for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh")) if (this[k].isNotBlank()) o.put(k, this[k])
             if (this["type"] == "grpc" && this["authority"].isNotBlank()) o.put("host", this["authority"])
-            o.put("path", if (this["type"] == "grpc") this["serviceName"] else this["path"])
+            o.put("path", if (this["type"] == "grpc") this["serviceName"] else if (this["type"] in setOf("ws", "httpupgrade")) this["path"].ifBlank { "/" } else this["path"])
             val link = "vmess://" + app.slipnet.data.export.WireBase64.encode(o.toString().toByteArray(Charsets.UTF_8))
             CoreLink.parse(link)
             return link

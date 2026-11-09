@@ -42,9 +42,21 @@ class InteroperabilityTest {
     @Test fun commonVmessExporterMetadataAndNullDefaultsDoNotRejectValidAead() {
         val payload=JSONObject().put("v",JSONObject.NULL).put("type",JSONObject.NULL).put("ps","Synthetic").put("name","Display metadata").put("add","example.invalid").put("port",443).put("id",id).put("aid","0").put("net","ws").put("tls","none").put("pcs","").put("vcn","")
         fun parse()=CoreLink.parse("vmess://"+WireBase64.encode(payload.toString().toByteArray()))
-        assertEquals("vmess",parse().outbound.getString("protocol"))
+        val parsed = parse()
+        assertEquals("vmess",parsed.outbound.getString("protocol"))
+        val raw = "vmess://"+WireBase64.encode(payload.toString().toByteArray())
+        assertTrue(parsed.outbound.similar(CoreLink.parse(CoreForm.decode(raw).encode(parsed.name)).outbound))
         payload.put("pcs","synthetic-custom-cert-pin")
         assertEquals("UNSUPPORTED_OPTION",runCatching { parse() }.exceptionOrNull()?.message)
+    }
+    @Test fun websocketEarlyDataUsesThePinnedCorePathDialectWithoutDiscardingHeaders() {
+        val link="trojan://synthetic@example.invalid:443?security=tls&type=ws&path=%2Ffixture&ed=2048&eh=Sec-WebSocket-Protocol"
+        val parsed=CoreLink.parse(link)
+        val ws=parsed.outbound.getJSONObject("streamSettings").getJSONObject("wsSettings")
+        assertEquals("/fixture?ed=2048",ws.getString("path"))
+        assertFalse(ws.has("maxEarlyData"))
+        assertTrue(parsed.outbound.similar(CoreLink.parse(CoreForm.decode(link).encode("Fixture")).outbound))
+        assertTrue(runCatching{CoreLink.parse(link.replace("Sec-WebSocket-Protocol","X-Custom-Header"))}.isFailure)
     }
     @Test fun unsupportedSettingsNeverBecomeAnApparentlyUsableConnection() {
         val base="trojan://synthetic@example.invalid:443?security=tls&type=tcp"

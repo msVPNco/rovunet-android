@@ -31,7 +31,7 @@ fun CoreProfileEditor(
         "ss" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks)
         "wireguard" -> "WireGuard"
         "hysteria2" -> "Hysteria2"
-        else -> "VLESS • ${if (form?.get("type") == "xhttp") "XHTTP" else "TCP"}"
+        else -> "VLESS • ${form?.get("type").orEmpty().ifBlank { "tcp" }.uppercase()}"
     }
     Scaffold(
         topBar = { TopAppBar(title = { Text(rv(title)) }, navigationIcon = {
