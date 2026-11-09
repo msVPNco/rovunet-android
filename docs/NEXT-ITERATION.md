@@ -12,6 +12,8 @@ Owner-approved backlog; implementation and release have not been authorized by t
 | P2 | Investigate intermittent subscription error-display UI test timeout | Keep the failure visible; reproduce and correct timing/lifecycle behavior without hiding failures or removing coverage. |
 | Investigation | Hysteria2 and WireGuard physical-network failures | Still reported; local interoperability tests do not establish operation on the affected mobile network. Collect protocol-specific diagnostics before promising a fix. |
 
+| P2 | Align AMOLED, dark and light themes | Owner approved the shared visual direction from the Windows reference for future theme alignment; no UI implementation is authorized by this entry. AMOLED uses a pure black background (#000000), near-black cards, subtle borders and fewer shadows. Dark keeps a very dark navy background; light uses off-white with white cards. Keep the same layout, icons and status meanings across themes, with accessible contrast: lilac/purple accents, mint green for connected, amber for warnings and red for errors. Reserve the purple gradient for the selected card, simplify connection-button rings and align the title R accent with the main lilac. Preserve visual continuity with Android; adapt to each platform rather than copying the desktop layout. Respect explicit theme selection and Follow system. Any display power-saving benefit applies to OLED hardware only. |
+
 ## When to propose another version
 
 - Severity takes precedence over item count. The repeated connection-blocking Hev stall already warrants proposing a focused maintenance update; do not delay its correction solely to bundle Chain or other features.
