@@ -34,13 +34,14 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
     onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean,
     onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null,
-    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null) {
+    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null,
+    onAutomatic: (() -> Unit)? = null) {
     if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
     val completed = profiles.mapNotNull { results[it.id] }
-    val verified = completed.count { it is PingResult.Success && it.verified }
-    val failed = completed.count { it is PingResult.Error }
+    val verified = completed.count { it is PingResult.Success && it.verified && ProbeCache.fresh(it) }
+    val failed = completed.count { it is PingResult.Error && ProbeCache.fresh(it) }
     var menuOpen by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val tones = collectionTones
@@ -85,10 +86,12 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                         DropdownMenuItem(text = { Text(stringResource(if (expanded) R.string.ui_hide_paths else R.string.ui_show_paths)) },
                             modifier = Modifier.testTag("collection-menu-paths"),
                             onClick = { menuOpen = false; onDetails() })
-                        DropdownMenuItem(text = { Text(stringResource(R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
+                        DropdownMenuItem(text = { Text(stringResource(if (profiles.size > 50) R.string.alpha17_next_batch else R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !busy,
                             onClick = { menuOpen = false; onStabilityTest() })
+                        onAutomatic?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.alpha17_smart_title)) },
+                            onClick = { menuOpen = false; action() }) }
                         HorizontalDivider()
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_manage)
                         onUpdate?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.subscription_update_review)) }, enabled = !busy, onClick = { menuOpen = false; action() }) }
@@ -108,6 +111,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                 }
             }
             accountStatus?.let { AccountStatusSummary(it) }
+            if (profiles.size > 50) Text(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
             if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),
                 color = colors.error, style = MaterialTheme.typography.bodySmall)
             if (completed.isNotEmpty()) Text(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),

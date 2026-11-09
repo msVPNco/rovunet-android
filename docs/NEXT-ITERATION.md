@@ -1,3 +1,11 @@
+# Next update after alpha17
+
+- Owner request, 2026-11-09: move Patterniha beside Anonymous and Mahsa in the provider group; do not change the owner-accepted alpha17 APK for this cosmetic adjustment.
+- Investigate the inherited intermittent subscription error-display UI test timeout without hiding failures.
+- If the physical-phone 120-second Hev stop recurs, use its redacted report; do not claim the screen-state reporting fix resolved it.
+
+## Historical source-only planning record
+
 # Source-only connection improvements
 
 No APK, release, version bump or signing change is included in this iteration.

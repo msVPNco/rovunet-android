@@ -15,7 +15,16 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
-    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "prismPublishesUdpBeforeTcpAndKeepsTheFirstProofTime"),
+    ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "allRejectedPreviewShowsReasonAndCannotCreateOrReplaceSource"),
+    ("app.slipnet.core.CoreDeviceSmokeTest", "trojanVmessAndGrpcUseThePackagedCore"),
+    ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "providerRequiresConsentCreatesOneSourceAndReaddingReviewsExistingCard"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "pingShowsFreshOrPreviousTimestampAndAppBypassNeedsConfirmation"),
+    ("app.slipnet.presentation.ConnectionHistoryDeviceTest", "selectedCardNeverReusesAnotherCollectionsLastConnection"),
+    ("app.slipnet.presentation.Alpha17PreferencesDeviceTest", "freshPreferencesFollowSystemAndPreserveExplicitTheme"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "languageWelcomeHasFourExplicitChoicesAndNoImportOrConnection"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "expandedThreeThousandPathsComposeOnlyVisibleRowsAndScrollToLast"),
+    ("app.slipnet.core.CoreDeviceSmokeTest", "stoppingIndependentCandidateLeavesLiveCoreAndPrivateEndpointWorking"),
+    ("app.slipnet.presentation.scanner.SoarScannerDeviceTest", "prismWaitsForBothTransportsAndCountsResolverOnce"),
     ("app.slipnet.data.subscription.AccountStatusDeviceTest", "metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources"),
     ("app.slipnet.presentation.main.AccountStatusUiDeviceTest", "persianAccountSummaryKeepsTheCollectionCardAndDistinguishesUnknownFromExhausted"),
     ("app.slipnet.presentation.scanner.ScannerDeadlineDeviceTest", "advancedUsesOneDeadlineAndCancellationClosesAWaitingQuery"),

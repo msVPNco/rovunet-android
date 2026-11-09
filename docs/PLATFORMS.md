@@ -5,7 +5,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 
 | Platform | Current status | Release channel | Installable asset |
 | --- | --- | --- | --- |
-| Android | alpha16.1/code33 public; repository-rename compatibility released | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
+| Android | alpha17/code36 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
 | Windows | Development in this repository; no validated public GUI release recorded here | `windows-v<version>` | Windows-specific installer/portable package |
 | Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
 | macOS | Planned for this repository | `macos-v<version>` | macOS-specific package, when implemented |
@@ -29,7 +29,7 @@ appropriate for new desktop code; coordinate its path with the existing work.
   disable checksum/signature verification or change the Android package/signer
   just to make a renamed download work.
 - Existing alpha16/code32 embeds the former repository URL and needs one direct
-  compatibility APK installation using the published alpha16.1 Full APK. Changing
+  compatibility APK installation using the published alpha17 Full APK. Changing
   web links alone does not update an installed APK.
 - Public alpha16 assets remain unchanged. Historical manifests, APK reconstruction
   records and archived PDF editions keep their original release identities.
@@ -58,4 +58,4 @@ Android, Windows и будущая macOS находятся в одном реп
 ## 简体中文
 
 Android、Windows 与未来 macOS 共用此仓库，各平台使用独立标签、文件、校验和及签名。
-全仓库 Latest 不是 Android 专用更新渠道。Android 常规开发暂停，更名兼容已在 alpha16.1 完成，本次不恢复常规功能开发。新版本须经所有者批准发布，保留 README 版式与历史发布证据。
+全仓库 Latest 不是 Android 专用更新渠道。所有者已恢复 Android 开发并批准 alpha17；后续反馈进入待办。新版本须经所有者批准发布，保留 README 版式与历史发布证据。

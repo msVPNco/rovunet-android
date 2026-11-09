@@ -77,10 +77,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         handleDeepLink(intent)
-        requestNotificationPermissionIfNeeded()
 
         setContent {
-            val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.LIGHT)
+            val darkMode by preferencesDataStore.darkMode.collectAsState(initial = DarkMode.SYSTEM)
+            val firstLaunchDone by preferencesDataStore.firstLaunchDone.collectAsState(initial = null)
+            val ready = languageReady(getSharedPreferences("rovunet_ui", MODE_PRIVATE).getString("language", null), firstLaunchDone)
+            androidx.compose.runtime.LaunchedEffect(ready) { if (ready) requestNotificationPermissionIfNeeded() }
 
             app.slipnet.presentation.theme.RovunetLocale {
                 SlipstreamTheme(darkMode = darkMode) {
@@ -88,8 +90,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val navController = rememberNavController()
-                        NavGraph(navController = navController)
+                        when {
+                            ready -> { val navController = rememberNavController(); NavGraph(navController = navController) }
+                            firstLaunchDone == false -> LanguageWelcome { code ->
+                                getSharedPreferences("rovunet_ui", MODE_PRIVATE).edit().putString("language", code).apply()
+                                recreate()
+                            }
+                        }
                     }
                 }
             }

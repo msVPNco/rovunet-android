@@ -28,6 +28,9 @@ public final class MtuTrafficActivity extends Activity {
     private void fetch(ResultReceiver receiver) {
         Bundle reply = new Bundle();
         reply.putInt("uid", Process.myUid());
+        android.net.ConnectivityManager manager = getSystemService(android.net.ConnectivityManager.class);
+        android.net.NetworkCapabilities capabilities = manager.getNetworkCapabilities(manager.getActiveNetwork());
+        reply.putBoolean("vpn", capabilities != null && capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN));
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress("198.18.0.13", 80), 8000);
             socket.setSoTimeout(8000);

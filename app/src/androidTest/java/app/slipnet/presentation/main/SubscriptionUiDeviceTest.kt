@@ -92,8 +92,13 @@ class SubscriptionUiDeviceTest {
 
             compose.runOnIdle { open.value = true }
             compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("Updated source")
+            assertTrue("Update requires a disconnected session: ${repository.connectionState.value}", repository.connectionState.value.isDisconnected)
+            assertEquals("Update requires released native ownership", 0L, app.slipnet.service.TunnelOperations.owner)
             compose.onNodeWithTag("subscription-update").performScrollTo().performClick()
-            compose.waitUntil(8000) { !open.value }
+            compose.waitUntil(8000) { !open.value || compose.onAllNodesWithTag("subscription-error", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            val updateErrors = compose.onAllNodesWithTag("subscription-error", useUnmergedTree = true).fetchSemanticsNodes()
+            assertTrue("Subscription update failed: ${updateErrors.map { it.config }}; calls=${calls.get()}", updateErrors.isEmpty())
+            assertFalse("Update did not dismiss", open.value)
             assertEquals(2, calls.get()); assertEquals(2, dismissed.get())
             assertEquals("Updated source", repository.findSource(address)?.name)
             assertTrue(requireNotNull(repository.findSource(address)).autoUpdate)
@@ -103,8 +108,8 @@ class SubscriptionUiDeviceTest {
             compose.runOnIdle { open.value = true }
             compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("Failed update")
             compose.onNodeWithTag("subscription-update").performScrollTo().performClick()
-            compose.waitUntil(8000) { compose.onAllNodesWithText(resources.getString(R.string.subscription_failed)).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText(resources.getString(R.string.subscription_failed)).assertExists()
+            compose.waitUntil(8000) { compose.onAllNodesWithTag("subscription-error").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("subscription-error").performScrollTo().assertTextEquals(resources.getString(R.string.subscription_failed))
             assertTrue(open.value); assertEquals(2, dismissed.get())
             assertEquals("Updated source", repository.findSource(address)?.name)
             assertNotNull(db.profileDao().getProfileById(stored.id))

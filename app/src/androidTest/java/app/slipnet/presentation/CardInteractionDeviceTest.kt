@@ -150,7 +150,7 @@ class CardInteractionDeviceTest {
                 pingResult = PingResult.Success(184, verified = true), onClick = {}, onConnectClick = { connected++ },
                 onEditClick = {}, onDeleteClick = {}, onExportClick = {}, onShareQrClick = {}, onPinClick = {}, onPingClick = {})
         } }
-        compose.onNodeWithTag("profile-latency-701", useUnmergedTree = true).assertIsDisplayed().assertTextEquals("HTTPS 184 ms")
+        compose.onNodeWithTag("profile-latency-701", useUnmergedTree = true).assertIsDisplayed().assertTextEquals(InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.alpha17_ping, 184L))
         compose.runOnIdle { assertEquals(0, connected) }
     }
 

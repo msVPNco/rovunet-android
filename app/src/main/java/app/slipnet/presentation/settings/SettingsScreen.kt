@@ -154,6 +154,7 @@ fun SettingsScreen(
     var showDomainRoutingModeDialog by remember { mutableStateOf(false) }
     var showDomainManagementDialog by remember { mutableStateOf(false) }
     var showGeoBypassCountryDialog by remember { mutableStateOf(false) }
+    var showAppBypassHelp by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showRemoteDnsDialog by remember { mutableStateOf(false) }
     var showGlobalResolverDialog by remember { mutableStateOf(false) }
@@ -744,6 +745,11 @@ fun SettingsScreen(
                         description = countryName(resources, uiState.geoBypassCountry),
                         onClick = { showGeoBypassCountryDialog = true }
                     )
+                    SettingsDivider()
+                    ClickableSettingItem(icon = Icons.Default.Apps,
+                        title = resources.getString(R.string.review02_app_bypass_title),
+                        description = resources.getString(R.string.review02_app_bypass_hint),
+                        onClick = { showAppBypassHelp = true })
                 }
             }
 
@@ -1256,6 +1262,10 @@ fun SettingsScreen(
     }
 
     // Geo-Bypass Country Dialog
+    if (showAppBypassHelp) AppBypassHelpDialog(
+        onConfirm = { viewModel.configureSelectedAppsBypass { showAppBypassHelp = false; onNavigateToAppSelector() } },
+        onDismiss = { showAppBypassHelp = false })
+
     if (showGeoBypassCountryDialog) {
         AlertDialog(
             onDismissRequest = { showGeoBypassCountryDialog = false },

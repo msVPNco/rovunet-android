@@ -26,9 +26,12 @@ fun CoreProfileEditor(
 ) {
     val form = state.coreForm
     val title = when (form?.kind) {
+        "trojan" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_trojan)
+        "vmess" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_vmess)
+        "ss" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks)
         "wireguard" -> "WireGuard"
         "hysteria2" -> "Hysteria2"
-        else -> "VLESS • ${if (form?.get("type") == "xhttp") "XHTTP" else "TCP"}"
+        else -> "VLESS • ${form?.get("type").orEmpty().ifBlank { "tcp" }.uppercase()}"
     }
     Scaffold(
         topBar = { TopAppBar(title = { Text(rv(title)) }, navigationIcon = {
@@ -77,10 +80,11 @@ fun CoreProfileEditor(
             } else {
                 field("server", app.slipnet.R.string.rv_server_address_8be897)
                 field("port", app.slipnet.R.string.rv_server_port_426f91)
-                field("auth", if (form.kind == "vless") app.slipnet.R.string.editor_uuid else app.slipnet.R.string.editor_core_auth_password, secret = true)
-                if (form.kind == "vless") {
-                    choices("type", app.slipnet.R.string.rv_transport_aaead4, listOf("tcp", "xhttp"), "tcp")
-                    choices("security", app.slipnet.R.string.editor_security_label, listOf("reality", "tls", "none"), "none")
+                field("auth", if (form.kind in setOf("vless", "vmess")) app.slipnet.R.string.editor_uuid else app.slipnet.R.string.editor_core_auth_password, secret = true)
+                if (form.kind in setOf("vless", "trojan", "vmess")) {
+                    choices("type", app.slipnet.R.string.rv_transport_aaead4, if (form.kind == "vless") listOf("tcp", "xhttp", "ws", "grpc", "httpupgrade") else listOf("tcp", "ws", "grpc", "httpupgrade"), "tcp")
+                    choices("security", app.slipnet.R.string.editor_security_label, when (form.kind) { "trojan" -> listOf("tls"); "vmess" -> listOf("tls", "none"); else -> listOf("reality", "tls", "none") }, "none")
+                    if (form.kind == "vmess") choices("cipher", app.slipnet.R.string.review03_vmess_cipher, listOf("auto", "aes-128-gcm", "chacha20-poly1305"), "auto")
                     if (form["security"] != "none") {
                         field("sni", app.slipnet.R.string.rv_tls_server_name_sni_719c47)
                         field("fp", app.slipnet.R.string.rv_tls_fingerprint_e_g_chrome_a19b6a)
@@ -91,14 +95,28 @@ fun CoreProfileEditor(
                         field("sid", app.slipnet.R.string.rv_reality_short_id_hex_a1d63e)
                         field("spx", app.slipnet.R.string.rv_spiderx_path_optional_5fb3c2)
                     }
-                    if (form["type"] == "xhttp") {
+                    if (form["type"] in setOf("ws", "httpupgrade")) {
+                        field("host", app.slipnet.R.string.rv_http_host_optional_2ba28f)
+                        field("path", app.slipnet.R.string.rv_xhttp_path_12ea5e)
+                        if (form["type"] == "ws") {
+                            field("ed", app.slipnet.R.string.review03_early_data)
+                            field("eh", app.slipnet.R.string.review03_early_header)
+                        }
+                    } else if (form["type"] == "grpc") {
+                        field("serviceName", app.slipnet.R.string.review03_grpc_service)
+                        field("authority", app.slipnet.R.string.review03_grpc_authority)
+                        choices("mode", app.slipnet.R.string.rv_transport_aaead4, listOf("gun", "multi"), "gun")
+                    } else if (form["type"] == "xhttp") {
                         field("host", app.slipnet.R.string.rv_http_host_optional_2ba28f)
                         field("path", app.slipnet.R.string.rv_xhttp_path_12ea5e)
                         choices("mode", app.slipnet.R.string.rv_xhttp_mode_289518, listOf("auto", "packet-up", "stream-up", "stream-one"), "auto")
                         field("extra", app.slipnet.R.string.rv_xhttp_extra_json_optional_c14cfc, multiline = true)
-                    } else if (form["security"] != "none") {
+                    } else if (form.kind == "vless" && form["security"] != "none") {
                         choices("flow", app.slipnet.R.string.editor_flow_label, listOf("", "xtls-rprx-vision"))
                     }
+                } else if (form.kind == "ss") {
+                    choices("method", app.slipnet.R.string.review02_ss_method,
+                        listOf("aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305"))
                 } else {
                     field("sni", app.slipnet.R.string.rv_tls_server_name_sni_719c47)
                     Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_tls_certificate_verification_is_enabled_de2de3), style = MaterialTheme.typography.bodySmall)

@@ -5,7 +5,7 @@
 <p align="center"><b>Several routes to your own server, on every device</b><br>DNS tunnels, SSH, HTTPS proxies and Xray profiles in named collections, with direct connection and real HTTPS tests.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -25,7 +25,7 @@
 
 | Platform | Status | Download and details |
 | --- | --- | --- |
-| **Android** | Public release: **0.3.0-alpha16.1 Full, code 33** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1) · [Android page](docs/android/README.md) |
+| **Android** | Public release: **0.3.0-alpha17 Full, code 36** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17) · [Android page](docs/android/README.md) |
 | **Windows** | In development; no validated public release yet | Releases will be tagged `windows-v<version>` |
 | **Linux** | Planned | No release yet |
 | **macOS** | Planned | Releases will be tagged `macos-v<version>` |
@@ -47,7 +47,7 @@ Full lists, limits and caveats are on the [Android page](docs/android/README.md)
 
 ## Get started on Android
 
-1. **Download** the Full APK from the [release page](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha16.1) and install it. Public alpha14 and later install in place, without uninstalling.
+1. **Download** the Full APK from the [release page](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17) and install it. Public alpha14 and later install in place, without uninstalling.
 2. **Open** Rovunet, choose language and theme, and grant the Android VPN permission when asked.
 3. **Import**: Subscriptions → paste your HTTPS subscription link → **Import**, or **+ → Import** for a link, QR code or file.
 4. **Connect**: expand the collection, tap a path to select it and tap it again to connect.
@@ -61,7 +61,7 @@ Full lists, limits and caveats are on the [Android page](docs/android/README.md)
 | [Android page](docs/android/README.md) | Release status, features, protocols and limits |
 | [Platforms](docs/PLATFORMS.md) · [Current status](docs/STATUS.md) · [Upgrade](docs/UPGRADE.md) | Release channels, release state, signer and migration notes |
 
-The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha16.1 notes](docs/releases/alpha16.md) for the new status, menu and idle behavior.
+The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha17 notes](docs/releases/alpha17.md) for the new status, menu and idle behavior.
 
 ## Source and support
 

@@ -122,7 +122,7 @@ class ConnectionHistoryDeviceTest {
         val group = "probe-history-" + UUID.randomUUID()
         val base = ServerProfile(name = "Synthetic SOCKS path", domain = "127.0.0.1", tunnelType = TunnelType.SOCKS5,
             socks5ServerPort = server.localPort, collectionId = group)
-        val ids = repo.insertCollection(listOf(base, base.copy(name = "Second synthetic SOCKS path")))
+        val ids = repo.insertCollection(List(6) { base.copy(name = "Synthetic external path ${it + 1}") })
         val selectedBefore = repo.getActiveProfile().first()?.id
         val lastUserConnection = preferences.lastConnectedProfileId.first()
         try {
@@ -134,13 +134,14 @@ class ConnectionHistoryDeviceTest {
                 withTimeout(90_000) { vm.uiState.first { !it.isPingRunning && ids.all { id -> it.pingResults[id] is PingResult.Error } } }
                 withTimeout(15_000) { vm.uiState.first { it.profiles.filter { p -> p.id in ids }.all { p -> p.deletionReview != null } } }
                 assertTrue(ids.all { vm.uiState.value.pingResults[it] is PingResult.Error })
+                assertTrue("New results were incorrectly marked historical", ids.all { (vm.uiState.value.pingResults[it] as PingResult.Error).currentNetwork })
                 assertEquals("Temporary probes changed the persistent selection", ids[0], repo.getActiveProfile().first()?.id)
                 assertEquals("Temporary probes replaced the last user connection", lastUserConnection, preferences.lastConnectedProfileId.first())
                 // A genuine mapper roundtrip changes both deletion-review digests. Results must still survive.
                 repo.updateProfileOrder(ids.reversed())
                 repo.updateLastConnectedAt(ids[1])
                 withTimeout(15_000) { vm.uiState.first { state ->
-                    state.profiles.filter { it.id in ids }.firstOrNull()?.id == ids[1] &&
+                    state.profiles.filter { it.id in ids }.firstOrNull()?.id == ids.last() &&
                         state.profiles.any { it.id == ids[1] && it.lastConnectedAt > 0 }
                 } }
                 assertTrue(ids.all { vm.uiState.value.pingResults[it] is PingResult.Error })
@@ -160,4 +161,68 @@ class ConnectionHistoryDeviceTest {
             preferences.setProxyOnlyMode(originalProxy)
         }
     }
+    @Test fun selectedCardNeverReusesAnotherCollectionsLastConnection() = runBlocking<Unit> {
+        initializeDependencies()
+        val prefs = PreferencesDataStore(context)
+        val proxy = prefs.proxyOnlyMode.first()
+        val previousActive = repository.getActiveProfile().first()?.id
+        val port = requireNotNull(InstrumentationRegistry.getArguments().getString("sshFixturePort")).toInt()
+        val key = "card-scope-" + UUID.randomUUID()
+        val first = ServerProfile(name="Synthetic first collection", collectionId=key,
+            tunnelType=TunnelType.SSH, domain="127.0.0.1",sshPort=port,sshUsername="device-test",sshPassword="synthetic-only")
+        val ids = repository.insertCollection(listOf(first, first.copy(name="Synthetic second collection",collectionId=key+"-other")))
+        try {
+            prefs.setProxyOnlyMode(true)
+            openScreen { vm,manager ->
+                val a=vm.uiState.value.profiles.single { it.id==ids[0] }
+                val b=vm.uiState.value.profiles.single { it.id==ids[1] }
+                try {
+                onMain { vm.selectProfileOnly(a) }
+                withTimeout(5000) { repository.getActiveProfile().first { it?.id==a.id } }
+                onMain { vm.connect() }
+                withTimeout(45000) {
+                    while(manager.connectionState.value !is ConnectionState.Connected) {
+                        assertFalse(manager.connectionState.value.toString(),manager.connectionState.value is ConnectionState.Error)
+                        TransportTrust.request.value?.let { TransportTrust.answer(it,true) }
+                        delay(25)
+                    }
+                }
+                assertEquals(a.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
+                onMain { vm.selectCollection(b) }
+                assertEquals(b.collectionId,vm.uiState.value.selectedCollection)
+                assertNull(vm.uiState.value.manualProfileId)
+                assertEquals("Browsing a card changed the live connection",a.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
+                onMain { vm.toggleGlobalConnection { fail("Main stop tried to connect the selected card") } }
+                withTimeout(30000) { manager.awaitSessionDisconnected(manager.currentSessionId) }
+                delay(150)
+                assertTrue("Main stop unexpectedly connected another card", manager.connectionState.value.isDisconnected)
+                onMain { vm.toggleGlobalConnection { vm.connect() } }
+                try {
+                    withTimeout(45000) {
+                        while(manager.connectionState.value !is ConnectionState.Connected) {
+                            assertFalse(manager.connectionState.value.toString(),manager.connectionState.value is ConnectionState.Error)
+                            TransportTrust.request.value?.let { TransportTrust.answer(it,true) }
+                            delay(25)
+                        }
+                    }
+                    assertEquals("Global connect reused the other collection",b.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
+                } finally { onMain { vm.disconnect() };withTimeout(30000){manager.awaitSessionDisconnected(manager.currentSessionId)} }
+                onMain { vm.selectCollection(a) }
+                assertEquals(a.id,vm.uiState.value.manualProfileId)
+                assertEquals(a.id,vm.preferredProfile(listOf(a))?.id)
+                } finally {
+                    if (!manager.connectionState.value.isDisconnected) {
+                        val session=manager.currentSessionId
+                        onMain { manager.disconnect(expectedSessionId=session) }
+                        withTimeout(30000) { manager.awaitSessionDisconnected(session) }
+                    }
+                }
+            }
+        } finally {
+            ids.forEach { repository.deleteProfile(it) }
+            if(previousActive!=null) repository.setActiveProfile(previousActive) else repository.clearActiveProfile()
+            prefs.setProxyOnlyMode(proxy)
+        }
+    }
+
 }

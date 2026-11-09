@@ -17,6 +17,16 @@ class VpnPowerPolicyTest {
         }
         assertTrue(VpnPowerPolicy.continuous(tcp.copy(wsPaddingEnabled = true)))
     }
+    @Test fun wifiLockRequiresWifiAndPreservesOnlyTheLegacyDnsScreenOffCase() {
+        for (api in listOf(24, 28, 29, 35)) {
+            assertFalse(VpnPowerPolicy.holdWifi(false, true, true, api))
+            assertFalse(VpnPowerPolicy.holdWifi(false, true, false, api))
+            assertTrue(VpnPowerPolicy.holdWifi(true, false, true, api))
+        }
+        assertTrue(VpnPowerPolicy.holdWifi(true, true, false, 28))
+        assertFalse(VpnPowerPolicy.holdWifi(true, true, false, 29))
+        assertFalse(VpnPowerPolicy.holdWifi(true, false, false, 28))
+    }
     @Test fun screenOffSamplingBacksOffAndVisibleSamplingRecovers() {
         assertEquals(10_000L, VpnPowerPolicy.sampleInterval(false, 0))
         assertEquals(30_000L, VpnPowerPolicy.sampleInterval(false, 3))

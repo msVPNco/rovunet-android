@@ -10,6 +10,7 @@ import java.util.concurrent.Executors
 
 /** Local SOCKS5 peer. Only the test destination can receive the payload. */
 internal class MtuSocksFixture : Closeable {
+    val payloadRequests = java.util.concurrent.atomic.AtomicInteger()
     val payload = "rovunet-mtu-".repeat(400)
     private val listener = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
     private val worker = Executors.newSingleThreadExecutor()
@@ -46,6 +47,7 @@ internal class MtuSocksFixture : Closeable {
         val reader = input.bufferedReader(Charsets.US_ASCII)
         if (reader.readLine() != "GET /mtu HTTP/1.0") return
         while (!reader.readLine().isNullOrEmpty()) { /* consume request headers */ }
+        payloadRequests.incrementAndGet()
         output.write("HTTP/1.0 200 OK\r\nContent-Length: ${payload.length}\r\n\r\n$payload".toByteArray(Charsets.US_ASCII))
     }
 

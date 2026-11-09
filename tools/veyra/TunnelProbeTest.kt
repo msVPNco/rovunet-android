@@ -83,6 +83,17 @@ fun main() {
     check(app.slipnet.domain.model.ProfileRanking.sort(profiles, mixed).first().id == 1L)
     check(app.slipnet.domain.model.ProfileRanking.sort(profiles, mixed, true).map { it.id } == listOf(3L,2L,1L,4L))
     kotlinx.coroutines.runBlocking {
+        var calls = 0
+        check(TunnelProbe.medianVerified({ true }) { host ->
+            calls++
+            if (host == TunnelProbe.HOST) error("primary blocked")
+            80L
+        } == 80L)
+        check(calls == 4)
+        calls = 0
+        check(TunnelProbe.medianVerified({ false }) { calls++; 80L } == null && calls == 0)
+        calls = 0
+        check(TunnelProbe.medianVerified({ true }) { calls++; error("both blocked") } == null && calls == 2)
         val hosts = mutableListOf<String>()
         val blocked = TunnelProbe.sample({}) { host -> hosts.add(host); error("endpoint blocked") }
         check(blocked.summary == null && blocked.attempts == 2)

@@ -21,9 +21,18 @@ object ProfileCollections {
      */
     fun coreTcpTarget(p: ServerProfile): Pair<String, Int>? {
         if (p.tunnelType != TunnelType.XRAY || isUdp(p)) return null
-        val found = coreAuthority.find(p.coreLink.trim()) ?: return null
-        val port = found.groupValues[2].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null
-        return found.groupValues[1].trim('[', ']') to port
+        val link = runCatching { app.slipnet.core.CoreSharing.normalize(p.coreLink) }.getOrNull() ?: return null
+        coreAuthority.find(link)?.let { found ->
+            val port = found.groupValues[2].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null
+            return found.groupValues[1].trim('[', ']') to port
+        }
+        if (!link.startsWith("ss://", true)) return null
+        return runCatching {
+            val parsed = app.slipnet.core.CoreLink.parse(link)
+            val settings = parsed.outbound.getJSONObject("settings")
+            val server = (settings.optJSONArray("vnext") ?: settings.getJSONArray("servers")).getJSONObject(0)
+            parsed.host to server.getInt("port")
+        }.getOrNull()
     }
 
     fun ordered(profiles: List<ServerProfile>, results: Map<Long, PingResult>): List<ServerProfile> {

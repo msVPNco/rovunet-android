@@ -31,6 +31,7 @@ fun ProfileListItem(
     onEditClick: () -> Unit, onDeleteClick: () -> Unit, onExportClick: () -> Unit,
     onShareQrClick: () -> Unit, onPinClick: () -> Unit, onPingClick: () -> Unit,
     onStabilityTestClick: () -> Unit = onPingClick, isPingRunning: Boolean = false,
+    measurementNowMillis: Long = System.currentTimeMillis(),
     modifier: Modifier = Modifier
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -55,11 +56,16 @@ fun ProfileListItem(
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
                     if (pingResult is PingResult.Success && pingResult.verified) {
-                        val green = if (pingResult.currentNetwork) ConnectedGreen else colors.onSurfaceVariant
-                        Text("HTTPS ${pingResult.latencyMs} ms", Modifier.testTag("profile-latency-${profile.id}")
+                        val fresh = ProbeCache.fresh(pingResult, measurementNowMillis)
+                        val green = if (fresh) ConnectedGreen else colors.onSurfaceVariant
+                        Text(stringResource(R.string.alpha17_ping, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
                             .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                             color = green, style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
                             fontWeight = FontWeight.SemiBold)
+                        val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
+                            androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
+                        Text(stringResource(if (fresh) R.string.review02_ping_fresh else R.string.review02_ping_previous, time),
+                            Modifier.testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
                     }
                 }
                 val status = when {
@@ -88,7 +94,13 @@ fun ProfileListItem(
                     }
                     Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
-                    Text(listOf(profile.tunnelType.displayName, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
+                    val protocolLabel = if (profile.tunnelType == TunnelType.XRAY) when (profile.coreLink.substringBefore("://").lowercase()) {
+                        "ss" -> stringResource(R.string.review02_shadowsocks)
+                        "trojan" -> stringResource(R.string.review03_trojan)
+                        "vmess" -> stringResource(R.string.review03_vmess)
+                        else -> profile.tunnelType.displayName
+                    } else profile.tunnelType.displayName
+                    Text(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
                         maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
                         color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
                 }
@@ -142,6 +154,7 @@ fun ProfileListItem(
                     java.text.DateFormat.getTimeInstance().format(java.util.Date(pingResult.measuredAt)), pingResult.message)
                 else -> stringResource(R.string.ui_not_verified)
             }
+            if (pingResult is PingResult.Success) Text(stringResource(R.string.alpha17_ping_hint), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
             Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             if ((pingResult is PingResult.Success && !pingResult.currentNetwork) || (pingResult is PingResult.Error && !pingResult.currentNetwork)) {
                 Text(stringResource(R.string.probe_previous_network), Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alpha17_language_title">زبان برنامه را انتخاب کنید</string>
+    <string name="alpha17_free_title">اتصال رایگان</string>
+    <string name="alpha17_free_hint">یک روش یا منبع عمومی انتخاب کنید. دسترسی به شبکه و ارائه‌دهنده بستگی دارد.</string>
+    <string name="alpha17_free_tor">تور / اسنوفلیک — افزودن اتصال</string>
+    <string name="alpha17_free_proton">Proton VPN Free — راهنمای کانفیگ شخصی</string>
+    <string name="alpha17_free_mahsa">مهسا — توضیحات منبع</string>
+    <string name="alpha17_free_anon">انونیموس X — اشتراک عمومی</string>
+    <string name="alpha17_free_other">اشتراک عمومی دیگر</string>
+    <string name="alpha17_free_pending">وارپ، سایفون، مهسا، پترنیها، Riseup/Calyx و Geph همچنان در بررسی سازگاری و اجازهٔ استفاده از سرویس هستند.</string>
+    <string name="alpha17_public_title">بررسی منبع عمومی</string>
+    <string name="alpha17_public_consent">سرورهای عمومی گردانندگان مستقلی دارند. تست اتصال، قابل‌اعتمادبودن آن‌ها را ثابت نمی‌کند. فقط منبعی را فعال کنید که اجازهٔ استفاده از آن را دارید؛ ورودی‌های ناسازگار ممکن است رد شوند.</string>
+    <string name="alpha17_public_ack">متوجه‌ام و می‌خواهم این منبع را بررسی کنم</string>
+    <string name="alpha17_public_summary">%1$d سازگار · %2$d ناسازگار · %3$d تکراری</string>
+    <string name="alpha17_public_import">واردکردن موارد بررسی‌شده</string>
+    <string name="alpha17_public_empty">در این منبع عمومی کانفیگ سازگار پیدا نشد.</string>
+    <string name="alpha17_public_limit">حجم یا تعداد ورودی‌های این منبع از سقف مجاز بیشتر است.</string>
+    <string name="alpha17_smart_title">انتخاب مسیر</string>
+    <string name="alpha17_manual">دستی</string>
+    <string name="alpha17_failover">جایگزینی هنگام خرابی</string>
+    <string name="alpha17_smart">انتخاب هوشمند</string>
+    <string name="alpha17_smart_hint">حالت هوشمند هنگام کاهش حداقل ۵۰٪ پینگ بالای HTTPS می‌تواند مسیر را عوض کند. تعویض ممکن است تماس یا دانلود را قطع کند. تست هم‌زمان برای مسیرهای سازگار هسته در دسترس است؛ مسیرهای دیگر پس از خرابی امتحان می‌شوند.</string>
+    <string name="alpha17_smart_start">اتصال خودکار</string>
+    <string name="alpha17_monitoring">اتصال هوشمند فعال است</string>
+    <string name="alpha17_switching">در حال تغییر به مسیر تأییدشده…</string>
+    <string name="alpha17_offline">در انتظار دسترسی به اینترنت</string>
+    <string name="alpha17_exhausted">در این مرحله مسیر جایگزین تأیید نشد. مرحلهٔ بعد را امتحان کنید یا دستی مسیر انتخاب کنید.</string>
+    <string name="alpha17_trying">در حال امتحان مسیر %1$d از %2$d</string>
+    <string name="alpha17_ping">پینگ %1$d ms</string>
+    <string name="alpha17_ping_hint">پینگ، تأخیر رفت‌وبرگشت HTTPS از داخل همین مسیر است؛ سرعت دانلود نیست.</string>
+    <string name="alpha17_next_batch">تست ۵۰ مسیر بعدی</string>
+    <string name="alpha17_large_batch">تست مجموعه در مرحله‌های حداکثر ۵۰ مسیری انجام می‌شود.</string>
+    <string name="alpha17_public_refresh_warning">پیش از اعمال به‌روزرسانی، این منبع را دوباره بررسی کنید.</string>
+    <string name="alpha17_free_details">توضیحات ارائه‌دهنده</string>
+</resources>

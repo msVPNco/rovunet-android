@@ -9,8 +9,8 @@ data class ProbePolicy(val setupMs: Long, val httpsMs: Int) {
          * are ordered last) are not cut off by the time the early failures used. Capped at 15 minutes;
          * the test can be stopped at any time.
          */
-        fun testAllBudgetMs(profiles: List<ServerProfile>): Long =
-            profiles.sumOf { forProfile(it).let { policy -> policy.setupMs + policy.httpsMs } }.coerceIn(90_000L, 900_000L)
+        fun testAllBudgetMs(profiles: List<ServerProfile>, detailed: Boolean = false): Long =
+            profiles.sumOf { forProfile(it).let { policy -> policy.setupMs + policy.httpsMs * (if (detailed) 3 else 2) + 25_000L } }.coerceIn(90_000L, 900_000L)
 
         fun forProfile(profile: ServerProfile): ProbePolicy = when {
             ProfileCollections.isDns(profile) || profile.tunnelType == TunnelType.SNOWFLAKE -> ProbePolicy(60_000, 20_000)

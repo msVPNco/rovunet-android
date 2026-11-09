@@ -11,6 +11,8 @@ internal object VpnPowerPolicy {
         TunnelType.SOAR, TunnelType.SOAR_SSH, TunnelType.SNOWFLAKE)
     fun holdCpu(continuous: Boolean, screenOn: Boolean, idleMs: Long): Boolean =
         continuous || screenOn || idleMs < 60_000
+    fun holdWifi(isWifi: Boolean, continuous: Boolean, screenOn: Boolean, api: Int): Boolean =
+        isWifi && (screenOn || continuous && api < 29)
     fun sampleInterval(screenOn: Boolean, idleTicks: Int): Long = when {
         !screenOn && idleTicks >= 6 -> 60_000
         !screenOn && idleTicks >= 3 -> 30_000

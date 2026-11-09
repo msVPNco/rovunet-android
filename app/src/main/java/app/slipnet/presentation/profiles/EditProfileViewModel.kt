@@ -304,7 +304,7 @@ class EditProfileViewModel @Inject constructor(
     private var recoveryProfile: ServerProfile? = null
     private var soarTcpModeExplicitlyChosen = false
     private val profileId: Long? = savedStateHandle.get<Long>("profileId")
-    private val coreMode = savedStateHandle.get<String>("tunnelType")?.takeIf { it in setOf("reality", "xhttp", "hysteria2", "wireguard") }
+    private val coreMode = savedStateHandle.get<String>("tunnelType")?.takeIf { it in setOf("reality", "xhttp", "hysteria2", "wireguard", "ss", "trojan", "vmess") }
     private val initialTunnelType: TunnelType = savedStateHandle.get<String>("tunnelType")
         ?.let { if (coreMode != null) TunnelType.XRAY else TunnelType.fromValue(it) } ?: TunnelType.DNSTT
 

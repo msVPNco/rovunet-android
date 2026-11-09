@@ -147,7 +147,7 @@ class ConfigImporter @Inject constructor() {
         val unwrapped = if (input.trim().startsWith(CollectionLink.PREFIX)) {
             try { CollectionLink.decode(input.trim()) } catch (_: Exception) { return ImportResult.Error("Unsupported or invalid collection QR") }
         } else input
-        val trimmedInput = ConfigSchemes.canonical(unwrapped.trim())
+        val trimmedInput = ConfigSchemes.canonical(unwrapped.removePrefix("\uFEFF").trim())
 
         // Password-encrypted bundle: the whole input is one base64 blob.
         // We unwrap it here and let the normal line-loop parse the decrypted
@@ -170,6 +170,15 @@ class ConfigImporter @Inject constructor() {
         }
 
         if (expanded.length > 2 * 1024 * 1024) return ImportResult.Error("Bundle exceeds 2 MiB")
+        if (app.slipnet.core.CoreDocument.looksLikeJson(expanded)) {
+            return try {
+                val doc = app.slipnet.core.CoreDocument.read(expanded)
+                if (doc.links.isEmpty()) ImportResult.Error("INVALID_FEED") else {
+                    val result = parseAndImport(doc.links.joinToString("\n"), localDeviceId, bundlePassword)
+                    if (result is ImportResult.Success) result.copy(warnings = result.warnings + "REVIEW03_JSON_CONNECTIONS_ONLY" + if (doc.rejected > 0) listOf("REVIEW03_JSON_UNSUPPORTED") else emptyList()) else result
+                }
+            } catch (_: Exception) { ImportResult.Error("INVALID_FEED") }
+        }
         if (expanded.trimStart().startsWith("[Interface]", true)) {
             return try {
                 val parsed = app.slipnet.core.CoreLink.parse(expanded)
@@ -199,7 +208,8 @@ class ConfigImporter @Inject constructor() {
             }
             while (accountHints.size <= profiles.size) accountHints += panelAccountHint
             accountHints[profiles.size] = panelAccountHint
-            val trimmedLine = ConfigSchemes.canonical(line.trim())
+            val sourceLink = ConfigSchemes.canonical(line.trim())
+            val trimmedLine = try { app.slipnet.core.CoreSharing.normalize(sourceLink) } catch (_: Exception) { warnings.add("Line ${index + 1}: Invalid or unsupported core link options"); continue }
             val externalScheme = trimmedLine.substringBefore("://").lowercase()
             if (externalScheme in setOf("ssh", "socks5", "naive+https")) {
                 try {
@@ -229,7 +239,7 @@ class ConfigImporter @Inject constructor() {
             if (isCore) {
                 try {
                     val parsed = app.slipnet.core.CoreLink.parse(trimmedLine)
-                    profiles.add(ServerProfile(name = parsed.name, domain = parsed.host, tunnelType = TunnelType.XRAY, coreLink = trimmedLine))
+                    profiles.add(ServerProfile(name = parsed.name, domain = parsed.host, tunnelType = TunnelType.XRAY, coreLink = if (trimmedLine.startsWith("vmess://", true) && '@' in sourceLink.substringBefore('#')) app.slipnet.core.CoreForm.decode(trimmedLine).encode(parsed.name) else sourceLink))
                 } catch (_: Exception) { warnings.add("Line ${index + 1}: Invalid or unsupported core link options") }
                 continue
             }
@@ -2395,6 +2405,9 @@ class ConfigImporter @Inject constructor() {
                 }
             }
 
+            require(params.keys.all { it in setOf("type", "security", "encryption", "flow", "sni", "fp", "host", "path", "alpn", "headerType", "allowInsecure", "insecure", "cdn", "cdn-port", "fragment") }) { "UNSUPPORTED_OPTION" }
+            require(params["headerType"].orEmpty() in setOf("", "none")) { "UNSUPPORTED_OPTION" }
+            require(params["insecure"].orEmpty().lowercase() in setOf("", "0", "false")) { "TLS_UNVERIFIED" }
             if (server.isBlank() || port !in 1..65535) return ProfileParseResult.Error("Line $lineNum: Invalid endpoint")
             if (!params["flow"].isNullOrEmpty() || params["encryption"]?.let { it != "none" } == true ||
                 params.any { (key, value) -> key.equals("allowInsecure", true) && (value == "1" || value.equals("true", true)) }) {
