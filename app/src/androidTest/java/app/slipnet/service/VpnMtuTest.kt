@@ -71,6 +71,9 @@ class VpnMtuTest {
         val oldMtu = prefs.vpnMtu.first()
         val oldBlock = prefs.blockIpv6.first()
         val oldProxyOnly = prefs.proxyOnlyMode.first()
+        val oldSplit = prefs.splitTunnelingEnabled.first()
+        val oldMode = prefs.splitTunnelingMode.first()
+        val oldApps = prefs.splitTunnelingApps.first()
         val db = DatabaseModule.provideDatabase(context)
         val fixture = MtuSocksFixture()
         val profile = ServerProfile(name = "MTU test", tunnelType = TunnelType.SOCKS5,
@@ -80,6 +83,7 @@ class VpnMtuTest {
             .setAction(SlipNetVpnService.ACTION_DISCONNECT))
         try {
             prefs.setProxyOnlyMode(false)
+            prefs.setSplitTunnelingEnabled(false)
             prefs.setVpnMtu(512)
             for ((block, expected) in listOf(false to 1280, true to 512)) {
                 prefs.setBlockIpv6(block)
@@ -96,6 +100,7 @@ class VpnMtuTest {
                 val (code, response) = withTimeout(30_000) { received.await() }
                 assertEquals(response.getString("error"), Activity.RESULT_OK, code)
                 assertNotEquals(android.os.Process.myUid(), response.getInt("uid"))
+                assertTrue("Included test UID did not see the VPN",response.getBoolean("vpn"))
                 assertEquals("TCP reply through MTU $expected", fixture.payload, response.getString("body"))
                 prefs.setVpnMtu(1400)
                 assertEquals(expected, tunMtu())
@@ -107,11 +112,33 @@ class VpnMtuTest {
                 until { tunMtu() == null && !app.slipnet.tunnel.HevSocks5Tunnel.isRunning() &&
                     TunnelOperations.mutex.withLock { TunnelOperations.owner == 0L } }
             }
+            prefs.setBlockIpv6(true)
+            prefs.setSplitTunnelingApps(setOf(inst.context.packageName))
+            prefs.configureSelectedAppsBypass()
+            ContextCompat.startForegroundService(context, Intent(context, SlipNetVpnService::class.java)
+                .setAction(SlipNetVpnService.ACTION_CONNECT).putExtra(SlipNetVpnService.EXTRA_PROFILE_ID,id))
+            until { tunMtu()==512 && nativeMtu()==512 }
+            val before=fixture.payloadRequests.get()
+            val excluded=CompletableDeferred<Pair<Int,Bundle>>()
+            val excludedReceiver=object:ResultReceiver(Handler(Looper.getMainLooper())) {
+                override fun onReceiveResult(code:Int,data:Bundle) { excluded.complete(code to data) }
+            }
+            context.startActivity(Intent().setClassName(inst.context.packageName,MtuTrafficActivity::class.java.name)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("result",excludedReceiver))
+            val (excludedCode,excludedData)=withTimeout(30000){excluded.await()}
+            assertNotEquals(android.os.Process.myUid(),excludedData.getInt("uid"))
+            assertFalse("Excluded UID still sees the VPN as its active network",excludedData.getBoolean("vpn"))
+            assertEquals(Activity.RESULT_CANCELED,excludedCode)
+            assertEquals("Excluded traffic unexpectedly reached the VPN proxy",before,fixture.payloadRequests.get())
+            assertEquals(512,tunMtu())
         } finally {
             if (tunMtu() != null) disconnect()
             prefs.setVpnMtu(oldMtu)
             prefs.setBlockIpv6(oldBlock)
             prefs.setProxyOnlyMode(oldProxyOnly)
+            prefs.setSplitTunnelingApps(oldApps)
+            prefs.setSplitTunnelingMode(oldMode)
+            prefs.setSplitTunnelingEnabled(oldSplit)
             db.profileDao().deleteProfile(id)
             db.close()
             fixture.close()

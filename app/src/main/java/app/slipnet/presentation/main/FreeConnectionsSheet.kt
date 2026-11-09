@@ -44,7 +44,9 @@ internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () 
 }
 
 @Composable
-internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: PublicProviders.Provider? = null, onDismiss: () -> Unit, onImported: () -> Unit) {
+internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: PublicProviders.Provider? = null,
+    prepare: suspend (String, String, Boolean) -> SubscriptionPreview = { name,address,update -> repository.preparePublic(name,address,update) },
+    onDismiss: () -> Unit, onImported: () -> Unit) {
     val presetName = if (provider == PublicProviders.Provider.MAHSA) stringResource(R.string.review02_mahsa) else stringResource(R.string.review02_anonymous)
     var name by remember(provider) { mutableStateOf(if (provider == null) "" else presetName) }
     var address by remember(provider) { mutableStateOf(provider?.address.orEmpty()) }
@@ -71,7 +73,7 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(address, { address = it }, enabled = !busy && provider == null, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
                 Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
-                Row { Checkbox(agreed, { agreed = it }, enabled = !busy); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
+                Row { Checkbox(agreed, { agreed = it }, enabled = !busy, modifier = Modifier.testTag("public-source-consent")); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
             } else preview?.let { item ->
                 Text(item.source.name, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
@@ -87,9 +89,9 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         } },
         confirmButton = {
-            TextButton(enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank(), onClick = {
+            TextButton(modifier = Modifier.testTag("public-source-confirm"), enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank(), onClick = {
                 execute { val ready = preview
-                    if (ready == null) preview = repository.preparePublic(name, address, updateExisting = provider != null)
+                    if (ready == null) preview = prepare(name, address, provider != null)
                     else { repository.apply(ready); onImported() }
                 }
             }) { Text(stringResource(if (preview == null) R.string.subscription_preview else R.string.alpha17_public_import)) }

@@ -122,7 +122,7 @@ class ConnectionHistoryDeviceTest {
         val group = "probe-history-" + UUID.randomUUID()
         val base = ServerProfile(name = "Synthetic SOCKS path", domain = "127.0.0.1", tunnelType = TunnelType.SOCKS5,
             socks5ServerPort = server.localPort, collectionId = group)
-        val ids = repo.insertCollection(listOf(base, base.copy(name = "Second synthetic SOCKS path")))
+        val ids = repo.insertCollection(List(6) { base.copy(name = "Synthetic external path ${it + 1}") })
         val selectedBefore = repo.getActiveProfile().first()?.id
         val lastUserConnection = preferences.lastConnectedProfileId.first()
         try {
@@ -134,6 +134,7 @@ class ConnectionHistoryDeviceTest {
                 withTimeout(90_000) { vm.uiState.first { !it.isPingRunning && ids.all { id -> it.pingResults[id] is PingResult.Error } } }
                 withTimeout(15_000) { vm.uiState.first { it.profiles.filter { p -> p.id in ids }.all { p -> p.deletionReview != null } } }
                 assertTrue(ids.all { vm.uiState.value.pingResults[it] is PingResult.Error })
+                assertTrue("New results were incorrectly marked historical", ids.all { (vm.uiState.value.pingResults[it] as PingResult.Error).currentNetwork })
                 assertEquals("Temporary probes changed the persistent selection", ids[0], repo.getActiveProfile().first()?.id)
                 assertEquals("Temporary probes replaced the last user connection", lastUserConnection, preferences.lastConnectedProfileId.first())
                 // A genuine mapper roundtrip changes both deletion-review digests. Results must still survive.
@@ -160,4 +161,47 @@ class ConnectionHistoryDeviceTest {
             preferences.setProxyOnlyMode(originalProxy)
         }
     }
+    @Test fun selectedCardNeverReusesAnotherCollectionsLastConnection() = runBlocking<Unit> {
+        initializeDependencies()
+        val prefs = PreferencesDataStore(context)
+        val proxy = prefs.proxyOnlyMode.first()
+        val previousActive = repository.getActiveProfile().first()?.id
+        val port = requireNotNull(InstrumentationRegistry.getArguments().getString("sshFixturePort")).toInt()
+        val key = "card-scope-" + UUID.randomUUID()
+        val first = ServerProfile(name="Synthetic first collection", collectionId=key,
+            tunnelType=TunnelType.SSH, domain="127.0.0.1",sshPort=port,sshUsername="device-test",sshPassword="synthetic-only")
+        val ids = repository.insertCollection(listOf(first, first.copy(name="Synthetic second collection",collectionId=key+"-other")))
+        try {
+            prefs.setProxyOnlyMode(true)
+            openScreen { vm,manager ->
+                val a=vm.uiState.value.profiles.single { it.id==ids[0] }
+                val b=vm.uiState.value.profiles.single { it.id==ids[1] }
+                onMain { vm.selectProfileOnly(a) }
+                withTimeout(5000) { repository.getActiveProfile().first { it?.id==a.id } }
+                onMain { vm.selectCollection(b) }
+                assertEquals(b.collectionId,vm.uiState.value.selectedCollection)
+                assertNull(vm.uiState.value.manualProfileId)
+                assertTrue(manager.connectionState.value.isDisconnected)
+                onMain { vm.connect() }
+                try {
+                    withTimeout(45000) {
+                        while(manager.connectionState.value !is ConnectionState.Connected) {
+                            assertFalse(manager.connectionState.value.toString(),manager.connectionState.value is ConnectionState.Error)
+                            TransportTrust.request.value?.let { TransportTrust.answer(it,true) }
+                            delay(25)
+                        }
+                    }
+                    assertEquals("Global connect reused the other collection",b.id,(manager.connectionState.value as ConnectionState.Connected).profile.id)
+                } finally { onMain { vm.disconnect() };withTimeout(30000){manager.awaitSessionDisconnected(manager.currentSessionId)} }
+                onMain { vm.selectCollection(a) }
+                assertEquals(a.id,vm.uiState.value.manualProfileId)
+                assertEquals(a.id,vm.preferredProfile(listOf(a))?.id)
+            }
+        } finally {
+            ids.forEach { repository.deleteProfile(it) }
+            if(previousActive!=null) repository.setActiveProfile(previousActive) else repository.clearActiveProfile()
+            prefs.setProxyOnlyMode(proxy)
+        }
+    }
+
 }

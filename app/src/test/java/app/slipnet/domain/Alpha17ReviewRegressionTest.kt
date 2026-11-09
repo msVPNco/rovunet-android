@@ -18,7 +18,7 @@ class Alpha17ReviewRegressionTest {
         assertFalse(initial.update("wifi-first:addresses"))
     }
     @Test fun freshSuccessRanksBeforeFastHistoricalValueAndWrongCollectionCannotResolve() {
-        val profiles = (1L..3L).map { ServerProfile(id=it, name="Synthetic", collectionId=if (it==1L) "collection-a" else "collection-b") }
+        val profiles = (1L..3L).map { ServerProfile(id=it, name="Synthetic", tunnelType=TunnelType.SSH, collectionId=if (it==1L) "collection-a" else "collection-b") }
         val results = mapOf(1L to PingResult.Success(1, verified=true, currentNetwork=false),
             2L to PingResult.Success(1500, verified=true), 3L to PingResult.Success(700, verified=true))
         assertEquals(listOf(3L,2L,1L), ProfileRanking.sort(profiles,results).map { it.id })

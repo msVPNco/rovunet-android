@@ -15,6 +15,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "providerRequiresConsentCreatesOneSourceAndReaddingReviewsExistingCard"),
+    ("app.slipnet.presentation.Alpha17UiDeviceTest", "pingShowsFreshOrPreviousTimestampAndAppBypassNeedsConfirmation"),
+    ("app.slipnet.presentation.ConnectionHistoryDeviceTest", "selectedCardNeverReusesAnotherCollectionsLastConnection"),
     ("app.slipnet.presentation.Alpha17PreferencesDeviceTest", "freshPreferencesFollowSystemAndPreserveExplicitTheme"),
     ("app.slipnet.presentation.Alpha17UiDeviceTest", "languageWelcomeHasFourExplicitChoicesAndNoImportOrConnection"),
     ("app.slipnet.presentation.Alpha17UiDeviceTest", "expandedThreeThousandPathsComposeOnlyVisibleRowsAndScrollToLast"),

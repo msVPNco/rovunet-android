@@ -24,6 +24,13 @@ class Alpha17PreferencesDeviceTest {
             assertEquals(DarkMode.DARK, preferences.darkMode.first())
             preferences.setDarkMode(DarkMode.LIGHT)
             assertEquals(DarkMode.LIGHT, preferences.darkMode.first())
+            preferences.setSplitTunnelingApps(setOf("synthetic.bank", "synthetic.other"))
+            preferences.setSplitTunnelingMode(app.slipnet.data.local.datastore.SplitTunnelingMode.ALLOW)
+            preferences.setSplitTunnelingEnabled(false)
+            preferences.configureSelectedAppsBypass()
+            assertTrue(preferences.splitTunnelingEnabled.first())
+            assertEquals(app.slipnet.data.local.datastore.SplitTunnelingMode.DISALLOW,preferences.splitTunnelingMode.first())
+            assertEquals(setOf("synthetic.bank", "synthetic.other"),preferences.splitTunnelingApps.first())
         } finally { scope.coroutineContext[Job]?.cancelAndJoin(); file.delete() }
     }
 }
