@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     u.sendto(frame,relay);out,_=u.recvfrom(65535);assert out.endswith(msg)
   finally:control.close()
  uid='00000000-0000-4000-8000-000000000001'
- for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard').split(','):
+ for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks').split(','):
   sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','wireguard'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[]
   inbound={'listen':'127.0.0.1','port':sp}
   tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode=='hysteria2' else ['h2','http/1.1']}
@@ -74,6 +74,10 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   elif mode=='xhttp':
    inbound.update(protocol='vless',settings={'clients':[{'id':uid}],'decryption':'none'},streamSettings={'network':'xhttp','security':'tls','tlsSettings':tls,'xhttpSettings':{'path':'/veyra','mode':'auto'}})
    link=f'vless://{uid}@127.0.0.1:{sp}?security=tls&type=xhttp&sni=localhost&host=localhost&path=%2Fveyra&mode=packet-up'
+  elif mode=='shadowsocks':
+   inbound.update(protocol='shadowsocks',settings={'method':'aes-256-gcm','password':'synthetic-aead-password','network':'tcp,udp'})
+   credentials=base64.urlsafe_b64encode(b'aes-256-gcm:synthetic-aead-password').decode().rstrip('=')
+   link=f'ss://{credentials}@127.0.0.1:{sp}#Synthetic-AEAD'
   elif mode=='hysteria2':
    inbound.update(protocol='hysteria',settings={'version':2,'users':[{'auth':'test-password'}]},streamSettings={'network':'hysteria','security':'tls','tlsSettings':tls,'hysteriaSettings':{'version':2},'finalmask':{'udp':[{'type':'salamander','settings':{'password':'obfs-test'}}]}})
    link=f'hysteria2://test-password@127.0.0.1:{sp}?sni=localhost&obfs=salamander&obfs-password=obfs-test'

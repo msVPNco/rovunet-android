@@ -19,7 +19,7 @@ object CoreLink {
     fun handles(text: String): Boolean {
         if (text.trimStart().startsWith("[Interface]", true)) return true
         val scheme = text.substringBefore("://").lowercase()
-        if (scheme in setOf("hysteria2", "hy2", "wireguard")) return true
+        if (scheme in setOf("hysteria2", "hy2", "wireguard", "ss")) return true
         if (scheme != "vless") return false
         val params = URI(text).rawQuery.orEmpty().split('&').associate {
             val kv = it.split('=', limit = 2)
@@ -28,10 +28,43 @@ object CoreLink {
         return params["security"] == "reality" || (params["type"] ?: "tcp") !in setOf("ws", "websocket")
     }
 
+    private fun shadowsocks(text: String): Parsed {
+        fun unpack(value: String): String {
+            val bytes = runCatching { Base64.decode(value, Base64.URL_SAFE or Base64.NO_WRAP) }
+                .getOrElse { Base64.decode(value, Base64.NO_WRAP) }
+            return String(bytes, Charsets.UTF_8)
+        }
+        val body = text.substringBefore('#')
+        val name = text.substringAfter('#', "").let(::decode).ifBlank { "Shadowsocks" }
+        val uri: URI
+        val credentials: String
+        if ('@' in body) {
+            uri = URI(body)
+            val auth = decode(uri.rawUserInfo ?: error("Missing credentials"))
+            credentials = if (':' in auth) auth else unpack(auth)
+        } else {
+            require('?' !in body) { "Unsupported Shadowsocks option" }
+            val decoded = unpack(body.substring(5))
+            val at = decoded.lastIndexOf('@')
+            require(at > 0) { "Missing Shadowsocks endpoint" }
+            credentials = decoded.substring(0, at)
+            uri = URI("ss://" + decoded.substring(at + 1))
+        }
+        val host = uri.host?.removeSurrounding("[", "]") ?: error("Missing host")
+        require(host.isNotBlank() && uri.port in 1..65535)
+        require(uri.rawQuery.isNullOrEmpty() && (uri.rawPath.isNullOrEmpty() || uri.rawPath == "/")) { "Unsupported Shadowsocks plugin or option" }
+        val auth = credentials.split(':', limit = 2)
+        require(auth.size == 2 && auth[1].isNotEmpty()) { "Missing Shadowsocks credentials" }
+        require(auth[0] in setOf("aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305")) { "Only authenticated AEAD Shadowsocks methods are supported" }
+        return Parsed(name, host, obj("protocol" to "shadowsocks", "settings" to obj("servers" to arr(
+            obj("address" to host, "port" to uri.port, "method" to auth[0], "password" to auth[1])))))
+    }
+
     fun parse(raw: String): Parsed {
         val text = raw.trim()
         require(text.length <= 65536) { "Core profile too large" }
         if (text.trimStart().startsWith("[Interface]", true)) return wireguard(text)
+        if (text.startsWith("ss://", true)) return shadowsocks(text)
         val uri = URI(text)
         val scheme = uri.scheme.lowercase()
         val host = uri.host?.removePrefix("[")?.removeSuffix("]") ?: error("Missing host")

@@ -39,4 +39,12 @@ class PublicProvidersTest {
         assertEquals("https://example.invalid/nested",PublicProviders.download(PublicProviders.Provider.ANONYMOUS.address) { _,_ -> calls++;"https://example.invalid/nested" })
         assertEquals(1,calls)
     }
+    @Test fun publishedEmptyChildIsNotADownloadFailureAndDoesNotDiscardOtherChildren() = runBlocking {
+        val combined=PublicProviders.download(PublicProviders.Provider.MAHSA.address) { url,_ ->
+            when(url) { PublicProviders.Provider.MAHSA.address -> "$first\n$second"; first -> ""; else -> body(10001) }
+        }
+        assertEquals(1,PublicFeed.parse(combined,ConfigImporter(),"synthetic").profiles.size)
+        assertEquals("",PublicFeed.expand("  \n"))
+    }
+
 }

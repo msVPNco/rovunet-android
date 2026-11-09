@@ -36,6 +36,14 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
                 "\n[Peer]\n" + line("publickey", "PublicKey") + line("presharedkey", "PresharedKey") + line("endpoint", "Endpoint") + line("allowedips", "AllowedIPs") + line("persistentkeepalive", "PersistentKeepalive")
         }
         val host = this["server"].trim().removeSurrounding("[", "]")
+        if (kind == "ss") {
+            val credentials = android.util.Base64.encodeToString((this["method"] + ":" + this["auth"]).toByteArray(Charsets.UTF_8),
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)
+            val encoded = "ss://$credentials@${if (':' in host) "[$host]" else host}:${this["port"]}#${enc(name)}"
+            CoreLink.parse(encoded)
+            return encoded
+        }
+
         val q = fields.filterKeys { it !in setOf("server", "port", "auth") }.toMutableMap()
         if (kind == "vless") {
             if (q["type"] == "xhttp") q.remove("flow") else listOf("mode", "host", "path", "extra").forEach(q::remove)
@@ -49,10 +57,16 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         fun fresh(mode: String) = when (mode) {
             "wireguard" -> CoreForm(mode, mapOf("mtu" to "1420", "allowedips" to "0.0.0.0/0", "persistentkeepalive" to "25"))
             "hysteria2" -> CoreForm(mode, mapOf("port" to "443"))
+            "ss" -> CoreForm(mode, mapOf("port" to "443", "method" to "aes-256-gcm"))
             else -> CoreForm("vless", mapOf("port" to "443", "encryption" to "none", "type" to if (mode == "xhttp") "xhttp" else "tcp", "security" to if (mode == "xhttp") "tls" else "reality", "fp" to "chrome", "path" to "/", "mode" to "auto", "flow" to if (mode == "xhttp") "" else "xtls-rprx-vision"))
         }
         fun decode(raw: String): CoreForm {
-            CoreLink.parse(raw) // Reject unsupported input before exposing editable fields.
+            val parsed = CoreLink.parse(raw) // Reject unsupported input before exposing editable fields.
+            if (raw.trim().startsWith("ss://", true)) {
+                val server = parsed.outbound.getJSONObject("settings").getJSONArray("servers").getJSONObject(0)
+                return CoreForm("ss", mapOf("server" to parsed.host, "port" to server.getInt("port").toString(),
+                    "method" to server.getString("method"), "auth" to server.getString("password")))
+            }
             val text = raw.trim()
             if (text.startsWith("[Interface]", true)) {
                 val fields = text.lines().map { it.substringBefore('#').trim() }.filter { '=' in it }.associate {

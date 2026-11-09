@@ -76,6 +76,11 @@ Tor and Soar engines/scanner code are unchanged from the tested code34 revision.
   app accepts an active VPN. Android lockdown can prevent bypassed apps using internet.
 - The provider catalog uses public link lists also published for proxy clients.
   No Hiddify engine code, WARP wrapper or blanket relay-ownership claim is included.
+  The existing Xray engine now accepts standard SIP002/legacy Shadowsocks links with
+  authenticated AEAD ciphers only, including editable secret-preserving roundtrips.
+  Insecure ciphers, unsupported plugins and unverified TLS remain rejected.
+  Intentionally empty published Mahsa children are accepted as empty, unlike failed
+  downloads, which abort the update.
   Prototype fixtures check consent, deduplication, same-source refresh and no partial
   replacement on child download failure. Real provider availability is network-dependent.
 

@@ -94,7 +94,9 @@ fun ProfileListItem(
                     }
                     Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
-                    Text(listOf(profile.tunnelType.displayName, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
+                    val protocolLabel = if (profile.tunnelType == TunnelType.XRAY && profile.coreLink.startsWith("ss://", true))
+                        stringResource(R.string.review02_shadowsocks) else profile.tunnelType.displayName
+                    Text(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
                         maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
                         color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
                 }

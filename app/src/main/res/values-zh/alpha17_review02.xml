@@ -11,4 +11,6 @@
     <string name="review02_app_bypass_message">这会启用“所选应用绕过 VPN”模式，并保留当前应用列表。选择应用后请重新连接。此功能不会隐藏正在运行的 VPN，部分应用仍可能拒绝使用。Android 的“阻止不通过 VPN 的连接”设置也可能阻止直连。</string>
     <string name="review02_app_bypass_choose">设置并选择应用</string>
     <string name="review02_provider_failed">无法下载来源。请使用可用连接重试，之前的配置会保留。</string>
+    <string name="review02_shadowsocks">Shadowsocks</string>
+    <string name="review02_ss_method">加密方式</string>
 </resources>

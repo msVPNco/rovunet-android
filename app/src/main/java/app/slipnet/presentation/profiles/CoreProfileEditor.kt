@@ -26,6 +26,7 @@ fun CoreProfileEditor(
 ) {
     val form = state.coreForm
     val title = when (form?.kind) {
+        "ss" -> androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks)
         "wireguard" -> "WireGuard"
         "hysteria2" -> "Hysteria2"
         else -> "VLESS • ${if (form?.get("type") == "xhttp") "XHTTP" else "TCP"}"
@@ -99,6 +100,9 @@ fun CoreProfileEditor(
                     } else if (form["security"] != "none") {
                         choices("flow", app.slipnet.R.string.editor_flow_label, listOf("", "xtls-rprx-vision"))
                     }
+                } else if (form.kind == "ss") {
+                    choices("method", app.slipnet.R.string.review02_ss_method,
+                        listOf("aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305"))
                 } else {
                     field("sni", app.slipnet.R.string.rv_tls_server_name_sni_719c47)
                     Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_tls_certificate_verification_is_enabled_de2de3), style = MaterialTheme.typography.bodySmall)

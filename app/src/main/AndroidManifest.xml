@@ -82,6 +82,7 @@
                 <data android:scheme="ssh" />
                 <data android:scheme="socks5" />
                 <data android:scheme="naive+https" />
+                <data android:scheme="ss" />
                 <data android:scheme="vless" />
                 <data android:scheme="hysteria2" />
                 <data android:scheme="hy2" />

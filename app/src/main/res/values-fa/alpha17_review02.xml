@@ -11,4 +11,6 @@
     <string name="review02_app_bypass_message">حالت تفکیک روی «برنامه‌های انتخاب‌شده خارج از VPN» قرار می‌گیرد و فهرست انتخاب‌های فعلی حفظ می‌شود. برنامه‌ها را انتخاب و سپس اتصال را قطع و وصل کنید. این کار VPN فعال را پنهان نمی‌کند؛ بعضی برنامه‌ها ممکن است همچنان آن را نپذیرند. گزینهٔ «مسدودکردن اتصال بدون VPN» در اندروید نیز می‌تواند عبور مستقیم را ببندد.</string>
     <string name="review02_app_bypass_choose">تنظیم و انتخاب برنامه‌ها</string>
     <string name="review02_provider_failed">دریافت منبع انجام نشد. با یک اتصال سالم دوباره امتحان کنید؛ کانفیگ‌های قبلی حفظ می‌شوند.</string>
+    <string name="review02_shadowsocks">Shadowsocks</string>
+    <string name="review02_ss_method">روش رمزنگاری</string>
 </resources>

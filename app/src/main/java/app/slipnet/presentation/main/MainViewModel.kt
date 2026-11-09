@@ -1555,7 +1555,11 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun getSimplePingTarget(profile: ServerProfile): Pair<String, Int>? {
-        // Try direct TCP target first
+        // Try direct TCP target first, including legacy/SIP002 Shadowsocks authorities.
+        if (profile.tunnelType == TunnelType.XRAY && profile.coreLink.startsWith("ss://", true)) return runCatching {
+            val parsed = app.slipnet.core.CoreLink.parse(profile.coreLink)
+            parsed.host to parsed.outbound.getJSONObject("settings").getJSONArray("servers").getJSONObject(0).getInt("port")
+        }.getOrNull()
         getTcpTarget(profile)?.let { return it }
         ProfileCollections.coreTcpTarget(profile)?.let { return it }
         // For DNS-tunneled profiles, ping the first resolver — honoring the

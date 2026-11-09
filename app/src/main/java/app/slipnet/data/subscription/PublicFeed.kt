@@ -16,6 +16,7 @@ internal object PublicFeed {
     fun expand(document: String): String {
         require(document.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "PUBLIC_FEED_LIMIT" }
         val text = document.removePrefix("\uFEFF").trim()
+        if (text.isEmpty()) return ""
         require(!text.startsWith("<") && !text.startsWith("{") && !text.startsWith("[")) { "INVALID_FEED" }
         val expanded = if (text.contains("://")) text else try {
             String(WireBase64.decode(text), Charsets.UTF_8)

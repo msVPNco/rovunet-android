@@ -51,7 +51,8 @@ class CoreDeviceSmokeTest {
         try {
             val link = "vless://00000000-0000-4000-8000-000000000001@example.invalid:443?security=tls&type=tcp"
             live.start(binary, CoreLink.runtime(link, first.port, first.user, first.password), launcher).getOrThrow()
-            candidate.start(binary, CoreLink.runtime(link, second.port, second.user, second.password), launcher).getOrThrow()
+            val aead = android.util.Base64.encodeToString("aes-256-gcm:synthetic-password".toByteArray(), android.util.Base64.NO_WRAP)
+            candidate.start(binary, CoreLink.runtime("ss://$aead@example.invalid:8388#Synthetic", second.port, second.user, second.password), launcher).getOrThrow()
             greeting(first); greeting(second)
             candidate.stop()
             assertFalse(candidate.isRunning())
