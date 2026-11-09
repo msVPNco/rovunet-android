@@ -45,7 +45,7 @@ class InteroperabilityTest {
         val parsed = parse()
         assertEquals("vmess",parsed.outbound.getString("protocol"))
         val raw = "vmess://"+WireBase64.encode(payload.toString().toByteArray())
-        assertTrue(parsed.outbound.similar(CoreLink.parse(CoreForm.decode(raw).encode(parsed.name)).outbound))
+        assertEquals(parsed.outbound.toString(),CoreLink.parse(CoreForm.decode(raw).encode(parsed.name)).outbound.toString())
         payload.put("pcs","synthetic-custom-cert-pin")
         assertEquals("UNSUPPORTED_OPTION",runCatching { parse() }.exceptionOrNull()?.message)
     }
@@ -55,7 +55,7 @@ class InteroperabilityTest {
         val ws=parsed.outbound.getJSONObject("streamSettings").getJSONObject("wsSettings")
         assertEquals("/fixture?ed=2048",ws.getString("path"))
         assertFalse(ws.has("maxEarlyData"))
-        assertTrue(parsed.outbound.similar(CoreLink.parse(CoreForm.decode(link).encode("Fixture")).outbound))
+        assertEquals(parsed.outbound.toString(),CoreLink.parse(CoreForm.decode(link).encode("Fixture")).outbound.toString())
         assertTrue(runCatching{CoreLink.parse(link.replace("Sec-WebSocket-Protocol","X-Custom-Header"))}.isFailure)
     }
     @Test fun unsupportedSettingsNeverBecomeAnApparentlyUsableConnection() {
