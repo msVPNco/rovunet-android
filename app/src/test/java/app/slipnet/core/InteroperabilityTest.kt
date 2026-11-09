@@ -39,6 +39,13 @@ class InteroperabilityTest {
             assertEquals(profile.coreLink,restored.coreLink)
         }
     }
+    @Test fun commonVmessExporterMetadataAndNullDefaultsDoNotRejectValidAead() {
+        val payload=JSONObject().put("v",JSONObject.NULL).put("type",JSONObject.NULL).put("ps","Synthetic").put("name","Display metadata").put("add","example.invalid").put("port",443).put("id",id).put("aid","0").put("net","ws").put("tls","none").put("pcs","").put("vcn","")
+        fun parse()=CoreLink.parse("vmess://"+WireBase64.encode(payload.toString().toByteArray()))
+        assertEquals("vmess",parse().outbound.getString("protocol"))
+        payload.put("pcs","synthetic-custom-cert-pin")
+        assertEquals("UNSUPPORTED_OPTION",runCatching { parse() }.exceptionOrNull()?.message)
+    }
     @Test fun unsupportedSettingsNeverBecomeAnApparentlyUsableConnection() {
         val base="trojan://synthetic@example.invalid:443?security=tls&type=tcp"
         for (option in listOf("cs=100","fm=1","headerType=http","allowInsecure=1","serviceName=unexpected","security=none")) assertTrue(runCatching{CoreLink.parse("$base&$option#Display name")}.isFailure)
