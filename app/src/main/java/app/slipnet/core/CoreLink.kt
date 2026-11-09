@@ -1,6 +1,7 @@
 package app.slipnet.core
 
 import android.util.Base64
+import app.slipnet.data.export.WireBase64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
@@ -30,8 +31,7 @@ object CoreLink {
 
     private fun shadowsocks(text: String): Parsed {
         fun unpack(value: String): String {
-            val bytes = runCatching { Base64.decode(value, Base64.URL_SAFE or Base64.NO_WRAP) }
-                .getOrElse { Base64.decode(value, Base64.NO_WRAP) }
+            val bytes = WireBase64.decode(value.replace('-', '+').replace('_', '/'))
             return String(bytes, Charsets.UTF_8)
         }
         val body = text.substringBefore('#')

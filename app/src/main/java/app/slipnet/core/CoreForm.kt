@@ -37,8 +37,9 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         }
         val host = this["server"].trim().removeSurrounding("[", "]")
         if (kind == "ss") {
-            val credentials = android.util.Base64.encodeToString((this["method"] + ":" + this["auth"]).toByteArray(Charsets.UTF_8),
-                android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)
+            val credentials = app.slipnet.data.export.WireBase64.encode(
+                (this["method"] + ":" + this["auth"]).toByteArray(Charsets.UTF_8)
+            ).replace('+', '-').replace('/', '_')
             val encoded = "ss://$credentials@${if (':' in host) "[$host]" else host}:${this["port"]}#${enc(name)}"
             CoreLink.parse(encoded)
             return encoded
