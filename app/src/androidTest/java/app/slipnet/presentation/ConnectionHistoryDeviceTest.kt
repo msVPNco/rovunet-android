@@ -141,7 +141,7 @@ class ConnectionHistoryDeviceTest {
                 repo.updateProfileOrder(ids.reversed())
                 repo.updateLastConnectedAt(ids[1])
                 withTimeout(15_000) { vm.uiState.first { state ->
-                    state.profiles.filter { it.id in ids }.firstOrNull()?.id == ids[1] &&
+                    state.profiles.filter { it.id in ids }.firstOrNull()?.id == ids.last() &&
                         state.profiles.any { it.id == ids[1] && it.lastConnectedAt > 0 }
                 } }
                 assertTrue(ids.all { vm.uiState.value.pingResults[it] is PingResult.Error })

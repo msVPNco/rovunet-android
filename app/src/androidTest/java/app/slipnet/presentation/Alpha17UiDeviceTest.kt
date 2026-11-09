@@ -69,14 +69,14 @@ class Alpha17UiDeviceTest {
             }
         } }
         val time=java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,context.resources.configuration.locales[0]).format(java.util.Date(measuredAt))
-        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,time))
+        compose.onNodeWithTag("profile-measured-991", useUnmergedTree = true).assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,time))
         // No minute tick occurs: the arriving result alone must refresh the display clock.
         android.os.SystemClock.sleep(25)
         compose.runOnIdle { result=(result as app.slipnet.domain.model.PingResult.Success).copy(measuredAt=System.currentTimeMillis()) }
         val freshTime=java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,context.resources.configuration.locales[0]).format(java.util.Date((result as app.slipnet.domain.model.PingResult.Success).measuredAt))
-        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,freshTime))
+        compose.onNodeWithTag("profile-measured-991", useUnmergedTree = true).assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_fresh,freshTime))
         compose.runOnIdle { result=(result as app.slipnet.domain.model.PingResult.Success).copy(currentNetwork=false) }
-        compose.onNodeWithTag("profile-measured-991").assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_previous,freshTime))
+        compose.onNodeWithTag("profile-measured-991", useUnmergedTree = true).assertTextEquals(context.getString(app.slipnet.R.string.review02_ping_previous,freshTime))
         compose.runOnIdle { showHelp=true }
         compose.runOnIdle { assertEquals(0,confirmed) }
         compose.onNodeWithTag("configure-app-bypass").performClick()

@@ -24,13 +24,15 @@ class Alpha17PreferencesDeviceTest {
             assertEquals(DarkMode.DARK, preferences.darkMode.first())
             preferences.setDarkMode(DarkMode.LIGHT)
             assertEquals(DarkMode.LIGHT, preferences.darkMode.first())
-            preferences.setSplitTunnelingApps(setOf("synthetic.bank", "synthetic.other"))
+            val installedApps = context.packageManager.getInstalledApplications(0).map { it.packageName }.take(2).toSet()
+            assertEquals(2, installedApps.size)
+            preferences.setSplitTunnelingApps(installedApps)
             preferences.setSplitTunnelingMode(app.slipnet.data.local.datastore.SplitTunnelingMode.ALLOW)
             preferences.setSplitTunnelingEnabled(false)
             preferences.configureSelectedAppsBypass()
             assertTrue(preferences.splitTunnelingEnabled.first())
             assertEquals(app.slipnet.data.local.datastore.SplitTunnelingMode.DISALLOW,preferences.splitTunnelingMode.first())
-            assertEquals(setOf("synthetic.bank", "synthetic.other"),preferences.splitTunnelingApps.first())
+            assertEquals(installedApps,preferences.splitTunnelingApps.first())
         } finally { scope.coroutineContext[Job]?.cancelAndJoin(); file.delete() }
     }
 }
