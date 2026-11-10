@@ -1535,6 +1535,11 @@ class SlipNetVpnService : VpnService() {
      * addDisallowedApplication ensures the bridge's DatagramSockets bypass VPN.
      */
     private suspend fun connectSlipstream(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String, globalResolverOverride: List<app.slipnet.domain.model.DnsResolver>? = null) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_START, serviceSessionId)
+        app.slipnet.util.ConnectionDiagnostics.record(if (profile.slipstreamCertificate.isBlank())
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_UNPINNED else
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_PIN_CONFIGURED, serviceSessionId)
+
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val slipstreamPort = proxyPort + 1
@@ -1566,8 +1571,10 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Step 2.6: Wait for QUIC handshake before VPN setup
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_LISTENER_READY, serviceSessionId)
         val quicReady = waitForQuicReady(maxAttempts = 150, delayMs = 200)
         if (!quicReady) {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_TIMEOUT, serviceSessionId)
             reportConnectionError("Slipstream tunnel failed to connect (QUIC timeout)")
             withContext(Dispatchers.IO) { SlipstreamBridge.stopClient() }
             SlipstreamBridge.setVpnService(null)
@@ -1575,6 +1582,8 @@ class SlipNetVpnService : VpnService() {
             stopOwnedService()
             return
         }
+
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_READY, serviceSessionId)
 
         // Step 3: Start SlipstreamSocksBridge on proxyPort (user-facing, with auth for Dante)
         // DNS target resolved at the REMOTE server (through Dante),
@@ -1756,6 +1765,11 @@ class SlipNetVpnService : VpnService() {
     }
 
     private suspend fun connectSlipstreamSsh(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String, globalResolverOverride: List<app.slipnet.domain.model.DnsResolver>? = null) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_START, serviceSessionId)
+        app.slipnet.util.ConnectionDiagnostics.record(if (profile.slipstreamCertificate.isBlank())
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_UNPINNED else
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_PIN_CONFIGURED, serviceSessionId)
+
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val slipstreamPort = proxyPort + 1
@@ -1789,8 +1803,10 @@ class SlipNetVpnService : VpnService() {
         // Step 2.6: Wait for QUIC handshake — REQUIRED for Slipstream+SSH.
         // SSH needs a working QUIC tunnel before JSch can connect through it.
         // Wait longer than plain Slipstream (30s vs 5s) since this is a hard requirement.
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_LISTENER_READY, serviceSessionId)
         val quicReady = waitForQuicReady(maxAttempts = 150, delayMs = 200)
         if (!quicReady) {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_TIMEOUT, serviceSessionId)
             Log.e(TAG, "QUIC connection not ready — cannot establish SSH through Slipstream")
             reportConnectionError("Slipstream tunnel failed to connect (QUIC timeout)")
             withContext(Dispatchers.IO) { SlipstreamBridge.stopClient() }
@@ -1799,6 +1815,8 @@ class SlipNetVpnService : VpnService() {
             stopOwnedService()
             return
         }
+
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_READY, serviceSessionId)
 
         // Step 3: Switch tunnel type to SLIPSTREAM_SSH before starting SSH
         vpnRepository.setCurrentTunnelType(TunnelType.SLIPSTREAM_SSH)

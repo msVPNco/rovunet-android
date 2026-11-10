@@ -6,7 +6,7 @@ import org.junit.Test
 
 class SlipstreamCertificateRoundTripTest {
     @Test fun optionalPublicIdentitySurvivesBothSlipstreamVariantsWithoutBecomingSshCredentials() {
-        val cert = "-----BEGIN CERTIFICATE-----\nsynthetic-public-certificate\n-----END CERTIFICATE-----"
+        val cert = requireNotNull(javaClass.getResourceAsStream("/slipstream-public.pem")).bufferedReader().use { it.readText() }
         for (type in listOf(TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH)) {
             val profile = ServerProfile(name = "Synthetic tunnel", domain = "example.invalid", tunnelType = type,
                 resolvers = listOf(DnsResolver("192.0.2.53", 53)), slipstreamCertificate = cert,
@@ -18,5 +18,11 @@ class SlipstreamCertificateRoundTripTest {
             assertEquals("synthetic-only", restored.sshPassword)
             assertEquals(type, restored.tunnelType)
         }
+    }
+    @Test fun privateKeysAndMalformedOrOversizedPublicMetadataAreRejected() {
+        for (pem in listOf("-----BEGIN PRIVATE KEY-----\nsynthetic\n-----END PRIVATE KEY-----", "not a certificate", "x".repeat(32769))) {
+            assertTrue(runCatching { SlipstreamIdentity.certificate(pem) }.isFailure)
+        }
+        assertNull(SlipstreamIdentity.certificate(""))
     }
 }

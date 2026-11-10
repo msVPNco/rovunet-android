@@ -140,6 +140,7 @@ class ProfileMapper @Inject constructor(
 
     /** Plain in-memory comparison/write input. The DAO seals it before persistence. */
     internal fun toSnapshot(profile: ServerProfile): ProfileEntity {
+        app.slipnet.domain.model.SlipstreamIdentity.certificate(profile.slipstreamCertificate)
         val resolversJson = gson.toJson(profile.resolvers)
         val defaultResolversJson = gson.toJson(profile.defaultResolvers)
 

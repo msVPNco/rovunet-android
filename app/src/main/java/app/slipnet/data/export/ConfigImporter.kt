@@ -403,6 +403,7 @@ class ConfigImporter @Inject constructor() {
         if (fields.size < 88) return ProfileParseResult.Error("Line $lineNum: Incomplete v33 credentials")
         return try {
             val credentials = org.json.JSONObject(String(WireBase64.decode(fields[87]), Charsets.UTF_8))
+            app.slipnet.domain.model.SlipstreamIdentity.certificate(credentials.optString("slipstreamCertificate"))
             val restored = fields.toMutableList().also {
                 it[12] = credentials.getString("socksUser"); it[13] = credentials.getString("socksPass")
                 it[15] = credentials.getString("sshUser"); it[16] = credentials.getString("sshPass")

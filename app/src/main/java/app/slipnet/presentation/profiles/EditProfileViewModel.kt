@@ -575,7 +575,7 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun updateSlipstreamCertificate(pem: String) {
-        _uiState.value = _uiState.value.copy(slipstreamCertificate = pem.take(32768))
+        _uiState.value = _uiState.value.copy(slipstreamCertificate = pem.take(32768), error = null)
     }
 
     fun updateCongestionControl(cc: CongestionControl) {
@@ -1481,6 +1481,10 @@ class EditProfileViewModel @Inject constructor(
     private fun validateProfile(forScanner: Boolean = false): Boolean {
         val state = _uiState.value
         var hasError = false
+        if (runCatching { app.slipnet.domain.model.SlipstreamIdentity.certificate(state.slipstreamCertificate) }.isFailure) {
+            _uiState.value = _uiState.value.copy(error = editorMessage(app.slipnet.R.string.alpha18_invalid_certificate))
+            hasError = true
+        }
 
         if (state.name.isBlank()) {
             _uiState.value = _uiState.value.copy(nameError = editorMessage(app.slipnet.R.string.editor_name_is_required))

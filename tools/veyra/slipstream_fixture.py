@@ -10,7 +10,7 @@ def slipstream_fixture(root):
         for name in ('server','other'):
             subprocess.run(['openssl','req','-x509','-newkey','rsa:2048','-nodes','-subj','/CN=synthetic-slipstream','-days','1',
                 '-keyout',directory/(name+'.key'),'-out',directory/(name+'.pem')],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        listener=socket.socket();listener.bind(('0.0.0.0',0));listener.listen(16);listener.settimeout(.2)
+        listener=socket.socket();listener.bind(('127.0.0.1',0));listener.listen(16);listener.settimeout(.2)
         stopping=threading.Event();clients=[]
         def echo(client):
             try:
@@ -28,9 +28,9 @@ def slipstream_fixture(root):
                 except OSError:break
                 clients.append(client);threading.Thread(target=echo,args=(client,),daemon=True).start()
         threading.Thread(target=accept,daemon=True).start()
-        udp=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);udp.bind(('0.0.0.0',0));port=udp.getsockname()[1];udp.close()
+        udp=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);udp.bind(('127.0.0.1',0));port=udp.getsockname()[1];udp.close()
         log=(directory/'server.log').open('w+')
-        process=subprocess.Popen([binary,'--dns-listen-host','0.0.0.0','--dns-listen-port',str(port),'--target-address',f'127.0.0.1:{listener.getsockname()[1]}',
+        process=subprocess.Popen([binary,'--dns-listen-host','127.0.0.1','--dns-listen-port',str(port),'--target-address',f'127.0.0.1:{listener.getsockname()[1]}',
             '--domain','tunnel.example.invalid','--cert',directory/'server.pem','--key',directory/'server.key'],stdout=log,stderr=log,env=dict(os.environ,RUST_LOG='warn'))
         try:
             time.sleep(.5)
