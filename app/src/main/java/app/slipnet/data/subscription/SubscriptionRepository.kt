@@ -28,7 +28,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 data class SubscriptionPreview(val source: SubscriptionEntity, val expectedSource: SubscriptionEntity?,
-    val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0, val publicStats: List<PublicFeed.Stat> = emptyList(), val importWarnings: List<String> = emptyList())
+    val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0, val publicStats: List<PublicFeed.Stat> = emptyList(), val importWarnings: List<String> = emptyList(),
+    val legacyKeys: Map<String, String> = emptyMap())
 
 @Singleton
 class SubscriptionRepository @Inject constructor(
@@ -154,6 +155,7 @@ class SubscriptionRepository @Inject constructor(
             sourceEnvelope = DeviceSecrets.seal(url(address).toString(), "subscription:$id"), autoUpdate = auto && !public)
         val publicResult = if (public) PublicFeed.parse(document, importer, connection.getDeviceId(), allowEmpty = true) else null
         val importWarnings = linkedSetOf<String>()
+        val legacyByCurrent = mutableMapOf<String, String>()
         val profiles = if (publicResult != null) publicResult.profiles.map { profile ->
             val stable = app.slipnet.domain.model.ProfileDuplicates.key(profile).copy(collectionId = "")
             hash(exporter.exportSingleProfile(stable)) to profile
@@ -163,16 +165,33 @@ class SubscriptionRepository @Inject constructor(
             require(item.key == null || parsed.profiles.size == 1) { "INVALID_FEED" }
             importWarnings += parsed.warnings
             parsed.profiles.map { p ->
-                val identity = item.key?.let { "remote-id:$it" } ?: "derived-v1:" + JSONArray(listOf(p.tunnelType.value, p.domain, p.sshHost, p.sshPort,
-                    p.socks5ServerPort, p.naivePort, p.sshUsername, p.socksUsername, p.naiveUsername, p.coreLink)).toString()
-                hash(identity) to p
+                val key = hash(item.key?.let { "remote-id:$it" } ?: SubscriptionIdentity.derived(p))
+                if (item.key == null && p.tunnelType == app.slipnet.domain.model.TunnelType.VLESS)
+                    legacyByCurrent[key] = hash(SubscriptionIdentity.legacy(p))
+                key to p
             }
         }
         require(profiles.size in (if (public) 0 else 1)..(if (public) PublicFeed.MAX_ENTRIES else 1000) && profiles.map { it.first }.distinct().size == profiles.size) { "INVALID_FEED" }
         val old = JSONArray(existing?.membersJson ?: "[]")
-        val incoming = profiles.map { it.first }.toSet()
+        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+        val aliases = mutableMapOf<String, String>()
+        val profilesByKey = profiles.toMap()
+        for ((legacy, candidates) in legacyByCurrent.entries.groupBy { it.value }) {
+            val saved = previous[legacy] ?: continue
+            val eligible = candidates.filter { it.key !in previous }
+            val target = eligible.singleOrNull() ?: run {
+                val row = db.profileDao().getProfileById(saved.getLong("id"))
+                val local = row?.let(mapper::toDomain)?.takeIf { !it.needsCredentials && it.collectionId == id }
+                val key = local?.let { app.slipnet.domain.model.ProfileDuplicates.key(it).copy(collectionId = "") }
+                eligible.singleOrNull { candidate -> profilesByKey[candidate.key]?.let {
+                    app.slipnet.domain.model.ProfileDuplicates.key(it).copy(collectionId = "") == key
+                } == true }
+            }
+            if (target != null) aliases[target.key] = legacy
+        }
+        val incoming = profiles.map { it.first }.toSet() + aliases.values
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
-        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList())
+        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList(), aliases)
     }
     /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
@@ -197,7 +216,13 @@ class SubscriptionRepository @Inject constructor(
             require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
         }
         val old = JSONArray(current?.membersJson ?: "[]")
-        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }.toMutableMap()
+        require(preview.legacyKeys.values.distinct().size == preview.legacyKeys.size) { "SOURCE_CHANGED" }
+        preview.legacyKeys.forEach { (key, legacy) ->
+            require(key !in previous) { "SOURCE_CHANGED" }
+            val saved = previous.remove(legacy) ?: error("SOURCE_CHANGED")
+            previous[key] = JSONObject(saved.toString()).put("key", key)
+        }
         var localCollectionName: String? = null
         for (saved in previous.values) {
             val row = db.profileDao().getProfileById(saved.getLong("id"))

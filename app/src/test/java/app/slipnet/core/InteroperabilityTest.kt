@@ -11,6 +11,69 @@ import org.junit.Test
 class InteroperabilityTest {
     private val id = "00000000-0000-4000-8000-000000000001"
     private val publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    @Test fun wireguardUriAndFileProduceTheSamePeerAndSurviveEditingAndExport() {
+        val secret = WireBase64.encode(ByteArray(32) { 255.toByte() })
+        val public = WireBase64.encode(ByteArray(32) { (it + 1).toByte() })
+        val psk = WireBase64.encode(ByteArray(32) { 42 })
+        val query = linkedMapOf("publickey" to public, "address" to "10.0.6.8/32, fd00::8/128", "allowedips" to "0.0.0.0/0, ::/0",
+            "dns" to "1.1.1.1, 2606:4700:4700::1111", "mtu" to "1380", "presharedkey" to psk, "persistentkeepalive" to "25")
+        val uri = "wireguard://${CoreSharing.enc(secret)}@[2001:db8::1]:51821/?" + query.entries.joinToString("&") { CoreSharing.enc(it.key) + "=" + CoreSharing.enc(it.value) } + "#Fixture name"
+        val document = "[Interface]\nPrivateKey = $secret\nAddress = 10.0.6.8/32, fd00::8/128\nDNS = 1.1.1.1, 2606:4700:4700::1111\nMTU = 1380\n[Peer]\nPublicKey = $public\nEndpoint = [2001:db8::1]:51821\nAllowedIPs = 0.0.0.0/0, ::/0\nPresharedKey = $psk\nPersistentKeepalive = 25"
+        val parsed = CoreLink.parse(uri)
+        assertEquals("Fixture name", parsed.name)
+        assertEquals(CoreLink.parse(document).outbound.toString(), parsed.outbound.toString())
+        assertEquals(parsed.outbound.toString(), CoreLink.parse(CoreForm.decode(uri).encode("Edited name")).outbound.toString())
+        val profile = (ConfigImporter().parseAndImport(uri) as ImportResult.Success).profiles.single()
+        assertTrue(ProfileCollections.isUdp(profile)); assertNull(ProfileCollections.coreTcpTarget(profile))
+        val restored = ConfigImporter().parseAndImport(ConfigExporter().exportSingleProfile(profile)) as ImportResult.Success
+        assertEquals(uri, restored.profiles.single().coreLink)
+    }
+    @Test fun wireguardUriRejectsAmbiguityScriptsMalformedKeysAndMultilineValues() {
+        val key = CoreSharing.enc(WireBase64.encode(ByteArray(32) { (it + 1).toByte() }))
+        val base = "wireguard://$key@example.invalid:51821/?publickey=$key&address=10.0.0.2%2F32&allowedips=0.0.0.0%2F0"
+        for (suffix in listOf("&publickey=$key", "&PublicKey=$key", "&PostUp=command", "&reserved=1,2,3", "&mtu=1501", "&persistentkeepalive=65536", "&dns=1.1.1.1%0APrivateKey%20%3D%20invalid"))
+            assertTrue(runCatching { CoreLink.parse(base + suffix) }.isFailure)
+        assertTrue(runCatching { CoreLink.parse(base.replace("address=10.0.0.2%2F32", "address=10.0.0.2%2F99")) }.isFailure)
+        assertTrue(runCatching { CoreLink.parse(base.replace("publickey=$key", "publickey=invalid")) }.isFailure)
+        assertTrue(runCatching { CoreLink.parse(base.substringBefore("&allowedips=")) }.isFailure)
+    }
+    @Test fun fiveWireguardSharingLinksImportAsOneCompleteSubscription() {
+        val key = CoreSharing.enc(WireBase64.encode(ByteArray(32) { (it + 1).toByte() }))
+        val links = (1..5).joinToString("\n") { "wireguard://$key@w$it.example.invalid:51821/?publickey=$key&address=10.0.6.8%2F32&allowedips=0.0.0.0%2F0%2C%3A%3A%2F0&dns=1.1.1.1#Fixture$it" }
+        val payload = WireBase64.encode(links.toByteArray())
+        val result = ConfigImporter().parseAndImport(app.slipnet.data.subscription.SubscriptionPayload.read(payload).single().link) as ImportResult.Success
+        assertEquals(5, result.profiles.size); assertTrue(result.warnings.isEmpty())
+        assertEquals(5, result.profiles.map(app.slipnet.data.subscription.SubscriptionIdentity::derived).distinct().size)
+    }
+    @Test fun mixedSubscriptionKeepsAllEncryptedAndSharedHostPathsWithoutIdentityCollisions() {
+        val encryption = "mlkem768x25519plus.native.0rtt." +
+            WireBase64.encode(ByteArray(32) { (it + 1).toByte() }).trimEnd('=').replace('+', '-').replace('/', '_')
+        val ordinary = (1..34).map { n -> "vless://$id@192.0.2.$n:443?type=${if (n <= 23) "ws" else "xhttp"}&security=tls&encryption=none&host=cdn${n % 8}.example.invalid&path=%2Ffixture&sni=tls.example.invalid#Fixture$n" }
+        val encrypted = (35..56).map { n -> "vless://$id@192.0.2.$n:443?type=xhttp&security=none&encryption=$encryption&mode=auto&path=%2Ffixture#Fixture$n" }
+        val body = WireBase64.encode((ordinary + encrypted).joinToString("\n").toByteArray())
+        val imported = ConfigImporter().parseAndImport(app.slipnet.data.subscription.SubscriptionPayload.read(body).single().link) as ImportResult.Success
+        assertEquals(56, imported.profiles.size); assertTrue(imported.warnings.isEmpty())
+        val native = imported.profiles.filter { it.tunnelType == TunnelType.VLESS }
+        assertEquals(23, native.size)
+        assertEquals(8, native.map(app.slipnet.data.subscription.SubscriptionIdentity::legacy).distinct().size)
+        assertEquals(56, imported.profiles.map(app.slipnet.data.subscription.SubscriptionIdentity::derived).distinct().size)
+        imported.profiles.filter { it.coreLink.contains("mlkem768x25519plus") }.forEach { profile ->
+            val outbound = CoreLink.parse(profile.coreLink).outbound
+            assertEquals(encryption, outbound.getJSONObject("settings").getJSONArray("vnext").getJSONObject(0).getJSONArray("users").getJSONObject(0).getString("encryption"))
+            assertEquals(outbound.toString(), CoreLink.parse(CoreForm.decode(profile.coreLink).encode("Edited name")).outbound.toString())
+            val restored = ConfigImporter().parseAndImport(ConfigExporter().exportSingleProfile(profile)) as ImportResult.Success
+            assertEquals(profile.coreLink, restored.profiles.single().coreLink)
+        }
+    }
+    @Test fun encryptedVlessNeverDowngradesUnknownModesOrMalformedPublicKeys() {
+        val key = WireBase64.encode(ByteArray(32) { (it + 1).toByte() }).trimEnd('=').replace('+', '-').replace('/', '_')
+        val base = "vless://$id@example.invalid:443?type=ws&security=none&encryption="
+        for (value in listOf("unknown", "mlkem768x25519plus.unknown.0rtt.$key", "mlkem768x25519plus.native.2rtt.$key", "mlkem768x25519plus.native.0rtt.invalid", "mlkem768x25519plus.native.0rtt.$key="))
+            assertTrue(runCatching { CoreLink.parse(base + value) }.isFailure)
+        assertTrue(CoreLink.handles(base + "mlkem768x25519plus.native.1rtt.$key"))
+        val result = ConfigImporter().parseAndImport(base + "mlkem768x25519plus.native.1rtt.$key") as ImportResult.Success
+        assertEquals(TunnelType.XRAY, result.profiles.single().tunnelType)
+    }
     @Test fun privateMixedSubscriptionPreservesWebsocketHeartbeatAndKcpTuning() {
         val extra = CoreSharing.enc("""{"xmux":{"maxConcurrency":"4-8","hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900","hMaxReusableSecs":"300-600"}}""")
         val links = (1..5).map { "vless://$id@edge$it.example.invalid:443?encryption=none&security=reality&type=xhttp&pbk=$publicKey&mode=auto&path=%2Ffixture&extra=$extra" } +

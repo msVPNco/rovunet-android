@@ -90,7 +90,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
                 return CoreForm("ss", mapOf("server" to parsed.host, "port" to server.getInt("port").toString(),
                     "method" to server.getString("method"), "auth" to server.getString("password")))
             }
-            val text = CoreSharing.normalize(raw.trim())
+            val text = if (raw.trim().startsWith("wireguard://", true)) CoreLink.wireguardDocument(CoreSharing.normalize(raw.trim())) else CoreSharing.normalize(raw.trim())
             if (text.startsWith("[Interface]", true)) {
                 val fields = text.lines().map { it.substringBefore('#').trim() }.filter { '=' in it }.associate {
                     val pair = it.split('=', limit = 2); pair[0].trim().lowercase() to pair[1].trim()

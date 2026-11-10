@@ -133,7 +133,9 @@ class SmartConnectionController @Inject constructor(
                         if (sample == null || !sample.health.unstable) { continue }
                         if (selectedMode == SmartPathPolicy.Mode.FAILOVER && sample.health.failed < 3) continue
                     }
-                    val options = if (!ProbeBypass.allows(ownedSession)) emptyList() else members(key).filter { it.id != active.id && probe.supports(it) }
+                    val options = if (!ProbeBypass.allows(ownedSession)) emptyList() else members(key).filter {
+                        it.id != active.id && probe.supports(it) && SmartPathPolicy.independentCandidatesCompatible(active, it)
+                    }
                     val start = (cursor[key] ?: 0).coerceAtMost((options.size - 1).coerceAtLeast(0))
                     val shortlist = (options.drop(start) + options.take(start)).take(SmartPathPolicy.MAX_CANDIDATES)
                     if (options.isNotEmpty()) cursor[key] = (start + shortlist.size) % options.size

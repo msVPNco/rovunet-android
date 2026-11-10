@@ -10,9 +10,12 @@ object ProfileCollections {
         TunnelType.DNSTT, TunnelType.DNSTT_SSH, TunnelType.NOIZDNS, TunnelType.NOIZDNS_SSH,
         TunnelType.VAYDNS, TunnelType.VAYDNS_SSH, TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH,
         TunnelType.SOAR, TunnelType.SOAR_SSH)
-    fun isUdp(p: ServerProfile): Boolean = p.tunnelType == TunnelType.XRAY &&
-        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2", "wireguard") || p.coreLink.trimStart().startsWith("[Interface]", true) ||
-            runCatching { java.net.URI(app.slipnet.core.CoreSharing.normalize(p.coreLink)).rawQuery.orEmpty().split('&').any {
+    fun isWireguard(p: ServerProfile): Boolean = p.tunnelType == TunnelType.XRAY && p.coreLink.trimStart().let {
+        it.startsWith("[Interface]", true) || it.startsWith("wireguard://", true)
+    }
+    fun isUdp(p: ServerProfile): Boolean = isWireguard(p) || p.tunnelType == TunnelType.XRAY &&
+        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2") ||
+            p.coreLink.trimStart().startsWith("vless://", true) && runCatching { java.net.URI(p.coreLink.trim().substringBefore('#')).rawQuery.orEmpty().split('&').any {
                 val pair = it.split('=', limit = 2)
                 java.net.URLDecoder.decode(pair[0], "UTF-8") == "type" &&
                     java.net.URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8") in setOf("kcp", "mkcp")

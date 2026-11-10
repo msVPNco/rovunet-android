@@ -62,8 +62,8 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     u.sendto(frame,relay);out,_=u.recvfrom(65535);assert out.endswith(msg)
   finally:control.close()
  uid='00000000-0000-4000-8000-000000000001'
- for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade,vless-ws-heartbeat,vless-kcp').split(','):
-  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','wireguard','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[]
+ for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade,vless-ws-heartbeat,vless-kcp,vless-encrypted-xhttp,wireguard-uri').split(','):
+  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','wireguard','wireguard-uri','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[]
   inbound={'listen':'127.0.0.1','port':sp}
   tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode=='hysteria2' else ['h2','http/1.1']}
   if mode=='reality':
@@ -74,6 +74,12 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   elif mode=='xhttp':
    inbound.update(protocol='vless',settings={'clients':[{'id':uid}],'decryption':'none'},streamSettings={'network':'xhttp','security':'tls','tlsSettings':tls,'xhttpSettings':{'path':'/veyra','mode':'auto'}})
    link=f'vless://{uid}@127.0.0.1:{sp}?security=tls&type=xhttp&sni=localhost&host=localhost&path=%2Fveyra&mode=packet-up'
+  elif mode=='vless-encrypted-xhttp':
+   private,public=pair()
+   rawurl=lambda key:key.rstrip('=').replace('+','-').replace('/','_')
+   inbound.update(protocol='vless',settings={'clients':[{'id':uid}],'decryption':'mlkem768x25519plus.native.600s.'+rawurl(private)},streamSettings={'network':'xhttp','security':'none','xhttpSettings':{'path':'/encrypted-fixture','mode':'auto'}})
+   encryption='mlkem768x25519plus.native.0rtt.'+rawurl(public)
+   link=f'vless://{uid}@127.0.0.1:{sp}?security=none&type=xhttp&path=%2Fencrypted-fixture&mode=packet-up&encryption={encryption}'
   elif mode=='shadowsocks':
    inbound.update(protocol='shadowsocks',settings={'method':'aes-256-gcm','password':'synthetic-aead-password','network':'tcp,udp'})
    credentials=base64.urlsafe_b64encode(b'aes-256-gcm:synthetic-aead-password').decode().rstrip('=')
@@ -106,6 +112,9 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
    serverPriv,serverPub=pair();clientPriv,clientPub=pair()
    inbound.update(protocol='wireguard',settings={'secretKey':serverPriv,'address':['10.66.0.1/32'],'peers':[{'publicKey':clientPub,'allowedIPs':['10.66.0.2/32']}],'noKernelTun':True,'mtu':1280})
    link=f'[Interface]\nPrivateKey = {clientPriv}\nAddress = 10.66.0.2/32\n[Peer]\nPublicKey = {serverPub}\nEndpoint = 127.0.0.1:{sp}\nAllowedIPs = 0.0.0.0/0\n'
+   if mode=='wireguard-uri':
+    query=urllib.parse.urlencode({'publickey':serverPub,'address':'10.66.0.2/32','allowedips':'0.0.0.0/0'})
+    link=f'wireguard://{urllib.parse.quote(clientPriv,safe="")}@127.0.0.1:{sp}/?{query}#Synthetic-WireGuard'
    for n in range(1,int(os.environ.get('WG_DEVICES','1'))):
     devicePrivate,devicePublic=pair();address=f'10.66.0.{n+2}'
     inbound['settings']['peers'].append({'publicKey':devicePublic,'allowedIPs':[address+'/32']})

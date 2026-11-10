@@ -325,7 +325,7 @@ class ConfigImporter @Inject constructor() {
 
         if (profiles.any { p -> (p.tunnelType == TunnelType.VLESS && p.vlessSecurity == "none") ||
                 (p.tunnelType == TunnelType.XRAY && p.coreLink.startsWith("vless://", true) &&
-                    runCatching { app.slipnet.core.CoreLink.parse(p.coreLink).outbound.optJSONObject("streamSettings")?.optString("security") == "none" }.getOrDefault(false)) }) {
+                    runCatching { app.slipnet.core.CoreLink.isUnencryptedVless(app.slipnet.core.CoreLink.parse(p.coreLink).outbound) }.getOrDefault(false)) }) {
             warnings += "A VLESS path uses security=none (unencrypted transport)"
         }
         return ImportResult.Success(profiles.mapIndexed { i, p -> p.copy(importAccountHint = accountHints.getOrNull(i).orEmpty()) }, warnings)

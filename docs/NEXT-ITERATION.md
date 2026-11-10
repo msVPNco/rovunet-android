@@ -13,9 +13,23 @@ The owner authorized implementation on a separate review branch, GitHub checks a
 | Investigation | Hysteria2 and WireGuard physical-network failures | Still reported; local interoperability tests do not establish operation on the affected mobile network. Collect protocol-specific diagnostics before promising a fix. |
 | P2 | Align AMOLED, dark and light themes | Owner approved the shared visual direction from the Windows reference for future theme alignment; implementation is authorized for the unpublished owner-review build. Approved Soft Pop option 1: gradual slate-navy at the top to black at the bottom, soft raised pastel lilac/mint controls with short press feedback, a taller translucent header similar to the bottom panel, subtle borders and restrained shadows. Pastel Clay option 2 is deferred to later updates. Dark keeps a very dark navy background; light uses off-white with white cards. Keep the same layout, icons and status meanings across themes, with accessible contrast: lilac/purple accents, mint green for connected, amber for warnings and red for errors. Reserve the purple gradient for the selected card, simplify connection-button rings and align the title R accent with the main lilac. Preserve visual continuity with Android; adapt to each platform rather than copying the desktop layout. Respect explicit theme selection and Follow system. Any display power-saving benefit applies to OLED hardware only. |
 
+## Unpublished alpha18.1 follow-up — owner acceptance pending
+
+The owner authorized the follow-up and the additional real subscription cases.
+Current implementation is on `fix/alpha18-owner-followup` / draft PR #18; see
+[the follow-up scope and validation limits](releases/alpha18-1-review.md).
+It includes physical-route/interruption handling, shared visible-only latency,
+bounded smart recovery, calm three-theme refinement, update UX, WebSocket
+heartbeat/KCP sharing options, single-key VLESS encryption, WireGuard sharing
+URIs and collision-free native VLESS subscription identities with legacy-row
+preservation. Local JVM regressions pass; the final commit still requires GitHub
+device/minified checks and a production-signed owner APK. Imported endpoints are
+not thereby proven reachable. No panel/server changes, merge, tag or release are
+authorized by this record. The older policy text below is historical planning.
+
 ## Owner observation hold and planned follow-up — 2026-11-10
 
-The owner originally requested one or two days of observation. Later on 2026-11-10 the owner explicitly authorized implementation of the prioritized follow-up, GitHub tests and another signed owner APK. The observation hold is superseded; merge and release still require acceptance. The signed owner APK remains source `83484cca3afaf8b17dbdb0f882f0a72271534fdc`, SHA-256 `c9664716fca637bde27ee1b2a524b5b653c3ee57502b5b57d337a3f5021ccf98`. A documentation-only follow-up does not change those APK bytes.
+The owner originally requested one or two days of observation. Later on 2026-11-10 the owner explicitly authorized implementation of the prioritized follow-up, GitHub tests and another signed owner APK. The observation hold is superseded; merge and release still require acceptance. The previous alpha18/code37 signed owner APK had source `83484cca3afaf8b17dbdb0f882f0a72271534fdc`, SHA-256 `c9664716fca637bde27ee1b2a524b5b653c3ee57502b5b57d337a3f5021ccf98`. Those are historical bytes, not evidence for the alpha18.1 follow-up.
 
 | Priority | Planned item | Scope and acceptance |
 | --- | --- | --- |
@@ -31,7 +45,7 @@ The owner originally requested one or two days of observation. Later on 2026-11-
 - Check contrast in actual rendered themes (target at least 4.5:1 for ordinary text and 3:1 for large text and meaningful controls), disabled-action clarity, readable footer content, scroll insets and reduced-motion preferences. Generated imagery does not establish those ratios or accessibility compliance.
 - Keep gradients/shadows static and press feedback short. Do not add continuous decorative animation or blur work merely to imitate a generated image; measure smoothness on a lower-end physical phone.
 
-### Proposed monitoring and switching policy — not implemented
+### Historical monitoring proposal — subsequent implementation needs acceptance
 
 1. **What is measured:** end-to-end HTTPS response latency in milliseconds through the active path, not ICMP ping, throughput, or a guarantee that every site works. Show the age of the last successful sample. A new failed sample must not leave an old value looking fresh or green. Manual mode may refresh this display but has no automatic connection replacement.
 2. **Cadence and cost:** start with approximately 30-second visible-app sampling, one small verified request per cycle, no overlap, bounded deadline and response size, cancellation on disconnect/session change. Reuse recent suitable measurements instead of duplicating independent health probes. Tentatively accumulate the last three cycles for a median/streak; do not fire three new full tests every 30 seconds solely for the badge. This needs battery/data measurements. When screen-off/idle, back off or suspend elective latency sampling, avoid a continuous wake lock for this feature, and retain event-driven handling of real service failure.
@@ -41,7 +55,7 @@ The owner originally requested one or two days of observation. Later on 2026-11-
 6. **Bounded discovery:** only scan a small rotating shortlist (tentatively 3–5 candidates) after a trigger, with capped concurrency, timeout, data and CPU budgets; never recheck hundreds or thousands of subscription entries every 30 seconds. Do not confuse the separately approved four isolated Slipstream resolver workers with a general permission to run all transport engines in parallel.
 7. **Switch hysteresis:** keep the prior policy as a proposed starting point: current median at least 2000 ms, candidate median at most half the current value, a recent confirmed candidate result, and at least 120 seconds since the last elective switch. This means 50% lower latency, not 50% higher throughput. Compare similar time windows, same destination and network, and separate setup time from request latency. A genuinely disconnected tunnel can recover without waiting for the elective dwell timer.
 8. **Safe transition:** re-check ownership and mode immediately before switching; manual selection/disconnect wins and cancels background work. Perform orderly teardown/setup, verify the replacement actually passes data, and retain bounded recovery to a previously usable path if replacement fails. Switching is not seamless and may interrupt existing TCP sessions; avoid oscillation and misleading connected states.
-9. **Current limitations:** source review shows a 180-second smart cycle with three-sample live verification and outside-tunnel candidates limited to Xray-backed profiles plus per-session bypass permission. The underlying-network lookup also needs the same route audit as collection testing. The requested 30-second display and extended policy are future work, not capabilities of the current APK. Hy2/WireGuard field failures remain unexplained by the supplied safe report.
+9. **Limitations at the alpha18/code37 planning point:** source review showed a 180-second smart cycle with three-sample live verification and outside-tunnel candidates limited to Xray-backed profiles plus per-session bypass permission. The follow-up changes this implementation as recorded above. Hy2/WireGuard field failures remain unexplained by the supplied safe report; support for importing a sharing format is not proof of carrier-network connectivity.
 10. **Validation before a later APK:** real Wi-Fi/mobile handover, low-end phone responsiveness, unchanged manual choice, no stale-callback teardown of a later connection, isolated candidate traffic, failed candidate cleanup, stale badges, screen-off battery/data cost and repeated group-test completion. Implementation was subsequently authorized; retain the requirement for explicit acceptance before merge or release.
 
 ## When to propose another version
