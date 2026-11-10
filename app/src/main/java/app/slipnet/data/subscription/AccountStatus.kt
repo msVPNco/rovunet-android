@@ -7,7 +7,7 @@ import org.json.JSONObject
 /** Advisory panel metadata: never grants, blocks or changes a saved connection. */
 data class AccountStatus(val serverId: String, val accountId: String, val periodId: String,
     val state: String, val expiresAt: Long?, val limitBytes: Long?, val usedBytes: Long?,
-    val metering: String, val sampledAt: Long?, val generatedAt: Long, val revision: Long) {
+    val metering: String, val sampledAt: Long?, val generatedAt: Long, val revision: Long, val providerReported: Boolean = false, val volumeKnown: Boolean = true, val expiryKnown: Boolean = true) {
     val remainingBytes: Long? get() = limitBytes?.let { (it - requireNotNull(usedBytes)).coerceAtLeast(0) }
     fun sameAccountPeriod(other: AccountStatus) = serverId == other.serverId && accountId == other.accountId && periodId == other.periodId
     fun accepts(previous: AccountStatus): Boolean {
@@ -71,7 +71,7 @@ data class AccountStatusView(val status: AccountStatus?, val serverNow: Long?, v
             val freshFile = status != null && serverNow != null && age <= 15 * 60_000 &&
                 (staticStatus || serverNow - status.generatedAt in -5_000L..(15 * 60_000L))
             val measured = status != null && (status.state != "active" || status.metering == "not_metered" ||
-                (status.metering == "complete" && status.sampledAt != null && serverNow != null &&
+                ((status.metering == "complete" || status.providerReported) && status.sampledAt != null && serverNow != null &&
                     serverNow - status.sampledAt in -5_000L..(15 * 60_000L)))
             val trustworthy = freshFile && measured && error.isEmpty()
             val severity = when {

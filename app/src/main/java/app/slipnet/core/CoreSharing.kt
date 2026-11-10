@@ -30,7 +30,7 @@ internal object CoreSharing {
         return JSONObject(text)
     }
     fun vmessUri(o: JSONObject): String {
-        require(o.keys().asSequence().all { it in setOf("v", "ps", "name", "add", "port", "id", "aid", "scy", "net", "type", "host", "path", "tls", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh", "pcs", "vcn") }) { "UNSUPPORTED_OPTION" }
+        require(o.keys().asSequence().all { it in setOf("v", "ps", "name", "add", "port", "id", "aid", "scy", "net", "type", "host", "path", "tls", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh", "pcs", "vcn", "cs", "fm") }) { "UNSUPPORTED_OPTION" }
         fun value(key: String, default: String = ""): String = if (o.isNull(key)) default else o.get(key).toString()
         // Common exporters attach a second display name and empty custom-trust hints.
         // Nonempty trust hints must not be discarded or replaced with system trust.
@@ -42,7 +42,7 @@ internal object CoreSharing {
         val tls = value("tls").ifBlank { "none" }
         require(tls in setOf("tls", "none")) { "UNSUPPORTED_OPTION" }
         val q = linkedMapOf("type" to net, "security" to tls, "cipher" to value("scy", "auto").ifBlank { "auto" })
-        for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh")) if (!o.isNull(k)) q[k] = value(k)
+        for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh", "cs", "fm")) if (!o.isNull(k)) q[k] = value(k)
         if (net == "grpc") { q["serviceName"] = value("path"); q["mode"] = if (type == "multi") "multi" else "gun" } else if (!o.isNull("path")) q["path"] = value("path")
         return uri("vmess", o.getString("id"), o.getString("add"), o.get("port").toString(), q, value("ps").ifBlank { value("name", "VMess") })
     }

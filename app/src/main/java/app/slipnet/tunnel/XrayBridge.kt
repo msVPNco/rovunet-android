@@ -16,7 +16,7 @@ object XrayBridge {
             require(!endpoint.user.isNullOrEmpty() && !endpoint.password.isNullOrEmpty()) { "Xray requires local SOCKS authentication" }
             val config = CoreLink.runtime(link, endpoint.port, endpoint.user, endpoint.password, routing)
             val nativeDir = context.applicationInfo.nativeLibraryDir
-            core.start(File(nativeDir, "libveyra_xray.so"), config, File(nativeDir, "libveyra_core_launcher.so")).getOrThrow()
+            core.start(File(nativeDir, "libveyra_xray.so"), config, File(nativeDir, "libveyra_core_launcher.so"), workDirectory = context.cacheDir).getOrThrow()
             activeEndpoint = endpoint
         }
 

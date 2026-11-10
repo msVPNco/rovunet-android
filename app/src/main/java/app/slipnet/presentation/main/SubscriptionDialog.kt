@@ -68,7 +68,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 if (!connection.isDisconnected) Text(stringResource(R.string.subscription_disconnect), style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(modifier = Modifier.weight(1f).testTag("subscription-update"),
-                        enabled = !busy && name.isNotBlank() && url.isNotBlank() && connection.isDisconnected, onClick = {
+                        enabled = !busy && url.isNotBlank() && connection.isDisconnected, onClick = {
                         execute {
                             val row = editing?.let { id -> sources.firstOrNull { it.id == id } } ?: repository.findSource(url) ?: error("SOURCE_NOT_FOUND")
                             val item = prepare(name, url, row.id, if (editing != null || automaticEdited) automatic else row.autoUpdate)
@@ -76,7 +76,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         }
                     }) { Text(stringResource(R.string.subscription_update_action)) }
                     Button(modifier = Modifier.weight(1f).testTag("subscription-import"),
-                        enabled = !busy && name.isNotBlank() && url.isNotBlank(), onClick = {
+                        enabled = !busy && url.isNotBlank(), onClick = {
                         execute {
                             require(repository.findSource(url) == null) { "SOURCE_EXISTS" }
                             val item = prepare(name, url, null, automatic)

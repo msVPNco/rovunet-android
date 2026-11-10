@@ -64,3 +64,6 @@ print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs; p
 # Slipstream Android certificate pinning adds a JNI entry point: a pinned release
 # library is not compatible with this bridge. Rebuild it instead of silently reusing.
 run(['python3', ROOT/'tools/native/build-slipstream.py'])
+
+# Isolated userspace AmneziaWG core: only active for an imported AWG peer.
+run(['python3', ROOT/'tools/native/build-awg.py'])

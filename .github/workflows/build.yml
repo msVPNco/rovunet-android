@@ -85,6 +85,7 @@ jobs:
         run: |
           python3 -m pip install cryptography==46.0.3
           python3 tools/veyra/integration.py
+          ROVUNET_AWG_HOST="$(dirname "$XRAY")/awg" ROVUNET_REQUIRE_KOTLIN=true python3 tools/native/build-awg.py
 
   android-device:
     uses: ./.github/workflows/android-device.yml

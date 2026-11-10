@@ -22,7 +22,7 @@ require(!minifiedBindingTests || deviceCandidate) { "Minified binding instrument
 val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
 require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
 val appVersionName = if (deviceCandidate) "0.3.0-alpha18.1-review01" else "0.3.0-alpha18.1"
-val appVersionCode = 38
+val appVersionCode = 39
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"

@@ -31,7 +31,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
     }
 
     @Synchronized
-    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000): Result<Unit> = runCatching {
+    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000, workDirectory: File? = null): Result<Unit> = runCatching {
         stop()
         if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
         require(binary.isFile && binary.canExecute()) { "Xray binary missing for this ABI" }
@@ -58,8 +58,17 @@ class CoreProcess(private val diagnostics: Boolean = true) {
             require(it.isFile && it.canExecute()) { "Core lifecycle helper missing" }
             command.add(it.absolutePath)
         }
-        command.addAll(listOf(binary.absolutePath, "run", "-c", "stdin:"))
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val auxiliary = outboundProtocol == "amneziawg"
+        val executable = if (auxiliary) File(binary.parentFile, "librovunet_awg.so") else binary
+        require(executable.isFile && executable.canExecute()) { "Core binary missing for this ABI" }
+        command.add(executable.absolutePath)
+        if (!auxiliary) command.addAll(listOf("run", "-c", "stdin:"))
+        val builder = ProcessBuilder(command).redirectErrorStream(true)
+        if (auxiliary && workDirectory != null) {
+            require(workDirectory.isDirectory)
+            builder.environment()["TMPDIR"] = workDirectory.absolutePath
+        }
+        val process = builder.start()
         child = process
         outputThread = Thread({
             runCatching {
@@ -71,7 +80,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
                         val ch = input.read()
                         if (ch == -1) break
                         if (ch == 10) {
-                            if (!discard && STARTED.matches(line)) listening.countDown()
+                            if (!discard && (if (auxiliary) line.toString() == "ROVUNET_AWG_READY" else STARTED.matches(line))) listening.countDown()
                             if (diagnostics && !discard) {
                                 val category = CoreRuntimeFailure.category(line.toString())
                                 if (category != ConnectionDiagnostics.Failure.NONE && reported.add(category))

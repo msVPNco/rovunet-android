@@ -32,7 +32,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         fun enc(v: String) = URLEncoder.encode(v, "UTF-8").replace("+", "%20")
         if (kind == "wireguard") {
             fun line(key: String, label: String) = if (this[key].isBlank()) "" else "$label = ${this[key].trim()}\n"
-            return "[Interface]\n" + line("privatekey", "PrivateKey") + line("address", "Address") + line("dns", "DNS") + line("mtu", "MTU") +
+            return "[Interface]\n" + line("privatekey", "PrivateKey") + line("address", "Address") + line("dns", "DNS") + line("mtu", "MTU") + AmneziaConfig.labels.entries.joinToString("") { (key, label) -> line(key, label) } +
                 "\n[Peer]\n" + line("publickey", "PublicKey") + line("presharedkey", "PresharedKey") + line("endpoint", "Endpoint") + line("allowedips", "AllowedIPs") + line("persistentkeepalive", "PersistentKeepalive")
         }
         val host = this["server"].trim().removeSurrounding("[", "]")
@@ -49,7 +49,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             val o = org.json.JSONObject().put("v", "2").put("ps", name).put("add", host).put("port", this["port"]).put("id", this["auth"]).put("aid", "0")
                 .put("scy", this["cipher"].ifBlank { "auto" }).put("net", this["type"].ifBlank { "tcp" }).put("type", if (this["type"] == "grpc") this["mode"].ifBlank { "gun" } else "none")
                 .put("tls", this["security"].ifBlank { "none" })
-            for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh")) if (this[k].isNotBlank()) o.put(k, this[k])
+            for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh", "cs", "fm")) if (this[k].isNotBlank()) o.put(k, this[k])
             if (this["type"] == "grpc" && this["authority"].isNotBlank()) o.put("host", this["authority"])
             o.put("path", if (this["type"] == "grpc") this["serviceName"] else if (this["type"] in setOf("ws", "httpupgrade")) this["path"].ifBlank { "/" } else this["path"])
             val link = "vmess://" + app.slipnet.data.export.WireBase64.encode(o.toString().toByteArray(Charsets.UTF_8))

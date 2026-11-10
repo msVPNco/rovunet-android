@@ -35,7 +35,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     onRename: () -> Unit, onMove: () -> Unit, onTest: () -> Unit, onStabilityTest: () -> Unit,
     onExport: () -> Unit, onDelete: () -> Unit, canDelete: Boolean,
     onShareQr: (() -> Unit)? = null, onUpdate: (() -> Unit)? = null,
-    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null,
+    accountStatus: app.slipnet.data.subscription.AccountStatusView? = null, updating: Boolean = false,
     onAutomatic: (() -> Unit)? = null) {
     if (profiles.isEmpty()) return
     val connected = connectedProfileId != null
@@ -95,7 +95,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                             onClick = { menuOpen = false; action() }) }
                         HorizontalDivider()
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_manage)
-                        onUpdate?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.subscription_update_review)) }, enabled = !busy, onClick = { menuOpen = false; action() }) }
+                        onUpdate?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.subscription_update_action)) }, enabled = !busy && !updating, onClick = { menuOpen = false; action() }) }
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_rename_3064d7)) }, enabled = !busy,
                             onClick = { menuOpen = false; onRename() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.rv_move_to_collection_b392f3)) }, enabled = !busy && !connected,
@@ -111,6 +111,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                     }
                 }
             }
+            if (updating) { Text(stringResource(R.string.subscription_updating_inline), style = MaterialTheme.typography.labelSmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
             accountStatus?.let { AccountStatusSummary(it) }
             if (profiles.size > 50) Text(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
             if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),

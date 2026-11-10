@@ -16,6 +16,34 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SubscriptionDeviceTest {
+    @Test fun providerMetadataAndOptionalNamePersistAtomicallyWithoutPanelRequests() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()
+        val db = DatabaseModule.provideDatabase(context)
+        val address = "https://example.invalid/provider-metadata-fixture"
+        val document = "vless://00000000-0000-4000-8000-000000000001@example.invalid:443?security=tls&type=tcp"
+        val at = System.currentTimeMillis()
+        val preview = repository.prepareDocument("", address, null, false, document).copy(metadata =
+            app.slipnet.data.subscription.DownloadMetadata("upload=10;download=20;total=100;expire=" + (at / 1000 + 86400), at, at))
+        try {
+            repository.apply(preview)
+            assertEquals("example.invalid", requireNotNull(repository.findSource(address)).name)
+            val first = requireNotNull(db.accountStatusDao().get(preview.source.id)).view()
+            assertTrue(first.trustworthy); assertEquals(70L, first.status?.remainingBytes)
+            assertTrue(first.status?.providerReported == true)
+            val next = repository.prepareDocument("", address, preview.source.id, false, document).copy(metadata =
+                app.slipnet.data.subscription.DownloadMetadata("upload=10;download=50;total=100;expire=" + (at / 1000 + 86400), at, at))
+            repository.apply(next)
+            assertEquals(40L, requireNotNull(db.accountStatusDao().get(preview.source.id)).view().status?.remainingBytes)
+            val missing = repository.prepareDocument("", address, preview.source.id, false, document)
+            repository.apply(missing)
+            assertFalse(requireNotNull(db.accountStatusDao().get(preview.source.id)).view().trustworthy)
+        } finally {
+            db.profileDao().getAllProfiles().first().filter { it.collectionId == preview.source.id }.forEach { db.profileDao().deleteProfile(it.id) }
+            repository.detach(preview.source.id)
+        }
+    }
+
     @Test fun sharedWebsocketHostsStayDistinctAndLegacyRefreshKeepsLocalRows() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()

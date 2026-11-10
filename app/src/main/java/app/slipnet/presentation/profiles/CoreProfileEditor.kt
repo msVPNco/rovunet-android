@@ -71,6 +71,12 @@ fun CoreProfileEditor(
                 field("address", app.slipnet.R.string.rv_interface_addresses_cidr_comma_separated_3cdfb2)
                 field("dns", app.slipnet.R.string.rv_dns_servers_optional_4e8d1b)
                 field("mtu", app.slipnet.R.string.rv_mtu_optional_3fa48b)
+                for ((key, label) in app.slipnet.core.AmneziaConfig.labels) if (form[key].isNotBlank()) {
+                    OutlinedTextField(value = form[key], onValueChange = { onField(key, it) },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.amnezia_parameter, label)) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        visualTransformation = if (key == "headerprotectionkey") androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None)
+                }
                 Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_peer_f8e772), style = MaterialTheme.typography.titleMedium)
                 field("publickey", app.slipnet.R.string.rv_server_public_key_3bff38)
                 field("presharedkey", app.slipnet.R.string.rv_preshared_key_optional_580dd0, secret = true)

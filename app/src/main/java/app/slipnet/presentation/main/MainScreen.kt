@@ -440,6 +440,9 @@ fun MainScreen(
         )
     }
 
+    LaunchedEffect(uiState.subscriptionNotice) {
+        uiState.subscriptionNotice?.let { snackbarHostState.showSnackbar(it); viewModel.clearSubscriptionNotice() }
+    }
     val localizedError = uiState.error?.let { app.slipnet.presentation.theme.UiErrors.text(uiResources, it) }
     LaunchedEffect(localizedError) {
         localizedError?.let { error ->
@@ -972,6 +975,7 @@ fun MainScreen(
                                             onMove = { moveTarget = representative },
                                             onExport = { viewModel.exportCollection(representative) },
                                             onShareQr = { viewModel.showCollectionQr(representative) },
+                                            updating = representative.collectionId in uiState.updatingSubscriptions,
                                             onUpdate = if (representative.collectionId in uiState.subscriptionIds) ({ viewModel.requestSubscription(representative.collectionId) }) else null,
                                             onDelete = { deleteCollectionTarget = collection.toList() },
                                             canDelete = uiState.connectionState.isDisconnected,

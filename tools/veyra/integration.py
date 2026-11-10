@@ -62,16 +62,16 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     u.sendto(frame,relay);out,_=u.recvfrom(65535);assert out.endswith(msg)
   finally:control.close()
  uid='00000000-0000-4000-8000-000000000001'
- for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade,vless-ws-heartbeat,vless-kcp,vless-encrypted-xhttp,wireguard-uri').split(','):
-  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','wireguard','wireguard-uri','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[]
+ for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade,vless-ws-heartbeat,vless-kcp,vless-encrypted-xhttp,wireguard-uri,shadowsocks2022-aes128,shadowsocks2022-chacha,trojan-fm,vless-xhttp-fm,hysteria2-hop').split(','):
+  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','hysteria2-hop','wireguard','wireguard-uri','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[];serverExtra=[]
   inbound={'listen':'127.0.0.1','port':sp}
-  tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode=='hysteria2' else ['h2','http/1.1']}
+  tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode in ['hysteria2','hysteria2-hop'] else ['h2','http/1.1']}
   if mode=='reality':
    priv,pub=pair();dest=port()
    target=subprocess.Popen([os.environ['TLS_TARGET'],f'127.0.0.1:{dest}',str(cert),str(keyfile)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);extra.append(target)
    inbound.update(protocol='vless',settings={'clients':[{'id':uid,'flow':'xtls-rprx-vision'}],'decryption':'none'},streamSettings={'network':'raw','security':'reality','realitySettings':{'target':f'127.0.0.1:{dest}','serverNames':['localhost'],'privateKey':priv.rstrip('=').replace('+','-').replace('/','_'),'shortIds':['ab']}})
    link=f'vless://{uid}@127.0.0.1:{sp}?security=reality&type=tcp&sni=localhost&fp=chrome&pbk={pub.rstrip("=").replace("+","-").replace("/","_")}&sid=ab&flow=xtls-rprx-vision'
-  elif mode=='xhttp':
+  elif mode in ['xhttp','vless-xhttp-fm']:
    inbound.update(protocol='vless',settings={'clients':[{'id':uid}],'decryption':'none'},streamSettings={'network':'xhttp','security':'tls','tlsSettings':tls,'xhttpSettings':{'path':'/veyra','mode':'auto'}})
    link=f'vless://{uid}@127.0.0.1:{sp}?security=tls&type=xhttp&sni=localhost&host=localhost&path=%2Fveyra&mode=packet-up'
   elif mode=='vless-encrypted-xhttp':
@@ -80,13 +80,19 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
    inbound.update(protocol='vless',settings={'clients':[{'id':uid}],'decryption':'mlkem768x25519plus.native.600s.'+rawurl(private)},streamSettings={'network':'xhttp','security':'none','xhttpSettings':{'path':'/encrypted-fixture','mode':'auto'}})
    encryption='mlkem768x25519plus.native.0rtt.'+rawurl(public)
    link=f'vless://{uid}@127.0.0.1:{sp}?security=none&type=xhttp&path=%2Fencrypted-fixture&mode=packet-up&encryption={encryption}'
+  elif mode.startswith('shadowsocks2022'):
+   method='2022-blake3-aes-128-gcm' if mode.endswith('aes128') else '2022-blake3-chacha20-poly1305'
+   password=base64.b64encode(os.urandom(16 if mode.endswith('aes128') else 32)).decode()
+   inbound.update(protocol='shadowsocks',settings={'method':method,'password':password,'network':'tcp,udp'})
+   credentials=base64.urlsafe_b64encode((method+':'+password).encode()).decode().rstrip('=')
+   link=f'ss://{credentials}@127.0.0.1:{sp}#Synthetic-2022'
   elif mode=='shadowsocks':
    inbound.update(protocol='shadowsocks',settings={'method':'aes-256-gcm','password':'synthetic-aead-password','network':'tcp,udp'})
    credentials=base64.urlsafe_b64encode(b'aes-256-gcm:synthetic-aead-password').decode().rstrip('=')
    link=f'ss://{credentials}@127.0.0.1:{sp}#Synthetic-AEAD'
-  elif mode in ['trojan','vmess-ws','vless-grpc','vless-httpupgrade','vless-ws-heartbeat','vless-kcp']:
-   protocol='trojan' if mode=='trojan' else 'vmess' if mode=='vmess-ws' else 'vless'
-   network='raw' if mode=='trojan' else 'ws' if mode in ['vmess-ws','vless-ws-heartbeat'] else 'grpc' if mode=='vless-grpc' else 'kcp' if mode=='vless-kcp' else 'httpupgrade'
+  elif mode in ['trojan','trojan-fm','vmess-ws','vless-grpc','vless-httpupgrade','vless-ws-heartbeat','vless-kcp']:
+   protocol='trojan' if mode in ['trojan','trojan-fm'] else 'vmess' if mode=='vmess-ws' else 'vless'
+   network='raw' if mode in ['trojan','trojan-fm'] else 'ws' if mode in ['vmess-ws','vless-ws-heartbeat'] else 'grpc' if mode=='vless-grpc' else 'kcp' if mode=='vless-kcp' else 'httpupgrade'
    settings={'clients':[{'password':'synthetic-password'}]} if protocol=='trojan' else {'clients':[{'id':uid}]}
    if protocol=='vless':settings['decryption']='none'
    stream={'network':network,'security':'tls','tlsSettings':tls}
@@ -105,7 +111,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     if network=='kcp':link=f'{protocol}://{auth}@127.0.0.1:{sp}?security=tls&type=kcp&sni=localhost&mtu=1200&tti=20'
     if mode=='vless-ws-heartbeat':link+='&heartbeatPeriod=30'
     link+='#Synthetic display name'
-  elif mode=='hysteria2':
+  elif mode in ['hysteria2','hysteria2-hop']:
    inbound.update(protocol='hysteria',settings={'version':2,'users':[{'auth':'test-password'}]},streamSettings={'network':'hysteria','security':'tls','tlsSettings':tls,'hysteriaSettings':{'version':2},'finalmask':{'udp':[{'type':'salamander','settings':{'password':'obfs-test'}}]}})
    link=f'hysteria2://test-password@127.0.0.1:{sp}?sni=localhost&obfs=salamander&obfs-password=obfs-test'
   else:
@@ -119,12 +125,21 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
     devicePrivate,devicePublic=pair();address=f'10.66.0.{n+2}'
     inbound['settings']['peers'].append({'publicKey':devicePublic,'allowedIPs':[address+'/32']})
     additionalLinks.append(f'[Interface]\nPrivateKey = {devicePrivate}\nAddress = {address}/32\n[Peer]\nPublicKey = {serverPub}\nEndpoint = 127.0.0.1:{sp}\nAllowedIPs = 0.0.0.0/0\n')
+  if mode in ['trojan-fm','vless-xhttp-fm']:
+   mask={'tcp':[{'type':'fragment','settings':{'packets':'tlshello','length':'50-100','delay':'1-2'}}]}
+   link+='&cs='+urllib.parse.quote('TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256',safe='')+'&fm='+urllib.parse.quote(json.dumps(mask),safe='')
+  if mode=='hysteria2-hop':
+   import copy
+   more=[port(socket.SOCK_DGRAM),port(socket.SOCK_DGRAM)]
+   for extraPort in more:
+    other=copy.deepcopy(inbound);other['port']=extraPort;serverExtra.append(other)
+   link+='&mport='+','.join(map(str,[sp]+more))+'&hop-interval=5s'
   source=root/(mode+'.link');source.write_text(link);clientFile=root/(mode+'-client.json')
   subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar:{JARS}/bcprov-jdk18on-1.80.jar','CoreFixtureKt',str(source),str(clientFile),str(cp)],check=True)
-  server=start({'log':{'loglevel':'debug'},'inbounds':[inbound],'outbounds':[{'protocol':'freedom','settings':{'redirect':'127.0.0.1:0','finalRules':[{'action':'allow','ip':['127.0.0.1/32']}]}}]},mode+'-server')
+  server=start({'log':{'loglevel':'debug'},'inbounds':[inbound]+serverExtra,'outbounds':[{'protocol':'freedom','settings':{'redirect':'127.0.0.1:0','finalRules':[{'action':'allow','ip':['127.0.0.1/32']}]}}]},mode+'-server')
   clientCfg=json.loads(clientFile.read_text())
   clientCfg['log']={'loglevel':'debug'}
-  if mode in ['xhttp','hysteria2','trojan','vmess-ws','vless-grpc','vless-httpupgrade','vless-ws-heartbeat','vless-kcp']:
+  if mode in ['xhttp','vless-xhttp-fm','hysteria2','hysteria2-hop','trojan-fm','trojan','vmess-ws','vless-grpc','vless-httpupgrade','vless-ws-heartbeat','vless-kcp']:
    clientCfg['outbounds'][0]['streamSettings']['tlsSettings']['certificates']=[{'certificateFile':str(cert),'usage':'verify'}]
   client=start(clientCfg,mode+'-client');processes=[client,server]+extra
   clientPorts=[cp]
@@ -135,6 +150,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   try:
    time.sleep(.6)
    for p in clientPorts:request(p);request_udp(p)
+   if mode=='hysteria2-hop':time.sleep(5.5);request(cp);request_udp(cp)
    t=time.monotonic()
    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as pool:list(pool.map(lambda n:request(clientPorts[n%len(clientPorts)]),range(200)))
    results.append({'protocol':mode,'tcp':True,'udp':True,'requests':200,'concurrency':40,'client_processes':len(clientPorts),'seconds':round(time.monotonic()-t,3)})

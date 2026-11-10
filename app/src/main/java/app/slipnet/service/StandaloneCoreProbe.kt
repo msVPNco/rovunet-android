@@ -25,7 +25,7 @@ class StandaloneCoreProbe @Inject constructor(@ApplicationContext private val co
             val dir = context.applicationInfo.nativeLibraryDir
             runInterruptible(Dispatchers.IO) {
                 check(valid())
-                core.start(File(dir, "libveyra_xray.so"), config, File(dir, "libveyra_core_launcher.so"), 6_000).getOrThrow()
+                core.start(File(dir, "libveyra_xray.so"), config, File(dir, "libveyra_core_launcher.so"), 6_000, workDirectory = context.cacheDir).getOrThrow()
             }
             TunnelProbe.medianVerified(valid, initialHost = host, allowFallback = false) { host ->
                 TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 8_000)

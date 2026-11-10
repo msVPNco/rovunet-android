@@ -1,0 +1,10 @@
+<resources>
+    <string name="subscription_volume_unknown">Volume information unavailable</string>
+    <string name="subscription_expiry_unknown">Expiry information unavailable</string>
+    <string name="subscription_provider_snapshot">Provider report · %1$s</string>
+    <string name="subscription_updated_inline">Updated: %1$d paths · %2$d unsupported · %3$d retained locally</string>
+    <string name="subscription_updating_inline">Updating subscription…</string>
+    <string name="amnezia_parameter">%1$s (AmneziaWG)</string>
+    <string name="subscription_partial_notice">Some imported settings or entries are unsupported; previous local profiles were preserved.</string>
+    <string name="amnezia_engine_notice">AmneziaWG uses a constrained Mihomo adapter (GPL-3.0). Source and notices accompany this release.</string>
+</resources>

@@ -93,6 +93,8 @@ data class MainUiState(
     val smartStatus: app.slipnet.service.SmartConnectionController.Status = app.slipnet.service.SmartConnectionController.Status(),
     val smartVersion: Long = 0,
     val subscriptionVersion: Long = 0,
+    val updatingSubscriptions: Set<String> = emptySet(),
+    val subscriptionNotice: String? = null,
     val accountStatuses: Map<String, app.slipnet.data.subscription.AccountStatusEntity> = emptyMap(),
     val dataPathState: app.slipnet.domain.model.DataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
     val dataPathNoticeUntilElapsedMs: Long = 0,
@@ -1013,7 +1015,29 @@ class MainViewModel @Inject constructor(
     }
 
     fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null) }
-    fun requestSubscription(id: String) { _uiState.value = _uiState.value.copy(subscriptionId = id) }
+    fun requestSubscription(id: String) {
+        if (id in _uiState.value.updatingSubscriptions) return
+        _uiState.value = _uiState.value.copy(updatingSubscriptions = _uiState.value.updatingSubscriptions + id)
+        viewModelScope.launch {
+            val resources = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
+            try {
+                val row = subscriptionRepository.observe().first().firstOrNull { it.id == id } ?: error("SOURCE_NOT_FOUND")
+                val preview = subscriptionRepository.prepare(row.name, subscriptionRepository.sourceUrl(row), id, row.autoUpdate)
+                subscriptionRepository.apply(preview)
+                _uiState.value = _uiState.value.copy(subscriptionNotice = resources.getString(
+                    app.slipnet.R.string.subscription_updated_inline, preview.profiles.size, preview.unsupported, preview.removed) +
+                    if (preview.importWarnings.isNotEmpty()) " · " + resources.getString(app.slipnet.R.string.subscription_partial_notice) else "")
+                subscriptionRepository.refreshAccountStatuses(force = true)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e
+            } catch (e: Exception) {
+                val key = if (e.message == "DISCONNECT_TO_UPDATE") app.slipnet.R.string.subscription_disconnect else app.slipnet.R.string.subscription_failed
+                _uiState.value = _uiState.value.copy(subscriptionNotice = resources.getString(key))
+            } finally {
+                _uiState.value = _uiState.value.copy(updatingSubscriptions = _uiState.value.updatingSubscriptions - id)
+            }
+        }
+    }
+    fun clearSubscriptionNotice() { _uiState.value = _uiState.value.copy(subscriptionNotice = null) }
     fun showCollectionQr(profile: ServerProfile) {
         viewModelScope.launch {
             try {

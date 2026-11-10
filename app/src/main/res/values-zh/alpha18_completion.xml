@@ -1,0 +1,10 @@
+<resources>
+    <string name="subscription_volume_unknown">流量信息不可用</string>
+    <string name="subscription_expiry_unknown">到期信息不可用</string>
+    <string name="subscription_provider_snapshot">服务商报告 · %1$s</string>
+    <string name="subscription_updated_inline">已更新：%1$d 条线路 · %2$d 条不支持 · %3$d 条保留在本机</string>
+    <string name="subscription_updating_inline">正在更新订阅…</string>
+    <string name="amnezia_parameter">%1$s（AmneziaWG）</string>
+    <string name="subscription_partial_notice">部分设置或条目不受支持；原有本地配置已保留。</string>
+    <string name="amnezia_engine_notice">AmneziaWG 使用受限的 Mihomo 适配器（GPL-3.0）。此版本附带源代码与许可证。</string>
+</resources>

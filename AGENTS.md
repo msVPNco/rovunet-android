@@ -28,6 +28,17 @@ release or public tag before the owner tests and accepts that exact APK. The
 Patterniha decision is removal from the built-in catalog, superseding relocation.
 See `docs/releases/alpha18-review.md`. Preserve the README layout and desktop work.
 
+## Alpha18.1 completion publication authorization
+
+On 2026-11-10 the owner explicitly authorized implementing the agreed subscription
+UX/metadata, existing-protocol compatibility (including cs/fm and Shadowsocks2022)
+and AmneziaWG completion, running GitHub checks, signing and releasing this update.
+This supersedes the earlier review-only hold for this exact iteration. Keep the
+fixed production signer and disclose that local/emulator tests do not establish
+new physical-phone/carrier/battery acceptance. Keep alpha18.1 with a higher build
+code because code38 was already delivered as alpha18.1; never replace its bytes.
+AnyTLS/TUIC remain subsequent work. Preserve README formatting and desktop code.
+
 ## Owner review before publication
 
 From 2026-11-07, deliver each new installable APK to the owner for testing on

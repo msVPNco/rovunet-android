@@ -33,13 +33,13 @@ internal fun AccountStatusSummary(view: AccountStatusView) {
         status?.state == "expired" || view.remainingMillis == 0L -> stringResource(R.string.account_status_expired)
         status?.state == "limit_reached" || status?.remainingBytes == 0L -> stringResource(R.string.account_status_limit_reached)
         status != null -> {
-            val volume = status.remainingBytes?.let { bytes ->
+            val volume = if (!status.volumeKnown) stringResource(R.string.subscription_volume_unknown) else status.remainingBytes?.let { bytes ->
                 val gib = bytes >= 1024L * 1024 * 1024
                 val divisor = if (gib) 1024.0 * 1024 * 1024 else 1024.0 * 1024
                 val number = NumberFormat.getNumberInstance().apply { maximumFractionDigits = 1 }.format(bytes / divisor)
                 stringResource(R.string.account_status_remaining_volume, number, if (gib) "GiB" else "MiB")
             } ?: stringResource(R.string.account_status_unlimited_volume)
-            val time = view.remainingMillis?.let { millis ->
+            val time = if (!status.expiryKnown) stringResource(R.string.subscription_expiry_unknown) else view.remainingMillis?.let { millis ->
                 when {
                     millis > 86_400_000 -> stringResource(R.string.account_status_days, (millis + 86_399_999) / 86_400_000)
                     millis > 3_600_000 -> stringResource(R.string.account_status_hours, (millis + 3_599_999) / 3_600_000)
@@ -52,7 +52,10 @@ internal fun AccountStatusSummary(view: AccountStatusView) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
         Text(message, style = MaterialTheme.typography.labelSmall, color = color)
-        if (view.trustworthy && status?.metering == "complete" && status.limitBytes != null && status.state == "active") {
+        if (status?.providerReported == true) Text(stringResource(R.string.subscription_provider_snapshot,
+            java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(status.generatedAt))),
+            style = MaterialTheme.typography.labelSmall, color = collectionTones.headerText.copy(alpha = .65f))
+        if (view.trustworthy && status != null && (status.metering == "complete" || status.providerReported) && status.limitBytes != null && status.state == "active") {
             LinearProgressIndicator(progress = { (requireNotNull(status.remainingBytes).toDouble() / status.limitBytes).coerceIn(0.0, 1.0).toFloat() },
                 modifier = Modifier.fillMaxWidth().height(3.dp), color = color,
                 trackColor = collectionTones.headerText.copy(alpha = .12f))

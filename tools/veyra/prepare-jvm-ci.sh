@@ -30,3 +30,5 @@ cc -O2 app/src/main/cpp/veyra-core-launcher.c -o "$CORE_LAUNCHER"
 
 : "${TLS_TARGET:?}"
 go build -o "$TLS_TARGET" tools/veyra/tls_target.go
+
+ROVUNET_AWG_HOST="$(dirname "$XRAY")/awg" python3 tools/native/build-awg.py
