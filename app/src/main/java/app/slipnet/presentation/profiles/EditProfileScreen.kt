@@ -2754,8 +2754,8 @@ fun EditProfileScreen(
                     if (uiState.isSlipstreamBased) {
                         OutlinedTextField(value = uiState.slipstreamCertificate,
                             onValueChange = viewModel::updateSlipstreamCertificate,
-                            label = { Text(androidx.compose.ui.res.stringResource(R.string.alpha18_slipstream_certificate)) },
-                            supportingText = { Text(androidx.compose.ui.res.stringResource(R.string.alpha18_slipstream_certificate_hint)) },
+                            label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha18_slipstream_certificate)) },
+                            supportingText = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.alpha18_slipstream_certificate_hint)) },
                             minLines = 2, maxLines = 5, modifier = Modifier.fillMaxWidth())
                         // Keep-Alive Interval (hidden in authoritative mode — polling subsumes keep-alive)
                         if (!uiState.authoritativeMode) {

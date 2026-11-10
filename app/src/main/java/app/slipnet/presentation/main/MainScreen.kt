@@ -2375,16 +2375,14 @@ private fun ConnectFab(
         label = "connectFabColor"
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
-    )
+    val pulseScale = if (isConnecting) {
+        val transition = rememberInfiniteTransition(label = "connectionPulse")
+        val scale by transition.animateFloat(
+            initialValue = 1f, targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
+            label = "connectionPulseScale")
+        scale
+    } else 1f
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
