@@ -106,6 +106,9 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             fields["port"] = (if (uri.port < 0) 443 else uri.port).toString()
             fields["auth"] = dec(uri.rawUserInfo)
             val kind = if (uri.scheme in setOf("hysteria2", "hy2")) "hysteria2" else uri.scheme.lowercase()
+            if (kind == "vmess" && fields.containsKey("encryption")) {
+                fields["cipher"] = fields.getValue("encryption"); fields.remove("encryption")
+            }
             if (kind == "vless") {
                 fields["type"] = when (fields["type"]) { null, "raw" -> "tcp"; "websocket" -> "ws"; "mkcp" -> "kcp"; else -> fields.getValue("type") }
                 fields.putIfAbsent("security", "none")

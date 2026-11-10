@@ -41,6 +41,10 @@ class Alpha18CompletionTest {
         val stream = CoreLink.parse(link).outbound.getJSONObject("streamSettings")
         assertEquals("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", stream.getJSONObject("tlsSettings").getString("cipherSuites"))
         assertEquals(JSONObject(fm).toString(), stream.getJSONObject("finalmask").toString())
+        val vmess = CoreSharing.uri("vmess", uuid, "example.test", "443", mapOf("security" to "tls", "encryption" to "aes-128-gcm", "cs" to "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "fm" to fm), "fixture")
+        val vmessAfterEdit = CoreLink.parse(CoreForm.decode(vmess).encode("edited")).outbound
+        assertEquals("aes-128-gcm", vmessAfterEdit.getJSONObject("settings").getJSONArray("vnext").getJSONObject(0).getJSONArray("users").getJSONObject(0).getString("security"))
+        assertTrue(vmessAfterEdit.getJSONObject("streamSettings").has("finalmask"))
         val edited = CoreLink.parse(CoreForm.decode(link).encode("renamed")).outbound
         assertEquals(stream.toString(), edited.getJSONObject("streamSettings").toString())
         rejected { CoreLink.parse(link.replace("security=tls", "security=none")) }

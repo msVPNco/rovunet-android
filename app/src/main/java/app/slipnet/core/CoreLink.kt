@@ -234,8 +234,12 @@ object CoreLink {
                 stream.getJSONObject("tlsSettings").put("cipherSuites", CoreOptions.cipherSuites(cs))
             }
             q["fm"]?.let { fm ->
-                require(!stream.has("finalmask")) { "UNSUPPORTED_OPTION" }
-                stream.put("finalmask", CoreOptions.finalMask(fm))
+                val incoming = CoreOptions.finalMask(fm)
+                val existing = stream.optJSONObject("finalmask")
+                if (existing == null) stream.put("finalmask", incoming) else {
+                    require(incoming.keys().asSequence().none(existing::has)) { "UNSUPPORTED_OPTION" }
+                    incoming.keys().forEach { existing.put(it, incoming.get(it)) }
+                }
             }
             q["mport"]?.let { ports ->
                 require(scheme in setOf("hy2", "hysteria2") && ports.length <= 512 &&
