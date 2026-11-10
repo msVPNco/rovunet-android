@@ -12,10 +12,17 @@ data class CollectionTones(
 )
 
 val collectionTones: CollectionTones
-    @Composable get() = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
-        CollectionTones(Color(0xFFE4D8FC), Color(0xFFD2BAF5), Color(0xFF271544),
-            Color(0xFFE8EAF4), Color(0xFFFCFBFF), Color(0xFFF0E9FC), Color(0xFFC4C6D8))
-    } else {
-        CollectionTones(Color(0xFF30274D), Color(0xFF40335F), Color(0xFFF7F1FF),
-            Color(0xFF0D1425), Color(0xFF182238), Color(0xFF292440), Color(0xFF3B4860))
+    @Composable get() {
+        val colors = MaterialTheme.colorScheme
+        return when {
+            colors.background == Color.Black -> CollectionTones(
+                Color(0xFF191E29), Color(0xFF272F40), Color(0xFFEBEDF4),
+                Color.Transparent, Color(0xFF161C25), Color(0xFF343C50), Color(0xFF333C49))
+            colors.background.luminance() > 0.5f -> CollectionTones(
+                Color(0xFFEAECF4), Color(0xFFDDE3EF), Color(0xFF1F2C42),
+                Color.Transparent, Color.White, Color(0xFFE4EAF4), Color(0xFFD8DFEA))
+            else -> CollectionTones(
+                Color(0xFF30364A), Color(0xFF3B435A), Color(0xFFF1F2F8),
+                Color.Transparent, Color(0xFF2C3D54), Color(0xFF4B536D), Color(0xFF53627B))
+        }
     }

@@ -4371,13 +4371,7 @@ class SlipNetVpnService : VpnService() {
         if (!underlyingDefaultDeclared) underlyingDefaultDeclared = runCatching { setUnderlyingNetworks(null) }.getOrDefault(false)
     }
 
-    private fun defaultPhysicalNetwork(): Network? {
-        val cm = connectivityManager ?: return null
-        val network = cm.activeNetwork ?: return null
-        val capabilities = cm.getNetworkCapabilities(network) ?: return null
-        return network.takeIf { capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
-    }
+    private fun defaultPhysicalNetwork(): Network? = connectivityManager?.let(PhysicalNetworkRoute::current)
 
     /**
      * Register a BroadcastReceiver to detect when the device exits Doze mode.
@@ -4448,6 +4442,7 @@ class SlipNetVpnService : VpnService() {
             private fun consider(network: Network, capabilities: NetworkCapabilities) {
                 if (!callbackRuntime.isActive || !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
                     !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
+                if (defaultPhysicalNetwork() != network) return
                 networkLostJob?.cancel()
                 networkLostJob = null
                 val previous = currentNetwork
@@ -4505,7 +4500,9 @@ class SlipNetVpnService : VpnService() {
                 if (changed) debouncedReconnect("physical network properties change")
             }
         }
-        try { connectivityManager?.registerDefaultNetworkCallback(requireNotNull(networkCallback)) }
+        try { connectivityManager?.registerNetworkCallback(android.net.NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(), requireNotNull(networkCallback)) }
         catch (error: Exception) { Log.e(TAG, "Failed to register default network callback", error) }
     }
 

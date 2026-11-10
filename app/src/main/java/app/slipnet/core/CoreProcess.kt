@@ -39,6 +39,12 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         val settings = JSONObject(config)
         val inbound = settings.getJSONArray("inbounds").getJSONObject(0)
         require(inbound.getString("listen") == "127.0.0.1" && inbound.getString("protocol") == "socks")
+        val diagnosticSession = ConnectionDiagnostics.currentSessionId()
+        val outboundProtocol = settings.optJSONArray("outbounds")?.optJSONObject(0)?.optString("protocol")
+        if (diagnostics) when (outboundProtocol) {
+            "hysteria" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_HYSTERIA2_START, diagnosticSession)
+            "wireguard" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_WIREGUARD_START, diagnosticSession)
+        }
         val port = inbound.getInt("port")
         require(port in 1..65535)
         val socks = inbound.optJSONObject("settings")
@@ -60,14 +66,20 @@ class CoreProcess(private val diagnostics: Boolean = true) {
                 process.inputStream.buffered().use { input ->
                     val line = StringBuilder(160)
                     var discard = false
+                    val reported = mutableSetOf<ConnectionDiagnostics.Failure>()
                     while (true) {
                         val ch = input.read()
                         if (ch == -1) break
                         if (ch == 10) {
                             if (!discard && STARTED.matches(line)) listening.countDown()
+                            if (diagnostics && !discard) {
+                                val category = CoreRuntimeFailure.category(line.toString())
+                                if (category != ConnectionDiagnostics.Failure.NONE && reported.add(category))
+                                    ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_UPSTREAM_FAILED, diagnosticSession, category)
+                            }
                             line.setLength(0)
                             discard = false
-                        } else if (line.length < 160) line.append(ch.toChar()) else discard = true
+                        } else if (line.length < 4096) line.append(ch.toChar()) else discard = true
                     }
                 }
             }

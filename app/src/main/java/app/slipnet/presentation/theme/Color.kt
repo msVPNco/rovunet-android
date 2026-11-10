@@ -47,4 +47,4 @@ val DownloadGreen = Color(0xFF4CAF50)
 val ConnectionSuccessColor: Color
     @androidx.compose.runtime.Composable get() =
         if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF126B46)
-        else Color(0xFF61DBA3)
+        else Color(0xFFB0E8C8)

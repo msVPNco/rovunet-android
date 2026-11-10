@@ -21,16 +21,18 @@ import androidx.compose.ui.unit.dp
 
 /** Static gradients and press-only spring motion; no perpetual decorative animation. */
 val softPopBackground: Brush
-    @Composable get() = Brush.verticalGradient(if (MaterialTheme.colorScheme.background.luminance() > .5f)
-        listOf(Color(0xFFE9E6F6), Color(0xFFF5F4FC), Color.White)
-    else listOf(Color(0xFF303C5C), Color(0xFF1C2940), MaterialTheme.colorScheme.background))
+    @Composable get() = Brush.verticalGradient(when {
+        MaterialTheme.colorScheme.background == Color.Black -> listOf(Color.Black, Color.Black)
+        MaterialTheme.colorScheme.background.luminance() > .5f -> listOf(Color(0xFFEEF1F8), Color(0xFFF7F8FC), Color.White)
+        else -> listOf(Color(0xFF26334D), Color(0xFF18243A), Color(0xFF0B1321))
+    })
 
 @Composable
 fun SoftPopGlass(modifier: Modifier = Modifier, header: Boolean = false, content: @Composable () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(modifier = modifier, shape = RoundedCornerShape(24.dp),
-        color = colors.primaryContainer.copy(alpha = if (header) .20f else .86f),
-        border = BorderStroke(1.dp, colors.primary.copy(alpha = .26f)), content = content)
+        color = colors.primaryContainer.copy(alpha = if (header) .94f else .96f),
+        border = BorderStroke(1.dp, colors.primary.copy(alpha = .22f)), content = content)
 }
 
 @Composable
@@ -58,3 +60,4 @@ fun SoftPopFab(onClick: () -> Unit, containerColor: Color, modifier: Modifier = 
         containerColor = containerColor, modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
         content = { Box(Modifier.clip(shape).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))).padding(16.dp)) { content() } })
 }
+

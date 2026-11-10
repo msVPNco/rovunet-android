@@ -155,7 +155,8 @@ class MainViewModel @Inject constructor(
     internal val subscriptionRepository: app.slipnet.data.subscription.SubscriptionRepository,
     private val preferencesDataStore: PreferencesDataStore,
     internal val connectionHistoryStore: ConnectionHistoryStore,
-    internal val smartConnections: app.slipnet.service.SmartConnectionController
+    internal val smartConnections: app.slipnet.service.SmartConnectionController,
+    internal val activePathMonitor: app.slipnet.service.ActivePathMonitor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -175,15 +176,7 @@ class MainViewModel @Inject constructor(
             dataPathNoticeUntilElapsedMs = 0)
         dataPathJob = viewModelScope.launch {
             val verified = try {
-                // Chain listeners can have a per-layer port override. Do not probe a different listener.
-                if (connected.chainId > 0) false else {
-                    val endpoint = if (connected.profile.tunnelType == TunnelType.XRAY)
-                        app.slipnet.tunnel.XrayBridge.activeEndpoint ?: error("No active endpoint")
-                    else preferencesDataStore.configuredSocksEndpoint()
-                    app.slipnet.core.TunnelProbe.sample({}, successTarget = 1) { host ->
-                        app.slipnet.core.TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 3000)
-                    }.summary != null
-                }
+                if (connected.chainId > 0) false else activePathMonitor.measure(connected.profile, owner.first)?.ms != null
             } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { false }
             if (dataPathOwner == owner && generation == dataPathGeneration &&
                 connectionManager.ownsSession(owner.first) && _uiState.value.connectionState is ConnectionState.Connected) {
@@ -247,6 +240,12 @@ class MainViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(accountStatuses = rows.associateBy { it.subscriptionId })
             }
         }
+        viewModelScope.launch { activePathMonitor.latest.collect { sample ->
+            if (sample != null && !_uiState.value.isPingRunning && connectionManager.ownsSession(sample.session) &&
+                (_uiState.value.connectionState as? ConnectionState.Connected)?.profile?.id == sample.profile) {
+                _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (sample.profile to sample.result))
+            }
+        } }
         observeConnectionState()
         observeDnsWarning()
         observeDnsPoolScan()
@@ -266,15 +265,8 @@ class MainViewModel @Inject constructor(
             .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build()
         runCatching { networkManager.registerNetworkCallback(request, networkCallback); networkCallbackRegistered = true }
     }
-    private fun physicalNetworkSnapshot(): String? {
-        val network = networkManager.activeNetwork ?: return null
-        val caps = networkManager.getNetworkCapabilities(network) ?: return null
-        if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
-            !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) return null
-        val links = networkManager.getLinkProperties(network)
-        return network.toString() + ":" + links?.interfaceName.orEmpty() + ":" +
-            links?.linkAddresses.orEmpty().map { it.toString() }.sorted().joinToString(",")
-    }
+    private fun physicalNetworkSnapshot(): String? = app.slipnet.service.PhysicalNetworkRoute.snapshot(networkManager)
+    fun setScreenVisible(visible: Boolean) = activePathMonitor.setVisible(this, visible)
     private fun networkChanged(network: android.net.Network, available: Boolean) {
         // Ignore the event's network: only the selected physical route matters.
         networkChangeJob?.cancel()
@@ -287,16 +279,18 @@ class MainViewModel @Inject constructor(
     internal suspend fun applyPhysicalNetworkSnapshot(snapshot: String?) {
         if (!physicalNetworkTracker.update(snapshot)) return
         val testing = _uiState.value.isPingRunning
+        if (testing) app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.COLLECTION_NETWORK_CHANGED)
         smartConnections.clearResults()
         pingJob?.cancelAndJoin()
         discoveredProfiles.clear()
         _uiState.value = _uiState.value.copy(collectionPrompt = false,
-            error = if (testing) app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
-                .getString(app.slipnet.R.string.review02_network_changed) else _uiState.value.error,
+            error = if (testing) "PROBE_NETWORK_CHANGED" else _uiState.value.error,
             pingResults = app.slipnet.domain.model.ProbeCache.historical(_uiState.value.pingResults))
         rememberHistory()
     }
     override fun onCleared() {
+        activePathMonitor.setVisible(this, false)
+        activePathMonitor.pause(this, false)
         rememberHistory()
         if (networkCallbackRegistered) runCatching { networkManager.unregisterNetworkCallback(networkCallback) }
         super.onCleared()
@@ -350,7 +344,7 @@ class MainViewModel @Inject constructor(
                     dataPathJob?.cancel(); dataPathExpiryJob?.cancel(); dataPathGeneration++; dataPathOwner = nextOwner
                     _uiState.value = _uiState.value.copy(dataPathState = app.slipnet.domain.model.DataPathState.UNTESTED,
                         dataPathNoticeUntilElapsedMs = 0)
-                    if (nextOwner != null) verifyDataPath()
+                    if (nextOwner != null && !_uiState.value.isPingRunning) verifyDataPath()
                 }
                 if (state is ConnectionState.Connecting) {
                     startBootstrapPolling()
@@ -1282,8 +1276,11 @@ class MainViewModel @Inject constructor(
     private class ProbeInterrupted(val reason: Int) : Exception()
 
     private fun showInterruptedTest(e: ProbeInterrupted) {
-        val context = app.slipnet.presentation.theme.RovunetStrings.localizedContext(appContext)
-        _uiState.value = _uiState.value.copy(error = context.getString(e.reason))
+        _uiState.value = _uiState.value.copy(error = when (e.reason) {
+            app.slipnet.R.string.probe_busy -> "PROBE_BUSY"
+            app.slipnet.R.string.probe_cleanup -> "PROBE_CLEANUP"
+            else -> "PROBE_CHANGED"
+        })
     }
 
     private fun finishTestResults(original: Map<Long, PingResult>): Map<Long, PingResult> =
@@ -1317,7 +1314,9 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",
             pingResults = _uiState.value.pingResults + historical + candidates.associate { it.id to PingResult.Pending })
+        activePathMonitor.pause(this, true)
         pingJob = viewModelScope.launch {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.COLLECTION_START)
             var passed = false
             var completedInBatch = 0
             try {
@@ -1354,13 +1353,16 @@ class MainViewModel @Inject constructor(
                     app.slipnet.domain.model.CollectionPhase.Completion.COMPLETE -> Unit
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
-            } catch (e: ProbeInterrupted) { showInterruptedTest(e)
+            } catch (e: ProbeInterrupted) {
+                app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.COLLECTION_INTERRUPTED, code = when(e.reason) { app.slipnet.R.string.probe_busy -> 1; app.slipnet.R.string.probe_cleanup -> 2; else -> 3 })
+                showInterruptedTest(e)
             } catch (_: Exception) {
                 _uiState.value = _uiState.value.copy(error = "Collection test failed; no configuration was removed")
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {
                     _uiState.value = _uiState.value.copy(isPingRunning = false, collectionProgress = "",
                         pingResults = finishTestResults(originalResults))
+                    activePathMonitor.pause(this@MainViewModel, false)
                     sortProfilesByPing()
                 }
             }
@@ -1423,6 +1425,7 @@ class MainViewModel @Inject constructor(
         val originalResults = _uiState.value.pingResults
         _uiState.value = _uiState.value.copy(isPingRunning = true,
             pingResults = _uiState.value.pingResults + profiles.associate { it.id to PingResult.Pending })
+        activePathMonitor.pause(this, true)
         pingJob = viewModelScope.launch {
             try {
                 for (profile in profiles) {
@@ -1437,6 +1440,7 @@ class MainViewModel @Inject constructor(
                 withContext(kotlinx.coroutines.NonCancellable) {
                     _uiState.value = _uiState.value.copy(isPingRunning = false,
                         pingResults = finishTestResults(originalResults))
+                    activePathMonitor.pause(this@MainViewModel, false)
                     sortProfilesByPing()
                 }
             }
@@ -1539,6 +1543,7 @@ class MainViewModel @Inject constructor(
         }
         _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + initial, isPingRunning = true)
 
+        activePathMonitor.pause(this, true)
         pingJob = viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers()

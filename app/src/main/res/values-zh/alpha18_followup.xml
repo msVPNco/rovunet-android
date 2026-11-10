@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_probe_failed">最新 HTTPS 检查失败；旧测量值不再有效。</string>
+    <string name="live_probe_age">%1$d 秒前测量</string>
+    <string name="update_error_network">无法连接更新服务。请检查网络或从官方发布页下载。</string>
+    <string name="update_error_identity">APK 包名或签名与本应用不符，已停止安装。</string>
+    <string name="update_error_integrity">下载不完整或验证失败，请重新下载。</string>
+    <string name="update_error_storage">无法保存 APK。请检查可用存储空间后重试。</string>
+    <string name="update_official_download">官方下载页</string>
+    <string name="update_permission_return">允许从 Rovunet 安装，然后返回继续。Android 将要求确认安装。</string>
+</resources>

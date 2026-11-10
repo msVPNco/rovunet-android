@@ -193,7 +193,7 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val statusLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var statusClock by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
-    LaunchedEffect(statusLifecycle, uiState.subscriptionIds, uiState.subscriptionVersion) {
+    LaunchedEffect(statusLifecycle, uiState.subscriptionIds, uiState.subscriptionVersion, uiState.connectedProfileId) {
         statusLifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             launch {
                 while (isActive) {
@@ -203,7 +203,7 @@ fun MainScreen(
             }
             while (isActive) {
                 statusClock = android.os.SystemClock.elapsedRealtime()
-                kotlinx.coroutines.delay(60_000L)
+                kotlinx.coroutines.delay(if (uiState.connectedProfileId != null) 5_000L else 60_000L)
             }
         }
     }
@@ -221,6 +221,15 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle, viewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ ->
+            viewModel.setScreenVisible(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        }
+        lifecycle.addObserver(observer)
+        viewModel.setScreenVisible(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        onDispose { lifecycle.removeObserver(observer); viewModel.setScreenVisible(false) }
+    }
     val uiResources = androidx.compose.ui.platform.LocalResources.current
     val clipboardManager = LocalClipboardManager.current
     val activity = context.findActivity()
@@ -742,6 +751,7 @@ fun MainScreen(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
+        val floatingHeader = !hasChains && !uiState.isPingRunning && uiState.smartStatus.message == 0
         // Auto-switch to chains tab when a chain is connected
         LaunchedEffect(uiState.connectedChainId) {
             if (uiState.connectedChainId != null && hasChains) selectedTab = 1
@@ -750,7 +760,7 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = if (floatingHeader) 0.dp else paddingValues.calculateTopPadding(), bottom = paddingValues.calculateBottomPadding())
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── Tab Row (only when chains exist) ────────────────────
@@ -802,7 +812,7 @@ fun MainScreen(
                             state = chainListState,
                             contentPadding = PaddingValues(
                                 start = 16.dp, end = 16.dp,
-                                top = 8.dp,
+                                top = if (floatingHeader) paddingValues.calculateTopPadding() + 8.dp else 8.dp,
                                 bottom = 200.dp + navBarPadding.calculateBottomPadding()
                             ),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -921,7 +931,7 @@ fun MainScreen(
                                 state = lazyListState,
                                 contentPadding = PaddingValues(
                                     start = 16.dp, end = 16.dp,
-                                    top = 8.dp,
+                                    top = if (floatingHeader) paddingValues.calculateTopPadding() + 8.dp else 8.dp,
                                     bottom = 200.dp + navBarPadding.calculateBottomPadding()
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -975,7 +985,7 @@ fun MainScreen(
                                     }
                                     if (expandedCollection == collectionKey) collectionPathItems(collection) { profile ->
                                         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp)
-                                            .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)) {
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,

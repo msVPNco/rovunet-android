@@ -23,7 +23,8 @@ class SmartConnectionController @Inject constructor(
     private val connection: VpnConnectionManager,
     private val repository: ProfileRepository,
     private val preferences: PreferencesDataStore,
-    private val probe: StandaloneCoreProbe
+    private val probe: StandaloneCoreProbe,
+    private val monitor: ActivePathMonitor
 ) {
     data class Status(val running: Boolean = false, val message: Int = 0, val index: Int = 0, val total: Int = 0)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -42,30 +43,19 @@ class SmartConnectionController @Inject constructor(
     fun setMode(key: String, mode: SmartPathPolicy.Mode) { cancel(); store.edit().putInt(key, mode.ordinal).apply() }
     fun cancel() { generation++; job?.cancel(); job = null; _status.value = Status() }
     fun clearResults() { _results.value = emptyMap() }
-    private fun physicalNetwork(): String? {
-        val active = network?.activeNetwork ?: return null
-        val caps = network.getNetworkCapabilities(active) ?: return null
-        return active.toString().takeIf { caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
-    }
+    private fun physicalNetwork(): String? = network?.let(PhysicalNetworkRoute::snapshot)
     private suspend fun members(key: String) = repository.getAllProfiles().first().filter {
         ProfileCollections.key(it) == key && !it.needsCredentials && !it.isExpired &&
             (it.boundDeviceId.isEmpty() || it.boundDeviceId == connection.getDeviceId()) && it.tunnelType != TunnelType.DOH
     }.sortedByDescending { it.lastConnectedAt }
     private fun record(profile: ServerProfile, value: Long?) {
         _results.value = _results.value + (profile.id to if (value == null) PingResult.Error("HTTPS_FAILED")
-            else PingResult.Success(value, verified = true, successes = 3, attempts = 3))
+            else PingResult.Success(value, verified = true, quick = true))
     }
     private data class LivePing(val ms: Long, val host: String)
     private suspend fun live(profile: ServerProfile, session: Long): LivePing? {
-        val endpoint = if (profile.tunnelType == TunnelType.XRAY) app.slipnet.tunnel.XrayBridge.activeEndpoint else preferences.configuredSocksEndpoint()
-        if (endpoint == null) return null
-        var target = TunnelProbe.HOST
-        val measured = TunnelProbe.medianVerified({
-            val state = connection.connectionState.value as? ConnectionState.Connected
-            connection.ownsSession(session) && state?.profile?.id == profile.id && state.chainId <= 0L
-        }) { host -> target = host; TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 8_000) }
-        return measured?.let { LivePing(it, target) }
+        val sample = monitor.measure(profile, session) ?: return null
+        return sample.ms?.let { LivePing(it, sample.host) }
     }
 
     private suspend fun disconnectOwned(session: Long) {
@@ -132,47 +122,79 @@ class SmartConnectionController @Inject constructor(
                     }
                     if (owner != generation || !connection.ownsSession(ownedSession)) break
                     if (physicalNetwork() == null) { _status.value = Status(true, R.string.alpha17_offline); delay(10_000); continue }
-                    if (failed == null && power?.isInteractive == false) continue
+                    if (failed == null && !monitor.visible) continue
                     val stamp = physicalNetwork()
                     val active = current ?: break
-                    var currentPing = if (failed == null) live(active, ownedSession) else null
-                    if (currentPing == null && failed == null) { delay(3_000); currentPing = live(active, ownedSession) }
-                    val currentDelay = currentPing?.ms
+                    val sample = if (failed == null) monitor.measure(active, ownedSession) else null
+                    val currentDelay = sample?.health?.medianMs
                     if (stamp != physicalNetwork()) { clearResults(); continue }
-                    record(active, currentDelay)
-                    if (currentDelay != null && (selectedMode == SmartPathPolicy.Mode.FAILOVER || currentDelay < SmartPathPolicy.SLOW_MS)) continue
+                    if (sample != null) _results.value = _results.value + (active.id to sample.result)
+                    if (failed == null) {
+                        if (sample == null || !sample.health.unstable) { continue }
+                        if (selectedMode == SmartPathPolicy.Mode.FAILOVER && sample.health.failed < 3) continue
+                    }
                     val options = if (!ProbeBypass.allows(ownedSession)) emptyList() else members(key).filter { it.id != active.id && probe.supports(it) }
                     val start = (cursor[key] ?: 0).coerceAtMost((options.size - 1).coerceAtLeast(0))
                     val shortlist = (options.drop(start) + options.take(start)).take(SmartPathPolicy.MAX_CANDIDATES)
                     if (options.isNotEmpty()) cursor[key] = (start + shortlist.size) % options.size
                     var replacement: ServerProfile? = null
+                    withTimeoutOrNull(45_000L) {
                     for (candidate in shortlist) {
                         val session = ownedSession
-                        val result = probe.measure(candidate, currentPing?.host ?: TunnelProbe.HOST) {
+                        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SMART_CANDIDATE, session)
+                        val result = probe.measure(candidate, sample?.host ?: TunnelProbe.HOST) {
                             owner == generation && connection.ownsSession(session) && stamp == physicalNetwork() &&
                                 ProbeBypass.allows(session)
                         }
                         if (stamp != physicalNetwork()) { clearResults(); break }
                         record(candidate, result)
-                        if (result != null && (currentDelay == null || SmartPathPolicy.better(currentDelay, result,
+                        if (result != null && ((failed != null || (sample?.health?.failed ?: 0) >= 3) || currentDelay != null && SmartPathPolicy.better(currentDelay, result,
                                 SystemClock.elapsedRealtime() - switchedAt))) { replacement = candidate; break }
                     }
-                    if (replacement != null && owner == generation && stamp == physicalNetwork()) {
+                    }
+                    val chosen = replacement
+                    if (chosen != null && owner == generation && stamp == physicalNetwork()) {
+                        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SMART_SWITCH, ownedSession)
                         _status.value = Status(true, R.string.alpha17_switching)
                         disconnectOwned(ownedSession); ownedSession = 0
-                        ownedSession = establish(replacement)
-                        if (ownedSession == 0L) { _status.value = Status(message = R.string.alpha17_exhausted); break }
-                        val confirmed = live(replacement, ownedSession)
-                        record(replacement, confirmed?.ms)
+                        ownedSession = establish(chosen)
+                        if (ownedSession == 0L) {
+                            ownedSession = establish(active)
+                            if (ownedSession != 0L && live(active, ownedSession) != null) {
+                                current = active; switchedAt = SystemClock.elapsedRealtime(); continue
+                            }
+                            if (ownedSession != 0L) { disconnectOwned(ownedSession); ownedSession = 0L }
+                            _status.value = Status(message = R.string.alpha17_exhausted); break
+                        }
+                        val confirmed = live(chosen, ownedSession)
+                        record(chosen, confirmed?.ms)
                         if (confirmed == null) {
                             disconnectOwned(ownedSession); ownedSession = 0
-                            start(key)
+                            // Restore the previously working path once; never recursively restart an unbounded batch.
+                            ownedSession = establish(active)
+                            if (ownedSession != 0L && live(active, ownedSession) != null) {
+                                current = active; switchedAt = SystemClock.elapsedRealtime(); continue
+                            }
+                            if (ownedSession != 0L) { disconnectOwned(ownedSession); ownedSession = 0L }
+                            _status.value = Status(message = R.string.alpha17_exhausted)
                             return@launch
                         }
-                        current = replacement; switchedAt = SystemClock.elapsedRealtime()
-                    } else if (currentDelay == null) {
+                        current = chosen; switchedAt = SystemClock.elapsedRealtime()
+                    } else if (failed != null || (sample?.health?.failed ?: 0) >= 3) {
                         disconnectOwned(ownedSession); ownedSession = 0
-                        start(key) // bounded fresh batch; ordinary native paths are tried only after the live path died
+                        var recovered: ServerProfile? = null
+                        for (candidate in members(key).filter { it.id != active.id }.take(SmartPathPolicy.MAX_CANDIDATES)) {
+                            ensureActive()
+                            if (owner != generation) break
+                            ownedSession = establish(candidate)
+                            if (ownedSession == 0L) continue
+                            val measured = live(candidate, ownedSession)
+                            record(candidate, measured?.ms)
+                            if (measured != null) { recovered = candidate; break }
+                            disconnectOwned(ownedSession); ownedSession = 0L
+                        }
+                        if (recovered != null) { current = recovered; switchedAt = SystemClock.elapsedRealtime(); continue }
+                        _status.value = Status(message = R.string.alpha17_exhausted)
                         return@launch
                     }
                 }

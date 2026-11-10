@@ -19,15 +19,15 @@ import app.slipnet.data.local.datastore.DarkMode
 
 // Brand roles are explicit in both themes; cards must remain distinct from the background.
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFC4B5FD), onPrimary = Color(0xFF2E1868),
-    primaryContainer = Color(0xFF30264C), onPrimaryContainer = Color(0xFFF1EBFF),
+    primary = Color(0xFFBDC0D9), onPrimary = Color(0xFF262D43),
+    primaryContainer = Color(0xFF30364A), onPrimaryContainer = Color(0xFFF1F2F8),
     secondary = Color(0xFF72DCE6), onSecondary = Color(0xFF00363B),
     secondaryContainer = Color(0xFF16434D), onSecondaryContainer = Color(0xFFC2F5FA),
     tertiary = Color(0xFF9DC4FF), onTertiary = Color(0xFF002F60),
     background = Color(0xFF0B1020), onBackground = Color(0xFFF1F3FC),
-    surface = Color(0xFF11182B), onSurface = Color(0xFFF1F3FC),
+    surface = Color(0xFF26354A), onSurface = Color(0xFFF1F3FC),
     surfaceContainerLowest = Color(0xFF0B1020), surfaceContainerLow = Color(0xFF172137),
-    surfaceContainer = Color(0xFF1D2941), surfaceContainerHigh = Color(0xFF26334D),
+    surfaceContainer = Color(0xFF2C3D54), surfaceContainerHigh = Color(0xFF26334D),
     surfaceContainerHighest = Color(0xFF303E58), surfaceVariant = Color(0xFF303E58),
     onSurfaceVariant = Color(0xFFC1CADD), outline = Color(0xFF8190AD), outlineVariant = Color(0xFF45536D),
     error = Color(0xFFFFB4B0), onError = Color(0xFF690005),
@@ -35,17 +35,19 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val AmoledColorScheme = DarkColorScheme.copy(
-    background = Color.Black, surface = Color(0xFF070B14), surfaceContainerLowest = Color.Black,
-    surfaceContainerLow = Color(0xFF111827), surfaceContainer = Color(0xFF192235)
+    background = Color.Black, surface = Color(0xFF161C25), surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF12151D), surfaceContainer = Color(0xFF161C25),
+    primaryContainer = Color(0xFF242A39), surfaceContainerHigh = Color(0xFF242A39),
+    outlineVariant = Color(0xFF333C49)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF5C3DB8), onPrimary = Color.White,
-    primaryContainer = Color(0xFFE9E0FF), onPrimaryContainer = Color(0xFF25104F),
+    primary = Color(0xFF505B7B), onPrimary = Color.White,
+    primaryContainer = Color(0xFFE4E8F3), onPrimaryContainer = Color(0xFF263147),
     secondary = Color(0xFF006A75), onSecondary = Color.White,
     secondaryContainer = Color(0xFFBEEFF4), onSecondaryContainer = Color(0xFF002F35),
     tertiary = Color(0xFF315C96), onTertiary = Color.White,
-    background = Color(0xFFF3F5FC), onBackground = Color(0xFF19233A),
+    background = Color(0xFFF3F5FA), onBackground = Color(0xFF19233A),
     surface = Color(0xFFF9FAFF), onSurface = Color(0xFF19233A),
     surfaceContainerLowest = Color.White, surfaceContainerLow = Color(0xFFFAFBFF),
     surfaceContainer = Color.White, surfaceContainerHigh = Color(0xFFE8ECF7),

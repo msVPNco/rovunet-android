@@ -25,6 +25,21 @@ import java.io.File
 class SoftPopUiDeviceTest {
     @get:Rule val compose = createEmptyComposeRule()
 
+    @Test fun interruptionMessagesKeepTheirSpecificReasonInAllLanguages() {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        for (language in listOf("en", "fa", "zh", "ru")) {
+            val config = android.content.res.Configuration(context.resources.configuration)
+            config.setLocale(java.util.Locale.forLanguageTag(language))
+            val resources = context.createConfigurationContext(config).resources
+            for ((code, id) in listOf("PROBE_BUSY" to app.slipnet.R.string.probe_busy,
+                "PROBE_CLEANUP" to app.slipnet.R.string.probe_cleanup,
+                "PROBE_CHANGED" to app.slipnet.R.string.probe_changed,
+                "PROBE_NETWORK_CHANGED" to app.slipnet.R.string.review02_network_changed)) {
+                org.junit.Assert.assertEquals(resources.getString(id), app.slipnet.presentation.theme.UiErrors.text(resources, code))
+            }
+        }
+    }
+
     @Test fun realHomeKeepsComfortableHeaderAcrossRtlAndThemes() = runBlocking {
         val inst = InstrumentationRegistry.getInstrumentation()
         val context = inst.targetContext
@@ -80,3 +95,4 @@ class SoftPopUiDeviceTest {
         }
     }
 }
+
