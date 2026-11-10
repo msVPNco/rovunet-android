@@ -130,6 +130,11 @@ func TestAmneziaEncryptedTcpUdpAndShutdown(t *testing.T) {
 				ipc += "s3=16\ns4=16\n"
 				conf += "S3=16\nS4=16\n"
 			}
+			if version == "2" {
+				options["h1"] = "123456-123499"
+				ipc = strings.ReplaceAll(ipc, "h1=123456", "h1=123456-123499")
+				conf = strings.ReplaceAll(conf, "H1=123456", "H1=123456-123499")
+			}
 			if version == "3.1" {
 				options["version"] = 3
 				options["header-protection-key"] = base64.StdEncoding.EncodeToString(protection)

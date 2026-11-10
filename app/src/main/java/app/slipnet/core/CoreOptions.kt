@@ -28,6 +28,12 @@ internal object CoreOptions {
     }
     fun finalMask(raw: String): JSONObject {
         require(raw.length <= 16_384) { "UNSUPPORTED_OPTION" }
+        var depth = 0; var quoted = false; var escaped = false
+        for (c in raw) {
+            if (quoted) { if (escaped) escaped = false else if (c == '\\') escaped = true else if (c == '\"') quoted = false }
+            else when (c) { '\"' -> quoted = true; '{', '[' -> { depth++; require(depth <= 8) { "UNSUPPORTED_OPTION" } }; '}', ']' -> { depth--; require(depth >= 0) } }
+        }
+        require(depth == 0 && !quoted)
         val result = JSONObject(raw); bounded(result)
         keys(result, setOf("tcp", "udp", "quicParams"))
         for (network in listOf("tcp", "udp")) result.optJSONArray(network)?.let { masks ->

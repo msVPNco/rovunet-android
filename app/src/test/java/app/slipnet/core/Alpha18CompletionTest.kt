@@ -44,6 +44,7 @@ class Alpha18CompletionTest {
         val edited = CoreLink.parse(CoreForm.decode(link).encode("renamed")).outbound
         assertEquals(stream.toString(), edited.getJSONObject("streamSettings").toString())
         rejected { CoreLink.parse(link.replace("security=tls", "security=none")) }
+        assertTrue(runCatching { CoreOptions.finalMask("{\"tcp\":" + "[".repeat(1000)) }.exceptionOrNull() is IllegalArgumentException)
         rejected { CoreOptions.finalMask("{\"tcp\":[{\"type\":\"fragment\",\"settings\":{\"masterKeyLog\":\"/tmp/log\"}}]}") }
         rejected { CoreOptions.finalMask("{\"udp\":[{\"type\":\"noise\",\"settings\":{\"script\":\"anything\"}}]}") }
     }
