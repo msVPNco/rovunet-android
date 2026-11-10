@@ -3,7 +3,6 @@ package app.slipnet.presentation.main
 import android.graphics.Bitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import app.slipnet.data.local.datastore.DarkMode
@@ -54,21 +53,27 @@ class SoftPopUiDeviceTest {
                 collectionId = "soft-pop-$index", collectionName = "Review $index")))
         }
         try {
+            // Complete onboarding in its own live window before theme recreation.
+            // Keep the real click + persistence assertions; do not mark it complete
+            // directly or dispatch a callback obtained from a retiring semantics root.
+            if (!prefs.firstLaunchDone.first()) {
+                prefs.setDarkMode(DarkMode.DARK)
+                assertTrue(ui.edit().putString("language", "en").commit())
+                ActivityScenario.launch(MainActivity::class.java).use { screen ->
+                    var start = ""
+                    screen.onActivity { start = it.getString(app.slipnet.R.string.rv_get_started_983f31) }
+                    compose.waitUntil(15000) { compose.onAllNodesWithText(start).fetchSemanticsNodes().isNotEmpty() }
+                    compose.onNodeWithText(start).assertIsDisplayed().performClick()
+                    compose.waitUntil(15000) { compose.onAllNodes(isDialog()).fetchSemanticsNodes().isEmpty() }
+                    kotlinx.coroutines.withTimeout(15000) { prefs.firstLaunchDone.first { it } }
+                }
+                inst.waitForIdleSync()
+            }
             for ((language, mode) in listOf("en" to DarkMode.DARK, "fa" to DarkMode.DARK,
                 "fa" to DarkMode.AMOLED, "en" to DarkMode.LIGHT)) {
                 prefs.setDarkMode(mode)
                 assertTrue(ui.edit().putString("language", language).commit())
-                val needsWelcome = !prefs.firstLaunchDone.first()
-                ActivityScenario.launch(MainActivity::class.java).use { screen ->
-                    var start = ""
-                    screen.onActivity { start = it.getString(app.slipnet.R.string.rv_get_started_983f31) }
-                    if (needsWelcome) {
-                        compose.waitUntil(15000) { compose.onAllNodesWithText(start).fetchSemanticsNodes().isNotEmpty() }
-                        // This is snapshot setup, not a gesture test. Invoke the
-                        // real button action without tapping a moving dialog window.
-                        compose.onNodeWithText(start).performSemanticsAction(SemanticsActions.OnClick) { action -> assertTrue(action()) }
-                        kotlinx.coroutines.withTimeout(5000) { prefs.firstLaunchDone.first { it } }
-                    }
+                ActivityScenario.launch(MainActivity::class.java).use {
                     compose.waitUntil(15000) {
                         compose.onAllNodesWithText("Review 1").fetchSemanticsNodes().isNotEmpty()
                     }

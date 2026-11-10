@@ -101,8 +101,9 @@ class SubscriptionUiDeviceTest {
             // Leave name empty to exercise hostname fallback on a real one-click import.
             compose.onNodeWithTag("subscription-import").performScrollTo().performClick()
             compose.waitUntil(5000) { calls.get() == 1 }
-            compose.onNodeWithTag("subscription-import").assertIsEnabled()
-            compose.onNodeWithTag("subscription-update").assertIsEnabled()
+            compose.onNodeWithTag("subscription-import").assertIsNotEnabled()
+            compose.onNodeWithTag("subscription-update").assertIsNotEnabled()
+            assertEquals("Only one in-flight preparation is allowed", 1, calls.get())
             gate.complete(Unit)
             compose.waitUntil(8000) { !open.value }
             compose.onAllNodes(isDialog()).assertCountEquals(0)
