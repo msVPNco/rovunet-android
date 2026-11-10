@@ -27,7 +27,7 @@ elif archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest() == e
     print('Verified cached Gradle 8.13 archive')
 else:
     # The same official release asset through a fresh API redirect, not a mirror.
-    sources = [url, 'https://api.github.com/repos/gradle/gradle-distributions/releases/assets/232373824?download=1&t=' + str(int(time.time()))]
+    sources = [url, 'https://downloads.gradle.org/distributions/gradle-8.13-bin.zip', 'https://api.github.com/repos/gradle/gradle-distributions/releases/assets/232373824?download=1&t=' + str(int(time.time()))]
     download_verified(archive, expected, sources, 200*1024*1024)
     print('Prepared checksum-verified Gradle 8.13 for the wrapper')
 

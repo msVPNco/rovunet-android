@@ -34,6 +34,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: slipstream-cargo-${{ runner.os }}-${{ hashFiles('tools/native/slipstream-android.patch') }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/verified-inputs
+            ~/.gradle/verified-maven
+          key: gradle-verified-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'tools/veyra/prepare-gradle.py') }}
       - name: Prepare checksum-verified Gradle
         run: python3 tools/veyra/prepare-gradle.py
       - name: Build private client and device tests
