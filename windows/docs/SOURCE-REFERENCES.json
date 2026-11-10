@@ -1,0 +1,140 @@
+{
+  "central_base": "c025177507ccc3036d3ff15be3199b301c1c837c",
+  "android_tag": "v0.3.0-alpha16",
+  "android_tag_commit": "201832d12d0644c93985d65d34066361f501a58f",
+  "android_application_commit": "ea5558fea6c6a2e9f2b94ef1ce8a230bd2308ba4",
+  "panel_commit": "212eda55af6faa4662c8648e0fc863fe652b8fa7",
+  "xray_official_commit": "a4a3dff5b20c2faae567b742c172c7b95e75c083",
+  "xray_android_reference_commit": "63ca2e0c1d31b89f67700c33842431f541fedd25",
+  "sources_zip_download_verified": false,
+  "reference": "Git tag source and official release metadata were read; the Android packaged ZIP was not re-downloaded.",
+  "preview2": {
+    "scope": "windows only; GitHub read-only",
+    "engine_pins": "engines/transports-pins.json",
+    "theme_sources": [
+      "app/src/main/java/app/slipnet/presentation/theme/Theme.kt",
+      "app/src/main/java/app/slipnet/presentation/theme/CollectionTones.kt"
+    ],
+    "ui_reference": "Android alpha16 CollectionCard.kt/MainScreen.kt read only",
+    "go_deps": "transports/vendor/modules.txt",
+    "windows_executed": false,
+    "owner_report": "preview.1 installation and screenshot; no assertion of preview.2 runtime"
+  },
+  "preview3": {
+    "reference_panel_tag": "v1.20.1",
+    "reference_panel_commit": "212eda55af6faa4662c8648e0fc863fe652b8fa7",
+    "actual_private_input_checked": 20,
+    "source_input_embedded": false,
+    "slipstream": "Mygod/slipstream-rust@v0.1.1",
+    "vaydns": "anonvector/vaydns@45f18f16af40b6ad666e8119be08701b21395ee2",
+    "slipstream_reference_server": "anonvector/slipgate@v1.6.8 release asset 692346247",
+    "windows_executed": false
+  },
+  "preview5": {
+    "scope": "Windows only; GitHub read only",
+    "client_design_review": "CLIENT-SOURCE-REVIEW.json",
+    "ui_reference": "Owner dark and light screenshots; no imported client UI source/assets",
+    "qr_dependency": {
+      "package": "ZXing.Net",
+      "version": "0.16.11",
+      "license": "Apache-2.0",
+      "package_sha512": "kHBBMH1ZKN4Y5IZY8Cq6iETXOr7k00ZrJ8Nbsow9QlTcJZvJVR26bX7VMR/oY1XOJuPzLyMu79WKdw+bKhechg=="
+    },
+    "stats_contract": {
+      "repository": "https://github.com/XTLS/Xray-core",
+      "commit": "a4a3dff5b20c2faae567b742c172c7b95e75c083",
+      "paths": [
+        "app/stats/command/command.proto",
+        "infra/conf/api.go",
+        "infra/conf/policy.go"
+      ],
+      "implementation": "Independent bounded C# HTTP/2 gRPC/protobuf adapter"
+    },
+    "transport_sha256": "25b185ea287cfc5e8560f223a248cdd5eb76a5152f47090b969053a0d90a7309",
+    "all_adapters_default_enabled": true,
+    "windows_executed": false
+  },
+  "preview6": {
+    "github_read_only": true,
+    "android_assets_from": "201832d12d0644c93985d65d34066361f501a58f",
+    "files_reused": [
+      {
+        "path": "app/src/main/res/drawable/ic_rovunet_status.xml",
+        "sha256": "b67deed70b11b7405c3a12665dcbb90070560b1337e2d75bc2007fbdb0b437b3"
+      },
+      {
+        "path": "app/src/main/res/drawable/ic_rovunet_status_connected.xml",
+        "sha256": "48b8a74c63cc6b6d1ea6768f13d5c9fb91e7fd34ded6606e78acb13384eb9700"
+      },
+      {
+        "path": "app/src/main/res/drawable/ic_rovunet_status_connecting.xml",
+        "sha256": "217c03a8b9bb239fc9e50d50605a3667462cf1e345ba7c9fdafbb3acc2a11713"
+      },
+      {
+        "path": "app/src/main/res/drawable/ic_rovunet_status_disconnecting.xml",
+        "sha256": "ae80e43457ae94817fb9e962e7086ad79181b5a6c24cbf92a54630d2b291aa2a"
+      },
+      {
+        "path": "app/src/main/res/drawable/ic_rovunet_status_error.xml",
+        "sha256": "1f376c05591f0a08b6c7eb5baa837a3a2bf9e9a1aadacd9b1472e38a7cbdcdda"
+      },
+      {
+        "path": "app/src/main/res/raw/resolvers.txt",
+        "sha256": "6798aaf62ca0af5a17c51557c3f890adc8c6ea5c032f6f1a568178b683302064"
+      },
+      {
+        "path": "app/src/main/assets/geo/ir.cidr",
+        "sha256": "caaed65a1d5f332bd78655b3f605bf016f3edd1fdc1d8141a79e18945ab9c0c1"
+      },
+      {
+        "path": "app/src/main/assets/geo/cn.cidr",
+        "sha256": "2869792c3d56ed8231a47182f7a4207c08d299186620a32cad76cdf2724c7c99"
+      },
+      {
+        "path": "app/src/main/assets/geo/ru.cidr",
+        "sha256": "5d5e4e425b90c8efc49ba961f92cb72ef6f3b823adc701e77b7315dc1862817c"
+      },
+      {
+        "path": "app/src/main/assets/geo/ir_dns.cidr",
+        "sha256": "b2f11df0bcc11503b7407b025451ab3d637d8d9757759a6910f10fbb3ced2a7f"
+      },
+      {
+        "path": "app/src/main/assets/geo/ir_dns_lite.cidr",
+        "sha256": "bad3a437c948eb7e045365a3832a4eead9ea9b33ceecf67de05ec21330a22467"
+      }
+    ],
+    "android_behavior_reimplemented": [
+      "DnsScannerViewModel.kt",
+      "ResolverScannerRepositoryImpl.kt",
+      "SoarResolverProbe.kt",
+      "ConfigImporter.kt",
+      "ConfigExporter.kt",
+      "BundleCrypto.kt",
+      "MainScreen.kt",
+      "CollectionInference.kt",
+      "ProfileDuplicates.kt"
+    ],
+    "external_implementations": {
+      "dns_wire": "existing vendor/www.bamsoftware.com/git/dnstt.git/dns",
+      "soar": "existing pinned soar-mobile + getlantern/soar v0.2.4",
+      "VayDNS_TCP": "CC0 pinned VayDNS client with a local plain TCP resolver branch; see deps/MODIFICATIONS.md"
+    },
+    "independent_references": [
+      "https://www.rfc-editor.org/rfc/rfc1035",
+      "https://www.rfc-editor.org/rfc/rfc8484",
+      "https://github.com/Mygod/slipstream-rust/discussions/111"
+    ],
+    "transport_sha256": "bd707b41f975442dc4cc515c4b71bbda457bccb23644ca1beb68b7b5f32e4360",
+    "windows_executed": false
+  },
+  "preview13": {
+    "license": "AGPL-3.0; original SlipNet/Rovunet attribution retained",
+    "core_link_sha256": "4d781a83b6ebd6820189ad1dcf453de9d3fb0b3110f95084ac85d721eda26aa2",
+    "editor_reference": "app/src/main/java/app/slipnet/presentation/profiles/CoreProfileEditor.kt",
+    "scope": "Windows only; local Android alpha17 source reference; no Android/panel edits",
+    "behavior": "VLESS TCP/REALITY/XHTTP, Hysteria2, WireGuard field set, masked fields, server-match hint and copy-on-conversion",
+    "android_reference_archive_sha256": "799c7aaf73d02d61003a2d7078f66d504a82ecc7d75bd7f126762915ff8e9856",
+    "windows_implementation": "CoreProfileEditing.cs, CoreProfileEditor.cs; preserves existing native envelope and WS support",
+    "core_form_sha256": "e07a88eefba3063c9f9ab8c3b6f03bd812a8357975734eae4f4d76537a174b7f"
+  }
+}

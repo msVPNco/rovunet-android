@@ -26,7 +26,7 @@
 | Платформа | Состояние | Загрузка и подробности |
 | --- | --- | --- |
 | **Android** | Публичный выпуск: **0.3.0-alpha18.1 Full, код 39** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) · [Страница Android](docs/android/README.ru.md) |
-| **Windows** | В разработке; проверенного публичного выпуска пока нет | Выпуски будут с тегом `windows-v<version>` |
+| **Windows** | **0.1.0 Beta · x64 · установщик без подписи** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta) · [Страница Windows](windows/README.md) |
 | **Linux** | Планируется | Выпусков пока нет |
 | **macOS** | Планируется | Выпуски будут с тегом `macos-v<version>` |
 

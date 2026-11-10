@@ -87,3 +87,7 @@ and voluntarily published donation address are intentional public project data.
 Record the exact build/source commit and actual test scope. Never describe
 skipped checks, emulator-only evidence or reused native binaries as fresh
 physical-network validation or a complete native rebuild.
+
+## Windows 0.1.0 Beta publication authorization
+
+On 2026-11-11 the owner explicitly requested GitHub publication as Windows0.1.0 Beta after reporting successful traffic on tested paths except Hysteria2/WireGuard. The beta changes version/packaging/public documentation from reviewed preview20/final4; connection implementation is identical. Source commit562a3d71670ceb7de909146bf68116d5cc614496; installer SHA256 bd1a46ab066cbb6f93850d9398b4c1a651407297550238ac6c2b6daf37bf0d3a. Publish only the listed verified assets under windows-v0.1.0-beta, marked prerelease, preserving Android Latest and all Android application/signing/build inputs. This permission is for this Windows iteration only. See docs/releases/windows-0.1.0-beta-provenance.json.

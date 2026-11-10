@@ -1,0 +1,50 @@
+{
+  "go": {
+    "version": "go1.27.3",
+    "build_flags": [
+      "-mod=vendor",
+      "-buildvcs=false",
+      "-trimpath",
+      "-ldflags=-s -w"
+    ],
+    "cgo_enabled": false,
+    "linux_sdk_sha256": "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40"
+  },
+  "naive": {
+    "version": "v154.0.8037.49-5",
+    "source": "https://github.com/klzgrad/naiveproxy/tree/v154.0.8037.49-5",
+    "license": "BSD-3-Clause / Chromium notices",
+    "assets": {
+      "windows-x64": {
+        "asset_id": 666568903,
+        "archive_sha256": "36d14c117ed052c8d04d10a30db083423ad4e423c012c2ef2ca7286ec06afbbc",
+        "executable_sha256": "ecf6f56a834a3e945e703ddb766b32c8c474e9767d472bb0b45177c33300aa79",
+        "name": "naiveproxy-v154.0.8037.49-5-win-x64.zip"
+      },
+      "linux-x64": {
+        "asset_id": 666601716,
+        "archive_sha256": "80214dfea1767f6ecf63a3a79dc9f48b203460f51abc609357fff48dd5844c7d",
+        "executable_sha256": "f86c52be454eebc9134aad476f3fe91fcf90df7200c3df262a4d0a3d2de85464",
+        "name": "naiveproxy-v154.0.8037.49-5-linux-x64.tar.xz"
+      }
+    }
+  },
+  "source_pins": {
+    "noizdns": "17ac5cf4e45cd09fa6f4bde09362e334dc4b8b55",
+    "dnstt": "51bdba3948d44b3175bc88ea40b2116bb9daff07",
+    "soar-mobile": "c025177507ccc3036d3ff15be3199b301c1c837c:soar-mobile",
+    "getlantern/soar": "v0.2.4",
+    "vaydns": "45f18f16af40b6ad666e8119be08701b21395ee2",
+    "kcp-go": "github.com/net2share/kcp-go/v5 v5.0.0-20260325165956-416ba9d3856d"
+  },
+  "slipstream": {
+    "repo": "Mygod/slipstream-rust",
+    "tag": "v0.1.1",
+    "source_commit": "c7b265c11dd13d6dfd601bc81d54d61ee9bdde23",
+    "asset_api": "https://api.github.com/repos/Mygod/slipstream-rust/releases/assets/424859944?download=1",
+    "archive_sha256": "7efc45bafab08aebacba10aa19562793de29dcd67e89f75ce8a3942b8da1e59e",
+    "executable_sha256": "206b43eacdae8c035176e458005117b7874d22ad82d896f01524f247bae6f43c",
+    "linux_fixture_archive_sha256": "5572d407d685a4a87e4de5a7121566d48ac719068e50ad69705793dc6d9ff682",
+    "licence": "Apache-2.0, individual bundled components retain their licences"
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "verification": {
+    "version": "0.1.0-beta",
+    "platform": "windows-x64",
+    "tag": "windows-v0.1.0-beta",
+    "date": "2026-11-11",
+    "repository": "msVPNco/rovunet-app",
+    "sourceCommit": "562a3d71670ceb7de909146bf68116d5cc614496",
+    "windowsTree": "5a729180e8175327f485d009b63d3e150b2437de",
+    "sourceMembers": 1711,
+    "remoteSourceBlobHashesVerified": true,
+    "sourceZipMembersVerified": true,
+    "privateSourceAuditPassed": true,
+    "freshWindowsSuites": [
+      {
+        "mode": "scanner20",
+        "exit": 0,
+        "passed": true,
+        "count": 25,
+        "failures": []
+      },
+      {
+        "mode": "product20",
+        "exit": 0,
+        "passed": true,
+        "count": 42,
+        "failures": []
+      },
+      {
+        "mode": "card20",
+        "exit": 0,
+        "passed": true,
+        "count": 10,
+        "failures": []
+      },
+      {
+        "mode": "trust-telemetry",
+        "exit": 0,
+        "passed": true,
+        "count": 71,
+        "failures": []
+      },
+      {
+        "mode": "extra-protocol-network",
+        "exit": 0,
+        "passed": true,
+        "count": 57,
+        "failures": []
+      },
+      {
+        "mode": "smoke",
+        "exit": 0,
+        "passed": true,
+        "count": 101,
+        "failures": []
+      },
+      {
+        "mode": "setup-preview",
+        "exit": 0,
+        "passed": true,
+        "count": 50,
+        "failures": []
+      },
+      {
+        "mode": "setup-exercise",
+        "exit": 0,
+        "passed": true,
+        "count": 30,
+        "failures": []
+      }
+    ],
+    "freshWindowsAssertions": 386,
+    "freshDomainAssertions": 239,
+    "freshDomainFailures": 0,
+    "connectionImplementationIdenticalToReviewedBaseline": true,
+    "baselineEvidence": {
+      "review": "preview20/final4",
+      "localWindowsAssertions": 1334,
+      "domainAssertions": 239,
+      "reusedWithSourceEquivalence": true,
+      "betaExternalDnsAuditRerun": false,
+      "ownerReportedSuccessfulTrafficExcept": [
+        "Hysteria2",
+        "WireGuard"
+      ],
+      "slipstreamHistoricalHttpsAudit": "20-second deadline exceeded; later owner-reported traffic succeeded",
+      "publicFeedDownloads": "intermittent failures observed; no universal availability claim"
+    },
+    "signing": {
+      "windowsAuthenticode": "NotSigned",
+      "androidSigningKeyUsed": false
+    },
+    "installerTesting": "Isolated install, upgrade, rollback, uninstall, shortcut and completion flow; normal owner installation untouched",
+    "unverified": [
+      "Actual beta install/elevation in Program Files",
+      "Physical touch, all OS DPI settings and hardware suspend",
+      "Device-wide TUN and forced per-process routing"
+    ],
+    "engines": [
+      {
+        "name": "naive.exe",
+        "sha256": "ecf6f56a834a3e945e703ddb766b32c8c474e9767d472bb0b45177c33300aa79",
+        "freshlyRebuiltForBeta": false
+      },
+      {
+        "name": "rovunet-transports.exe",
+        "sha256": "891a70e6fbb044e4f61070f0583d0d30a1ef445893bf3d9b406afebd9679f7e0",
+        "freshlyRebuiltForBeta": false
+      },
+      {
+        "name": "slipstream-client.exe",
+        "sha256": "206b43eacdae8c035176e458005117b7874d22ad82d896f01524f247bae6f43c",
+        "freshlyRebuiltForBeta": false
+      },
+      {
+        "name": "xray.exe",
+        "sha256": "d5b558191cccb1e92a5772b68b8cab67717b26f634b0f15153215f65ae982a7e",
+        "freshlyRebuiltForBeta": false
+      }
+    ],
+    "artifacts": [
+      {
+        "name": "Rovunet-Windows-0.1.0-Beta-Guide-FA.txt",
+        "bytes": 4538,
+        "sha256": "391b8b8dc9062d170e692e162af9bb4d015ac85e148943c6db81cf74dfb5f426"
+      },
+      {
+        "name": "Rovunet-Windows-0.1.0-Beta-source.zip",
+        "bytes": 7161940,
+        "sha256": "060e92e73ed0676ef718bcf2ea17251d4f048674cc7aa7c9c5d642cac03bab95"
+      },
+      {
+        "name": "Rovunet-Windows-0.1.0-Beta-x64-Setup.exe",
+        "bytes": 213287982,
+        "sha256": "bd1a46ab066cbb6f93850d9398b4c1a651407297550238ac6c2b6daf37bf0d3a"
+      },
+      {
+        "name": "SOURCE-MANIFEST.json",
+        "bytes": 317947,
+        "sha256": "2ea9453272d567a9512dd5905323ee150bd934423777f0629c34380082c38670"
+      },
+      {
+        "name": "Xray-core-source.zip",
+        "bytes": 1960131,
+        "sha256": "2ccfe5eb7561008ca65aa0d9834a27062b4c4797bb978a66be038ddb4fe17b63"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "name": "Rovunet-Windows-0.1.0-Beta-Guide-FA.txt",
+      "bytes": 4538,
+      "sha256": "391b8b8dc9062d170e692e162af9bb4d015ac85e148943c6db81cf74dfb5f426"
+    },
+    {
+      "name": "Rovunet-Windows-0.1.0-Beta-source.zip",
+      "bytes": 7161940,
+      "sha256": "060e92e73ed0676ef718bcf2ea17251d4f048674cc7aa7c9c5d642cac03bab95"
+    },
+    {
+      "name": "Rovunet-Windows-0.1.0-Beta-x64-Setup.exe",
+      "bytes": 213287982,
+      "sha256": "bd1a46ab066cbb6f93850d9398b4c1a651407297550238ac6c2b6daf37bf0d3a"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 581,
+      "sha256": "166a5a87e16d7f8cddfc38dc1b7f36cc19ce8fb545399df12afbe3fc103d6e17"
+    },
+    {
+      "name": "SOURCE-MANIFEST.json",
+      "bytes": 317947,
+      "sha256": "2ea9453272d567a9512dd5905323ee150bd934423777f0629c34380082c38670"
+    },
+    {
+      "name": "VERIFICATION.json",
+      "bytes": 4206,
+      "sha256": "1c892b2222f9bedb1e20c4b8a2387f13b119426ddd34c16d7d53d8484c009641"
+    },
+    {
+      "name": "Xray-core-source.zip",
+      "bytes": 1960131,
+      "sha256": "2ccfe5eb7561008ca65aa0d9834a27062b4c4797bb978a66be038ddb4fe17b63"
+    }
+  ]
+}

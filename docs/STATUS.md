@@ -1,3 +1,7 @@
+## Windows 0.1.0 Beta
+
+Windows x64 beta: [release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta), [source and scope](../windows/README.md), [verification](releases/windows-0.1.0-beta-provenance.json). Unsigned; Hysteria2/WireGuard and TUN/per-process routing limitations are disclosed.386 fresh Windows/installer assertions and239 domain tests passed; platform-specific prerelease leaves Android Latest unchanged.
+
 # Rovunet — current release / وضعیت فعلی
 
 ## English
