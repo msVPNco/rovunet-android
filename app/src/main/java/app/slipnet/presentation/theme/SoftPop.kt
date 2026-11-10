@@ -40,12 +40,12 @@ fun SoftPopIconButton(onClick: () -> Unit, modifier: Modifier = Modifier, enable
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) .94f else 1f, spring(dampingRatio = .7f), label = "softPopPress")
     val colors = MaterialTheme.colorScheme
-    FilledIconButton(onClick, enabled = enabled, interactionSource = interaction,
+    IconButton(onClick, enabled = enabled, interactionSource = interaction,
         modifier = modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).padding(3.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = if (pressed) 1.dp.toPx() else 4.dp.toPx(); shape = CircleShape; clip = true }
             .background(Brush.verticalGradient(listOf(colors.primary.copy(alpha = .24f), colors.primaryContainer)), CircleShape),
-        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Transparent,
-            contentColor = colors.primary, disabledContainerColor = Color.Transparent), content = content)
+        colors = IconButtonDefaults.iconButtonColors(contentColor = colors.primary,
+            disabledContentColor = colors.onSurface.copy(alpha = .38f)), content = content)
 }
 
 @Composable

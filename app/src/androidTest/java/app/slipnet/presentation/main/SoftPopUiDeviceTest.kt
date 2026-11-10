@@ -3,6 +3,7 @@ package app.slipnet.presentation.main
 import android.graphics.Bitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.core.app.ActivityScenario
 import androidx.test.platform.app.InstrumentationRegistry
 import app.slipnet.data.local.datastore.DarkMode
@@ -48,7 +49,9 @@ class SoftPopUiDeviceTest {
                     screen.onActivity { start = it.getString(app.slipnet.R.string.rv_get_started_983f31) }
                     if (needsWelcome) {
                         compose.waitUntil(15000) { compose.onAllNodesWithText(start).fetchSemanticsNodes().isNotEmpty() }
-                        compose.onNodeWithText(start).performClick()
+                        // This is snapshot setup, not a gesture test. Invoke the
+                        // real button action without tapping a moving dialog window.
+                        compose.onNodeWithText(start).performSemanticsAction(SemanticsActions.OnClick) { action -> assertTrue(action()) }
                         kotlinx.coroutines.withTimeout(5000) { prefs.firstLaunchDone.first { it } }
                     }
                     compose.waitUntil(15000) {
