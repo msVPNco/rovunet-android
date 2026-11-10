@@ -43,6 +43,10 @@ jobs:
           key: gradle-verified-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'tools/veyra/prepare-gradle.py') }}
       - name: Prepare checksum-verified Gradle
         run: python3 tools/veyra/prepare-gradle.py
+      - name: Compile Kotlin against verified bindings before native rebuild
+        run: |
+          python3 tools/veyra/prepare-native.py --bindings-only
+          bash gradlew -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2 :app:compileFullDebugKotlin -ProvunetVerifiedBuildInputs=true -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
       - name: Build private client and device tests
         run: |
           python3 tools/veyra/prepare-native.py
