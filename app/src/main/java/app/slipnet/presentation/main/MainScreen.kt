@@ -527,7 +527,7 @@ fun MainScreen(
         topBar = {
             SoftPopGlass(modifier = Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), header = true) {
             TopAppBar(
-                modifier = Modifier.heightIn(min = 72.dp).padding(vertical = 4.dp),
+                modifier = Modifier.testTag("soft-pop-header").heightIn(min = 72.dp).padding(vertical = 4.dp),
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Row(

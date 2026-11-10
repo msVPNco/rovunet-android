@@ -12,7 +12,7 @@ Use Linux, JDK 21, SDK platform 36, build tools, NDK 29.0.14206865, Python 3 and
 python3 tools/veyra/prepare-native.py
 ```
 
-Preparation validates the inherited Full APK before recovering unchanged engines and builds the pinned core/launcher. `veyraPrebuiltNative=true` avoids rebuilding unchanged engines; it is not a claim of a fresh complete native rebuild. Building OpenSSL from source uses the versioned script, not an unverified downloaded archive.
+Preparation validates the inherited Full APK before recovering unchanged engines and builds the pinned core/launcher. It also rebuilds Hev and the patched Slipstream client for the three Full ABIs. The new client is `librovunet_slipstream.so`; the original pinned `libslipstream.so` remains byte-identical for legacy encrypted links. `veyraPrebuiltNative=true` packages these prepared inputs; it is not a claim of a fresh complete native rebuild. The old Gradle cargo packaging path is blocked because it would overwrite the legacy codec. Building OpenSSL from source uses the versioned script, not an unverified downloaded archive.
 
 ## Private validation package
 

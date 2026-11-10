@@ -366,6 +366,9 @@ tasks.whenTaskAdded {
     when (name) {
         "cargoBuildArm", "cargoBuildArm64", "cargoBuildX86_64" -> {
             dependsOn("verifyOpenSsl")
+            doFirst {
+                throw GradleException("The legacy cargo packaging path would replace the configuration codec. Run python3 tools/veyra/prepare-native.py, then Gradle with -PveyraPrebuiltNative=true; the client and legacy codec must remain separate.")
+            }
         }
         "mergeFullDebugJniLibFolders", "mergeFullReleaseJniLibFolders",
         "mergeLiteDebugJniLibFolders", "mergeLiteReleaseJniLibFolders" -> {

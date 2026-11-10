@@ -16,6 +16,7 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.main.SoftPopUiDeviceTest", "realHomeKeepsComfortableHeaderAcrossRtlAndThemes"),
     ("app.slipnet.service.SlipstreamIsolationDeviceTest", "pinnedQuicCarriesRealBytesAndRejectsAnotherCertificate"),
     ("app.slipnet.service.SlipstreamIsolationDeviceTest", "fourWorkersHaveIndependentProcessesAndReleaseCancelledSlots"),
     ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "allRejectedPreviewShowsReasonAndCannotCreateOrReplaceSource"),
@@ -170,7 +171,8 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png"):
+    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
+                     "home-alpha18-en-dark.png", "home-alpha18-fa-dark.png", "home-alpha18-fa-amoled.png", "home-alpha18-en-light.png"):
         with (previews / filename).open("wb") as image:
             subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
                             "cat", "files/" + filename], stdout=image, check=True)
