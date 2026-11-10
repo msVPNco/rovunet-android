@@ -325,7 +325,7 @@ class ConfigImporter @Inject constructor() {
 
         if (profiles.any { p -> (p.tunnelType == TunnelType.VLESS && p.vlessSecurity == "none") ||
                 (p.tunnelType == TunnelType.XRAY && p.coreLink.startsWith("vless://", true) &&
-                    runCatching { app.slipnet.core.CoreLink.parse(p.coreLink).outbound.optJSONObject("streamSettings")?.optString("security") == "none" }.getOrDefault(false)) }) {
+                    runCatching { app.slipnet.core.CoreLink.isUnencryptedVless(app.slipnet.core.CoreLink.parse(p.coreLink).outbound) }.getOrDefault(false)) }) {
             warnings += "A VLESS path uses security=none (unencrypted transport)"
         }
         return ImportResult.Success(profiles.mapIndexed { i, p -> p.copy(importAccountHint = accountHints.getOrNull(i).orEmpty()) }, warnings)
@@ -403,12 +403,14 @@ class ConfigImporter @Inject constructor() {
         if (fields.size < 88) return ProfileParseResult.Error("Line $lineNum: Incomplete v33 credentials")
         return try {
             val credentials = org.json.JSONObject(String(WireBase64.decode(fields[87]), Charsets.UTF_8))
+            app.slipnet.domain.model.SlipstreamIdentity.certificate(credentials.optString("slipstreamCertificate"))
             val restored = fields.toMutableList().also {
                 it[12] = credentials.getString("socksUser"); it[13] = credentials.getString("socksPass")
                 it[15] = credentials.getString("sshUser"); it[16] = credentials.getString("sshPass")
             }
             val base = parseProfileV32(restored, lineNum)
             if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(
+                slipstreamCertificate = credentials.optString("slipstreamCertificate"),
                 sshUsername = credentials.getString("sshUser"), sshPassword = credentials.getString("sshPass"),
                 socksUsername = credentials.getString("socksUser").ifEmpty { null },
                 socksPassword = credentials.getString("socksPass").ifEmpty { null })) else base

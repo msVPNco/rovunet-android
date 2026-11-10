@@ -32,7 +32,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         fun enc(v: String) = URLEncoder.encode(v, "UTF-8").replace("+", "%20")
         if (kind == "wireguard") {
             fun line(key: String, label: String) = if (this[key].isBlank()) "" else "$label = ${this[key].trim()}\n"
-            return "[Interface]\n" + line("privatekey", "PrivateKey") + line("address", "Address") + line("dns", "DNS") + line("mtu", "MTU") +
+            return "[Interface]\n" + line("privatekey", "PrivateKey") + line("address", "Address") + line("dns", "DNS") + line("mtu", "MTU") + AmneziaConfig.labels.entries.joinToString("") { (key, label) -> line(key, label) } +
                 "\n[Peer]\n" + line("publickey", "PublicKey") + line("presharedkey", "PresharedKey") + line("endpoint", "Endpoint") + line("allowedips", "AllowedIPs") + line("persistentkeepalive", "PersistentKeepalive")
         }
         val host = this["server"].trim().removeSurrounding("[", "]")
@@ -49,7 +49,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             val o = org.json.JSONObject().put("v", "2").put("ps", name).put("add", host).put("port", this["port"]).put("id", this["auth"]).put("aid", "0")
                 .put("scy", this["cipher"].ifBlank { "auto" }).put("net", this["type"].ifBlank { "tcp" }).put("type", if (this["type"] == "grpc") this["mode"].ifBlank { "gun" } else "none")
                 .put("tls", this["security"].ifBlank { "none" })
-            for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh")) if (this[k].isNotBlank()) o.put(k, this[k])
+            for (k in listOf("host", "sni", "alpn", "fp", "allowInsecure", "insecure", "ed", "eh", "cs", "fm")) if (this[k].isNotBlank()) o.put(k, this[k])
             if (this["type"] == "grpc" && this["authority"].isNotBlank()) o.put("host", this["authority"])
             o.put("path", if (this["type"] == "grpc") this["serviceName"] else if (this["type"] in setOf("ws", "httpupgrade")) this["path"].ifBlank { "/" } else this["path"])
             val link = "vmess://" + app.slipnet.data.export.WireBase64.encode(o.toString().toByteArray(Charsets.UTF_8))
@@ -67,6 +67,8 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         if (kind in setOf("vless", "trojan")) {
             if (q["type"] != "grpc") listOf("serviceName", "authority").forEach(q::remove)
             if (q["type"] != "ws") listOf("ed", "eh").forEach(q::remove)
+            if (q["type"] != "ws") q.remove("heartbeatPeriod")
+            if (q["type"] !in setOf("kcp", "mkcp")) listOf("mtu", "tti").forEach(q::remove)
             if (q["type"] !in setOf("grpc", "xhttp")) q.remove("mode")
         }
         val query = q.filterValues { it.isNotBlank() }.entries.joinToString("&") { enc(it.key) + "=" + enc(it.value) }
@@ -88,7 +90,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
                 return CoreForm("ss", mapOf("server" to parsed.host, "port" to server.getInt("port").toString(),
                     "method" to server.getString("method"), "auth" to server.getString("password")))
             }
-            val text = CoreSharing.normalize(raw.trim())
+            val text = if (raw.trim().startsWith("wireguard://", true)) CoreLink.wireguardDocument(CoreSharing.normalize(raw.trim())) else CoreSharing.normalize(raw.trim())
             if (text.startsWith("[Interface]", true)) {
                 val fields = text.lines().map { it.substringBefore('#').trim() }.filter { '=' in it }.associate {
                     val pair = it.split('=', limit = 2); pair[0].trim().lowercase() to pair[1].trim()
@@ -104,8 +106,11 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             fields["port"] = (if (uri.port < 0) 443 else uri.port).toString()
             fields["auth"] = dec(uri.rawUserInfo)
             val kind = if (uri.scheme in setOf("hysteria2", "hy2")) "hysteria2" else uri.scheme.lowercase()
+            if (kind == "vmess" && fields.containsKey("encryption")) {
+                fields["cipher"] = fields.getValue("encryption"); fields.remove("encryption")
+            }
             if (kind == "vless") {
-                fields["type"] = when (fields["type"]) { null, "raw" -> "tcp"; "websocket" -> "ws"; else -> fields.getValue("type") }
+                fields["type"] = when (fields["type"]) { null, "raw" -> "tcp"; "websocket" -> "ws"; "mkcp" -> "kcp"; else -> fields.getValue("type") }
                 fields.putIfAbsent("security", "none")
             }
             return CoreForm(kind, fields)

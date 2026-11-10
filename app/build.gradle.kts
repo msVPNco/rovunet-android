@@ -21,8 +21,8 @@ require(!minifiedBindingTests || deviceCandidate) { "Minified binding instrument
 // Prepare a non-installable Release artifact for an offline signer; never a debug-signed public APK.
 val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
 require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
-val appVersionName = if (deviceCandidate) "0.3.0-alpha17-review03" else "0.3.0-alpha17"
-val appVersionCode = 36
+val appVersionName = if (deviceCandidate) "0.3.0-alpha18.1-review01" else "0.3.0-alpha18.1"
+val appVersionCode = 39
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"
@@ -366,6 +366,9 @@ tasks.whenTaskAdded {
     when (name) {
         "cargoBuildArm", "cargoBuildArm64", "cargoBuildX86_64" -> {
             dependsOn("verifyOpenSsl")
+            doFirst {
+                throw GradleException("The legacy cargo packaging path would replace the configuration codec. Run python3 tools/veyra/prepare-native.py, then Gradle with -PveyraPrebuiltNative=true; the client and legacy codec must remain separate.")
+            }
         }
         "mergeFullDebugJniLibFolders", "mergeFullReleaseJniLibFolders",
         "mergeLiteDebugJniLibFolders", "mergeLiteReleaseJniLibFolders" -> {

@@ -71,6 +71,12 @@ fun CoreProfileEditor(
                 field("address", app.slipnet.R.string.rv_interface_addresses_cidr_comma_separated_3cdfb2)
                 field("dns", app.slipnet.R.string.rv_dns_servers_optional_4e8d1b)
                 field("mtu", app.slipnet.R.string.rv_mtu_optional_3fa48b)
+                for ((key, label) in app.slipnet.core.AmneziaConfig.labels) if (form[key].isNotBlank()) {
+                    OutlinedTextField(value = form[key], onValueChange = { onField(key, it) },
+                        label = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.amnezia_parameter, label)) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        visualTransformation = if (key == "headerprotectionkey") androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None)
+                }
                 Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_peer_f8e772), style = MaterialTheme.typography.titleMedium)
                 field("publickey", app.slipnet.R.string.rv_server_public_key_3bff38)
                 field("presharedkey", app.slipnet.R.string.rv_preshared_key_optional_580dd0, secret = true)
@@ -82,7 +88,7 @@ fun CoreProfileEditor(
                 field("port", app.slipnet.R.string.rv_server_port_426f91)
                 field("auth", if (form.kind in setOf("vless", "vmess")) app.slipnet.R.string.editor_uuid else app.slipnet.R.string.editor_core_auth_password, secret = true)
                 if (form.kind in setOf("vless", "trojan", "vmess")) {
-                    choices("type", app.slipnet.R.string.rv_transport_aaead4, if (form.kind == "vless") listOf("tcp", "xhttp", "ws", "grpc", "httpupgrade") else listOf("tcp", "ws", "grpc", "httpupgrade"), "tcp")
+                    choices("type", app.slipnet.R.string.rv_transport_aaead4, if (form.kind == "vless") listOf("tcp", "xhttp", "ws", "grpc", "httpupgrade", "kcp") else listOf("tcp", "ws", "grpc", "httpupgrade"), "tcp")
                     choices("security", app.slipnet.R.string.editor_security_label, when (form.kind) { "trojan" -> listOf("tls"); "vmess" -> listOf("tls", "none"); else -> listOf("reality", "tls", "none") }, "none")
                     if (form.kind == "vmess") choices("cipher", app.slipnet.R.string.review03_vmess_cipher, listOf("auto", "aes-128-gcm", "chacha20-poly1305"), "auto")
                     if (form["security"] != "none") {

@@ -54,6 +54,7 @@ class ProfileMapper @Inject constructor(
             updatedAt = entity.updatedAt,
             tunnelType = TunnelType.fromValue(entity.tunnelType),
             dnsttPublicKey = entity.dnsttPublicKey,
+            slipstreamCertificate = entity.slipstreamCertificate,
             sshUsername = entity.sshUsername,
             sshPassword = entity.sshPassword,
             sshPort = entity.sshPort,
@@ -139,6 +140,7 @@ class ProfileMapper @Inject constructor(
 
     /** Plain in-memory comparison/write input. The DAO seals it before persistence. */
     internal fun toSnapshot(profile: ServerProfile): ProfileEntity {
+        app.slipnet.domain.model.SlipstreamIdentity.certificate(profile.slipstreamCertificate)
         val resolversJson = gson.toJson(profile.resolvers)
         val defaultResolversJson = gson.toJson(profile.defaultResolvers)
 
@@ -160,6 +162,7 @@ class ProfileMapper @Inject constructor(
             updatedAt = profile.updatedAt,
             tunnelType = profile.tunnelType.value,
             dnsttPublicKey = profile.dnsttPublicKey,
+            slipstreamCertificate = profile.slipstreamCertificate,
             sshUsername = profile.sshUsername,
             sshPassword = profile.sshPassword,
             sshPort = profile.sshPort,

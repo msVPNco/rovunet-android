@@ -22,6 +22,7 @@ fun AboutDialogContent() {
         Text(resources.getString(R.string.settings_experimental_alpha_build_device_and_network_compatibility_testing_aba1ce), style = MaterialTheme.typography.bodySmall)
         TelegramCommunityLink()
         SupportRovunetCard()
+        Text(resources.getString(R.string.amnezia_engine_notice), style = MaterialTheme.typography.bodySmall)
         Text(resources.getString(R.string.settings_open_source_acknowledgements_c41241), style = MaterialTheme.typography.titleSmall)
         Text(resources.getString(R.string.settings_based_on_slipnet_2_5_6_full_by_its_original_contributors_rovunet__206a83), style = MaterialTheme.typography.bodySmall)
     }

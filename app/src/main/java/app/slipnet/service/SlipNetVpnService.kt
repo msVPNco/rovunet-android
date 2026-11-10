@@ -935,6 +935,9 @@ class SlipNetVpnService : VpnService() {
         // Determine if VPN is needed before outermost layer
         val outermost = profiles.first()
         val needsVpnFirst = app.slipnet.domain.model.ChainValidation.needsVpnFirst(outermost.tunnelType)
+        // The outer core's sockets must bypass the TUN, as in standalone Xray.
+        // Establishing before setting the type would capture the core itself.
+        if (outermost.tunnelType == TunnelType.XRAY) currentTunnelType = TunnelType.XRAY
 
         if (!isProxyOnly && needsVpnFirst && vpnInterface == null) {
             vpnInterface = establishVpnInterface(dnsServer)
@@ -1117,7 +1120,7 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Start tun2socks on the final proxy port
-        val tun2socksResult = vpnRepository.startTun2Socks(profiles.first(), requireNotNull(vpnInterface) { "Chain VPN interface unavailable" })
+        val tun2socksResult = vpnRepository.startTun2Socks(if (profiles.first().tunnelType == TunnelType.XRAY) profiles.last() else profiles.first(), requireNotNull(vpnInterface) { "Chain VPN interface unavailable" })
         if (tun2socksResult.isFailure) {
             reportConnectionError(tun2socksResult.exceptionOrNull()?.message ?: "Failed to start tunnel")
             for (layer in activeChainLayers.reversed()) withContext(Dispatchers.IO) { stopLayer(layer) }
@@ -1152,6 +1155,14 @@ class SlipNetVpnService : VpnService() {
         internalPortBase: Int = layerPort + 1
     ): Result<Unit> {
         return when (profile.tunnelType) {
+            TunnelType.XRAY -> {
+                if (layerIndex != 0 || isLast || prevPort > 0)
+                    return Result.failure(IllegalArgumentException("Xray must be the outer layer before SSH"))
+                val endpoint = app.slipnet.core.LocalSocksEndpoint(layerPort,
+                    java.util.UUID.randomUUID().toString(), java.util.UUID.randomUUID().toString())
+                coreEndpoint = endpoint
+                withContext(Dispatchers.IO) { XrayBridge.start(this@SlipNetVpnService, profile.coreLink, endpoint, null) }
+            }
             TunnelType.DNSTT, TunnelType.NOIZDNS -> {
                 DnsttBridge.setVpnService(this@SlipNetVpnService)
                 val isNoizdns = profile.tunnelType == TunnelType.NOIZDNS
@@ -1290,6 +1301,13 @@ class SlipNetVpnService : VpnService() {
                 // Create a named SSH instance for this chain layer
                 val sshInstance = SshTunnelBridge.createInstance("chain-ssh-$layerIndex")
                 configureSshInstance(sshInstance, profile)
+                if (isLast) {
+                    // The final named instance is the user-facing listener. The
+                    // default bridge's auth settings do not propagate to it.
+                    val endpoint = preferencesDataStore.configuredSocksEndpoint()
+                    sshInstance.localAuthUsername = endpoint.user
+                    sshInstance.localAuthPassword = endpoint.password
+                }
 
                 if (prevPort > 0) {
                     val resolvedPrevType = prevLayerType
@@ -1332,8 +1350,8 @@ class SlipNetVpnService : VpnService() {
                                     sshPassword = profile.sshPassword,
                                     proxyHost = prevHost,
                                     proxyPort = prevPort,
-                                    socksUsername = prevProfile?.socksUsername,
-                                    socksPassword = prevProfile?.socksPassword,
+                                    socksUsername = if (prevLayerType == TunnelType.XRAY) coreEndpoint?.user else prevProfile?.socksUsername,
+                                    socksPassword = if (prevLayerType == TunnelType.XRAY) coreEndpoint?.password else prevProfile?.socksPassword,
                                     listenPort = layerPort,
                                     listenHost = layerHost,
                                     blockDirectDns = preferencesDataStore.preventDnsFallback.first(),
@@ -1524,6 +1542,11 @@ class SlipNetVpnService : VpnService() {
      * addDisallowedApplication ensures the bridge's DatagramSockets bypass VPN.
      */
     private suspend fun connectSlipstream(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String, globalResolverOverride: List<app.slipnet.domain.model.DnsResolver>? = null) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_START, serviceSessionId)
+        app.slipnet.util.ConnectionDiagnostics.record(if (profile.slipstreamCertificate.isBlank())
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_UNPINNED else
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_PIN_CONFIGURED, serviceSessionId)
+
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val slipstreamPort = proxyPort + 1
@@ -1555,10 +1578,19 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Step 2.6: Wait for QUIC handshake before VPN setup
-        val quicReady = waitForQuicReady(maxAttempts = 50, delayMs = 100)
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_LISTENER_READY, serviceSessionId)
+        val quicReady = waitForQuicReady(maxAttempts = 150, delayMs = 200)
         if (!quicReady) {
-            Log.w(TAG, "QUIC connection not ready within timeout, continuing anyway")
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_TIMEOUT, serviceSessionId)
+            reportConnectionError("Slipstream tunnel failed to connect (QUIC timeout)")
+            withContext(Dispatchers.IO) { SlipstreamBridge.stopClient() }
+            SlipstreamBridge.setVpnService(null)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopOwnedService()
+            return
         }
+
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_READY, serviceSessionId)
 
         // Step 3: Start SlipstreamSocksBridge on proxyPort (user-facing, with auth for Dante)
         // DNS target resolved at the REMOTE server (through Dante),
@@ -1740,6 +1772,11 @@ class SlipNetVpnService : VpnService() {
     }
 
     private suspend fun connectSlipstreamSsh(profile: app.slipnet.domain.model.ServerProfile, dnsServer: String, remoteDns: String, remoteDnsFallback: String, globalResolverOverride: List<app.slipnet.domain.model.DnsResolver>? = null) {
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_START, serviceSessionId)
+        app.slipnet.util.ConnectionDiagnostics.record(if (profile.slipstreamCertificate.isBlank())
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_UNPINNED else
+            app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_PIN_CONFIGURED, serviceSessionId)
+
         val proxyPort = preferencesDataStore.proxyListenPort.first()
         val proxyHost = preferencesDataStore.proxyListenAddress.first()
         val slipstreamPort = proxyPort + 1
@@ -1773,8 +1810,10 @@ class SlipNetVpnService : VpnService() {
         // Step 2.6: Wait for QUIC handshake — REQUIRED for Slipstream+SSH.
         // SSH needs a working QUIC tunnel before JSch can connect through it.
         // Wait longer than plain Slipstream (30s vs 5s) since this is a hard requirement.
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_LISTENER_READY, serviceSessionId)
         val quicReady = waitForQuicReady(maxAttempts = 150, delayMs = 200)
         if (!quicReady) {
+            app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_TIMEOUT, serviceSessionId)
             Log.e(TAG, "QUIC connection not ready — cannot establish SSH through Slipstream")
             reportConnectionError("Slipstream tunnel failed to connect (QUIC timeout)")
             withContext(Dispatchers.IO) { SlipstreamBridge.stopClient() }
@@ -1783,6 +1822,8 @@ class SlipNetVpnService : VpnService() {
             stopOwnedService()
             return
         }
+
+        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SLIPSTREAM_QUIC_READY, serviceSessionId)
 
         // Step 3: Switch tunnel type to SLIPSTREAM_SSH before starting SSH
         vpnRepository.setCurrentTunnelType(TunnelType.SLIPSTREAM_SSH)
@@ -4330,13 +4371,7 @@ class SlipNetVpnService : VpnService() {
         if (!underlyingDefaultDeclared) underlyingDefaultDeclared = runCatching { setUnderlyingNetworks(null) }.getOrDefault(false)
     }
 
-    private fun defaultPhysicalNetwork(): Network? {
-        val cm = connectivityManager ?: return null
-        val network = cm.activeNetwork ?: return null
-        val capabilities = cm.getNetworkCapabilities(network) ?: return null
-        return network.takeIf { capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
-    }
+    private fun defaultPhysicalNetwork(): Network? = connectivityManager?.let(PhysicalNetworkRoute::current)
 
     /**
      * Register a BroadcastReceiver to detect when the device exits Doze mode.
@@ -4407,6 +4442,7 @@ class SlipNetVpnService : VpnService() {
             private fun consider(network: Network, capabilities: NetworkCapabilities) {
                 if (!callbackRuntime.isActive || !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) ||
                     !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return
+                if (defaultPhysicalNetwork() != network) return
                 networkLostJob?.cancel()
                 networkLostJob = null
                 val previous = currentNetwork
@@ -4464,7 +4500,9 @@ class SlipNetVpnService : VpnService() {
                 if (changed) debouncedReconnect("physical network properties change")
             }
         }
-        try { connectivityManager?.registerDefaultNetworkCallback(requireNotNull(networkCallback)) }
+        try { connectivityManager?.registerNetworkCallback(android.net.NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(), requireNotNull(networkCallback)) }
         catch (error: Exception) { Log.e(TAG, "Failed to register default network callback", error) }
     }
 

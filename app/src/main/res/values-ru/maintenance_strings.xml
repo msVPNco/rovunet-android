@@ -2,7 +2,7 @@
 <resources>
   <string name="subscriptions_title">"Подписки"</string>
   <string name="subscription_hint">"Добавьте новую подписку кнопкой «Импорт». «Обновить» обновляет сохранённый источник; удалённые записи по-прежнему требуют проверки. После успеха окно закроется. Ошибка загрузки не меняет существующие профили."</string>
-  <string name="subscription_name">"Название коллекции"</string>
+  <string name="subscription_name">Название коллекции (необязательно)</string>
   <string name="subscription_url">"Приватный URL подписки (HTTPS)"</string>
   <string name="subscription_automatic">"Автообновление в безлимитной сети"</string>
   <string name="subscription_automatic_hint">"Проверка примерно каждые 12 часов при подходящей сети и заряде. Удаления требуют проверки; локальные правки сохраняются."</string>

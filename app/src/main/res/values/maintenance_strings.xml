@@ -2,7 +2,7 @@
 <resources>
   <string name="subscriptions_title">"Subscriptions"</string>
   <string name="subscription_hint">"Add a new subscription with Import. Update refreshes the saved source; removals still require review. A successful action closes this window. Failed downloads keep existing profiles."</string>
-  <string name="subscription_name">"Collection name"</string>
+  <string name="subscription_name">Collection name (optional)</string>
   <string name="subscription_url">"Private subscription URL (HTTPS)"</string>
   <string name="subscription_automatic">"Automatic updates on unmetered networks"</string>
   <string name="subscription_automatic_hint">"Checked about every 12 hours when the network and battery allow. Removals require review. Locally edited profiles are preserved."</string>

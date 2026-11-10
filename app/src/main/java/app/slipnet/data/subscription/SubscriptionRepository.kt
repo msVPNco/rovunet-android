@@ -28,7 +28,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 data class SubscriptionPreview(val source: SubscriptionEntity, val expectedSource: SubscriptionEntity?,
-    val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0, val publicStats: List<PublicFeed.Stat> = emptyList(), val importWarnings: List<String> = emptyList())
+    val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0, val publicStats: List<PublicFeed.Stat> = emptyList(), val importWarnings: List<String> = emptyList(),
+    val legacyKeys: Map<String, String> = emptyMap(), val metadata: DownloadMetadata? = null)
 
 @Singleton
 class SubscriptionRepository @Inject constructor(
@@ -61,7 +62,7 @@ class SubscriptionRepository @Inject constructor(
         db.subscriptionDao().all().firstOrNull { runCatching { url(sourceUrl(it)).toString() == normalized }.getOrDefault(false) }
     }
     internal data class Download(val code: Int, val location: String?, val text: String,
-        val serverTime: Long = 0, val receivedAt: Long = 0)
+        val serverTime: Long = 0, val receivedAt: Long = 0, val userInfo: String? = null, val title: String? = null)
     private suspend fun fetch(address: String, limit: Int = 2 * 1024 * 1024): String = fetchDocument(address, limit, false).text
     internal suspend fun fetchAccountStatus(address: String): Download = fetchDocument(address, 65_536, true)
     private suspend fun fetchDocument(address: String, maxBytes: Int, account: Boolean): Download {
@@ -114,7 +115,7 @@ class SubscriptionRepository @Inject constructor(
                                 val serverTime = runCatching {
                                     java.time.ZonedDateTime.parse(it.header("Date"), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli()
                                 }.getOrDefault(0L)
-                                Download(it.code, null, text, serverTime, it.receivedResponseAtMillis)
+                                Download(it.code, null, text, serverTime, it.receivedResponseAtMillis, it.header("subscription-userinfo"), it.header("profile-title"))
                             }
                         } }
                         if (continuation.isActive) continuation.resumeWith(result)
@@ -129,8 +130,11 @@ class SubscriptionRepository @Inject constructor(
     }
     suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
         val initial = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val document = if (initial?.id?.startsWith("public:") == true) PublicProviders.download(url(address).toString(), ::fetch) else fetch(address)
-        val preview = prepareDocument(name, address, existingId, auto, document)
+        val response = if (initial?.id?.startsWith("public:") == true) null else fetchDocument(address, 2 * 1024 * 1024, false)
+        val document = response?.text ?: PublicProviders.download(url(address).toString(), ::fetch)
+        val resolvedName = SubscriptionMetadata.name(name, response?.title, url(address).host, initial?.name)
+        val preview = prepareDocument(resolvedName, address, existingId, auto, document).copy(
+            metadata = response?.let { DownloadMetadata(it.userInfo, it.serverTime, it.receivedAt) })
         require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
         preview
     }
@@ -146,14 +150,16 @@ class SubscriptionRepository @Inject constructor(
 
     internal suspend fun prepareDocument(name: String, address: String, existingId: String?, auto: Boolean, document: String,
         publicMode: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
-        require(name.isNotBlank() && name.length <= 120) { "NAME_REQUIRED" }
+        require(name.length <= 120) { "NAME_REQUIRED" }
+        val safeName = SubscriptionMetadata.name(name, null, url(address).host)
         val existing = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
         val public = publicMode || existing?.id?.startsWith("public:") == true
         val id = existing?.id ?: (if (public) "public:" else "") + UUID.randomUUID().toString()
-        val source = (existing ?: SubscriptionEntity(id, name.trim(), "")).copy(name = name.trim(),
+        val source = (existing ?: SubscriptionEntity(id, safeName, "")).copy(name = safeName,
             sourceEnvelope = DeviceSecrets.seal(url(address).toString(), "subscription:$id"), autoUpdate = auto && !public)
         val publicResult = if (public) PublicFeed.parse(document, importer, connection.getDeviceId(), allowEmpty = true) else null
         val importWarnings = linkedSetOf<String>()
+        val legacyByCurrent = mutableMapOf<String, String>()
         val profiles = if (publicResult != null) publicResult.profiles.map { profile ->
             val stable = app.slipnet.domain.model.ProfileDuplicates.key(profile).copy(collectionId = "")
             hash(exporter.exportSingleProfile(stable)) to profile
@@ -163,16 +169,33 @@ class SubscriptionRepository @Inject constructor(
             require(item.key == null || parsed.profiles.size == 1) { "INVALID_FEED" }
             importWarnings += parsed.warnings
             parsed.profiles.map { p ->
-                val identity = item.key?.let { "remote-id:$it" } ?: "derived-v1:" + JSONArray(listOf(p.tunnelType.value, p.domain, p.sshHost, p.sshPort,
-                    p.socks5ServerPort, p.naivePort, p.sshUsername, p.socksUsername, p.naiveUsername, p.coreLink)).toString()
-                hash(identity) to p
+                val key = hash(item.key?.let { "remote-id:$it" } ?: SubscriptionIdentity.derived(p))
+                if (item.key == null && p.tunnelType == app.slipnet.domain.model.TunnelType.VLESS)
+                    legacyByCurrent[key] = hash(SubscriptionIdentity.legacy(p))
+                key to p
             }
         }
         require(profiles.size in (if (public) 0 else 1)..(if (public) PublicFeed.MAX_ENTRIES else 1000) && profiles.map { it.first }.distinct().size == profiles.size) { "INVALID_FEED" }
         val old = JSONArray(existing?.membersJson ?: "[]")
-        val incoming = profiles.map { it.first }.toSet()
+        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+        val aliases = mutableMapOf<String, String>()
+        val profilesByKey = profiles.toMap()
+        for ((legacy, candidates) in legacyByCurrent.entries.groupBy { it.value }) {
+            val saved = previous[legacy] ?: continue
+            val eligible = candidates.filter { it.key !in previous }
+            val target = eligible.singleOrNull() ?: run {
+                val row = db.profileDao().getProfileById(saved.getLong("id"))
+                val local = row?.let(mapper::toDomain)?.takeIf { !it.needsCredentials && it.collectionId == id }
+                val key = local?.let { app.slipnet.domain.model.ProfileDuplicates.key(it).copy(collectionId = "") }
+                eligible.singleOrNull { candidate -> profilesByKey[candidate.key]?.let {
+                    app.slipnet.domain.model.ProfileDuplicates.key(it).copy(collectionId = "") == key
+                } == true }
+            }
+            if (target != null) aliases[target.key] = legacy
+        }
+        val incoming = profiles.map { it.first }.toSet() + aliases.values
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
-        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList())
+        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList(), aliases)
     }
     /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
@@ -197,7 +220,13 @@ class SubscriptionRepository @Inject constructor(
             require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
         }
         val old = JSONArray(current?.membersJson ?: "[]")
-        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }
+        val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }.toMutableMap()
+        require(preview.legacyKeys.values.distinct().size == preview.legacyKeys.size) { "SOURCE_CHANGED" }
+        preview.legacyKeys.forEach { (key, legacy) ->
+            require(key !in previous) { "SOURCE_CHANGED" }
+            val saved = previous.remove(legacy) ?: error("SOURCE_CHANGED")
+            previous[key] = JSONObject(saved.toString()).put("key", key)
+        }
         var localCollectionName: String? = null
         for (saved in previous.values) {
             val row = db.profileDao().getProfileById(saved.getLong("id"))
@@ -247,6 +276,14 @@ class SubscriptionRepository @Inject constructor(
             }
         }
         db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
+        if (!preview.source.id.startsWith("public:") && (preview.metadata?.userInfo != null || accountStatusStore.endpoint(sourceUrl(preview.source)) == null)) {
+            val now = System.currentTimeMillis()
+            val info = preview.metadata
+            val usage = info?.userInfo?.let { runCatching { SubscriptionMetadata.usage(it, info.serverTime.takeIf { t -> t > 0 } ?: now) }.getOrNull() }
+            db.accountStatusDao().put(AccountStatusEntity(preview.source.id, hash(url(sourceUrl(preview.source)).toString()),
+                usage?.toString().orEmpty(), now, android.os.SystemClock.elapsedRealtime(),
+                info?.serverTime?.takeIf { it > 0 } ?: now, if (usage == null) "UNAVAILABLE" else ""))
+        }
     }
     suspend fun refresh(id: String) {
         val row = db.subscriptionDao().get(id) ?: return

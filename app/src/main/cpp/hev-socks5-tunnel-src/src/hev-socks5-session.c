@@ -24,11 +24,14 @@ hev_socks5_session_run (HevSocks5Session *self)
 
     LOG_D ("%p socks5 session run", self);
 
+    if (HEV_SOCKS5 (self)->terminated)
+        return;
+
     srv = hev_config_get_socks5_server ();
 
     res = hev_socks5_client_connect (HEV_SOCKS5_CLIENT (self), srv->addr,
                                      srv->port);
-    if (res < 0) {
+    if (res < 0 || HEV_SOCKS5 (self)->terminated) {
         LOG_I ("%p socks5 session connect", self);
         return;
     }
@@ -36,11 +39,11 @@ hev_socks5_session_run (HevSocks5Session *self)
     if (srv->user && srv->pass) {
         hev_socks5_client_set_auth (HEV_SOCKS5_CLIENT (self), srv->user,
                                     srv->pass);
-        LOG_D ("%p socks5 client auth %s:%s", self, srv->user, srv->pass);
+        LOG_D ("%p socks5 client auth configured", self);
     }
 
     res = hev_socks5_client_handshake (HEV_SOCKS5_CLIENT (self), srv->pipeline);
-    if (res < 0) {
+    if (res < 0 || HEV_SOCKS5 (self)->terminated) {
         LOG_I ("%p socks5 session handshake", self);
         return;
     }
@@ -57,6 +60,7 @@ hev_socks5_session_terminate (HevSocks5Session *self)
     LOG_D ("%p socks5 session terminate", self);
 
     iface = HEV_OBJECT_GET_IFACE (self, HEV_SOCKS5_SESSION_TYPE);
+    HEV_SOCKS5 (self)->terminated = 1;
     hev_socks5_set_timeout (HEV_SOCKS5 (self), 0);
     hev_task_wakeup (iface->get_task (self));
 }

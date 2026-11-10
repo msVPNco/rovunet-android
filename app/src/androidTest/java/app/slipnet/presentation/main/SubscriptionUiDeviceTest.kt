@@ -29,6 +29,27 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class SubscriptionUiDeviceTest {
     @get:Rule val compose = createComposeRule()
+    @Test fun cardUpdateStaysOnCardAndDisablesRepeatedRequests() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val calls = AtomicInteger()
+        val updating = mutableStateOf(false)
+        val profile = app.slipnet.domain.model.ServerProfile(id = 4242, name = "fixture", collectionId = "fixture", collectionName = "Fixture")
+        compose.setContent { SlipstreamTheme {
+            CollectionCard(profiles = listOf(profile), results = emptyMap(), selected = false, expanded = false,
+                connectedProfileId = null, manualProfileId = null, connecting = false, busy = false,
+                canConnect = true, onConnect = {}, onDetails = {}, onRename = {}, onMove = {}, onTest = {},
+                onStabilityTest = {}, onExport = {}, onDelete = {}, canDelete = true,
+                updating = updating.value, onUpdate = { calls.incrementAndGet(); updating.value = true })
+        } }
+        compose.onNodeWithContentDescription(context.getString(R.string.rv_collection_actions_06a9e8)).performClick()
+        compose.onNodeWithText(context.getString(R.string.subscription_update_action)).performClick()
+        compose.onAllNodes(isDialog()).assertCountEquals(0)
+        compose.onNodeWithText(context.getString(R.string.subscription_updating_inline)).assertExists()
+        assertEquals(1, calls.get())
+        compose.onNodeWithContentDescription(context.getString(R.string.rv_collection_actions_06a9e8)).performClick()
+        compose.onNodeWithText(context.getString(R.string.subscription_update_action)).assertIsNotEnabled()
+    }
+
     @Test fun persianSubscriptionFormUsesCurrentResourcesAndRtlWithoutStartingADownload() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val configuration = Configuration(context.resources.configuration).apply { setLocale(Locale("fa")); setLayoutDirection(Locale("fa")) }
@@ -43,8 +64,8 @@ class SubscriptionUiDeviceTest {
             compose.onNodeWithText(resources.getString(id)).assertExists()
         }
         compose.onAllNodesWithText("Subscriptions").assertCountEquals(0)
-        compose.onNodeWithTag("subscription-update").assertIsNotEnabled()
-        compose.onNodeWithTag("subscription-import").assertIsNotEnabled()
+        compose.onNodeWithTag("subscription-update").assertIsEnabled()
+        compose.onNodeWithTag("subscription-import").assertIsEnabled()
         File(context.filesDir, "subscription-fa-code29.png").outputStream().use {
             assertTrue(compose.onNode(isDialog()).captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it))
         }
@@ -77,11 +98,12 @@ class SubscriptionUiDeviceTest {
                     }
                 }
             }
-            compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("First source")
+            // Leave name empty to exercise hostname fallback on a real one-click import.
             compose.onNodeWithTag("subscription-import").performScrollTo().performClick()
             compose.waitUntil(5000) { calls.get() == 1 }
             compose.onNodeWithTag("subscription-import").assertIsNotEnabled()
             compose.onNodeWithTag("subscription-update").assertIsNotEnabled()
+            assertEquals("Only one in-flight preparation is allowed", 1, calls.get())
             gate.complete(Unit)
             compose.waitUntil(8000) { !open.value }
             compose.onAllNodes(isDialog()).assertCountEquals(0)
@@ -108,8 +130,8 @@ class SubscriptionUiDeviceTest {
             compose.runOnIdle { open.value = true }
             compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("Failed update")
             compose.onNodeWithTag("subscription-update").performScrollTo().performClick()
-            compose.waitUntil(8000) { compose.onAllNodesWithTag("subscription-error").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("subscription-error").performScrollTo().assertTextEquals(resources.getString(R.string.subscription_failed))
+            compose.waitUntil(8000) { compose.onAllNodesWithTag("subscription-error", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("subscription-error", useUnmergedTree = true).performScrollTo().assertTextEquals(resources.getString(R.string.subscription_failed))
             assertTrue(open.value); assertEquals(2, dismissed.get())
             assertEquals("Updated source", repository.findSource(address)?.name)
             assertNotNull(db.profileDao().getProfileById(stored.id))

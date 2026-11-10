@@ -919,7 +919,13 @@ fun SettingsScreen(
                 }
                 when (uiState.updateCheckResult) {
                     UpdateCheckResult.CHECKING -> CircularProgressIndicator()
-                    UpdateCheckResult.ERROR -> Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_check_failed))
+                    UpdateCheckResult.ERROR -> Column {
+                        Text(androidx.compose.ui.res.stringResource(uiState.updateErrorResource))
+                        TextButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(app.slipnet.util.UpdateChecker.RELEASES_URL))) }) {
+                            Text(androidx.compose.ui.res.stringResource(R.string.update_official_download))
+                        }
+                    }
                     UpdateCheckResult.UP_TO_DATE -> Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.update_current))
                     else -> Unit
                 }

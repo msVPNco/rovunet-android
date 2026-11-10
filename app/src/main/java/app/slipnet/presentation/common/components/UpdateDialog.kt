@@ -23,30 +23,46 @@ fun UpdateDialog(update: AppUpdate, onDismiss: () -> Unit) {
     var downloaded by remember(update) { mutableStateOf<File?>(null) }
     var failed by remember(update) { mutableStateOf(false) }
     var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    val errorText = stringResource(R.string.update_failed)
+    var errorResource by remember(update) { mutableIntStateOf(R.string.update_failed) }
+    val errorText = stringResource(errorResource)
+    var awaitingPermission by remember(update) { mutableStateOf(false) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    fun install(apk: File) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
+                awaitingPermission = true
+                context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")))
+            } else {
+                awaitingPermission = false
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
+                context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            }
+        } catch (error: Exception) { errorResource = UpdateChecker.errorResource(error); failed = true }
+    }
+    DisposableEffect(lifecycle, downloaded, awaitingPermission) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME && awaitingPermission &&
+                (Build.VERSION.SDK_INT < 26 || context.packageManager.canRequestPackageInstalls())) downloaded?.let(::install)
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     AlertDialog(
         onDismissRequest = { job?.cancel(); onDismiss() },
         title = { Text(stringResource(R.string.update_available)) },
-        text = { Text(when { failed -> errorText; percent != null -> stringResource(R.string.update_downloading, percent!!); else -> stringResource(R.string.update_version, update.versionName) }) },
+        text = { Text(when { failed -> errorText; percent != null -> stringResource(R.string.update_downloading, (percent ?: 0)); awaitingPermission -> stringResource(R.string.update_permission_return); else -> stringResource(R.string.update_version, update.versionName) }) },
         confirmButton = {
             TextButton(enabled = percent == null, onClick = {
                 val apk = downloaded
                 if (apk != null) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
-                            context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")))
-                        } else {
-                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apk)
-                            context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
-                        }
-                    } catch (_: Exception) { failed = true }
+                    install(apk)
                 } else {
                     failed = false; percent = 0
                     job = scope.launch {
                         try {
                             downloaded = UpdateChecker.download(context.applicationContext, update) { value -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { percent = value } }
                         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                        catch (_: Exception) { failed = true }
+                        catch (error: Exception) { errorResource = UpdateChecker.errorResource(error); failed = true }
                         finally { percent = null }
                     }
                 }

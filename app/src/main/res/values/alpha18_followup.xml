@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_probe_failed">The latest HTTPS check failed; the old measurement is no longer current.</string>
+    <string name="live_probe_age">Measured %1$d seconds ago</string>
+    <string name="update_error_network">Cannot reach the update service. Check your connection or download from the official releases page.</string>
+    <string name="update_error_identity">The APK package or signing identity does not match this app. Installation was stopped.</string>
+    <string name="update_error_integrity">The download is incomplete or failed verification. Download it again.</string>
+    <string name="update_error_storage">The APK could not be saved. Check available storage and try again.</string>
+    <string name="update_official_download">Official download page</string>
+    <string name="update_permission_return">Allow installation from Rovunet, then return here to continue. Android will ask you to confirm installation.</string>
+    <string name="collection_dns_continue">Test this collection’s configured DNS paths next? If none work, a bounded resolver search may follow. This uses data and may take several minutes. Completed results are kept.</string>
+</resources>

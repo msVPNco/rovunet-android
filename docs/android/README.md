@@ -1,15 +1,15 @@
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-Alpha17 Full / code 36 is owner-approved. Fresh installs ask language first and follow system theme. Soar scanning restores the alpha15.4 repeated-handshake/BOTH behaviour. Collections retain fresh HTTPS measurements and scoped choices; the main button stops the live connection even when another card is selected. Anonymous, Mahsa and Patterniha use consent and reviewed imports. Trojan, AEAD VMess, Shadowsocks and supported Xray/sing-box JSON connections are importable; unsupported effective settings and unverified TLS are rejected with per-protocol reasons. Optional failure recovery/smart selection stays bounded and manual by default. JSON does not apply external DNS, routing or listeners.
+Alpha18.1 Full / code 39 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
 
-The 120-second physical-phone Hev stop is not proved fixed; false screen-off reporting was corrected. Physical-network availability, full overnight/Doze and battery savings are not established by emulator tests. No new Lite or desktop binary is published. Patterniha placement beside Anonymous/Mahsa is deferred to the next update.
+Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC and Mieru remain future work. No new Lite or desktop binary is published.
 
 <h1 align="center">Rovunet for Android</h1>
 
 <p align="center"><b>Several routes to your own server, in one Android app</b><br>DNS tunnels, SSH, HTTPS proxies and Xray profiles in named collections, with direct connection and real HTTPS tests.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -19,25 +19,27 @@ The 120-second physical-phone Hev stop is not proved fixed; false screen-off rep
 
 <p align="center"><a href="../../README.md">← All Rovunet apps</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17">Download</a> · 📘 <a href="../guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="../USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1">Download</a> · 📘 <a href="../guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="../USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
 
 ---
 
 **A multi-protocol Android VPN client for several routes to your own server.** Rovunet brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel.
 
-This is the shared Rovunet app repository for Android, Windows and future macOS work. Android alpha17 is published; desktop clients have no validated public GUI release yet. [Platform and release channels](../PLATFORMS.md).
+This is the shared Rovunet app repository for Android, Windows and future macOS work. Android alpha18.1 is published; desktop clients have no validated public GUI release yet. [Platform and release channels](../PLATFORMS.md).
 
 ## Release status
 
-The current release is **0.3.0-alpha17 Full, version code 36**. It retains the [production signing identity](../SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) · [Release record](../releases/alpha16.md) · [Current status](../STATUS.md).
+The current release is **0.3.0-alpha18.1 Full, version code 39**. It retains the [production signing identity](../SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) · [Release record](../releases/alpha18-1.md) · [Current status](../STATUS.md).
 
-Alpha16.1 fixes update compatibility after the repository was renamed to `rovunet-app`. Android now selects its newest compatible Full/Lite APK from the shared release feed, independently of Windows/macOS Latest and with the preview setting preserved. Repository/tag/filename ownership, checksum, package, version and signer checks remain enforced. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569) passed **93 portable/JUnit cases, the Gradle unit-test task, 55 Debug emulator cases and 2 minified Release JNI cases**. The owner authorized publication of the exact reviewed APK. Tunnel, battery, scanner, account-card and translation behavior are unchanged.
+**Subscriptions:** choose Update on the collection card to update in place; progress blocks repeated clicks and the outcome stays on Home. Existing-profile replacement still requires a disconnected VPN. Names are optional: explicit/saved name, safe provider title, then hostname. `subscription-userinfo` reports upload + download, volume and expiry from the same response; missing fields stay unknown. Provider snapshots show their age and are not independent metering. No additional periodic full-feed downloads are introduced. Panel status retains its separate contract.
 
-**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged. If the accepted alpha17/code36 review APK is installed, it is this same binary; no reinstall is needed.
+**Imports:** supported VLESS/VMess/Trojan `cs` and `fm` are preserved with verified TLS; unsupported masks/scripts/settings are rejected explicitly. Shadowsocks 2022 validates key lengths. Hy2 supports bounded `mport` lists and `hop-interval`. Standard WireGuard sharing URIs and single-peer AmneziaWG `.conf`/supported URI parameters are accepted. AWG runs in a separate authenticated userspace engine; one address per IP family, no scripts, multi-peer or ranged keepalive. Arbitrary core/Mihomo YAML is not executed.
+
+**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
 
 ## Quick start
 
-1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17) and install it. Public alpha14 and later install in place, without uninstalling.
+1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) and install it. Public alpha14 and later install in place, without uninstalling.
 2. **Open** Rovunet, choose language and theme, and grant the Android VPN permission when asked.
 3. **Import**: Subscriptions → paste your HTTPS subscription link → **Import**, or **+ → Import** for a link, QR code or file.
 4. **Connect**: expand the collection, tap a path to select it and tap it again to connect.
@@ -78,7 +80,6 @@ Persian, English, Simplified Chinese and Russian cover the main interface, setti
 
 **New Soar and Soar+SSH profiles default to UDP + TCP.** Existing/imported choices are preserved; Automatic, UDP + TCP, TCP only and UDP only remain independent options. SSH over a base tunnel also requires the server to allow the destination and SSH port.
 
-Imports include `rovunet://` bundles, compatible `veyra://`/`slipnet://` aliases, supported VLESS/Hysteria2 links and single-peer WireGuard INI. Native export is v33. Unknown future versions are explicitly rejected instead of partially imported. Arbitrary core JSON, AmneziaWG and every WireGuard URI dialect are not advertised as supported.
 
 ## Connect, measure and update
 
@@ -94,7 +95,7 @@ The in-app updater downloads compatible GitHub release APKs and checks checksum,
 
 [Rovunet Panel](https://github.com/msVPNco/rovunet-panel) manages supported Linux services and exports configs. Client support does not imply automatic panel installation; some `core-plan` paths require manual deployment. A server and valid credentials are needed; the app does not provide free accounts.
 
-Automatic collection failover, download-throughput testing and desktop/store versions are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
+Automatic recovery is opt-in and bounded; manual mode never switches automatically. Download-throughput benchmarks and new desktop/store binaries are not included. Soar automatic-mode differences and remote SOCKS data flow on the reported real network still require field evidence. No protocol guarantees access through every network.
 
 ## Guides
 
@@ -104,7 +105,7 @@ Automatic collection failover, download-throughput testing and desktop/store ver
 | [User guide](../USER_GUIDE.md) | Installation, import, connection, tests, Soar, credentials and troubleshooting |
 | [Current status](../STATUS.md) · [Upgrade](../UPGRADE.md) | Release state, signer and migration notes |
 
-The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha17 notes](../releases/alpha16.md) for the new status, menu and idle behavior.
+The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha18.1 notes](../releases/alpha18-1.md) for the new status, menu and idle behavior.
 
 ## Source, verification and support
 

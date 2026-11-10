@@ -1,16 +1,20 @@
-# Rovunet 用户指南 — alpha17
+# Rovunet 用户指南 — alpha18.1
 
-Alpha17 Full（代码 36）已获所有者批准。首次安装先选择语言，主题默认跟随系统。Soar 扫描恢复 alpha15.4 的重复握手及 BOTH 行为。集合保留最新 HTTPS 测量和各自选择；即使选中另一张卡片，主按钮仍断开当前连接。Anonymous、Mahsa 和 Patterniha 在同意及预览后导入。支持 Trojan、AEAD VMess、Shadowsocks 和兼容的 Xray/sing-box JSON 连接；按协议说明不支持的参数及未验证 TLS 的拒绝原因。故障恢复与智能选择有次数限制且需主动启用，默认仍为手动。外部 JSON 的 DNS、路由及监听端口不会应用。
+Alpha18.1 Full（版本代码 39）支持直接在集合卡片更新订阅、可选名称、提供方报告的流量和到期时间、兼容的 `cs`/`fm`、Shadowsocks 2022、Hy2 端口跳跃及单对端 AmneziaWG 导入。保留柔和 Soft Pop 主题、仅界面可见时的延迟测量、有次数限制的智能恢复、隔离的 Slipstream 检测及原生停止改进。内置列表移除了 Patterniha，既有用户导入保持不变。
 
-尚未证实已修复实体手机上 Hev 停止耗时 120 秒的问题；已修正错误的屏幕关闭记录。模拟器测试不证明实际网络可用、整夜/Doze 稳定或省电。未发布新的 Lite 或桌面安装包。将 Patterniha 移至 Anonymous/Mahsa 同组的调整留待下次更新。
+本地和模拟器测试不证明实体手机省电、整夜/Doze 稳定、运营商网络可达或已修复面板 WireGuard/Hy2 节点。未声称有新的实体手机验收。AnyTLS、TUIC 和 Mieru 留待后续；没有新的 Lite 或桌面安装包。
+
+**订阅：**在集合卡片选择更新即可原地更新；进度会阻止重复点击，结果留在首页。替换现有配置仍需断开 VPN。名称可留空：依次使用显式/已存名称、安全的提供方标题、主机名。同一响应的 `subscription-userinfo` 提供双向总流量、上限和到期时间；缺失字段保持未知，显示快照时间及来源，不是独立审计计量。没有新增定期下载整个订阅的任务。
+
+**导入：**保留经验证 TLS 的兼容 VLESS/VMess/Trojan `cs`/`fm`；不支持的掩码、脚本和设置会明确拒绝。检查 Shadowsocks 2022 密钥长度；Hy2 支持有界 `mport` 和 `hop-interval`。接受兼容 WireGuard URI 与单对端 AmneziaWG `.conf`/URI 参数。AWG 使用独立、经认证的用户空间进程；每个 IP 地址族一个地址，不支持脚本、多对端或范围 keepalive。不执行任意内核/Mihomo YAML。
 
 Panel v1.19 状态在原卡片中显示剩余 GiB 与时间。黄色：≤20% 或 ≤3 天；红色：≤5% 或 ≤24 小时。不限量、未知和过期分别显示。404、过旧或不完整的计量不是过期证明。仅主页可见时刷新状态，不阻止手动连接；实际计量和限制以服务器为准。
 
 Soar 恢复重复协议握手，BOTH 等待 UDP 和 TCP 两项结果。保留显式 TCP-only 及信任检查。本地测试通过不代表特定网络中的解析器可用。
 
-**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。若已安装获批准的 alpha17/代码36 测试 APK，就是同一个文件，无需重装。
+**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。
 
-alpha17 修复仓库更名为 `rovunet-app` 后的更新兼容。Android 从共享发布列表选择最新兼容 Full/Lite APK，不依赖 Windows/macOS 的全局 Latest，并保留预发布选项。仓库、标签、文件名、校验和、包名、版本及签名检查继续生效。[CI](https://github.com/msVPNco/rovunet-app/actions/runs/42626133278) 通过 **119 项可移植/JUnit、Gradle 单元测试、64 项 Debug 模拟器及 2 项精简 Release JNI 测试**。所有者批准发布同一个已审阅 APK。本次行为变更见上方 alpha17 摘要。
+[CI](https://github.com/msVPNco/rovunet-app/actions/runs/42905223390)：144 项 JVM 测试、18 种真实加密 TCP/UDP 本地模式、AWG 1/2/3.1 传输和停止测试。Android 及精简 JNI 结果记录在[发布来源信息](releases/alpha18-1-provenance.json)。
 
 HTTPS 订阅提供 **更新** 和 **导入**。新来源一次导入成功后关闭整个窗口；错误保留表单，重复来源地址被拒绝，本地编辑得到保留。更新已有来源前须断开 VPN；移除旧条目仍需审核。可选自动刷新约每 12 小时在合适的网络/电池条件下运行。小集合可用 QR/PNG 分享，过大集合使用文件。
 
@@ -20,7 +24,7 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 
 ## 安装与更新
 
-版本为 **alpha17 Full，代码 36**。从[公开发布](https://github.com/msVPNco/rovunet-app/releases/latest)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
+版本为 **alpha18.1 Full，代码 39**。从[公开发布](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
 
 需要 Android 7.0/API 24，支持目标 ARM32/ARM64/x86_64，继承的 Naive/Tor 不提供 x86_64。没有承诺新的 Lite 或商店/桌面版本。
 
@@ -52,6 +56,6 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 
 反馈提供版本、协议、步骤与网页实际表现。安全报告只包含类型化阶段/代码、Soar 配置模式和 UI 计数快照，不含端点/账号/凭据字段；不自动发送。继承的详细调试日志可能敏感，请先审阅脱敏，不公开真实配置、密码、私钥或设备 ID。
 
-远程 SOCKS 数据路径和 Soar auto/on 差异仍需实测。CONNECT 成功不证明数据通过，DNS 错误不证明审查或 ACL。DoH 单独只加密 DNS，普通 SOCKS5 不加密传输。未包含自动路径切换与吞吐量基准。[状态](STATUS.md) · [Telegram](https://t.me/RovunetVPN)。
+远程 SOCKS 数据路径和 Soar auto/on 差异仍需实测。CONNECT 成功不证明数据通过，DNS 错误不证明审查或 ACL。DoH 单独只加密 DNS，普通 SOCKS5 不加密传输。自动恢复需主动启用且有次数限制；手动模式不会自动切换。未提供吞吐量基准。[状态](STATUS.md) · [Telegram](https://t.me/RovunetVPN)。
 
 alpha15 修复 Release 打包时 Go/JNI 成员被删除的问题。更新后如再次退出，请重新打开应用，附上新事件的时间与安全报告；旧退出记录可能在升级后仍保留。

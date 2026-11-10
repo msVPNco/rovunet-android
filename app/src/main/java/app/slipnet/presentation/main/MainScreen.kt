@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -90,6 +91,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.ui.platform.testTag
+import app.slipnet.presentation.theme.SoftPopFab
+import app.slipnet.presentation.theme.SoftPopGlass
+import app.slipnet.presentation.theme.softPopBackground
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
@@ -158,7 +162,7 @@ import app.slipnet.presentation.common.icons.VlessIcon
 import app.slipnet.presentation.home.DebugLogSheet
 import app.slipnet.presentation.scanner.QrScannerActivity
 import androidx.compose.material.icons.filled.Timer
-import app.slipnet.presentation.theme.ConnectedGreen
+import app.slipnet.presentation.theme.ConnectionSuccessColor as ConnectedGreen
 import app.slipnet.presentation.theme.ConnectingOrange
 import app.slipnet.presentation.theme.DisconnectedRed
 import com.journeyapps.barcodescanner.ScanContract
@@ -189,7 +193,7 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val statusLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var statusClock by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
-    LaunchedEffect(statusLifecycle, uiState.subscriptionIds, uiState.subscriptionVersion) {
+    LaunchedEffect(statusLifecycle, uiState.subscriptionIds, uiState.subscriptionVersion, uiState.connectedProfileId) {
         statusLifecycle.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             launch {
                 while (isActive) {
@@ -199,7 +203,7 @@ fun MainScreen(
             }
             while (isActive) {
                 statusClock = android.os.SystemClock.elapsedRealtime()
-                kotlinx.coroutines.delay(60_000L)
+                kotlinx.coroutines.delay(if (uiState.connectedProfileId != null) 5_000L else 60_000L)
             }
         }
     }
@@ -217,6 +221,15 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle, viewModel) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ ->
+            viewModel.setScreenVisible(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        }
+        lifecycle.addObserver(observer)
+        viewModel.setScreenVisible(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        onDispose { lifecycle.removeObserver(observer); viewModel.setScreenVisible(false) }
+    }
     val uiResources = androidx.compose.ui.platform.LocalResources.current
     val clipboardManager = LocalClipboardManager.current
     val activity = context.findActivity()
@@ -364,7 +377,9 @@ fun MainScreen(
     if (uiState.collectionPrompt) AlertDialog(
         onDismissRequest = viewModel::dismissCollectionPrompt,
         title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_try_dns_fallback_a41a7b)) },
-        text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_direct_paths_failed_in_this_collection_test_its_configured_dns_first_then_search_the_bundl_c79e01)) },
+        text = { Text(androidx.compose.ui.res.stringResource(if (uiState.collectionConnect)
+            app.slipnet.R.string.rv_direct_paths_failed_in_this_collection_test_its_configured_dns_first_then_search_the_bundl_c79e01
+            else app.slipnet.R.string.collection_dns_continue)) },
         confirmButton = { TextButton(enabled = !uiState.isPingRunning, onClick = viewModel::acceptCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef)) } },
         dismissButton = { TextButton(onClick = viewModel::dismissCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } }
     )
@@ -425,6 +440,9 @@ fun MainScreen(
         )
     }
 
+    LaunchedEffect(uiState.subscriptionNotice) {
+        uiState.subscriptionNotice?.let { snackbarHostState.showSnackbar(it); viewModel.clearSubscriptionNotice() }
+    }
     val localizedError = uiState.error?.let { app.slipnet.presentation.theme.UiErrors.text(uiResources, it) }
     LaunchedEffect(localizedError) {
         localizedError?.let { error ->
@@ -519,8 +537,12 @@ fun MainScreen(
     }
 
     Scaffold(
+        modifier = Modifier.background(softPopBackground),
         topBar = {
+            SoftPopGlass(modifier = Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), header = true) {
             TopAppBar(
+                modifier = Modifier.testTag("soft-pop-header").heightIn(min = 72.dp).padding(vertical = 4.dp),
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -701,12 +723,13 @@ fun MainScreen(
                     containerColor = Color.Transparent
                 )
             )
+            }
         },
         floatingActionButton = {
             Column(
                 horizontalAlignment = Alignment.End
             ) {
-                FloatingActionButton(
+                SoftPopFab(
                     onClick = { showAddMenu = !showAddMenu },
                     containerColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(end = 8.dp)
@@ -730,9 +753,10 @@ fun MainScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
+        val floatingHeader = !hasChains && !uiState.isPingRunning && uiState.smartStatus.message == 0
         // Auto-switch to chains tab when a chain is connected
         LaunchedEffect(uiState.connectedChainId) {
             if (uiState.connectedChainId != null && hasChains) selectedTab = 1
@@ -741,7 +765,7 @@ fun MainScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = if (floatingHeader) 0.dp else paddingValues.calculateTopPadding(), bottom = paddingValues.calculateBottomPadding())
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // ── Tab Row (only when chains exist) ────────────────────
@@ -793,7 +817,7 @@ fun MainScreen(
                             state = chainListState,
                             contentPadding = PaddingValues(
                                 start = 16.dp, end = 16.dp,
-                                top = 8.dp,
+                                top = if (floatingHeader) paddingValues.calculateTopPadding() + 8.dp else 8.dp,
                                 bottom = 200.dp + navBarPadding.calculateBottomPadding()
                             ),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -912,7 +936,7 @@ fun MainScreen(
                                 state = lazyListState,
                                 contentPadding = PaddingValues(
                                     start = 16.dp, end = 16.dp,
-                                    top = 8.dp,
+                                    top = if (floatingHeader) paddingValues.calculateTopPadding() + 8.dp else 8.dp,
                                     bottom = 200.dp + navBarPadding.calculateBottomPadding()
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -951,6 +975,7 @@ fun MainScreen(
                                             onMove = { moveTarget = representative },
                                             onExport = { viewModel.exportCollection(representative) },
                                             onShareQr = { viewModel.showCollectionQr(representative) },
+                                            updating = representative.collectionId in uiState.updatingSubscriptions,
                                             onUpdate = if (representative.collectionId in uiState.subscriptionIds) ({ viewModel.requestSubscription(representative.collectionId) }) else null,
                                             onDelete = { deleteCollectionTarget = collection.toList() },
                                             canDelete = uiState.connectionState.isDisconnected,
@@ -966,7 +991,7 @@ fun MainScreen(
                                     }
                                     if (expandedCollection == collectionKey) collectionPathItems(collection) { profile ->
                                         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp)
-                                            .background(app.slipnet.presentation.theme.collectionTones.tray, RoundedCornerShape(16.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)) {
                                             val isConnected = uiState.connectedProfileId == profile.id
                                     ProfileListItem(
                                         profile = profile,
@@ -2114,11 +2139,7 @@ private fun ConnectionStatusStrip(
         label = "statusColor"
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        tonalElevation = 2.dp,
-        shape = RoundedCornerShape(16.dp)
-    ) {
+    SoftPopGlass(modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2371,22 +2392,20 @@ private fun ConnectFab(
         label = "connectFabColor"
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
-    )
+    val pulseScale = if (isConnecting) {
+        val transition = rememberInfiniteTransition(label = "connectionPulse")
+        val scale by transition.animateFloat(
+            initialValue = 1f, targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Reverse),
+            label = "connectionPulseScale")
+        scale
+    } else 1f
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        FloatingActionButton(
+        SoftPopFab(
             onClick = onToggleConnection,
             containerColor = statusColor,
             modifier = Modifier
@@ -2397,7 +2416,7 @@ private fun ConnectFab(
                 imageVector = Icons.Default.PowerSettingsNew,
                 contentDescription = if (isConnected) "Disconnect" else "Connect",
                 tint = when {
-                    isConnected || isConnecting -> Color.White
+                    isConnected || isConnecting -> MaterialTheme.colorScheme.onPrimary
                     hasProfile -> MaterialTheme.colorScheme.onPrimary
                     else -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                 }

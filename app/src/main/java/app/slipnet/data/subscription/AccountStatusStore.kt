@@ -58,8 +58,9 @@ internal class AccountStatusStore(private val db: SlipNetDatabase, private val s
                 } catch (cancelled: CancellationException) { throw cancelled
                 } catch (error: Exception) {
                     val safe = error.message?.takeIf { it in setOf("UNAVAILABLE", "OLDER") } ?: "UNAVAILABLE"
-                    AccountStatusEntity(source.id, key, cached?.payload.orEmpty(), System.currentTimeMillis(),
-                        SystemClock.elapsedRealtime(), 0, safe)
+                    if (cached?.view()?.status?.providerReported == true) cached else
+                        AccountStatusEntity(source.id, key, cached?.payload.orEmpty(), System.currentTimeMillis(),
+                            SystemClock.elapsedRealtime(), 0, safe)
                 }
                 db.withTransaction {
                     // A detached source or an edited URL must not receive an old response.

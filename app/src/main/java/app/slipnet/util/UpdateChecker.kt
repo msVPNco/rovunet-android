@@ -25,6 +25,8 @@ object UpdateChecker {
         require(URL(url).protocol == "https")
         connectTimeout = 15_000
         readTimeout = 15_000
+        useCaches = false
+        setRequestProperty("Cache-Control", "no-cache")
         setRequestProperty("Accept", "application/vnd.github+json")
         setRequestProperty("User-Agent", "Rovunet-Android")
     }
@@ -95,6 +97,14 @@ object UpdateChecker {
             check(part.renameTo(apk)) { "Could not save APK" }
             apk
         } finally { conn.disconnect(); part.delete() }
+    }
+    fun errorResource(error: Throwable): Int = when {
+        error is java.net.UnknownHostException || error is java.net.SocketTimeoutException ||
+            error is java.net.ConnectException || error.message in setOf("Update service unavailable", "Download unavailable") -> app.slipnet.R.string.update_error_network
+        error.message in setOf("Wrong application package", "APK signing identity mismatch") -> app.slipnet.R.string.update_error_identity
+        error.message in setOf("Incomplete APK", "APK checksum mismatch", "Invalid APK", "Unexpected APK size") -> app.slipnet.R.string.update_error_integrity
+        error.message == "Could not save APK" || error is java.io.FileNotFoundException -> app.slipnet.R.string.update_error_storage
+        else -> app.slipnet.R.string.update_failed
     }
     @Suppress("DEPRECATION")
     private fun verifyPackage(context: Context, file: File) {

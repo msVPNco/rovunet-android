@@ -7,8 +7,7 @@ import kotlinx.coroutines.ensureActive
 internal object PublicProviders {
     enum class Provider(val address: String) {
         ANONYMOUS("https://raw.githubusercontent.com/4n0nymou3/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt"),
-        MAHSA("https://raw.githubusercontent.com/hiddify/hiddify-app/refs/heads/main/test.configs/mahsa"),
-        PATTERNIHA("https://raw.githubusercontent.com/patterniha/Free-Configs/refs/heads/main/configs.txt")
+        MAHSA("https://raw.githubusercontent.com/hiddify/hiddify-app/refs/heads/main/test.configs/mahsa")
     }
     private val mahsaChild = Regex("""https://raw\.githubusercontent\.com/mahsanet/MahsaFreeConfig/(?:refs/heads/main|main)/(?:mci|mtn)/sub_[1-4]\.txt""")
     fun mahsaChildren(document: String): List<String> {

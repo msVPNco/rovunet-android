@@ -31,7 +31,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
     }
 
     @Synchronized
-    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000): Result<Unit> = runCatching {
+    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000, workDirectory: File? = null): Result<Unit> = runCatching {
         stop()
         if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
         require(binary.isFile && binary.canExecute()) { "Xray binary missing for this ABI" }
@@ -39,6 +39,12 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         val settings = JSONObject(config)
         val inbound = settings.getJSONArray("inbounds").getJSONObject(0)
         require(inbound.getString("listen") == "127.0.0.1" && inbound.getString("protocol") == "socks")
+        val diagnosticSession = ConnectionDiagnostics.currentSessionId()
+        val outboundProtocol = settings.optJSONArray("outbounds")?.optJSONObject(0)?.optString("protocol")
+        if (diagnostics) when (outboundProtocol) {
+            "hysteria" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_HYSTERIA2_START, diagnosticSession)
+            "wireguard" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_WIREGUARD_START, diagnosticSession)
+        }
         val port = inbound.getInt("port")
         require(port in 1..65535)
         val socks = inbound.optJSONObject("settings")
@@ -52,22 +58,37 @@ class CoreProcess(private val diagnostics: Boolean = true) {
             require(it.isFile && it.canExecute()) { "Core lifecycle helper missing" }
             command.add(it.absolutePath)
         }
-        command.addAll(listOf(binary.absolutePath, "run", "-c", "stdin:"))
-        val process = ProcessBuilder(command).redirectErrorStream(true).start()
+        val auxiliary = outboundProtocol == "amneziawg"
+        val executable = if (auxiliary) File(binary.parentFile, "librovunet_awg.so") else binary
+        require(executable.isFile && executable.canExecute()) { "Core binary missing for this ABI" }
+        command.add(executable.absolutePath)
+        if (!auxiliary) command.addAll(listOf("run", "-c", "stdin:"))
+        val builder = ProcessBuilder(command).redirectErrorStream(true)
+        if (auxiliary && workDirectory != null) {
+            require(workDirectory.isDirectory)
+            builder.environment()["TMPDIR"] = workDirectory.absolutePath
+        }
+        val process = builder.start()
         child = process
         outputThread = Thread({
             runCatching {
                 process.inputStream.buffered().use { input ->
                     val line = StringBuilder(160)
                     var discard = false
+                    val reported = mutableSetOf<ConnectionDiagnostics.Failure>()
                     while (true) {
                         val ch = input.read()
                         if (ch == -1) break
                         if (ch == 10) {
-                            if (!discard && STARTED.matches(line)) listening.countDown()
+                            if (!discard && (if (auxiliary) line.toString() == "ROVUNET_AWG_READY" else STARTED.matches(line))) listening.countDown()
+                            if (diagnostics && !discard) {
+                                val category = CoreRuntimeFailure.category(line.toString())
+                                if (category != ConnectionDiagnostics.Failure.NONE && reported.add(category))
+                                    ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_UPSTREAM_FAILED, diagnosticSession, category)
+                            }
                             line.setLength(0)
                             discard = false
-                        } else if (line.length < 160) line.append(ch.toChar()) else discard = true
+                        } else if (line.length < 4096) line.append(ch.toChar()) else discard = true
                     }
                 }
             }

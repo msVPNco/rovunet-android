@@ -3,7 +3,7 @@
 Requires Go (auto toolchain enabled), JDK21, Android SDK36 and NDK29.
 Uses upstream's checked-in full Java bindings with the exact released JNI library.
 """
-import hashlib,os,pathlib,subprocess,tempfile,time,zipfile
+import hashlib,os,pathlib,subprocess,sys,tempfile,time,zipfile
 from fetch_verified import download_verified
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 PIN='63ca2e0c1d31b89f67700c33842431f541fedd25'
@@ -13,7 +13,8 @@ SDK=pathlib.Path(os.environ['ANDROID_HOME']);NDK=pathlib.Path(os.environ.get('AN
 JAVA=pathlib.Path(os.environ['JAVA_HOME'])/'bin';GO=os.environ.get('GO','go')
 def run(args,**kw):subprocess.run([str(x) for x in args],check=True,**kw)
 with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
- temp=pathlib.Path(tmp);apk=temp/'slipnet.apk'
+ temp=pathlib.Path(tmp)
+ apk=pathlib.Path.home()/'.cache/rovunet-inputs'/('slipnet-'+APK_SHA+'.apk')
  download_verified(apk,APK_SHA,[APK_URL,'https://api.github.com/repos/anonvector/SlipNet/releases/assets/704535849?download=1&t='+str(int(time.time()))],200*1024*1024)
  if hashlib.sha256(apk.read_bytes()).hexdigest()!=APK_SHA:raise SystemExit('Upstream APK hash mismatch')
  with zipfile.ZipFile(apk) as z:
@@ -37,6 +38,9 @@ with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
   # Reconstructed AARs must retain gomobile's JNI consumer rules. R8 cannot
   # infer the non-native constructors/fields/callbacks referenced from C.
   z.writestr('proguard.txt',(ROOT/'app/gomobile-consumer-rules.pro').read_bytes())
+ if '--bindings-only' in sys.argv:
+  print('Prepared verified bindings and pinned native payload for Kotlin compilation; no native rebuild in this step.')
+  sys.exit(0)
  core=temp/'xray';run(['git','clone','https://github.com/XTLS/Xray-core.git',core]);run(['git','checkout',PIN],cwd=core)
  for abi,arch,target in [('arm64-v8a','arm64','aarch64-linux-android24'),('armeabi-v7a','arm','armv7a-linux-androideabi24'),('x86_64','amd64','x86_64-linux-android24')]:
   cc=NDK/'toolchains/llvm/prebuilt/linux-x86_64/bin'/(target+'-clang');dest=ROOT/'app/src/main/jniLibs'/abi
@@ -56,3 +60,10 @@ with tempfile.TemporaryDirectory(prefix='rovunet-hev-') as temp:
    source=pathlib.Path(temp)/'libs'/abi/name
    (ROOT/'app/src/main/jniLibs'/abi/name).write_bytes(source.read_bytes())
 print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs; preserved other transports.')
+
+# Slipstream Android certificate pinning adds a JNI entry point: a pinned release
+# library is not compatible with this bridge. Rebuild it instead of silently reusing.
+run(['python3', ROOT/'tools/native/build-slipstream.py'])
+
+# Isolated userspace AmneziaWG core: only active for an imported AWG peer.
+run(['python3', ROOT/'tools/native/build-awg.py'])

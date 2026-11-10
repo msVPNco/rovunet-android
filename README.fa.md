@@ -7,7 +7,7 @@
 <p align="center"><b>چند مسیر به سرور خودتان، روی هر دستگاه</b><br>تونل‌های DNS، SSH، پروکسی‌های HTTPS و پروفایل‌های Xray در مجموعه‌های نام‌دار، با اتصال مستقیم و تست واقعی HTTPS.</p>
 
 <p align="center" dir="ltr">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -27,7 +27,7 @@
 
 | پلتفرم | وضعیت | دانلود و جزئیات |
 | --- | --- | --- |
-| **اندروید** | انتشار عمومی: **آلفا۱۷ Full با کد نسخهٔ ۳۶** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17) · [صفحهٔ اندروید](docs/android/README.fa.md) |
+| **اندروید** | انتشار عمومی: **آلفا۱۸.۱ Full با کد نسخهٔ ۳۹** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) · [صفحهٔ اندروید](docs/android/README.fa.md) |
 | **ویندوز** | در حال توسعه؛ هنوز انتشار عمومی تأییدشده ندارد | انتشارها با برچسب `windows-v<version>` خواهند بود |
 | **لینوکس** | برنامه‌ریزی‌شده | هنوز انتشاری ندارد |
 | **مک** | برنامه‌ریزی‌شده | انتشارها با برچسب `macos-v<version>` خواهند بود |
@@ -49,7 +49,7 @@
 
 ## شروع سریع در اندروید
 
-1. **دانلود**: APK کامل را از [صفحهٔ انتشار](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha17) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
+1. **دانلود**: APK کامل را از [صفحهٔ انتشار](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
 2. **باز کردن**: زبان و تم را انتخاب کنید و مجوز VPN اندروید را بدهید.
 3. **ورود کانفیگ**: اشتراک‌ها ← لینک اشتراک HTTPS را بچسبانید ← **ایمپورت**؛ یا **+ ← ورود** برای لینک، QR یا فایل.
 4. **اتصال**: مجموعه را باز کنید، مسیر را یک بار لمس کنید تا انتخاب شود و دوباره لمس کنید تا وصل شود.
@@ -63,7 +63,7 @@
 | [صفحهٔ اندروید](docs/android/README.fa.md) | وضعیت انتشار، قابلیت‌ها، پروتکل‌ها و محدودیت‌ها |
 | [پلتفرم‌ها](docs/PLATFORMS.md) · [وضعیت فعلی](docs/STATUS.md) · [ارتقا](docs/UPGRADE.md) | کانال‌های انتشار، وضعیت انتشار، امضا و مهاجرت |
 
-قالب و ویرایش آلفا۱۵.۴ راهنماهای PDF حفظ شده است؛ رفتار تازهٔ وضعیت حساب، منو و بیکاری را در راهنمای کاربر فعلی و [یادداشت آلفا۱۷](docs/releases/alpha17.md) بخوانید.
+قالب و ویرایش آلفا۱۵.۴ راهنماهای PDF حفظ شده است؛ رفتار تازهٔ وضعیت حساب، منو و بیکاری را در راهنمای کاربر فعلی و [یادداشت آلفا۱۸.۱](docs/releases/alpha18-1.md) بخوانید.
 
 ## سورس و پشتیبانی
 

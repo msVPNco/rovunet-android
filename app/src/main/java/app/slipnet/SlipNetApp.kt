@@ -21,6 +21,12 @@ class SlipNetApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Probe processes host only their native client. They must not contend
+        // for the main process's diagnostics, DataStore or scheduled workers.
+        val processName = if (Build.VERSION.SDK_INT >= 28) Application.getProcessName()
+            else getSystemService(android.app.ActivityManager::class.java).runningAppProcesses
+                ?.firstOrNull { it.pid == android.os.Process.myPid() }?.processName.orEmpty()
+        if (processName.startsWith("$packageName:slipstream_probe_")) return
         app.slipnet.util.ConnectionDiagnostics.enablePersistence(java.io.File(cacheDir, "connection-diagnostics.txt"))
         app.slipnet.util.StabilityDiagnostics.initialize(this)
         app.slipnet.tunnel.TransportTrust.initialize(this)

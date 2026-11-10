@@ -71,7 +71,7 @@ class PublicProviderUiDeviceTest {
         val address = "https://example.invalid/all-rejected-public-source"
         var open by mutableStateOf(true)
         compose.setContent { SlipstreamTheme {
-            if (open) PublicSourceDialog(repository, provider = PublicProviders.Provider.PATTERNIHA,
+            if (open) PublicSourceDialog(repository, provider = PublicProviders.Provider.ANONYMOUS,
                 prepare = { name, _, _ -> repository.prepareDocument(name, address, null, false, "unknown://synthetic", publicMode = true) },
                 onDismiss = { open = false }, onImported = { fail("An all-rejected preview must not be applied") })
         } }

@@ -18,7 +18,7 @@ object PublicFeed {
     private fun reason(line: String): Reason {
         if (line.substringBefore("://").lowercase() !in setOf("vless", "ss", "trojan", "vmess", "hysteria2", "hy2", "ssh", "socks5", "naive+https")) return Reason.PROTOCOL
         val parsed = runCatching { app.slipnet.core.CoreLink.parse(line) }
-        if (parsed.getOrNull()?.outbound?.let { it.optString("protocol") == "vless" && it.optJSONObject("streamSettings")?.optString("security") == "none" } == true) return Reason.TLS
+        if (parsed.getOrNull()?.outbound?.let(app.slipnet.core.CoreLink::isUnencryptedVless) == true) return Reason.TLS
         val error = parsed.exceptionOrNull()?.message.orEmpty()
         return when {
             error == "TLS_UNVERIFIED" || error.contains("Unverified TLS") || error == "TLS_REQUIRED" -> Reason.TLS

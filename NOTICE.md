@@ -16,3 +16,8 @@ Third-party components keep their own licenses, including Xray-core
 (MPL-2.0), slipstream-rust, dnstt, NoizDNS, VayDNS, Soar, lyrebird, Tor
 components and hev-socks5-tunnel. Their sources are included as submodules
 or under their original directories.
+
+AmneziaWG profiles use a constrained Mihomo adapter (GPL-3.0), pinned to
+`3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8`. Its adapter, build scripts, notices
+and pinned upstream source are included with the release source. See
+`app/src/main/assets/licenses/Rovunet-AWG-source.txt` and `Mihomo.txt`.

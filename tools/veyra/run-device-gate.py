@@ -11,10 +11,20 @@ import re
 import subprocess
 import sys
 import zipfile
+from slipstream_fixture import slipstream_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "cardUpdateStaysOnCardAndDisablesRepeatedRequests"),
+    ("app.slipnet.core.CoreDeviceSmokeTest", "packagedAmneziaCoreOwnsAuthenticatedPortAndStopsWithoutAHandshake"),
+    ("app.slipnet.service.SubscriptionDeviceTest", "providerMetadataAndOptionalNamePersistAtomicallyWithoutPanelRequests"),
+    ("app.slipnet.service.SubscriptionDeviceTest", "sharedWebsocketHostsStayDistinctAndLegacyRefreshKeepsLocalRows"),
+    ("app.slipnet.presentation.main.SoftPopUiDeviceTest", "interruptionMessagesKeepTheirSpecificReasonInAllLanguages"),
+    ("app.slipnet.service.XrayChainDeviceTest", "xrayOuterCarriesSshAndTunUsesTheInnerEndpoint"),
+    ("app.slipnet.presentation.main.SoftPopUiDeviceTest", "realHomeKeepsComfortableHeaderAcrossRtlAndThemes"),
+    ("app.slipnet.service.SlipstreamIsolationDeviceTest", "pinnedQuicCarriesRealBytesAndRejectsAnotherCertificate"),
+    ("app.slipnet.service.SlipstreamIsolationDeviceTest", "fourWorkersHaveIndependentProcessesAndReleaseCancelledSlots"),
     ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "allRejectedPreviewShowsReasonAndCannotCreateOrReplaceSource"),
     ("app.slipnet.core.CoreDeviceSmokeTest", "trojanVmessAndGrpcUseThePackagedCore"),
     ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "providerRequiresConsentCreatesOneSourceAndReaddingReviewsExistingCard"),
@@ -155,11 +165,11 @@ def main():
             raise RuntimeError(f"Could not install {apk.name}")
     adb("shell", "cmd", "appops", "set", PACKAGE, "ACTIVATE_VPN", "allow")
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/app.slipnet.presentation.MainActivity")
-    with ssh_fixture(adb), soar_fixture() as soar_peers:
+    with ssh_fixture(adb), soar_fixture() as soar_peers, slipstream_fixture(ROOT) as slipstream_peer:
         print("Running device regressions with local SSH and TLS peers", flush=True)
         result = adb("shell", "am", "instrument", "-w", "-r", "-e", "testVpnMtu", "true",
                      "-e", "sshFixturePort", "39222", "-e", "tlsFixturePort", "39223",
-                     "-e", "soarFixture", soar_peers,
+                     "-e", "soarFixture", soar_peers, "-e", "slipstreamFixture", slipstream_peer,
                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=900)
     print(result, flush=True)
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")
@@ -167,7 +177,8 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png"):
+    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
+                     "home-alpha18-en-dark.png", "home-alpha18-fa-dark.png", "home-alpha18-fa-amoled.png", "home-alpha18-en-light.png"):
         with (previews / filename).open("wb") as image:
             subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,
                             "cat", "files/" + filename], stdout=image, check=True)

@@ -30,7 +30,6 @@ internal fun FreeConnectionsSheet(repository: SubscriptionRepository, onTor: () 
             Text(stringResource(R.string.alpha17_free_title), style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.alpha17_free_hint), style = MaterialTheme.typography.bodyMedium)
             if (BuildConfig.INCLUDE_TOR) OutlinedButton(onClick = onTor, modifier = Modifier.fillMaxWidth().testTag("free-tor")) { Text(stringResource(R.string.alpha17_free_tor)) }
-            OutlinedButton(onClick = { provider = PublicProviders.Provider.PATTERNIHA; showPublic = true }, modifier = Modifier.fillMaxWidth().testTag("free-patterniha")) { Text(stringResource(R.string.review03_patterniha)) }
             HorizontalDivider()
             Text(stringResource(R.string.alpha17_public_title), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
@@ -49,7 +48,6 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
     onDismiss: () -> Unit, onImported: () -> Unit) {
     val presetName = stringResource(when (provider) {
         PublicProviders.Provider.MAHSA -> R.string.review02_mahsa
-        PublicProviders.Provider.PATTERNIHA -> R.string.review03_patterniha
         else -> R.string.review02_anonymous
     })
     var name by remember(provider) { mutableStateOf(if (provider == null) "" else presetName) }
@@ -76,7 +74,6 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
             if (preview == null) {
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(address, { address = it }, enabled = !busy && provider == null, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
-                if (provider == PublicProviders.Provider.PATTERNIHA) Text(stringResource(R.string.review03_patterniha_hint), style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
                 Row { Checkbox(agreed, { agreed = it }, enabled = !busy, modifier = Modifier.testTag("public-source-consent")); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
             } else preview?.let { item ->

@@ -33,14 +33,14 @@ object ChainValidation {
     val CHAINABLE_TYPES = setOf(
         TunnelType.DNSTT, TunnelType.NOIZDNS, TunnelType.VAYDNS, TunnelType.SOAR, TunnelType.SLIPSTREAM,
         TunnelType.SSH, TunnelType.NAIVE, TunnelType.SNOWFLAKE, TunnelType.DOH,
-        TunnelType.SOCKS5
+        TunnelType.SOCKS5, TunnelType.XRAY
     )
 
     /** Tunnel types that can serve as an intermediate (non-final) layer. */
     val CAN_BE_INTERMEDIATE = setOf(
         TunnelType.DNSTT, TunnelType.NOIZDNS, TunnelType.VAYDNS, TunnelType.SOAR, TunnelType.SLIPSTREAM,
         TunnelType.NAIVE, TunnelType.SNOWFLAKE, TunnelType.SOCKS5,
-        TunnelType.SSH, TunnelType.DOH
+        TunnelType.SSH, TunnelType.DOH, TunnelType.XRAY
     )
 
     /** Tunnel types that can serve as the final (innermost) layer. */
@@ -61,6 +61,7 @@ object ChainValidation {
         TunnelType.SSH -> LayerOutput.SOCKS5
         TunnelType.NAIVE -> LayerOutput.SOCKS5
         TunnelType.SNOWFLAKE -> LayerOutput.SOCKS5
+        TunnelType.XRAY -> LayerOutput.SOCKS5
         TunnelType.SOCKS5 -> LayerOutput.SOCKS5
         // DohBridge is itself a SOCKS5 server: CONNECTs are TCP-forwarded
         // with DoH name resolution, so the next layer (e.g. Tor) can CONNECT
@@ -123,6 +124,12 @@ object ChainValidation {
     fun validate(profiles: List<ServerProfile>): String? {
         if (profiles.size < 2) return "Chain must have at least 2 profiles"
         if (profiles.size > 4) return "Chain cannot have more than 4 layers"
+
+        // Xray is initially a directly reachable outer transport for SSH only.
+        // In particular, SSH TCP forwarding cannot carry QUIC/WireGuard UDP.
+        if (profiles.any { it.tunnelType == TunnelType.XRAY } &&
+            (profiles.size != 2 || profiles[0].tunnelType != TunnelType.XRAY || profiles[1].tunnelType != TunnelType.SSH))
+            return "XRAY_CHAIN_REQUIRES_OUTER_SSH"
 
         if (profiles.any { it.isExpired }) return "A profile in this chain has expired"
 

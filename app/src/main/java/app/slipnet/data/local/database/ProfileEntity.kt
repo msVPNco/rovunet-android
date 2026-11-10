@@ -59,6 +59,9 @@ data class ProfileEntity(
     @ColumnInfo(name = "dnstt_public_key", defaultValue = "")
     val dnsttPublicKey: String = "",
 
+    @ColumnInfo(defaultValue = "")
+    val slipstreamCertificate: String = "",
+
     // SSH tunnel fields
     @ColumnInfo(name = "ssh_username", defaultValue = "")
     val sshUsername: String = "",

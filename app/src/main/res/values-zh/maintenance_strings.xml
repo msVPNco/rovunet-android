@@ -2,7 +2,7 @@
 <resources>
   <string name="subscriptions_title">"订阅"</string>
   <string name="subscription_hint">"使用“导入”添加新订阅，使用“更新”刷新已保存的来源。移除旧条目仍需审核。操作成功后窗口自动关闭；下载失败不会修改现有配置。"</string>
-  <string name="subscription_name">"集合名称"</string>
+  <string name="subscription_name">集合名称（可选）</string>
   <string name="subscription_url">"私密订阅地址（HTTPS）"</string>
   <string name="subscription_automatic">"在不计费网络上自动更新"</string>
   <string name="subscription_automatic_hint">"网络及电量允许时约每 12 小时检查。删除需要确认，本地修改会保留。"</string>

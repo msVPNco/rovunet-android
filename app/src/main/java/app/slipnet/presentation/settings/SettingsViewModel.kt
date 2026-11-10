@@ -77,6 +77,7 @@ data class SettingsUiState(
     val customRemoteDns: String = "",
     val customRemoteDnsFallback: String = "",
     // Update checker
+    val updateErrorResource: Int = app.slipnet.R.string.update_check_failed,
     val updateCheckResult: UpdateCheckResult = UpdateCheckResult.IDLE
 )
 
@@ -274,7 +275,7 @@ class SettingsViewModel @Inject constructor(
                 )
             }.collect { newState ->
                 // Preserve update check state across DataStore re-emissions
-                _uiState.value = newState.copy(updateCheckResult = _uiState.value.updateCheckResult)
+                _uiState.value = newState.copy(updateCheckResult = _uiState.value.updateCheckResult, updateErrorResource = _uiState.value.updateErrorResource)
             }
         }
     }
@@ -617,8 +618,8 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.CHECKING)
         viewModelScope.launch {
             val current = app.slipnet.BuildConfig.VERSION_NAME
-            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {
-                _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.ERROR)
+            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (error: Exception) {
+                _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.ERROR, updateErrorResource = app.slipnet.util.UpdateChecker.errorResource(error))
                 return@launch
             }
             availableUpdate = update

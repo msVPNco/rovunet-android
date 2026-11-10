@@ -93,6 +93,7 @@ data class EditProfileUiState(
     val tunnelType: TunnelType = TunnelType.DNSTT,
     // DNSTT-specific fields
     val dnsttPublicKey: String = "",
+    val slipstreamCertificate: String = "",
     val dnsttPublicKeyError: String? = null,
     // SSH tunnel fields (SSH-only tunnel type)
     val sshUsername: String = "",
@@ -397,6 +398,7 @@ class EditProfileViewModel @Inject constructor(
                     tunnelType = profile.tunnelType,
                     coreForm = if (profile.tunnelType == TunnelType.XRAY) app.slipnet.core.CoreForm.decode(profile.coreLink) else null,
                     dnsttPublicKey = profile.dnsttPublicKey,
+                    slipstreamCertificate = profile.slipstreamCertificate,
                     sshUsername = profile.sshUsername,
                     sshPassword = profile.sshPassword,
                     sshPort = profile.sshPort.toString(),
@@ -570,6 +572,10 @@ class EditProfileViewModel @Inject constructor(
 
     fun updateKeepAliveInterval(interval: String) {
         _uiState.value = _uiState.value.copy(keepAliveInterval = interval)
+    }
+
+    fun updateSlipstreamCertificate(pem: String) {
+        _uiState.value = _uiState.value.copy(slipstreamCertificate = pem.take(32768), error = null)
     }
 
     fun updateCongestionControl(cc: CongestionControl) {
@@ -1475,6 +1481,10 @@ class EditProfileViewModel @Inject constructor(
     private fun validateProfile(forScanner: Boolean = false): Boolean {
         val state = _uiState.value
         var hasError = false
+        if (runCatching { app.slipnet.domain.model.SlipstreamIdentity.certificate(state.slipstreamCertificate) }.isFailure) {
+            _uiState.value = _uiState.value.copy(error = editorMessage(app.slipnet.R.string.alpha18_invalid_certificate))
+            hasError = true
+        }
 
         if (state.name.isBlank()) {
             _uiState.value = _uiState.value.copy(nameError = editorMessage(app.slipnet.R.string.editor_name_is_required))
@@ -1711,6 +1721,7 @@ class EditProfileViewModel @Inject constructor(
                     socksPassword = state.socksPassword.takeIf { it.isNotBlank() },
                     tunnelType = state.tunnelType,
                     dnsttPublicKey = state.dnsttPublicKey.trim(),
+                    slipstreamCertificate = state.slipstreamCertificate.trim(),
                     sshUsername = if (state.useSsh) state.sshUsername.trim() else "",
                     sshPassword = if (state.useSsh && state.sshAuthType == SshAuthType.PASSWORD) state.sshPassword else "",
                     sshPort = state.sshPort.toIntOrNull() ?: 22,

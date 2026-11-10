@@ -53,7 +53,8 @@ class PrivateCandidateTest {
             old.version = 46
         }
         fun open() = Room.databaseBuilder(context, SlipNetDatabase::class.java, name)
-            .addMigrations(SlipNetDatabase.MIGRATION_46_47, SlipNetDatabase.MIGRATION_47_48, SlipNetDatabase.MIGRATION_48_49).build()
+            .addMigrations(SlipNetDatabase.MIGRATION_46_47, SlipNetDatabase.MIGRATION_47_48, SlipNetDatabase.MIGRATION_48_49,
+                SlipNetDatabase.MIGRATION_49_50).build()
         try {
             val interrupted = open()
             try {
@@ -77,6 +78,7 @@ class PrivateCandidateTest {
                 assertEquals("", stored.coreLink); assertEquals("", stored.sshPassword)
                 assertTrue(stored.secretEnvelope.isNotEmpty()); assertFalse(stored.secretEnvelope.contains(secret))
                 val profile = mapper.toDomain(stored)
+                assertEquals("", profile.slipstreamCertificate)
                 assertEquals(link, profile.coreLink); assertEquals(secret, profile.sshPassword)
                 db.profileDao().updateProfile(mapper.toEntity(profile.copy(name = "edited")))
             } finally { first.close() }

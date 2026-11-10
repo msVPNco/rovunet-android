@@ -16,6 +16,53 @@ object CoreLink {
         require(WireBase64.decode(s).size == 32) { "Expected a 32-byte key" }
         return s
     }
+    private fun vlessEncryption(value: String?): String {
+        val encryption = value?.ifBlank { "none" } ?: "none"
+        if (encryption == "none") return encryption
+        // The pinned Xray accepts a raw URL-safe public X25519 or ML-KEM key.
+        // Preserve this tested single-key dialect; never downgrade unknown modes.
+        val match = Regex("^mlkem768x25519plus\\.(native|xorpub|random)\\.(0rtt|1rtt)\\.([A-Za-z0-9_-]+)$")
+            .matchEntire(encryption) ?: error("UNSUPPORTED_VLESS_ENCRYPTION")
+        val encoded = match.groupValues[3]
+        val bytes = WireBase64.decode(encoded.replace('-', '+').replace('_', '/'))
+        require(bytes.size in setOf(32, 1184) &&
+            WireBase64.encode(bytes).trimEnd('=').replace('+', '-').replace('/', '_') == encoded) { "UNSUPPORTED_VLESS_ENCRYPTION" }
+        return encryption
+    }
+    internal fun isUnencryptedVless(outbound: JSONObject): Boolean = outbound.optString("protocol") == "vless" &&
+        outbound.optJSONObject("streamSettings")?.optString("security") == "none" &&
+        outbound.optJSONObject("settings")?.optJSONArray("vnext")?.optJSONObject(0)
+            ?.optJSONArray("users")?.optJSONObject(0)?.optString("encryption", "none") == "none"
+
+    /** Convert the supported sharing URI to the same strict configuration parser used for files. */
+    internal fun wireguardDocument(text: String): String {
+        val uri = URI(text)
+        require(uri.scheme.equals("wireguard", true))
+        val host = uri.host?.removeSurrounding("[", "]") ?: error("Missing WireGuard endpoint")
+        val port = if (uri.port < 0) 51820 else uri.port
+        require(port in 1..65535 && host.isNotBlank() && uri.rawPath.orEmpty() in setOf("", "/"))
+        val q = linkedMapOf<String, String>()
+        for (part in uri.rawQuery.orEmpty().split('&').filter(String::isNotEmpty)) {
+            val pair = part.split('=', limit = 2)
+            val name = decode(pair[0]).lowercase()
+            require(name !in q) { "Duplicate option" }
+            q[name] = decode(pair.getOrElse(1) { "" })
+        }
+        require(q.keys.all { it in setOf("publickey", "address", "allowedips", "dns", "mtu", "presharedkey", "persistentkeepalive") || it in AmneziaConfig.labels }) { "UNSUPPORTED_OPTION" }
+        val privateKey = decode(uri.rawUserInfo ?: error("Missing WireGuard private key"))
+        require((q.values + privateKey).none { '\n' in it || '\r' in it }) { "UNSUPPORTED_OPTION" }
+        return buildString {
+            append("[Interface]\nPrivateKey = ").append(privateKey)
+            append("\nAddress = ").append(q["address"] ?: error("Missing WireGuard address"))
+            for ((name, label) in listOf("dns" to "DNS", "mtu" to "MTU")) q[name]?.let { append('\n').append(label).append(" = ").append(it) }
+            for ((name, label) in AmneziaConfig.labels) q[name]?.let { append('\n').append(label).append(" = ").append(it) }
+            append("\n[Peer]\nPublicKey = ").append(q["publickey"] ?: error("Missing peer key"))
+            append("\nEndpoint = ").append(if (':' in host) "[$host]" else host).append(':').append(port)
+            append("\nAllowedIPs = ").append(q["allowedips"] ?: error("Missing AllowedIPs"))
+            for ((name, label) in listOf("presharedkey" to "PresharedKey", "persistentkeepalive" to "PersistentKeepalive"))
+                q[name]?.let { append('\n').append(label).append(" = ").append(it) }
+        }
+    }
     fun handles(text: String): Boolean {
         if (text.trimStart().startsWith("[Interface]", true)) return true
         val scheme = text.substringBefore("://").lowercase()
@@ -25,7 +72,8 @@ object CoreLink {
             val kv = it.split('=', limit = 2)
             decode(kv[0]) to decode(kv.getOrElse(1) { "" })
         }
-        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority") } ||
+        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority", "heartbeatPeriod", "cs", "fm") } ||
+            params["encryption"].orEmpty() !in setOf("", "none") ||
             Regex("[?&]ed=").containsMatchIn(params["path"].orEmpty()) || params["security"] == "reality" || (params["type"] ?: "tcp") !in setOf("ws", "websocket")
     }
 
@@ -55,7 +103,11 @@ object CoreLink {
         require(uri.rawQuery.isNullOrEmpty() && (uri.rawPath.isNullOrEmpty() || uri.rawPath == "/")) { "Unsupported Shadowsocks plugin or option" }
         val auth = credentials.split(':', limit = 2)
         require(auth.size == 2 && auth[1].isNotEmpty()) { "Missing Shadowsocks credentials" }
-        require(auth[0] in setOf("aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305")) { "Only authenticated AEAD Shadowsocks methods are supported" }
+        require(auth[0] in setOf("aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305")) { "Only authenticated AEAD Shadowsocks methods are supported" }
+        if (auth[0].startsWith("2022-")) {
+            val size = if (auth[0] == "2022-blake3-aes-128-gcm") 16 else 32
+            require(auth[1].split(':').all { WireBase64.decode(it).size == size }) { "INVALID_FEED" }
+        }
         return Parsed(name, host, obj("protocol" to "shadowsocks", "settings" to obj("servers" to arr(
             obj("address" to host, "port" to uri.port, "method" to auth[0], "password" to auth[1])))))
     }
@@ -63,7 +115,9 @@ object CoreLink {
     fun parse(raw: String): Parsed {
         val text = CoreSharing.normalize(raw.trim())
         require(text.length <= 65536) { "Core profile too large" }
-        if (text.trimStart().startsWith("[Interface]", true)) return wireguard(text)
+        if (text.trimStart().startsWith("[Interface]", true)) return if (AmneziaConfig.handles(text)) AmneziaConfig.parse(text) else wireguard(text)
+        if (text.startsWith("wireguard://", true)) return parse(wireguardDocument(text)).copy(
+            name = URI(text).rawFragment?.let(::decode)?.ifBlank { null } ?: "WireGuard")
         if (text.startsWith("ss://", true)) return shadowsocks(text)
         val uri = URI(text)
         val scheme = uri.scheme.lowercase()
@@ -94,15 +148,22 @@ object CoreLink {
         }
         val outbound = when (scheme) {
             "vless" -> {
-                only("type", "security", "encryption", "flow", "sni", "fp", "pbk", "sid", "spx", "path", "host", "mode", "alpn", "extra", "headerType", "serviceName", "authority", "ed", "eh", "allowInsecure", "insecure")
-                require(q["encryption"].orEmpty() in setOf("", "none"))
+                only("type", "security", "encryption", "flow", "sni", "fp", "pbk", "sid", "spx", "path", "host", "mode", "alpn", "extra", "headerType", "serviceName", "authority", "ed", "eh", "heartbeatPeriod", "mtu", "tti", "cs", "fm", "allowInsecure", "insecure")
+                val encryption = vlessEncryption(q["encryption"])
                 require(auth.matches(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")))
-                val transport = when (q["type"] ?: "tcp") { "tcp", "raw" -> "raw"; "xhttp", "ws", "grpc", "httpupgrade" -> q.getValue("type"); "websocket" -> "ws"; else -> error("UNSUPPORTED_TRANSPORT") }
+                val transport = when (q["type"] ?: "tcp") { "tcp", "raw" -> "raw"; "xhttp", "ws", "grpc", "httpupgrade" -> q.getValue("type"); "kcp", "mkcp" -> "kcp"; "websocket" -> "ws"; else -> error("UNSUPPORTED_TRANSPORT") }
                 val security = q["security"] ?: "none"
                 require(security in setOf("none", "tls", "reality"))
                 val flow = q["flow"].orEmpty()
                 require(flow.isEmpty() || (flow == "xtls-rprx-vision" && transport == "raw" && security != "none"))
                 val stream = obj("network" to transport, "security" to security)
+                require(transport != "kcp" || security != "reality") { "UNSUPPORTED_OPTION" }
+                if (transport == "kcp") {
+                    val settings = JSONObject()
+                    q["mtu"]?.let { value -> val n = value.toInt(); require(n in 21..65535); settings.put("mtu", n) }
+                    q["tti"]?.let { value -> val n = value.toInt(); require(n in 10..1000); settings.put("tti", n) }
+                    stream.put("kcpSettings", settings)
+                } else require(!q.containsKey("mtu") && !q.containsKey("tti")) { "UNSUPPORTED_OPTION" }
                 val sni = q["sni"] ?: host
                 if (security == "reality") {
                     val publicKey = q["pbk"] ?: error("REALITY public key required")
@@ -127,10 +188,10 @@ object CoreLink {
                     }
                     stream.put("xhttpSettings", settings)
                 }
-                obj("protocol" to "vless", "settings" to obj("vnext" to arr(obj("address" to host, "port" to port, "users" to arr(obj("id" to auth, "encryption" to "none", "flow" to flow))))), "streamSettings" to stream)
+                obj("protocol" to "vless", "settings" to obj("vnext" to arr(obj("address" to host, "port" to port, "users" to arr(obj("id" to auth, "encryption" to encryption, "flow" to flow))))), "streamSettings" to stream)
             }
             "trojan", "vmess" -> {
-                only("type", "security", "sni", "fp", "path", "host", "alpn", "headerType", "serviceName", "authority", "mode", "ed", "eh", "allowInsecure", "insecure", "cipher")
+                only("type", "security", "sni", "fp", "path", "host", "alpn", "headerType", "serviceName", "authority", "mode", "ed", "eh", "allowInsecure", "insecure", "cipher", "encryption", "cs", "fm")
                 require(auth.isNotEmpty())
                 val stream = stream(if (scheme == "trojan") "tls" else "none")
                 if (scheme == "trojan") {
@@ -139,13 +200,14 @@ object CoreLink {
                     obj("protocol" to "trojan", "settings" to obj("servers" to arr(obj("address" to host, "port" to port, "password" to auth))), "streamSettings" to stream)
                 } else {
                     require(auth.matches(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")))
-                    val cipher = q["cipher"] ?: "auto"
+                    require(q["cipher"].isNullOrBlank() || q["encryption"].isNullOrBlank() || q["cipher"] == q["encryption"]) { "UNSUPPORTED_OPTION" }
+                    val cipher = q["cipher"] ?: q["encryption"] ?: "auto"
                     require(cipher in setOf("auto", "aes-128-gcm", "chacha20-poly1305")) { "UNSUPPORTED_OPTION" }
                     obj("protocol" to "vmess", "settings" to obj("vnext" to arr(obj("address" to host, "port" to port, "users" to arr(obj("id" to auth, "security" to cipher))))), "streamSettings" to stream)
                 }
             }
             "hysteria2", "hy2" -> {
-                only("sni", "insecure", "allowInsecure", "obfs", "obfs-password", "alpn", "security")
+                only("sni", "insecure", "allowInsecure", "obfs", "obfs-password", "alpn", "security", "fm", "mport", "hop-interval")
                 require(q["security"].orEmpty() in setOf("", "tls")) { "UNSUPPORTED_OPTION" }
                 require(q["insecure"].orEmpty() in setOf("", "0", "false")) { "Unverified TLS is not allowed" }
                 require(auth.isNotEmpty())
@@ -164,8 +226,32 @@ object CoreLink {
                 }
                 obj("protocol" to "hysteria", "settings" to obj("version" to 2, "address" to host, "port" to port), "streamSettings" to stream)
             }
-            "wireguard" -> error("Import standard WireGuard [Interface]/[Peer] configuration")
             else -> error("Unsupported core protocol")
+        }
+        outbound.optJSONObject("streamSettings")?.let { stream ->
+            q["cs"]?.let { cs ->
+                require(stream.optString("security") == "tls") { "UNSUPPORTED_OPTION" }
+                stream.getJSONObject("tlsSettings").put("cipherSuites", CoreOptions.cipherSuites(cs))
+            }
+            q["fm"]?.let { fm ->
+                val incoming = CoreOptions.finalMask(fm)
+                val existing = stream.optJSONObject("finalmask")
+                if (existing == null) stream.put("finalmask", incoming) else {
+                    require(incoming.keys().asSequence().none(existing::has)) { "UNSUPPORTED_OPTION" }
+                    incoming.keys().forEach { existing.put(it, incoming.get(it)) }
+                }
+            }
+            q["mport"]?.let { ports ->
+                require(scheme in setOf("hy2", "hysteria2") && ports.length <= 512 &&
+                    ports.split(',').all { range -> range.split('-').let { pair -> pair.size in 1..2 && pair.all { it.toIntOrNull() in 1..65535 } && (pair.size == 1 || pair[0].toInt() <= pair[1].toInt()) } }) { "UNSUPPORTED_OPTION" }
+                val seconds = q["hop-interval"]?.removeSuffix("s")?.toInt() ?: 30
+                require(seconds in 5..3600)
+                val mask = stream.optJSONObject("finalmask") ?: JSONObject().also { stream.put("finalmask", it) }
+                val layers = mask.optJSONArray("udp") ?: JSONArray().also { mask.put("udp", it) }
+                require((0 until layers.length()).none { layers.getJSONObject(it).optString("type") == "udphop" }) { "UNSUPPORTED_OPTION" }
+                layers.put(obj("type" to "udphop", "settings" to obj("mode" to "intervalremote", "interval" to seconds, "remotePorts" to ports)))
+            }
+            require(q["hop-interval"].isNullOrBlank() || q.containsKey("mport")) { "UNSUPPORTED_OPTION" }
         }
         return Parsed(name, host, outbound)
     }
@@ -184,6 +270,10 @@ object CoreLink {
                 }
                 require(q["eh"].isNullOrEmpty() || q.containsKey("ed")) { "UNSUPPORTED_OPTION" }
                 val settings = obj("path" to path, "headers" to obj("Host" to (q["host"]?.ifBlank { host } ?: host)))
+                q["heartbeatPeriod"]?.let { value ->
+                    val seconds = value.toLong(); require(seconds in 0..4_294_967_295L)
+                    settings.put("heartbeatPeriod", seconds)
+                }
                 stream.put("wsSettings", settings)
             }
             "grpc" -> {
@@ -193,6 +283,7 @@ object CoreLink {
             "httpupgrade" -> stream.put("httpupgradeSettings", obj("host" to (q["host"] ?: host), "path" to (q["path"] ?: "/")))
         }
         if (transport != "ws") require(q["ed"].isNullOrBlank() && q["eh"].isNullOrBlank()) { "UNSUPPORTED_OPTION" }
+        if (transport != "ws") require(!q.containsKey("heartbeatPeriod")) { "UNSUPPORTED_OPTION" }
         if (transport != "grpc") require(q["serviceName"].isNullOrBlank() && q["authority"].isNullOrBlank()) { "UNSUPPORTED_OPTION" }
     }
 

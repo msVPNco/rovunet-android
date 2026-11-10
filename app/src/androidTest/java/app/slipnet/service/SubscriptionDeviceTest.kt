@@ -16,6 +16,81 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SubscriptionDeviceTest {
+    @Test fun providerMetadataAndOptionalNamePersistAtomicallyWithoutPanelRequests() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()
+        val db = DatabaseModule.provideDatabase(context)
+        val address = "https://example.invalid/provider-metadata-fixture"
+        val document = "vless://00000000-0000-4000-8000-000000000001@example.invalid:443?security=tls&type=tcp"
+        val at = System.currentTimeMillis()
+        val preview = repository.prepareDocument("", address, null, false, document).copy(metadata =
+            app.slipnet.data.subscription.DownloadMetadata("upload=10;download=20;total=100;expire=" + (at / 1000 + 86400), at, at))
+        try {
+            repository.apply(preview)
+            assertEquals("example.invalid", requireNotNull(repository.findSource(address)).name)
+            val first = requireNotNull(db.accountStatusDao().get(preview.source.id)).view()
+            assertTrue(first.trustworthy); assertEquals(70L, first.status?.remainingBytes)
+            assertTrue(first.status?.providerReported == true)
+            val next = repository.prepareDocument("", address, preview.source.id, false, document).copy(metadata =
+                app.slipnet.data.subscription.DownloadMetadata("upload=10;download=50;total=100;expire=" + (at / 1000 + 86400), at, at))
+            repository.apply(next)
+            assertEquals(40L, requireNotNull(db.accountStatusDao().get(preview.source.id)).view().status?.remainingBytes)
+            val missing = repository.prepareDocument("", address, preview.source.id, false, document)
+            repository.apply(missing)
+            assertFalse(requireNotNull(db.accountStatusDao().get(preview.source.id)).view().trustworthy)
+        } finally {
+            db.profileDao().getAllProfiles().first().filter { it.collectionId == preview.source.id }.forEach { db.profileDao().deleteProfile(it.id) }
+            repository.detach(preview.source.id)
+        }
+    }
+
+    @Test fun sharedWebsocketHostsStayDistinctAndLegacyRefreshKeepsLocalRows() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()
+        val db = DatabaseModule.provideDatabase(context)
+        val mapper = ProfileMapper(Gson())
+        val address = "https://example.invalid/shared-host-fixture"
+        val uuid = "00000000-0000-4000-8000-000000000001"
+        val first = "vless://$uuid@192.0.2.31:443?type=ws&security=tls&host=cdn.example.invalid&path=%2Ffixture&sni=tls.example.invalid#First"
+        val second = first.replace("192.0.2.31:443", "192.0.2.32:8443").replace("#First", "#Second")
+        val initial = repository.prepareDocument("Shared host fixture", address, null, false, first)
+        val sourceId = initial.source.id
+        try {
+            repository.apply(initial)
+            val row = db.profileDao().getAllProfiles().first().single { it.collectionId == sourceId }
+            val remote = mapper.toDomain(row)
+            val identity = app.slipnet.data.subscription.SubscriptionIdentity.legacy(remote)
+            val legacyKey = java.security.MessageDigest.getInstance("SHA-256").digest(identity.toByteArray())
+                .joinToString("") { "%02x".format(it) }
+            // Emulate the membership key stored by the already-shipped updater.
+            val saved = requireNotNull(db.subscriptionDao().get(sourceId))
+            val members = org.json.JSONArray(saved.membersJson)
+            members.getJSONObject(0).put("key", legacyKey)
+            db.subscriptionDao().put(saved.copy(membersJson = members.toString()))
+            db.profileDao().updateProfile(mapper.toEntity(remote.copy(name = "Local override")))
+            val edited = requireNotNull(db.profileDao().getProfileById(row.id))
+            val update = repository.prepareDocument(initial.source.name, address, sourceId, false, first + "\n" + second)
+            assertEquals(2, update.profiles.size)
+            assertEquals(0, update.removed)
+            assertEquals(listOf(legacyKey), update.legacyKeys.values.toList())
+            repository.apply(update)
+            val current = db.profileDao().getAllProfiles().first().filter { it.collectionId == sourceId }
+            assertEquals(2, current.size)
+            assertEquals("Local override", db.profileDao().getProfileById(row.id)?.name)
+            assertEquals(edited.secretEnvelope, db.profileDao().getProfileById(row.id)?.secretEnvelope)
+            val again = repository.prepareDocument(initial.source.name, address, sourceId, false, first + "\n" + second)
+            assertTrue(again.legacyKeys.isEmpty()); assertEquals(0, again.removed)
+            repository.apply(again)
+            assertEquals(current.map { it.id }.toSet(), db.profileDao().getAllProfiles().first().filter { it.collectionId == sourceId }.map { it.id }.toSet())
+            assertTrue(runCatching { repository.prepareDocument(initial.source.name, address, sourceId, false,
+                first + "\n" + second + "\n" + "vless://$uuid@example.invalid:443?type=xhttp&security=none&encryption=unknown") }.isFailure)
+            assertEquals(2, db.profileDao().getAllProfiles().first().count { it.collectionId == sourceId })
+        } finally {
+            repository.detach(sourceId)
+            db.profileDao().getAllProfiles().first().filter { it.collectionId == sourceId || it.collectionId == sourceId + ":retained" }.forEach { db.profileDao().deleteProfile(it.id) }
+            db.close()
+        }
+    }
     @Test fun newSourcePreservesTunnelOwnershipAndDuplicateImportsAreAtomic() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()

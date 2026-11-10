@@ -72,13 +72,15 @@ internal object CoreDocument {
         val settings = o.getJSONObject("settings")
         val q = linkedMapOf<String, String>()
         val stream = o.optJSONObject("streamSettings") ?: JSONObject()
-        keys(stream, "network", "security", "tlsSettings", "realitySettings", "wsSettings", "grpcSettings", "httpupgradeSettings", "xhttpSettings")
+        keys(stream, "network", "security", "tlsSettings", "realitySettings", "wsSettings", "grpcSettings", "httpupgradeSettings", "xhttpSettings", "finalmask")
+        stream.optJSONObject("finalmask")?.let { q["fm"] = CoreOptions.finalMask(it.toString()).toString() }
         q["type"] = stream.optString("network", "tcp")
         q["security"] = stream.optString("security", "none")
         val tls = stream.optJSONObject("tlsSettings")
         tls?.let {
-            keys(it, "serverName", "fingerprint", "alpn", "allowInsecure")
+            keys(it, "serverName", "fingerprint", "alpn", "allowInsecure", "cipherSuites")
             require(!it.optBoolean("allowInsecure")) { "TLS_UNVERIFIED" }
+            if (it.has("cipherSuites")) q["cs"] = it.getString("cipherSuites")
             q["sni"] = it.optString("serverName"); q["fp"] = it.optString("fingerprint", "chrome")
             it.optJSONArray("alpn")?.let { a -> q["alpn"] = (0 until a.length()).joinToString(",") { n -> a.getString(n) } }
         }

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 data class AccountStatusEntity(@PrimaryKey val subscriptionId: String, val sourceFingerprint: String,
     val payload: String, val checkedAt: Long, val checkedElapsed: Long, val serverTime: Long, val error: String) {
     fun view(now: Long = System.currentTimeMillis(), elapsed: Long = android.os.SystemClock.elapsedRealtime()): AccountStatusView =
-        AccountStatusView.evaluate(runCatching { AccountStatus.read(payload) }.getOrNull(), checkedAt, checkedElapsed, serverTime, error, now, elapsed)
+        AccountStatusView.evaluate(runCatching { SubscriptionMetadata.readStatus(payload) }.getOrNull(), checkedAt, checkedElapsed, serverTime, error, now, elapsed)
 }
 
 @Dao

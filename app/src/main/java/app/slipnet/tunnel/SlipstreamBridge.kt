@@ -31,7 +31,7 @@ object SlipstreamBridge {
 
     init {
         try {
-            System.loadLibrary("slipstream")
+            System.loadLibrary("rovunet_slipstream")
             isLibraryLoaded = true
             Log.d(TAG, "Native library loaded successfully")
         } catch (e: UnsatisfiedLinkError) {
@@ -92,7 +92,8 @@ object SlipstreamBridge {
         debugPoll: Boolean = false,
         debugStreams: Boolean = false,
         idlePollIntervalMs: Int = 10000,
-        idleTimeoutMs: Int = 120000
+        idleTimeoutMs: Int = 120000,
+        certificatePath: String = ""
     ): Result<Unit> {
         if (!isLibraryLoaded) {
             return Result.failure(IllegalStateException("Native library not loaded"))
@@ -127,10 +128,11 @@ object SlipstreamBridge {
         }
 
         return try {
+            nativeSetRovunetCertificatePath(certificatePath)
             Log.i(TAG, "Starting slipstream client on $tcpListenHost:$actualPort, domain=$domain")
             currentPort = actualPort
 
-            val result = nativeStartSlipstreamClient(
+            val result = nativeStartRovunetClient(
                 domain = domain,
                 resolverHosts = resolvers.map { it.host }.toTypedArray(),
                 resolverPorts = resolvers.map { it.port }.toIntArray(),
@@ -157,7 +159,7 @@ object SlipstreamBridge {
                 -11 -> {
                     // -11 means "client died before listener ready" — could be port
                     // conflict OR another startup error (UDP bind, socket protection).
-                    val nativeError = try { nativeGetLastError()?.takeIf { it.isNotEmpty() } } catch (_: Exception) { null }
+                    val nativeError = try { nativeGetRovunetError()?.takeIf { it.isNotEmpty() } } catch (_: Exception) { null }
                     if (nativeError != null) {
                         Log.e(TAG, "Native startup error: $nativeError")
                     }
@@ -207,7 +209,7 @@ object SlipstreamBridge {
             Log.i(TAG, "Retrying on alternative port $alt")
             currentPort = alt
 
-            val result = nativeStartSlipstreamClient(
+            val result = nativeStartRovunetClient(
                 domain = domain,
                 resolverHosts = resolvers.map { it.host }.toTypedArray(),
                 resolverPorts = resolvers.map { it.port }.toIntArray(),
@@ -262,7 +264,7 @@ object SlipstreamBridge {
         val port = currentPort
         Log.i(TAG, "Stopping slipstream client on port $port")
         try {
-            nativeStopSlipstreamClient()
+            nativeStopRovunetClient()
             // Native stop waits up to 3s internally. Brief check — don't block disconnect.
             // If port is still stuck, the next startClient() has port fallback.
             if (port > 0 && isPortInUse(port)) {
@@ -281,7 +283,7 @@ object SlipstreamBridge {
     fun isClientRunning(): Boolean {
         if (!isLibraryLoaded) return false
         return try {
-            nativeIsClientRunning()
+            nativeIsRovunetRunning()
         } catch (e: Exception) {
             Log.e(TAG, "Error checking native running state", e)
             false
@@ -337,7 +339,7 @@ object SlipstreamBridge {
     }
 
     // Native methods - matches slipstream-client CLI parameters
-    private external fun nativeStartSlipstreamClient(
+    private external fun nativeStartRovunetClient(
         domain: String,
         resolverHosts: Array<String>,
         resolverPorts: IntArray,
@@ -353,10 +355,11 @@ object SlipstreamBridge {
         idleTimeoutMs: Int
     ): Int
 
-    private external fun nativeStopSlipstreamClient()
-    private external fun nativeIsClientRunning(): Boolean
-    private external fun nativeIsQuicReady(): Boolean
-    private external fun nativeGetLastError(): String?
+    private external fun nativeSetRovunetCertificatePath(path: String)
+    private external fun nativeStopRovunetClient()
+    private external fun nativeIsRovunetRunning(): Boolean
+    private external fun nativeIsRovunetQuicReady(): Boolean
+    private external fun nativeGetRovunetError(): String?
 
     /**
      * Check if the native client reports it's running (alias for isClientRunning).
@@ -371,7 +374,7 @@ object SlipstreamBridge {
     fun isQuicReady(): Boolean {
         if (!isLibraryLoaded) return false
         return try {
-            nativeIsQuicReady()
+            nativeIsRovunetQuicReady()
         } catch (e: Exception) {
             Log.e(TAG, "Error checking QUIC ready state", e)
             false

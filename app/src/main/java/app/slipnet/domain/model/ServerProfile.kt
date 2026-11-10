@@ -24,6 +24,7 @@ data class ServerProfile(
     val tunnelType: TunnelType = TunnelType.DNSTT,
     // DNSTT-specific fields
     val dnsttPublicKey: String = "",
+    val slipstreamCertificate: String = "",
     // SSH tunnel fields (used for SSH-only and DNSTT+SSH tunnel types)
     val sshUsername: String = "",
     val sshPassword: String = "",

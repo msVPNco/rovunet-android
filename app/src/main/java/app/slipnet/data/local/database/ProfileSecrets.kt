@@ -17,6 +17,7 @@ internal object ProfileSecrets {
     }
 
     fun seal(row: ProfileEntity): ProfileEntity {
+        app.slipnet.domain.model.SlipstreamIdentity.certificate(row.slipstreamCertificate)
         val sealed = envelope(listOf(row.sshPassword, row.sshPrivateKey, row.sshKeyPassphrase, row.socksPassword, row.naivePassword, row.coreLink, row.vlessUuid, row.lockPasswordHash))
         return withoutSecrets(row).copy(secretEnvelope = sealed)
     }

@@ -2,7 +2,7 @@
 <resources>
   <string name="subscriptions_title">"اشتراک‌ها"</string>
   <string name="subscription_hint">"اشتراک تازه را با «ایمپورت» اضافه کنید. «آپدیت» منبع ذخیره‌شده را تازه می‌کند؛ کنارگذاشتن ورودی‌های قدیمی همچنان بازبینی می‌خواهد. پس از موفقیت، پنجره بسته می‌شود. دانلود ناموفق کانفیگ‌های قبلی را تغییر نمی‌دهد."</string>
-  <string name="subscription_name">"نام مجموعه"</string>
+  <string name="subscription_name">نام مجموعه (اختیاری)</string>
   <string name="subscription_url">"لینک خصوصی اشتراک (HTTPS)"</string>
   <string name="subscription_automatic">"تازه‌سازی خودکار با اینترنت بدون محدودیت مصرف"</string>
   <string name="subscription_automatic_hint">"تقریباً هر ۱۲ ساعت، با شرایط مناسب شبکه و باتری بررسی می‌شود. حذف‌ها نیاز به بازبینی دارند. کانفیگ‌های ویرایش‌شدهٔ محلی حفظ می‌شوند."</string>

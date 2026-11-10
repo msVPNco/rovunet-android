@@ -46,8 +46,9 @@ fun ProfileListItem(
             if (isSelected) { if (!isConnected && canStart) onConnectClick() } else onClick()
         }
     }, modifier = modifier.fillMaxWidth().testTag("profile-${profile.id}"), shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(if (isConnected || isSelected) 1.5.dp else 1.dp, if (isConnected || isSelected) border else tones.childOutline),
-        colors = CardDefaults.cardColors(containerColor = if (isSelected) tones.selectedChild else tones.child)) {
+        colors = CardDefaults.cardColors(containerColor = if (isSelected || isConnected) tones.selectedChild else tones.child)) {
         Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 5.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
                     itemVerticalAlignment = Alignment.CenterVertically) {
@@ -56,7 +57,7 @@ fun ProfileListItem(
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
                     if (pingResult is PingResult.Success && pingResult.verified) {
-                        val fresh = ProbeCache.fresh(pingResult, measurementNowMillis)
+                        val fresh = ProbeCache.fresh(pingResult, measurementNowMillis) && (!isConnected || measurementNowMillis - pingResult.measuredAt <= 65_000)
                         val green = if (fresh) ConnectedGreen else colors.onSurfaceVariant
                         Text(stringResource(R.string.alpha17_ping, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
                             .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
@@ -64,7 +65,8 @@ fun ProfileListItem(
                             fontWeight = FontWeight.SemiBold)
                         val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
                             androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
-                        Text(stringResource(if (fresh) R.string.review02_ping_fresh else R.string.review02_ping_previous, time),
+                        Text(if (isConnected && fresh) stringResource(R.string.live_probe_age, ((measurementNowMillis - pingResult.measuredAt).coerceAtLeast(0) / 1000).toInt())
+                            else stringResource(if (fresh) R.string.review02_ping_fresh else R.string.review02_ping_previous, time),
                             Modifier.testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
                     }
                 }

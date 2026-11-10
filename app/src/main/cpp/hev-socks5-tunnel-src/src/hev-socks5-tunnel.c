@@ -847,8 +847,12 @@ hev_socks5_tunnel_stop (void)
     fd = READ_ONCE (event_fds[1]);
     /* A stop before initialization is retained by stop_requested. A completed
      * or failed initializer has no pipe; never spin waiting for a dead thread. */
-    if (fd >= 0)
-        (void) write (fd, &value, sizeof (value));
+    if (fd >= 0) {
+        ssize_t sent;
+        do {
+            sent = write (fd, &value, sizeof (value));
+        } while (sent < 0 && errno == EINTR);
+    }
 }
 
 void

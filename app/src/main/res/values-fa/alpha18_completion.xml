@@ -1,0 +1,10 @@
+<resources>
+    <string name="subscription_volume_unknown">اطلاعات حجم در دسترس نیست</string>
+    <string name="subscription_expiry_unknown">اطلاعات انقضا در دسترس نیست</string>
+    <string name="subscription_provider_snapshot">گزارش ارائه‌دهنده · %1$s</string>
+    <string name="subscription_updated_inline">به‌روز شد: %1$d مسیر · %2$d پشتیبانی‌نشده · %3$d نگه‌داری‌شده در گوشی</string>
+    <string name="subscription_updating_inline">در حال به‌روزرسانی اشتراک…</string>
+    <string name="amnezia_parameter">%1$s (تنظیم AmneziaWG)</string>
+    <string name="subscription_partial_notice">بخشی از تنظیمات یا ورودی‌ها پشتیبانی نمی‌شود؛ کانفیگ‌های محلی قبلی حفظ شدند.</string>
+    <string name="amnezia_engine_notice">AmneziaWG از واسط محدودشدهٔ Mihomo با مجوز GPL-3.0 استفاده می‌کند. سورس و مجوزها همراه این نسخه هستند.</string>
+</resources>

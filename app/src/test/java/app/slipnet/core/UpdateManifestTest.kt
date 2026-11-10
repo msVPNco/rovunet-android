@@ -18,6 +18,15 @@ class UpdateManifestTest {
         UpdateManifest.newestPublished(array, lite = lite, includePreview = previews)?.getString("tag_name")
     private fun apk(release: JSONObject) = release.getJSONArray("assets").getJSONObject(0)
 
+    @Test fun publicUpgradeFromAlpha15_3AndSubsequentDotVersionsUsesCanonicalAsset() {
+        val r = release("v0.3.0-alpha18.1")
+        for (current in listOf("0.3.0-alpha15.3", "0.3.0-alpha16.1", "0.3.0-alpha17", "0.3.0-alpha18")) {
+            assertEquals("0.3.0-alpha18.1", UpdateManifest.parse(r.toString(), current, false)?.version)
+        }
+        assertNull(UpdateManifest.parse(r.toString(), "0.3.0-alpha18.1", false))
+        assertFalse(UpdateManifest.trustedAsset(apk(r).getString("browser_download_url").replace("rovunet-app", "rovunet-android")))
+    }
+
     @Test fun canonicalRepositoryOwnsBothApiAndDownloads() {
         assertEquals("https://api.github.com/repos/msVPNco/rovunet-app/releases", UpdateManifest.API_URL)
         val url = "${UpdateManifest.RELEASES_URL}/download/v0.3.0-alpha16.1/Rovunet-Full.apk"

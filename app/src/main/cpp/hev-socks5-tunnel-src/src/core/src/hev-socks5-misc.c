@@ -37,9 +37,12 @@ hev_socks5_task_io_yielder (HevTaskYieldType type, void *data)
 {
     HevSocks5 *self = data;
 
+    if (self->terminated)
+        return -1;
+
     if (type == HEV_TASK_YIELD) {
         hev_task_yield (HEV_TASK_YIELD);
-        return 0;
+        return self->terminated ? -1 : 0;
     }
 
     if (self->timeout < 0) {
@@ -53,7 +56,7 @@ hev_socks5_task_io_yielder (HevTaskYieldType type, void *data)
         }
     }
 
-    return 0;
+    return self->terminated ? -1 : 0;
 }
 
 int
