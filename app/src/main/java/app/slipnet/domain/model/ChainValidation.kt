@@ -129,7 +129,7 @@ object ChainValidation {
         // In particular, SSH TCP forwarding cannot carry QUIC/WireGuard UDP.
         if (profiles.any { it.tunnelType == TunnelType.XRAY } &&
             (profiles.size != 2 || profiles[0].tunnelType != TunnelType.XRAY || profiles[1].tunnelType != TunnelType.SSH))
-            return "Xray chains currently require an outer Xray transport followed by SSH"
+            return "XRAY_CHAIN_REQUIRES_OUTER_SSH"
 
         if (profiles.any { it.isExpired }) return "A profile in this chain has expired"
 

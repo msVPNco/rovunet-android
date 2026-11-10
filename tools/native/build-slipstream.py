@@ -27,3 +27,8 @@ for abi, target, clang in [('arm64-v8a','aarch64-linux-android','aarch64-linux-a
     dest = ROOT / 'app/src/main/jniLibs'/abi/'libslipstream.so'
     dest.write_bytes((SOURCE/'target'/target/'release/libslipstream.so').read_bytes())
 print('Rebuilt patched pinned Slipstream JNI library for all three Full ABIs.')
+
+# A matching synthetic server is used by emulator tests, never shipped in the APK.
+host_env = os.environ.copy()
+host_env.update(PICOQUIC_AUTO_BUILD='1', PICOQUIC_BUILD_DIR=str(SOURCE/'.picoquic-build/host'), BUILD_TYPE='Release')
+run(['cargo','build','--locked','--release','-p','slipstream-server','--features','openssl-vendored,picoquic-minimal-build','-j2'], cwd=SOURCE, env=host_env)

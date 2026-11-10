@@ -20,7 +20,7 @@ val SlipstreamSecondary = Color(0xFF03DAC6)
 val SlipstreamSecondaryDark = Color(0xFF00A896)
 
 // Status colors
-val ConnectedGreen = Color(0xFF61DBA3)
+val ConnectedGreen = Color(0xFF4CAF50)
 val ConnectedGreenDark = Color(0xFF388E3C)
 val DisconnectedRed = Color(0xFFF44336)
 val DisconnectedRedDark = Color(0xFFD32F2F)

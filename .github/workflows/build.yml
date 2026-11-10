@@ -38,6 +38,11 @@ jobs:
         run: python3 tools/veyra/check-device-gate.py
       - name: Reject new unsafe Kotlin constructs
         run: python3 tools/quality/check-kotlin-safety.py
+      - name: Native packet shutdown and cancellation regressions
+        run: |
+          make -C app/src/main/cpp/hev-socks5-tunnel-src -j2 bin/libhev-socks5-tunnel.so
+          python3 tools/native/check-hev-cancellation.py
+          python3 tools/native/test-hev-stop.py
       - uses: actions/setup-java@v4
         with:
           java-version: '21'

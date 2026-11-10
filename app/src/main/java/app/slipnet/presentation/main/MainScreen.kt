@@ -161,7 +161,7 @@ import app.slipnet.presentation.common.icons.VlessIcon
 import app.slipnet.presentation.home.DebugLogSheet
 import app.slipnet.presentation.scanner.QrScannerActivity
 import androidx.compose.material.icons.filled.Timer
-import app.slipnet.presentation.theme.ConnectedGreen
+import app.slipnet.presentation.theme.ConnectionSuccessColor as ConnectedGreen
 import app.slipnet.presentation.theme.ConnectingOrange
 import app.slipnet.presentation.theme.DisconnectedRed
 import com.journeyapps.barcodescanner.ScanContract
@@ -2401,7 +2401,7 @@ private fun ConnectFab(
                 imageVector = Icons.Default.PowerSettingsNew,
                 contentDescription = if (isConnected) "Disconnect" else "Connect",
                 tint = when {
-                    isConnected || isConnecting -> Color.White
+                    isConnected || isConnecting -> MaterialTheme.colorScheme.onPrimary
                     hasProfile -> MaterialTheme.colorScheme.onPrimary
                     else -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                 }

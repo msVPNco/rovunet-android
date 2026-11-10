@@ -19,6 +19,15 @@ Published Android tags retain `v<Android version>`. New desktop release tags use
 platform updaters and platform download links must select compatible assets from
 their own channel, never assume Latest is an Android release.
 
+## Current authorized owner-review work
+
+On 2026-11-10 the owner explicitly authorized the agreed post-alpha17 backlog and
+approved Soft Pop mockup on a separate branch, a draft PR, GitHub checks and an
+installable review APK. This supersedes earlier backlog-only planning. No merge,
+release or public tag before the owner tests and accepts that exact APK. The
+Patterniha decision is removal from the built-in catalog, superseding relocation.
+See `docs/releases/alpha18-review.md`. Preserve the README layout and desktop work.
+
 ## Owner review before publication
 
 From 2026-11-07, deliver each new installable APK to the owner for testing on

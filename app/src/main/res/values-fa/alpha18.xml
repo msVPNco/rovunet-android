@@ -1,4 +1,5 @@
 <resources>
     <string name="alpha18_slipstream_certificate">گواهی عمومی اسلیپ‌استریم (PEM)</string>
     <string name="alpha18_slipstream_certificate_hint">گواهی دقیق تونل برای تأیید سرور؛ جدا از هویت SSH است. هرگز کلید خصوصی وارد نکنید.</string>
+    <string name="alpha18_chain_outer_ssh">در این زنجیره ابتدا مسیر Xray و سپس SSH قرار می‌گیرد. انتقال معکوس پروتکل‌های UDP از SSH پشتیبانی نمی‌شود.</string>
 </resources>

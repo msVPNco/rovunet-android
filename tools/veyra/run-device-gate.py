@@ -11,10 +11,12 @@ import re
 import subprocess
 import sys
 import zipfile
+from slipstream_fixture import slipstream_fixture
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.service.SlipstreamIsolationDeviceTest", "pinnedQuicCarriesRealBytesAndRejectsAnotherCertificate"),
     ("app.slipnet.service.SlipstreamIsolationDeviceTest", "fourWorkersHaveIndependentProcessesAndReleaseCancelledSlots"),
     ("app.slipnet.presentation.main.PublicProviderUiDeviceTest", "allRejectedPreviewShowsReasonAndCannotCreateOrReplaceSource"),
     ("app.slipnet.core.CoreDeviceSmokeTest", "trojanVmessAndGrpcUseThePackagedCore"),
@@ -156,11 +158,11 @@ def main():
             raise RuntimeError(f"Could not install {apk.name}")
     adb("shell", "cmd", "appops", "set", PACKAGE, "ACTIVATE_VPN", "allow")
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/app.slipnet.presentation.MainActivity")
-    with ssh_fixture(adb), soar_fixture() as soar_peers:
+    with ssh_fixture(adb), soar_fixture() as soar_peers, slipstream_fixture(ROOT) as slipstream_peer:
         print("Running device regressions with local SSH and TLS peers", flush=True)
         result = adb("shell", "am", "instrument", "-w", "-r", "-e", "testVpnMtu", "true",
                      "-e", "sshFixturePort", "39222", "-e", "tlsFixturePort", "39223",
-                     "-e", "soarFixture", soar_peers,
+                     "-e", "soarFixture", soar_peers, "-e", "slipstreamFixture", slipstream_peer,
                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=900)
     print(result, flush=True)
     print(f"PASS: {len(verified_tests(result))} device tests, including VPN traffic across UIDs.")

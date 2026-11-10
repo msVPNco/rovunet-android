@@ -1,4 +1,5 @@
 <resources>
     <string name="alpha18_slipstream_certificate">Открытый сертификат Slipstream (PEM)</string>
     <string name="alpha18_slipstream_certificate_hint">Необязательный точный сертификат сервера. Отдельно от SSH; не вводите закрытый ключ.</string>
+    <string name="alpha18_chain_outer_ssh">В этой цепочке сначала идёт транспорт Xray, затем SSH. Передача UDP в обратном направлении через SSH не поддерживается.</string>
 </resources>

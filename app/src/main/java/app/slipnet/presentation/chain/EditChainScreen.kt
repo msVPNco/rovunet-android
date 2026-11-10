@@ -225,7 +225,7 @@ fun EditChainScreen(
             // Validation error
             uiState.validationError?.let { error ->
                 Text(
-                    text = error,
+                    text = app.slipnet.presentation.theme.UiErrors.text(androidx.compose.ui.platform.LocalResources.current, error),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(vertical = 8.dp)

@@ -1,4 +1,5 @@
 <resources>
     <string name="alpha18_slipstream_certificate">Slipstream public certificate (PEM)</string>
     <string name="alpha18_slipstream_certificate_hint">Optional exact server certificate pin. Separate from SSH host identity; never enter a private key.</string>
+    <string name="alpha18_chain_outer_ssh">This chain supports an outer Xray transport followed by SSH. SSH cannot forward UDP protocols in the reverse direction.</string>
 </resources>

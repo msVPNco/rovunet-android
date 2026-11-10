@@ -76,5 +76,6 @@ jobs:
             app/build/outputs/mapping/fullRelease/mapping.txt
             tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0/lib/apksigner.jar
           if-no-files-found: error
           retention-days: 5

@@ -1,5 +1,5 @@
 diff --git a/crates/slipstream-client/src/android.rs b/crates/slipstream-client/src/android.rs
-index 3932ede..03b26cf 100644
+index 3932ede..9936bce 100644
 --- a/crates/slipstream-client/src/android.rs
 +++ b/crates/slipstream-client/src/android.rs
 @@ -223,6 +223,19 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _: *mut std::ffi::c_void) ->
@@ -16,7 +16,7 @@ index 3932ede..03b26cf 100644
 +    if let Ok(value) = env.get_string(&path) {
 +        let value: String = value.into();
 +        *CERTIFICATE_PATH.lock().unwrap() = if value.is_empty() { None } else { Some(value) };
-+    }
++    };
 +}
 +
  #[no_mangle]
@@ -55,3 +55,23 @@ index 3932ede..03b26cf 100644
              congestion_control: congestion_control.as_deref(),
              gso,
              keep_alive_interval,
+diff --git a/crates/slipstream-ffi/build/picoquic.rs b/crates/slipstream-ffi/build/picoquic.rs
+index d6bb77e..4c99130 100644
+--- a/crates/slipstream-ffi/build/picoquic.rs
++++ b/crates/slipstream-ffi/build/picoquic.rs
+@@ -54,6 +54,15 @@ pub(crate) fn build_picoquic(
+     }
+     if let Some(root) = &openssl_paths.root {
+         command.env("OPENSSL_ROOT_DIR", root);
++        // CMake's Android sysroot search does not reliably select the vendored
++        // archives from a root hint alone. Bind headers and libraries to the
++        // same openssl-sys installation rather than host/system OpenSSL.
++        let lib = root.join("lib");
++        if lib.join("libcrypto.a").is_file() && lib.join("libssl.a").is_file() {
++            command.env("OPENSSL_CRYPTO_LIBRARY", lib.join("libcrypto.a"));
++            command.env("OPENSSL_SSL_LIBRARY", lib.join("libssl.a"));
++            command.env("OPENSSL_USE_STATIC_LIBS", "TRUE");
++        }
+     }
+     let prefer_static_openssl = cfg!(feature = "openssl-static");
+     let openssl_no_vendor = env::var_os("OPENSSL_NO_VENDOR").is_some();

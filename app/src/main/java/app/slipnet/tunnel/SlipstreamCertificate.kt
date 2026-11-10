@@ -14,7 +14,11 @@ object SlipstreamCertificate {
         val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded).joinToString("") { "%02x".format(it) }
         val directory = File(context.cacheDir, "slipstream-certificates").apply { mkdirs() }
         val file = File(directory, "$digest.pem")
-        synchronized(this) { if (!file.exists()) file.writeText(pem) }
+        val temporary = File.createTempFile("certificate-", ".pem", directory)
+        try {
+            temporary.writeText(pem)
+            check(temporary.renameTo(file)) { "Cannot store Slipstream certificate" }
+        } finally { temporary.delete() }
         return file.absolutePath
     }
 }
