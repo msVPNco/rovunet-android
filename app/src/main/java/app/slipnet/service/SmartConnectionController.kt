@@ -156,12 +156,13 @@ class SmartConnectionController @Inject constructor(
                     if (chosen != null && owner == generation && stamp == physicalNetwork()) {
                         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.SMART_SWITCH, ownedSession)
                         _status.value = Status(true, R.string.alpha17_switching)
+                        established = false
                         disconnectOwned(ownedSession); ownedSession = 0
                         ownedSession = establish(chosen)
                         if (ownedSession == 0L) {
                             ownedSession = establish(active)
                             if (ownedSession != 0L && live(active, ownedSession) != null) {
-                                current = active; switchedAt = SystemClock.elapsedRealtime(); continue
+                                current = active; established = true; switchedAt = SystemClock.elapsedRealtime(); continue
                             }
                             if (ownedSession != 0L) { disconnectOwned(ownedSession); ownedSession = 0L }
                             _status.value = Status(message = R.string.alpha17_exhausted); break
@@ -173,14 +174,15 @@ class SmartConnectionController @Inject constructor(
                             // Restore the previously working path once; never recursively restart an unbounded batch.
                             ownedSession = establish(active)
                             if (ownedSession != 0L && live(active, ownedSession) != null) {
-                                current = active; switchedAt = SystemClock.elapsedRealtime(); continue
+                                current = active; established = true; switchedAt = SystemClock.elapsedRealtime(); continue
                             }
                             if (ownedSession != 0L) { disconnectOwned(ownedSession); ownedSession = 0L }
                             _status.value = Status(message = R.string.alpha17_exhausted)
                             return@launch
                         }
-                        current = chosen; switchedAt = SystemClock.elapsedRealtime()
+                        current = chosen; established = true; switchedAt = SystemClock.elapsedRealtime()
                     } else if (failed != null || (sample?.health?.failed ?: 0) >= 3) {
+                        established = false
                         disconnectOwned(ownedSession); ownedSession = 0
                         var recovered: ServerProfile? = null
                         for (candidate in members(key).filter { it.id != active.id }.take(SmartPathPolicy.MAX_CANDIDATES)) {
@@ -193,7 +195,7 @@ class SmartConnectionController @Inject constructor(
                             if (measured != null) { recovered = candidate; break }
                             disconnectOwned(ownedSession); ownedSession = 0L
                         }
-                        if (recovered != null) { current = recovered; switchedAt = SystemClock.elapsedRealtime(); continue }
+                        if (recovered != null) { current = recovered; established = true; switchedAt = SystemClock.elapsedRealtime(); continue }
                         _status.value = Status(message = R.string.alpha17_exhausted)
                         return@launch
                     }
