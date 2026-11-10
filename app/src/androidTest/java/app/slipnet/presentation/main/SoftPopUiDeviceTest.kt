@@ -77,8 +77,32 @@ class SoftPopUiDeviceTest {
                     assertTrue("Header is shorter than 72 dp", header.boundsInRoot.height / context.resources.displayMetrics.density >= 72f)
                     compose.waitForIdle()
                     compose.onAllNodes(isDialog()).assertCountEquals(0)
-                    inst.uiAutomation.waitForIdle(500, 5000)
-                    val bitmap = requireNotNull(inst.uiAutomation.takeScreenshot())
+                    // Semantics can still describe the preceding Activity while a new
+                    // window is drawing. Require both the requested appearance and a
+                    // painted collection, rather than saving a light/loading frame as
+                    // the AMOLED evidence. These bounds are pixels in the device window.
+                    val card = compose.onNodeWithTag("collection-soft-pop-1").fetchSemanticsNode().boundsInWindow
+                    var captured: Bitmap? = null
+                    compose.waitUntil(15000) {
+                        val frame = requireNotNull(inst.uiAutomation.takeScreenshot())
+                        val background = frame.getPixel(frame.width / 2, frame.height * 2 / 3)
+                        val surface = frame.getPixel(card.center.x.toInt().coerceIn(0, frame.width - 1),
+                            card.center.y.toInt().coerceIn(0, frame.height - 1))
+                        val red = android.graphics.Color.red(background)
+                        val green = android.graphics.Color.green(background)
+                        val blue = android.graphics.Color.blue(background)
+                        val matches = when (mode) {
+                            DarkMode.AMOLED -> red <= 2 && green <= 2 && blue <= 2
+                            DarkMode.LIGHT -> red >= 235 && green >= 235 && blue >= 235
+                            else -> red < 80 && green < 80 && blue < 100 && blue > red
+                        }
+                        val painted = kotlin.math.abs(android.graphics.Color.red(surface) - red) +
+                            kotlin.math.abs(android.graphics.Color.green(surface) - green) +
+                            kotlin.math.abs(android.graphics.Color.blue(surface) - blue) > 30
+                        if (matches && painted) { captured = frame; true }
+                        else { frame.recycle(); false }
+                    }
+                    val bitmap = requireNotNull(captured)
                     File(context.filesDir, "home-alpha18-$language-${mode.name.lowercase()}.png").outputStream().use { output ->
                         assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
                     }
