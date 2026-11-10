@@ -77,9 +77,9 @@ func main() {
 				go ssh.DiscardRequests(requests)
 				for channel := range channels {
 					var destination struct {
-						Host string
-						Port uint32
-						Origin string
+						Host       string
+						Port       uint32
+						Origin     string
 						OriginPort uint32
 					}
 					if channel.ChannelType() != "direct-tcpip" || ssh.Unmarshal(channel.ExtraData(), &destination) != nil ||

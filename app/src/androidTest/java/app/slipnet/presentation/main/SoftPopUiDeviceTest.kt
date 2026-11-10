@@ -42,7 +42,15 @@ class SoftPopUiDeviceTest {
                 "fa" to DarkMode.AMOLED, "en" to DarkMode.LIGHT)) {
                 prefs.setDarkMode(mode)
                 assertTrue(ui.edit().putString("language", language).commit())
-                ActivityScenario.launch(MainActivity::class.java).use {
+                val needsWelcome = !prefs.firstLaunchDone.first()
+                ActivityScenario.launch(MainActivity::class.java).use { screen ->
+                    var start = ""
+                    screen.onActivity { start = it.getString(app.slipnet.R.string.rv_get_started_983f31) }
+                    if (needsWelcome) {
+                        compose.waitUntil(15000) { compose.onAllNodesWithText(start).fetchSemanticsNodes().isNotEmpty() }
+                        compose.onNodeWithText(start).performClick()
+                        kotlinx.coroutines.withTimeout(5000) { prefs.firstLaunchDone.first { it } }
+                    }
                     compose.waitUntil(15000) {
                         compose.onAllNodesWithText("Review 1").fetchSemanticsNodes().isNotEmpty()
                     }
@@ -50,6 +58,8 @@ class SoftPopUiDeviceTest {
                     val header = compose.onNodeWithTag("soft-pop-header").fetchSemanticsNode()
                     assertTrue("Header is shorter than 72 dp", header.boundsInRoot.height / context.resources.displayMetrics.density >= 72f)
                     compose.waitForIdle()
+                    compose.onAllNodes(isDialog()).assertCountEquals(0)
+                    inst.uiAutomation.waitForIdle(500, 5000)
                     val bitmap = requireNotNull(inst.uiAutomation.takeScreenshot())
                     File(context.filesDir, "home-alpha18-$language-${mode.name.lowercase()}.png").outputStream().use { output ->
                         assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))

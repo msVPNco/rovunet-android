@@ -30,6 +30,9 @@ client must not silently replace the encryption identity of old shared links.
   transport followed by SSH. Core SOCKS credentials are per session; the final
   packet engine connects to SSH, not accidentally to the outer core. Reverse
   UDP-over-SSH and arbitrary Xray placements remain unsupported.
+  The SSH target must also be allowed/reachable from the outer server. The final
+  named SSH listener honors configured local SOCKS authentication. A cross-UID
+  TUN test checks an SSH-only response and rejects unauthenticated local clients.
 - Approved Soft Pop direction: soft raised lilac/mint controls, press-only spring
   feedback, gradual slate-navy-to-black background, taller translucent header and
   matching bottom panel. Light/dark appearances retain shared layout and explicit
@@ -59,3 +62,15 @@ Hysteria2/WireGuard network failures remain investigation items; local core
 interoperability success is not proof they work on the affected mobile network.
 Panel certificate export and installed client/server version matching require
 coordination with the panel maintainer; this app PR does not modify the panel.
+
+## Supplementary upstream lint
+
+The edited Rust files are formatted. Full-workspace `cargo fmt --all --check`
+and `cargo clippy --workspace --all-targets -- -D warnings` were run locally with
+Rust 1.99.1. The pinned upstream has unrelated formatting differences, plus
+Clippy failures in untouched `runtime/setup.rs` (unused `info`), `pinning.rs`
+(public raw-pointer API), `runtime.rs` (manual clamp) and server `udp_fallback.rs`
+(question-mark style). These are not passing checks and are not represented as
+such. This app patch does not rewrite those upstream runtime/server files.
+The new Android client no longer compiles the unused legacy codec-key module;
+the original pinned codec remains in its original library.

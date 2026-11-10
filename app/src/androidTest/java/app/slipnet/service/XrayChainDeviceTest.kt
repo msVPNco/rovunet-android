@@ -41,7 +41,10 @@ class XrayChainDeviceTest {
         fun port() = ServerSocket(0).use { it.localPort }
         val vlessPort = port()
         val id = "00000000-0000-4000-8000-000000000018"
-        val config = """{"inbounds":[{"listen":"127.0.0.1","port":${port()},"protocol":"socks","settings":{"auth":"noauth"}},{"listen":"127.0.0.1","port":$vlessPort,"protocol":"vless","settings":{"clients":[{"id":"$id"}],"decryption":"none"},"streamSettings":{"network":"raw","security":"none"}}],"outbounds":[{"protocol":"freedom"}]}"""
+        // This pinned Xray blocks private final destinations for VLESS by default
+        // (including a 30–90s blackhole). Only the disposable fixture permits its
+        // adb-loopback SSH peer; the shipped client's routing/ACLs are unchanged.
+        val config = """{"inbounds":[{"listen":"127.0.0.1","port":${port()},"protocol":"socks","settings":{"auth":"noauth"}},{"listen":"127.0.0.1","port":$vlessPort,"protocol":"vless","settings":{"clients":[{"id":"$id"}],"decryption":"none"},"streamSettings":{"network":"raw","security":"none"}}],"outbounds":[{"protocol":"freedom","settings":{"finalRules":[{"action":"allow","ip":["127.0.0.1/32"]}]}}]}"""
         val mapper = ProfileMapper(Gson())
         val profiles = listOf(
             ServerProfile(name = "Synthetic outer Xray", tunnelType = TunnelType.XRAY,
@@ -76,7 +79,7 @@ class XrayChainDeviceTest {
                 }
                 withTimeout(45000) {
                     while ((connection.connectionState.value as? ConnectionState.Connected)?.chainId != chainId) {
-                        assertFalse("Chain setup failed: ${connection.connectionState.value}", connection.connectionState.value is ConnectionState.Error)
+                        assertFalse("Chain setup failed: ${connection.connectionState.value}\n${app.slipnet.util.ConnectionDiagnostics.report()}", connection.connectionState.value is ConnectionState.Error)
                         TransportTrust.request.value?.let { TransportTrust.answer(it, true) }
                         delay(25)
                     }
