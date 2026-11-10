@@ -11,6 +11,42 @@ import org.junit.Test
 class InteroperabilityTest {
     private val id = "00000000-0000-4000-8000-000000000001"
     private val publicKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    @Test fun privateMixedSubscriptionPreservesWebsocketHeartbeatAndKcpTuning() {
+        val extra = CoreSharing.enc("""{"xmux":{"maxConcurrency":"4-8","hKeepAlivePeriod":30,"hMaxRequestTimes":"600-900","hMaxReusableSecs":"300-600"}}""")
+        val links = (1..5).map { "vless://$id@edge$it.example.invalid:443?encryption=none&security=reality&type=xhttp&pbk=$publicKey&mode=auto&path=%2Ffixture&extra=$extra" } +
+            "vless://$id@udp.example.invalid:443?encryption=none&security=tls&type=kcp&mtu=1200&tti=20&sni=example.invalid" +
+            (1..5).map { "vless://$id@ws$it.example.invalid:443?encryption=none&security=tls&type=ws&path=%2Ffixture&heartbeatPeriod=30&sni=example.invalid" }
+        val encoded = WireBase64.encode(links.joinToString("\n").toByteArray())
+        val decoded = app.slipnet.data.subscription.SubscriptionPayload.read(encoded).single().link
+        val imported = ConfigImporter().parseAndImport(decoded) as ImportResult.Success
+        assertEquals(11, imported.profiles.size)
+        assertTrue(imported.warnings.isEmpty())
+        imported.profiles.forEach { profile ->
+            assertEquals(TunnelType.XRAY, profile.tunnelType)
+            val parsed = CoreLink.parse(profile.coreLink)
+            assertEquals(parsed.outbound.toString(), CoreLink.parse(CoreForm.decode(profile.coreLink).encode("Fixture")).outbound.toString())
+            val restored = ConfigImporter().parseAndImport(ConfigExporter().exportSingleProfile(profile)) as ImportResult.Success
+            assertEquals(profile.coreLink, restored.profiles.single().coreLink)
+        }
+        val ws = CoreLink.parse(links.last()).outbound.getJSONObject("streamSettings").getJSONObject("wsSettings")
+        assertEquals(30L, ws.getLong("heartbeatPeriod"))
+        val kcp = imported.profiles.single { it.domain == "udp.example.invalid" }
+        val settings = CoreLink.parse(kcp.coreLink).outbound.getJSONObject("streamSettings").getJSONObject("kcpSettings")
+        assertEquals(1200, settings.getInt("mtu")); assertEquals(20, settings.getInt("tti"))
+        assertTrue(ProfileCollections.isUdp(kcp)); assertNull(ProfileCollections.coreTcpTarget(kcp))
+    }
+    @Test fun transportTuningRejectsInvalidOrMisplacedSettingsWithoutWeakeningTls() {
+        val ws = "vless://$id@example.invalid:443?type=ws&security=tls&heartbeatPeriod="
+        for (value in listOf("-1", "4294967296", "abc", "")) assertTrue(runCatching { CoreLink.parse(ws + value) }.isFailure)
+        val kcp = "vless://$id@example.invalid:443?type=kcp&security=tls"
+        for (option in listOf("mtu=20", "mtu=65536", "tti=9", "tti=1001", "heartbeatPeriod=30", "allowInsecure=1", "headerType=srtp", "seed=unsupported"))
+            assertTrue(option, runCatching { CoreLink.parse("$kcp&$option") }.isFailure)
+        assertTrue(runCatching { CoreLink.parse(ws.replace("type=ws", "type=tcp") + "30") }.isFailure)
+        assertTrue(runCatching { CoreLink.parse(kcp.replace("type=kcp", "type=ws") + "&mtu=1200") }.isFailure)
+        assertEquals("raw", CoreLink.parse(CoreForm.decode(ws + "30").with("type", "tcp").encode("Changed")).outbound.getJSONObject("streamSettings").getString("network"))
+        val changed = CoreForm.decode(kcp + "&mtu=1200&tti=20").with("type", "ws").encode("Changed")
+        assertFalse(CoreLink.parse(changed).outbound.getJSONObject("streamSettings").has("kcpSettings"))
+    }
     @Test fun rawDisplayNamesDoNotChangeEndpointQueryOrSecrets() {
         val link="vless://$id@example.invalid:443?security=reality&type=tcp&pbk=$publicKey&headerType=none#Free profile 🇨🇦 + plus"
         val parsed=CoreLink.parse(link)

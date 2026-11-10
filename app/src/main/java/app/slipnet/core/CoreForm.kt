@@ -67,6 +67,8 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
         if (kind in setOf("vless", "trojan")) {
             if (q["type"] != "grpc") listOf("serviceName", "authority").forEach(q::remove)
             if (q["type"] != "ws") listOf("ed", "eh").forEach(q::remove)
+            if (q["type"] != "ws") q.remove("heartbeatPeriod")
+            if (q["type"] !in setOf("kcp", "mkcp")) listOf("mtu", "tti").forEach(q::remove)
             if (q["type"] !in setOf("grpc", "xhttp")) q.remove("mode")
         }
         val query = q.filterValues { it.isNotBlank() }.entries.joinToString("&") { enc(it.key) + "=" + enc(it.value) }
@@ -105,7 +107,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             fields["auth"] = dec(uri.rawUserInfo)
             val kind = if (uri.scheme in setOf("hysteria2", "hy2")) "hysteria2" else uri.scheme.lowercase()
             if (kind == "vless") {
-                fields["type"] = when (fields["type"]) { null, "raw" -> "tcp"; "websocket" -> "ws"; else -> fields.getValue("type") }
+                fields["type"] = when (fields["type"]) { null, "raw" -> "tcp"; "websocket" -> "ws"; "mkcp" -> "kcp"; else -> fields.getValue("type") }
                 fields.putIfAbsent("security", "none")
             }
             return CoreForm(kind, fields)

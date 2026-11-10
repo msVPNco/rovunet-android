@@ -82,7 +82,7 @@ fun CoreProfileEditor(
                 field("port", app.slipnet.R.string.rv_server_port_426f91)
                 field("auth", if (form.kind in setOf("vless", "vmess")) app.slipnet.R.string.editor_uuid else app.slipnet.R.string.editor_core_auth_password, secret = true)
                 if (form.kind in setOf("vless", "trojan", "vmess")) {
-                    choices("type", app.slipnet.R.string.rv_transport_aaead4, if (form.kind == "vless") listOf("tcp", "xhttp", "ws", "grpc", "httpupgrade") else listOf("tcp", "ws", "grpc", "httpupgrade"), "tcp")
+                    choices("type", app.slipnet.R.string.rv_transport_aaead4, if (form.kind == "vless") listOf("tcp", "xhttp", "ws", "grpc", "httpupgrade", "kcp") else listOf("tcp", "ws", "grpc", "httpupgrade"), "tcp")
                     choices("security", app.slipnet.R.string.editor_security_label, when (form.kind) { "trojan" -> listOf("tls"); "vmess" -> listOf("tls", "none"); else -> listOf("reality", "tls", "none") }, "none")
                     if (form.kind == "vmess") choices("cipher", app.slipnet.R.string.review03_vmess_cipher, listOf("auto", "aes-128-gcm", "chacha20-poly1305"), "auto")
                     if (form["security"] != "none") {

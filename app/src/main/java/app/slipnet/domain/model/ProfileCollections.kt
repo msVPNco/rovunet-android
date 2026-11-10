@@ -11,7 +11,12 @@ object ProfileCollections {
         TunnelType.VAYDNS, TunnelType.VAYDNS_SSH, TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH,
         TunnelType.SOAR, TunnelType.SOAR_SSH)
     fun isUdp(p: ServerProfile): Boolean = p.tunnelType == TunnelType.XRAY &&
-        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2", "wireguard") || p.coreLink.trimStart().startsWith("[Interface]", true))
+        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2", "wireguard") || p.coreLink.trimStart().startsWith("[Interface]", true) ||
+            runCatching { java.net.URI(app.slipnet.core.CoreSharing.normalize(p.coreLink)).rawQuery.orEmpty().split('&').any {
+                val pair = it.split('=', limit = 2)
+                java.net.URLDecoder.decode(pair[0], "UTF-8") == "type" &&
+                    java.net.URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8") in setOf("kcp", "mkcp")
+            } }.getOrDefault(false))
     private val coreAuthority = Regex("""^[A-Za-z][A-Za-z0-9+.-]*://(?:[^@/?#]*@)?(\[[0-9A-Fa-f:]+]|[^:/?#\s]+):(\d{1,5})""")
 
     /**

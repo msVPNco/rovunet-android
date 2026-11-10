@@ -50,6 +50,14 @@ production-signed owner APK. No merge, tag or release before explicit acceptance
   categories improve diagnosis without exporting raw engine output. A ready
   SOCKS listener is not a successful UDP handshake or proof of Internet access.
   No claim is made that the owner's physical-network failures are fixed.
+- A private mixed VLESS subscription exposed rejected WebSocket heartbeat and
+  KCP MTU/TTI parameters. These now map to the pinned Xray settings instead of
+  discarding the options or rejecting the complete subscription. WebSocket with
+  heartbeat uses Xray; KCP remains UDP and is excluded from plain TCP checks.
+  Editing/export preserve the imported options. TLS validation and strict atomic
+  private-feed application remain unchanged. Synthetic regressions contain no
+  account links, credentials or provider addresses; new loopback cases exercise
+  WebSocket heartbeat and KCP using actual Kotlin-generated configurations.
 
 ## Validation and remaining evidence
 

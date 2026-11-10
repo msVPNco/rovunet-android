@@ -25,7 +25,7 @@ object CoreLink {
             val kv = it.split('=', limit = 2)
             decode(kv[0]) to decode(kv.getOrElse(1) { "" })
         }
-        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority") } ||
+        return params.keys.any { it in setOf("ed", "eh", "serviceName", "authority", "heartbeatPeriod") } ||
             Regex("[?&]ed=").containsMatchIn(params["path"].orEmpty()) || params["security"] == "reality" || (params["type"] ?: "tcp") !in setOf("ws", "websocket")
     }
 
@@ -94,15 +94,22 @@ object CoreLink {
         }
         val outbound = when (scheme) {
             "vless" -> {
-                only("type", "security", "encryption", "flow", "sni", "fp", "pbk", "sid", "spx", "path", "host", "mode", "alpn", "extra", "headerType", "serviceName", "authority", "ed", "eh", "allowInsecure", "insecure")
+                only("type", "security", "encryption", "flow", "sni", "fp", "pbk", "sid", "spx", "path", "host", "mode", "alpn", "extra", "headerType", "serviceName", "authority", "ed", "eh", "heartbeatPeriod", "mtu", "tti", "allowInsecure", "insecure")
                 require(q["encryption"].orEmpty() in setOf("", "none"))
                 require(auth.matches(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")))
-                val transport = when (q["type"] ?: "tcp") { "tcp", "raw" -> "raw"; "xhttp", "ws", "grpc", "httpupgrade" -> q.getValue("type"); "websocket" -> "ws"; else -> error("UNSUPPORTED_TRANSPORT") }
+                val transport = when (q["type"] ?: "tcp") { "tcp", "raw" -> "raw"; "xhttp", "ws", "grpc", "httpupgrade" -> q.getValue("type"); "kcp", "mkcp" -> "kcp"; "websocket" -> "ws"; else -> error("UNSUPPORTED_TRANSPORT") }
                 val security = q["security"] ?: "none"
                 require(security in setOf("none", "tls", "reality"))
                 val flow = q["flow"].orEmpty()
                 require(flow.isEmpty() || (flow == "xtls-rprx-vision" && transport == "raw" && security != "none"))
                 val stream = obj("network" to transport, "security" to security)
+                require(transport != "kcp" || security != "reality") { "UNSUPPORTED_OPTION" }
+                if (transport == "kcp") {
+                    val settings = JSONObject()
+                    q["mtu"]?.let { value -> val n = value.toInt(); require(n in 21..65535); settings.put("mtu", n) }
+                    q["tti"]?.let { value -> val n = value.toInt(); require(n in 10..1000); settings.put("tti", n) }
+                    stream.put("kcpSettings", settings)
+                } else require(!q.containsKey("mtu") && !q.containsKey("tti")) { "UNSUPPORTED_OPTION" }
                 val sni = q["sni"] ?: host
                 if (security == "reality") {
                     val publicKey = q["pbk"] ?: error("REALITY public key required")
@@ -184,6 +191,10 @@ object CoreLink {
                 }
                 require(q["eh"].isNullOrEmpty() || q.containsKey("ed")) { "UNSUPPORTED_OPTION" }
                 val settings = obj("path" to path, "headers" to obj("Host" to (q["host"]?.ifBlank { host } ?: host)))
+                q["heartbeatPeriod"]?.let { value ->
+                    val seconds = value.toLong(); require(seconds in 0..4_294_967_295L)
+                    settings.put("heartbeatPeriod", seconds)
+                }
                 stream.put("wsSettings", settings)
             }
             "grpc" -> {
@@ -193,6 +204,7 @@ object CoreLink {
             "httpupgrade" -> stream.put("httpupgradeSettings", obj("host" to (q["host"] ?: host), "path" to (q["path"] ?: "/")))
         }
         if (transport != "ws") require(q["ed"].isNullOrBlank() && q["eh"].isNullOrBlank()) { "UNSUPPORTED_OPTION" }
+        if (transport != "ws") require(!q.containsKey("heartbeatPeriod")) { "UNSUPPORTED_OPTION" }
         if (transport != "grpc") require(q["serviceName"].isNullOrBlank() && q["authority"].isNullOrBlank()) { "UNSUPPORTED_OPTION" }
     }
 
