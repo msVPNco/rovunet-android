@@ -1,5 +1,9 @@
 # Release procedure
 
+## Alpha18.1 authorization
+
+The owner explicitly authorized implementation and release on 2026-11-10, superseding the review-only hold for this iteration. This is authorization, not a claim of new physical-phone acceptance. Use the fixed production signer, passing final-source CI and pinned public APK copy record. Later releases retain the ordinary phone-review rule below.
+
 ## Mandatory phone review
 
 The owner requires an installable APK for phone testing before public release.
@@ -26,7 +30,9 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha17/code36: owner accepted the exact APK on 2026-11-09. APK SHA-256 `eb5ac7bd474b37e361e8ca126c8e2f7d445faaf876ddd7b9ecd158548324a871`; application source `bbb30d7146c3f308f37943a0e3c9456b185167f0`. PR CI 42626133278 passed 119 JVM, Gradle unit task, 64 Debug device, two minified JNI and nine TCP/UDP modes. Parallel push UI timeout remains disclosed. Publication restores the exact accepted bytes without rebuilding or re-signing. [Record](releases/alpha17.md).
+Current alpha18.1/code39: application source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, APK SHA-256 `a649930c42e236226c903a43c5a8acc315864c87a2cb1a5b8902fc487f554e21`. Both recorded source CI runs passed verify/device gates; see [provenance](releases/alpha18-1-provenance.json). Owner authorized implementation and publication, with no new physical-phone acceptance claim. The one-version workflow restores and verifies the offline-signed APK after the exact PR is merged; it cannot replace a public release.
+
+Historical alpha17/code36: owner accepted the exact APK on 2026-11-09. APK SHA-256 `eb5ac7bd474b37e361e8ca126c8e2f7d445faaf876ddd7b9ecd158548324a871`; application source `bbb30d7146c3f308f37943a0e3c9456b185167f0`. PR CI 42626133278 passed 119 JVM, Gradle unit task, 64 Debug device, two minified JNI and nine TCP/UDP modes. Parallel push UI timeout remains disclosed. Publication restores the exact accepted bytes without rebuilding or re-signing. [Record](releases/alpha17.md).
 
 Historical alpha16.1/code33 published the exact owner-accepted review APK, approved on 2026-11-08: SHA-256 `133a0a4f1aa97ddd9eb42c8ec5b0be8ca53c00ed5e33811e0a585ab773e3fc28`, application commit `af237e5e53692862dffb82fe3033e16e9fc83204`. [Source CI](https://github.com/msVPNco/rovunet-app/actions/runs/42487016569) and PR CI 42487026297 passed 93 portable/JUnit cases, the Gradle unit task, 55 Debug emulator and two minified Release JNI cases. Publication documentation/tooling does not rebuild or re-sign the APK. Owner authorization does not imply new detailed battery or network measurements. Older version paragraphs below are historical.
 

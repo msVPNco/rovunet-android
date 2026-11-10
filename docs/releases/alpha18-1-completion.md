@@ -28,14 +28,32 @@ physical-phone test pass. Keep code38's delivered review APK unchanged.
 - Android / desktop updater compatibility keeps the version name alpha18.1 and
   increments code38 to39, avoiding a version-name rollback for owner test devices.
 
-## Validation record (to be finalized after CI)
+## Validation record
 
-Local JVM/parser/lifecycle regressions, real local encrypted TCP+UDP relays, and
-AWG v1/v2/v3.1 userspace server/client tests are run before submission. Android
-packaging, device/UI/storage and minified JNI gates must pass on the final commit.
-Local fixtures are not proof of carrier reachability, censorship resistance,
-physical-phone battery use, or repair of the owner's panel WG/Hy2 peer.
+Final application source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, tree
+`3e890261420f7bbc87bf55cc324f240caffdc490`. Push CI 42905223390 and independent
+PR CI 42905231496 passed the required verify and Android-device jobs: 144 JVM,
+Gradle unit tests, 18 real local encrypted TCP/UDP modes (200 TCP requests each,
+concurrency 40), 73 Debug emulator cases and two minified Release JNI cases.
+AWG 1/2/3.1 fixtures exchange actual encrypted TCP/UDP and verify shutdown; the
+Android case verifies packaged authenticated endpoint ownership/cancellation.
+The public Full APK is assembled unsigned by that CI and signed offline with the
+fixed production key; exact artifact, APK hashes and certificate are in
+[provenance](alpha18-1-provenance.json). Public copy records contain only headers,
+padding and signatures; all payload bytes are checked against the CI input.
 
-AnyTLS/TUIC and further protocols remain subsequent work after current protocol
-compatibility. Existing reviewed theme, Slipstream and native stop changes are
-retained. README design and desktop source layout must be preserved.
+The first Hy2 hopping fixture used independent QUIC connection-ID tables and
+could fail after a port change; it now uses shared-listener UDP fan-in and checks
+an actual remote-port change. A busy-dialog test had an inverted enabled-state
+assertion; disabled controls are now required. Theme snapshots complete onboarding
+with a real click in a separate live window and still require persisted completion;
+the original short-timeout cause was not independently established. No coverage
+was removed and skipped device results are not accepted as success.
+
+Local fixtures/emulators are not proof of carrier reachability, censorship
+resistance, physical-phone battery use, or repair of the owner's panel WG/Hy2 peer.
+No new physical-phone acceptance is claimed. AnyTLS/TUIC/Mieru remain subsequent
+work after existing compatibility and field validation. README design, historical
+records and desktop source layout are preserved. Full/light explicit source ZIPs
+include available pinned expanded sources plus Xray/Mihomo; the unavailable old
+dnstt-mobile tree remains disclosed rather than silently substituted.

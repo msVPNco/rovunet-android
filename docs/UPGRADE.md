@@ -1,20 +1,20 @@
 # Signing and upgrade guide / راهنمای امضا و ارتقا
 
-Alpha17 Full / code 36 is owner-approved. Fresh installs ask language first and follow system theme. Soar scanning restores the alpha15.4 repeated-handshake/BOTH behaviour. Collections retain fresh HTTPS measurements and scoped choices; the main button stops the live connection even when another card is selected. Anonymous, Mahsa and Patterniha use consent and reviewed imports. Trojan, AEAD VMess, Shadowsocks and supported Xray/sing-box JSON connections are importable; unsupported effective settings and unverified TLS are rejected with per-protocol reasons. Optional failure recovery/smart selection stays bounded and manual by default. JSON does not apply external DNS, routing or listeners.
+Alpha18.1 Full / code 39 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
 
-The 120-second physical-phone Hev stop is not proved fixed; false screen-off reporting was corrected. Physical-network availability, full overnight/Doze and battery savings are not established by emulator tests. No new Lite or desktop binary is published. Patterniha placement beside Anonymous/Mahsa is deferred to the next update.
+Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC and Mieru remain future work. No new Lite or desktop binary is published.
 
 ## Alpha16.1 after the repository rename
 
-**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged. If the accepted alpha17/code36 review APK is installed, it is this same binary; no reinstall is needed.
+**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
 
-**ارتقای مستقیم برای آلفا۱۴ تا آلفا۱۶ عمومی (تا کد۳۲):** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) را **بدون حذف اپ یا پاک‌کردن داده‌ها** روی برنامهٔ فعلی نصب کنید. آپدیتر قدیمی نشانی قبلی مخزن را درون خود دارد و تغییر مسیر وب آن بررسی را اصلاح نمی‌کند. بسته و امضای تولیدی ثابت‌اند. اگر APK تأییدشدهٔ آلفا۱۷/کد۳۶ نصب است، همین فایل انتشار را دارید و نصب دوباره لازم نیست.
+**ارتقای مستقیم برای آلفا۱۴ تا آلفا۱۶ عمومی (تا کد۳۲):** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) را **بدون حذف اپ یا پاک‌کردن داده‌ها** روی برنامهٔ فعلی نصب کنید. آپدیتر قدیمی نشانی قبلی مخزن را درون خود دارد و تغییر مسیر وب آن بررسی را اصلاح نمی‌کند. بسته و امضای تولیدی ثابت‌اند.
 
-**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。若已安装获批准的 alpha17/代码36 测试 APK，就是同一个文件，无需重装。
+**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。
 
-**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha17/Rovunet-v0.3.0-alpha17-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены. Установленная проверенная alpha17/код36 уже является этим файлом; переустановка не нужна.
+**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены.
 
-VersionCode 33 retains `app.veyra.client` and the canonical production certificate. Alpha16.1 keeps the schema already introduced by alpha16 (Room 48 → 49); it adds no new account/profile migration. Account metadata never gates manual connection. Android updates now select compatible APKs independently of desktop Latest. Historical alpha11 and independent candidates remain subject to the identity rules below.
+VersionCode 39 retains `app.veyra.client` and the canonical production certificate. Current Room schema is 50; existing account/profile records are preserved. Provider metadata uses the existing account-status table without a further schema migration. Code37/38 owner-review builds can upgrade to code39. Account metadata never gates manual connection. Android updates now select compatible APKs independently of desktop Latest. Historical alpha11 and independent candidates remain subject to the identity rules below.
 
 ## Historical alpha14 signing decision — 2026-11-06
 
@@ -44,6 +44,10 @@ releases reuse the new managed key. The private candidate remains independent.
 новая установка; будущие обновления используют тот же новый ключ.
 
 ## English
+
+**Subscriptions:** choose Update on the collection card to update in place; progress blocks repeated clicks and the outcome stays on Home. Existing-profile replacement still requires a disconnected VPN. Names are optional: explicit/saved name, safe provider title, then hostname. `subscription-userinfo` reports upload + download, volume and expiry from the same response; missing fields stay unknown. Provider snapshots show their age and are not independent metering. No additional periodic full-feed downloads are introduced. Panel status retains its separate contract.
+
+**Imports:** supported VLESS/VMess/Trojan `cs` and `fm` are preserved with verified TLS; unsupported masks/scripts/settings are rejected explicitly. Shadowsocks 2022 validates key lengths. Hy2 supports bounded `mport` lists and `hop-interval`. Standard WireGuard sharing URIs and single-peer AmneziaWG `.conf`/supported URI parameters are accepted. AWG runs in a separate authenticated userspace engine; one address per IP family, no scripts, multi-peer or ranged keepalive. Arbitrary core/Mihomo YAML is not executed.
 
 The public alpha11 package is `app.veyra.client`, code 17, signer SHA-256:
 

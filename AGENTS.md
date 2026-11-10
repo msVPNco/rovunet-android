@@ -6,10 +6,10 @@ Canonical repository: `msVPNco/rovunet-app` (the existing repository was renamed
 repository ID 1445854036). Android, Windows and future macOS clients belong here,
 not in a separate `rovunet-windows` repository. See `docs/PLATFORMS.md`.
 
-The owner resumed Android development and accepted the exact alpha17/code36 APK on
+Historical alpha17 acceptance: the owner resumed development and accepted the exact alpha17/code36 APK on
 2026-11-09 (source bbb30d7146c3f308f37943a0e3c9456b185167f0, SHA-256
 eb5ac7bd474b37e361e8ca126c8e2f7d445faaf876ddd7b9ecd158548324a871).
-Publication must reuse those bytes. Record later feedback for the next update,
+That historical publication reused those bytes. Record later feedback for the next update,
 including moving Patterniha into the same source group as Anonymous and Mahsa.
 Do not move the Android tree or overwrite desktop work. Preserve the owner's
 README layout, header styling, language order and tables.
@@ -19,7 +19,7 @@ Published Android tags retain `v<Android version>`. New desktop release tags use
 platform updaters and platform download links must select compatible assets from
 their own channel, never assume Latest is an Android release.
 
-## Current authorized owner-review work
+## Historical alpha18 owner-review authorization
 
 On 2026-11-10 the owner explicitly authorized the agreed post-alpha17 backlog and
 approved Soft Pop mockup on a separate branch, a draft PR, GitHub checks and an
@@ -29,6 +29,8 @@ Patterniha decision is removal from the built-in catalog, superseding relocation
 See `docs/releases/alpha18-review.md`. Preserve the README layout and desktop work.
 
 ## Alpha18.1 completion publication authorization
+
+Current completion target: **0.3.0-alpha18.1 / code39**, app source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, signed APK SHA-256 `a649930c42e236226c903a43c5a8acc315864c87a2cb1a5b8902fc487f554e21`. See `docs/releases/alpha18-1-provenance.json` for exact passing CI, source and artifact identity. The earlier code37/38 review binaries remain historical and must not be relabeled as code39.
 
 On 2026-11-10 the owner explicitly authorized implementing the agreed subscription
 UX/metadata, existing-protocol compatibility (including cs/fm and Shadowsocks2022)

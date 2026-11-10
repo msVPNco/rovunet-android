@@ -1,4 +1,12 @@
-# Next update after alpha17
+# Rovunet next iteration
+
+## Current alpha18.1 completion
+
+The owner explicitly authorized implementation and release on 2026-11-10. This supersedes the review-only holds recorded below for this iteration. Subscription card updates, optional names, provider usage/expiry, supported cs/fm, SS2022, Hy2 hopping and AmneziaWG are implemented. See [completion and validation limits](releases/alpha18-1-completion.md) and [provenance](releases/alpha18-1-provenance.json). Earlier planning below is historical; it is not evidence of an additional regression.
+
+Next priority: validate physical-phone whole-card cancellation, low-end UI, screen-off battery/data and the reported panel WG/Hy2 endpoints; finish remaining existing-format options with explicit rejection. Then AnyTLS and TUIC, followed by Mieru. AmneziaWG is already included this iteration. Do not repeat the previously reported Hev alert without new evidence.
+
+## Historical planning and observations
 
 The owner authorized implementation on a separate review branch, GitHub checks and a test APK on 2026-11-10; merging and release still require acceptance. See [alpha18 review](releases/alpha18-review.md). Keep the published alpha17/code36 APK unchanged. Current decisions below supersede older planning notes, including the old request to move Patterniha beside other providers.
 
