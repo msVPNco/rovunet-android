@@ -12,15 +12,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/metacubex/mihomo/adapter/inbound"
 	"github.com/metacubex/mihomo/component/auth"
 	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
-	authStore "github.com/metacubex/mihomo/listener/auth"
-	LC "github.com/metacubex/mihomo/listener/config"
-	"github.com/metacubex/mihomo/listener/socks"
-	"github.com/metacubex/mihomo/tunnel"
 	logrus "github.com/sirupsen/logrus"
 )
 
@@ -150,17 +145,11 @@ func run() error {
 	}
 	executor.ApplyConfig(cfg, true)
 	defer executor.Shutdown()
-	lc := LC.AuthServer{Enable: true, Listen: address, AuthStore: authStore.NewAuthStore(authenticator)}
-	tcp, err := socks.NewWithConfig(lc, inbound.NewListenConfig(), tunnel.Tunnel)
+	listener, err := newLocalListener(address, authenticator)
 	if err != nil {
 		return err
 	}
-	defer tcp.Close()
-	udp, err := socks.NewUDPWithConfig(lc, inbound.NewListenConfig(), tunnel.Tunnel)
-	if err != nil {
-		return err
-	}
-	defer udp.Close()
+	defer listener.Close()
 	fmt.Fprintln(os.Stdout, "ROVUNET_AWG_READY")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)

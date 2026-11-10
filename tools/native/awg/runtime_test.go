@@ -259,6 +259,9 @@ func TestAmneziaEncryptedTcpUdpAndShutdown(t *testing.T) {
 			}
 			control, relay := socksConnect(t, localPort, 3, netip.MustParseAddrPort("0.0.0.0:0"))
 			defer control.Close()
+			if relay.Port() == uint16(localPort) {
+				t.Fatal("UDP relay must be scoped to authentication")
+			}
 			u, e := net.DialUDP("udp", nil, net.UDPAddrFromAddrPort(relay))
 			if e != nil {
 				t.Fatal(e)
@@ -271,6 +274,21 @@ func TestAmneziaEncryptedTcpUdpAndShutdown(t *testing.T) {
 			n, err := u.Read(b)
 			if err != nil || !strings.HasSuffix(string(b[:n]), "udp-payload") {
 				t.Fatalf("UDP relay: %v", err)
+			}
+			control.Close()
+			u.Close()
+			released := false
+			for n := 0; n < 50; n++ {
+				check, err := net.ListenPacket("udp4", relay.String())
+				if err == nil {
+					check.Close()
+					released = true
+					break
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			if !released {
+				t.Fatal("UDP association survived its authenticated TCP owner")
 			}
 			child.Process.Signal(os.Interrupt)
 			done := make(chan error, 1)
