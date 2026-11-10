@@ -31,6 +31,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
   body=b'veyra-real-tunnel-test\n'*200
   self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
  def log_message(self,*a):pass
+class HopPortRelay:
+ """Emulate server-side UDP DNAT: all public ports share one QUIC listener.
+ Separate Xray inbounds have separate connection-ID tables and cannot migrate
+ an established QUIC session between ports. No root/network rule is required.
+ """
+ def __init__(self,backend):
+  self.closed=False;self.seen=set();self.latest=None;self.lock=threading.Lock();self.front=[]
+  self.upstream=socket.socket(type=socket.SOCK_DGRAM);self.upstream.connect(('127.0.0.1',backend));self.upstream.settimeout(.2)
+  for _ in range(3):
+   sock=socket.socket(type=socket.SOCK_DGRAM);sock.bind(('127.0.0.1',0));sock.settimeout(.2);self.front.append(sock)
+   threading.Thread(target=self.forward,args=(sock,),daemon=True).start()
+  threading.Thread(target=self.reply,daemon=True).start()
+ def forward(self,sock):
+  while not self.closed:
+   try:
+    data,client=sock.recvfrom(65535)
+    with self.lock:self.latest=(sock,client);self.seen.add(sock.getsockname()[1])
+    self.upstream.send(data)
+   except socket.timeout:pass
+   except OSError:return
+ def reply(self):
+  while not self.closed:
+   try:
+    data=self.upstream.recv(65535)
+    with self.lock:target=self.latest
+    if target:target[0].sendto(data,target[1])
+   except socket.timeout:pass
+   except OSError:return
+ def close(self):
+  self.closed=True
+  for sock in self.front+[self.upstream]:sock.close()
+
 http=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=http.serve_forever,daemon=True).start()
 httpport=http.server_address[1]
 udp=socket.socket(type=socket.SOCK_DGRAM);udp.bind(('127.0.0.1',0));udpport=udp.getsockname()[1]
@@ -63,7 +95,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   finally:control.close()
  uid='00000000-0000-4000-8000-000000000001'
  for mode in os.environ.get('PROTOCOLS','reality,xhttp,hysteria2,wireguard,shadowsocks,trojan,vmess-ws,vless-grpc,vless-httpupgrade,vless-ws-heartbeat,vless-kcp,vless-encrypted-xhttp,wireguard-uri,shadowsocks2022-aes128,shadowsocks2022-chacha,trojan-fm,vless-xhttp-fm,hysteria2-hop').split(','):
-  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','hysteria2-hop','wireguard','wireguard-uri','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[];serverExtra=[]
+  sp=port(socket.SOCK_DGRAM if mode in ['hysteria2','hysteria2-hop','wireguard','wireguard-uri','vless-kcp'] else socket.SOCK_STREAM);cp=port();extra=[];additionalLinks=[];serverExtra=[];hopRelay=None
   inbound={'listen':'127.0.0.1','port':sp}
   tls={'certificates':[{'certificateFile':str(cert),'keyFile':str(keyfile)}],'alpn':['h3'] if mode in ['hysteria2','hysteria2-hop'] else ['h2','http/1.1']}
   if mode=='reality':
@@ -129,11 +161,8 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
    mask={'tcp':[{'type':'fragment','settings':{'packets':'tlshello','length':'50-100','delay':'1-2'}}]}
    link+='&cs='+urllib.parse.quote('TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256',safe='')+'&fm='+urllib.parse.quote(json.dumps(mask),safe='')
   if mode=='hysteria2-hop':
-   import copy
-   more=[port(socket.SOCK_DGRAM),port(socket.SOCK_DGRAM)]
-   for extraPort in more:
-    other=copy.deepcopy(inbound);other['port']=extraPort;serverExtra.append(other)
-   link+='&mport='+','.join(map(str,[sp]+more))+'&hop-interval=5s'
+   hopRelay=HopPortRelay(sp)
+   link+='&mport='+','.join(str(sock.getsockname()[1]) for sock in hopRelay.front)+'&hop-interval=5s'
   source=root/(mode+'.link');source.write_text(link);clientFile=root/(mode+'-client.json')
   subprocess.run(['java','-cp',f'{TEST_JAR}:{JARS}/kotlin-stdlib-2.2.21.jar:{JARS}/json.jar:{JARS}/bcprov-jdk18on-1.80.jar','CoreFixtureKt',str(source),str(clientFile),str(cp)],check=True)
   server=start({'log':{'loglevel':'debug'},'inbounds':[inbound]+serverExtra,'outbounds':[{'protocol':'freedom','settings':{'redirect':'127.0.0.1:0','finalRules':[{'action':'allow','ip':['127.0.0.1/32']}]}}]},mode+'-server')
@@ -150,7 +179,12 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
   try:
    time.sleep(.6)
    for p in clientPorts:request(p);request_udp(p)
-   if mode=='hysteria2-hop':time.sleep(5.5);request(cp);request_udp(cp)
+   if hopRelay:
+    deadline=time.monotonic()+22
+    while len(hopRelay.seen)<2 and time.monotonic()<deadline:
+     time.sleep(.5);request(cp);request_udp(cp)
+    assert len(hopRelay.seen)>=2,'No real remote-port change observed'
+    request(cp);request_udp(cp)
    t=time.monotonic()
    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as pool:list(pool.map(lambda n:request(clientPorts[n%len(clientPorts)]),range(200)))
    results.append({'protocol':mode,'tcp':True,'udp':True,'requests':200,'concurrency':40,'client_processes':len(clientPorts),'seconds':round(time.monotonic()-t,3)})
@@ -159,6 +193,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-integration-') as tmp:
    results.append({'protocol':mode,'error':type(e).__name__+': '+str(e)});print(json.dumps(results[-1]),flush=True)
    for f in root.glob(mode+'*.log'):print(f.name,f.read_text()[-5000:],flush=True)
   finally:
+   if hopRelay:hopRelay.close()
    for p in processes:
     p.terminate()
    for p in processes:
