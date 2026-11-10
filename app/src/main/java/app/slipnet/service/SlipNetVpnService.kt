@@ -935,6 +935,9 @@ class SlipNetVpnService : VpnService() {
         // Determine if VPN is needed before outermost layer
         val outermost = profiles.first()
         val needsVpnFirst = app.slipnet.domain.model.ChainValidation.needsVpnFirst(outermost.tunnelType)
+        // The outer core's sockets must bypass the TUN, as in standalone Xray.
+        // Establishing before setting the type would capture the core itself.
+        if (outermost.tunnelType == TunnelType.XRAY) currentTunnelType = TunnelType.XRAY
 
         if (!isProxyOnly && needsVpnFirst && vpnInterface == null) {
             vpnInterface = establishVpnInterface(dnsServer)
@@ -1117,7 +1120,7 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Start tun2socks on the final proxy port
-        val tun2socksResult = vpnRepository.startTun2Socks(profiles.first(), requireNotNull(vpnInterface) { "Chain VPN interface unavailable" })
+        val tun2socksResult = vpnRepository.startTun2Socks(if (profiles.first().tunnelType == TunnelType.XRAY) profiles.last() else profiles.first(), requireNotNull(vpnInterface) { "Chain VPN interface unavailable" })
         if (tun2socksResult.isFailure) {
             reportConnectionError(tun2socksResult.exceptionOrNull()?.message ?: "Failed to start tunnel")
             for (layer in activeChainLayers.reversed()) withContext(Dispatchers.IO) { stopLayer(layer) }

@@ -3,12 +3,13 @@ package app.slipnet.tunnel
 import android.content.Intent
 import android.net.VpnService
 import android.os.*
+import android.os.Process
 
 /** One native singleton per dedicated probe process, never the live VPN process. */
 open class SlipstreamProbeService : VpnService() {
     override fun onBind(intent: Intent?): IBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code !in 1..3) return super.onTransact(code, data, reply, flags)
+            if (code !in 1..4) return super.onTransact(code, data, reply, flags)
             check(Binder.getCallingUid() == Process.myUid())
             data.enforceInterface(TOKEN)
             when (code) {
@@ -30,6 +31,7 @@ open class SlipstreamProbeService : VpnService() {
                     reply?.writeNoException()
                     reply?.writeInt(result.getOrDefault(-1))
                 }
+                PID -> { reply?.writeNoException(); reply?.writeInt(Process.myPid()) }
                 READY -> { reply?.writeNoException(); reply?.writeInt(if (SlipstreamBridge.isQuicReady()) 1 else 0) }
                 STOP -> {
                     reply?.writeNoException()
@@ -50,6 +52,7 @@ open class SlipstreamProbeService : VpnService() {
         const val START = 1
         const val READY = 2
         const val STOP = 3
+        const val PID = 4
     }
 }
 class SlipstreamProbe0 : SlipstreamProbeService()

@@ -20,6 +20,7 @@ for abi, target, clang in [('arm64-v8a','aarch64-linux-android','aarch64-linux-a
     env.update(ANDROID_ABI=abi, ANDROID_PLATFORM='android-24', PICOQUIC_AUTO_BUILD='1',
                PICOQUIC_BUILD_DIR=str(SOURCE/'.picoquic-build'/abi), BUILD_TYPE='Release',
                CC=str(bin_dir/(clang+'-clang')), AR=str(bin_dir/'llvm-ar'),
+               RANLIB=str(bin_dir/'llvm-ranlib'),
                RUSTFLAGS='-C link-arg=-Wl,-z,max-page-size=16384')
     env['CARGO_TARGET_'+target.upper().replace('-','_')+'_LINKER'] = str(bin_dir/(clang+'-clang'))
     run(['cargo','build','--locked','--release','--target',target,'-p','slipstream-client','--lib','--features','openssl-vendored,picoquic-minimal-build','-j2'], cwd=SOURCE, env=env)

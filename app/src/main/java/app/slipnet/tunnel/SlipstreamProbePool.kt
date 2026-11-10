@@ -64,6 +64,7 @@ object SlipstreamProbePool {
             })
             check(port > 0) { "Slipstream native startup failed" }
         }
+        fun processId() = call(SlipstreamProbeService.PID)
         fun isQuicReady() = call(SlipstreamProbeService.READY) == 1
         fun getClientPort() = port
         fun stop() { call(SlipstreamProbeService.STOP) }
