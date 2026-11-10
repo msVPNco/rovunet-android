@@ -56,3 +56,7 @@ with tempfile.TemporaryDirectory(prefix='rovunet-hev-') as temp:
    source=pathlib.Path(temp)/'libs'/abi/name
    (ROOT/'app/src/main/jniLibs'/abi/name).write_bytes(source.read_bytes())
 print('Rebuilt Hev packet engine and JNI wrapper for all three supported ABIs; preserved other transports.')
+
+# Slipstream Android certificate pinning adds a JNI entry point: a pinned release
+# library is not compatible with this bridge. Rebuild it instead of silently reusing.
+run(['python3', ROOT/'tools/native/build-slipstream.py'])

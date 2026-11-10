@@ -1175,7 +1175,7 @@ class VpnRepositoryImpl @Inject constructor(
         listenHost: String
     ): Boolean {
         tunnelStartException = null
-        val result = SlipstreamBridge.startClient(
+        val result = runCatching { SlipstreamBridge.startClient(
             domain = domain,
             resolvers = resolvers,
             congestionControl = profile.congestionControl.value,
@@ -1186,8 +1186,9 @@ class VpnRepositoryImpl @Inject constructor(
             debugPoll = debugLogging,
             debugStreams = debugLogging,
             idlePollIntervalMs = 10000,
-            idleTimeoutMs = 120000
-        )
+            idleTimeoutMs = 120000,
+            certificatePath = app.slipnet.tunnel.SlipstreamCertificate.materialize(context, profile.slipstreamCertificate)
+        ).getOrThrow() }
         if (result.isFailure) {
             val exception = result.exceptionOrNull()
             tunnelStartException = Exception("DNS tunnel failed: ${exception?.message ?: "Unknown error"}", exception)

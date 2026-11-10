@@ -310,7 +310,7 @@ class ConfigExporter @Inject constructor() {
             // v33: lossless credentials; earlier positional fields remain readable by old clients.
             WireBase64.encode(org.json.JSONObject().put("sshUser", profile.sshUsername)
                 .put("sshPass", profile.sshPassword).put("socksUser", profile.socksUsername ?: "")
-                .put("socksPass", profile.socksPassword ?: "").toString().toByteArray(Charsets.UTF_8))
+                .put("slipstreamCertificate", profile.slipstreamCertificate).put("socksPass", profile.socksPassword ?: "").toString().toByteArray(Charsets.UTF_8))
         ).joinToString(FIELD_DELIMITER)
     }
 

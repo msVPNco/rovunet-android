@@ -1152,6 +1152,14 @@ class SlipNetVpnService : VpnService() {
         internalPortBase: Int = layerPort + 1
     ): Result<Unit> {
         return when (profile.tunnelType) {
+            TunnelType.XRAY -> {
+                if (layerIndex != 0 || isLast || prevPort > 0)
+                    return Result.failure(IllegalArgumentException("Xray must be the outer layer before SSH"))
+                val endpoint = app.slipnet.core.LocalSocksEndpoint(layerPort,
+                    java.util.UUID.randomUUID().toString(), java.util.UUID.randomUUID().toString())
+                coreEndpoint = endpoint
+                withContext(Dispatchers.IO) { XrayBridge.start(this@SlipNetVpnService, profile.coreLink, endpoint, null) }
+            }
             TunnelType.DNSTT, TunnelType.NOIZDNS -> {
                 DnsttBridge.setVpnService(this@SlipNetVpnService)
                 val isNoizdns = profile.tunnelType == TunnelType.NOIZDNS
@@ -1332,8 +1340,8 @@ class SlipNetVpnService : VpnService() {
                                     sshPassword = profile.sshPassword,
                                     proxyHost = prevHost,
                                     proxyPort = prevPort,
-                                    socksUsername = prevProfile?.socksUsername,
-                                    socksPassword = prevProfile?.socksPassword,
+                                    socksUsername = if (prevLayerType == TunnelType.XRAY) coreEndpoint?.user else prevProfile?.socksUsername,
+                                    socksPassword = if (prevLayerType == TunnelType.XRAY) coreEndpoint?.password else prevProfile?.socksPassword,
                                     listenPort = layerPort,
                                     listenHost = layerHost,
                                     blockDirectDns = preferencesDataStore.preventDnsFallback.first(),
@@ -1555,9 +1563,14 @@ class SlipNetVpnService : VpnService() {
         }
 
         // Step 2.6: Wait for QUIC handshake before VPN setup
-        val quicReady = waitForQuicReady(maxAttempts = 50, delayMs = 100)
+        val quicReady = waitForQuicReady(maxAttempts = 150, delayMs = 200)
         if (!quicReady) {
-            Log.w(TAG, "QUIC connection not ready within timeout, continuing anyway")
+            reportConnectionError("Slipstream tunnel failed to connect (QUIC timeout)")
+            withContext(Dispatchers.IO) { SlipstreamBridge.stopClient() }
+            SlipstreamBridge.setVpnService(null)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopOwnedService()
+            return
         }
 
         // Step 3: Start SlipstreamSocksBridge on proxyPort (user-facing, with auth for Dante)

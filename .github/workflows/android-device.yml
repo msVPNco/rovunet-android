@@ -27,6 +27,13 @@ jobs:
           echo "ANDROID_USER_HOME=$RUNNER_TEMP/rovunet-android" >> "$GITHUB_ENV"
           echo "ANDROID_AVD_HOME=$RUNNER_TEMP/rovunet-android/avd" >> "$GITHUB_ENV"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0' 'ndk;29.0.14206865' emulator "$IMAGE"
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: slipstream-cargo-${{ runner.os }}-${{ hashFiles('tools/native/slipstream-android.patch') }}
       - name: Prepare checksum-verified Gradle
         run: python3 tools/veyra/prepare-gradle.py
       - name: Build private client and device tests
@@ -60,7 +67,7 @@ jobs:
         if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: rovunet-code36-review-validation
+          name: rovunet-code37-review-validation
           path: |
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk

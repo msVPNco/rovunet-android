@@ -1016,7 +1016,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
             TunnelType.SOAR, TunnelType.SOAR_SSH -> if (!soarProfileAvailable(profile)) E2eTestResult(errorMessage = "Profile unavailable") else app.slipnet.tunnel.SoarResolverProbe.test(
                 resolverHost, resolverPort, profile, profile.dnsTransport, timeoutMs, testUrl, fullVerification, onPhaseUpdate)
             TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH ->
-                // Slipstream native lib is singleton — fall back to shared bridge
+                // Each candidate uses a dedicated process, independent of the live VPN.
                 testResolverSlipstream(resolverHost, resolverPort, profile, testUrl, timeoutMs, onPhaseUpdate, fullVerification)
             TunnelType.DNSTT, TunnelType.DNSTT_SSH ->
                 testResolverDnsttIsolated(resolverHost, resolverPort, profile, testUrl, timeoutMs, onPhaseUpdate, fullVerification = fullVerification)
@@ -1031,7 +1031,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
 
     override fun maxE2eConcurrency(profile: ServerProfile): Int = when (profile.tunnelType) {
         TunnelType.SOAR, TunnelType.SOAR_SSH -> 4
-        TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH -> 1
+        TunnelType.SLIPSTREAM, TunnelType.SLIPSTREAM_SSH -> 4
         else -> 10
     }
 
@@ -1540,28 +1540,14 @@ class ResolverScannerRepositoryImpl @Inject constructor(
         onPhaseUpdate: (String) -> Unit,
         fullVerification: Boolean = false
     ): E2eTestResult = withContext(Dispatchers.IO) {
+        app.slipnet.tunnel.SlipstreamProbePool.use(context) { client ->
         val totalStart = SystemClock.elapsedRealtime()
         val tunnelPort = findFreePort()
         try {
             val result = withTimeoutOrNull(timeoutMs) {
                 // Phase 1: Start tunnel
                 onPhaseUpdate("Starting tunnel...")
-                SlipstreamBridge.proxyOnlyMode = true
-
-                val resolver = ResolverConfig(
-                    host = resolverHost,
-                    port = resolverPort,
-                    authoritative = profile.authoritativeMode
-                )
-
-                val startResult = SlipstreamBridge.startClient(
-                    domain = profile.domain,
-                    resolvers = listOf(resolver),
-                    congestionControl = profile.congestionControl.value,
-                    keepAliveInterval = profile.keepAliveInterval,
-                    tcpListenPort = tunnelPort,
-                    tcpListenHost = "127.0.0.1"
-                )
+                val startResult = client.start(profile, resolverHost, resolverPort, tunnelPort)
 
                 if (startResult.isFailure) {
                     return@withTimeoutOrNull E2eTestResult(
@@ -1577,7 +1563,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
                 val quicStart = SystemClock.elapsedRealtime()
                 var quicReady = false
                 while (SystemClock.elapsedRealtime() - quicStart < quicTimeout) {
-                    if (SlipstreamBridge.isQuicReady()) {
+                    if (client.isQuicReady()) {
                         quicReady = true
                         break
                     }
@@ -1593,7 +1579,7 @@ class ResolverScannerRepositoryImpl @Inject constructor(
                 }
 
                 val tunnelSetupMs = SystemClock.elapsedRealtime() - totalStart
-                val actualPort = SlipstreamBridge.getClientPort()
+                val actualPort = client.getClientPort()
                 val isSshVariant = profile.tunnelType == TunnelType.SLIPSTREAM_SSH
 
                 // Fast scan mode: QUIC handshake proves the tunnel transport is
@@ -1663,17 +1649,15 @@ class ResolverScannerRepositoryImpl @Inject constructor(
                 errorMessage = "E2E test timed out (${timeoutMs}ms)",
                 phase = E2eTestPhase.TUNNEL_SETUP
             )
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             E2eTestResult(
                 totalMs = SystemClock.elapsedRealtime() - totalStart,
                 errorMessage = e.message ?: "Unknown error",
                 phase = E2eTestPhase.TUNNEL_SETUP
             )
-        } finally {
-            try {
-                SlipstreamBridge.stopClient()
-            } catch (_: Exception) {}
-            SlipstreamBridge.proxyOnlyMode = false
+        }
         }
     }
 

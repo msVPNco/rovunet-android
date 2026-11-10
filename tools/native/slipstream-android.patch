@@ -1,0 +1,57 @@
+diff --git a/crates/slipstream-client/src/android.rs b/crates/slipstream-client/src/android.rs
+index 3932ede..03b26cf 100644
+--- a/crates/slipstream-client/src/android.rs
++++ b/crates/slipstream-client/src/android.rs
+@@ -223,6 +223,19 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _: *mut std::ffi::c_void) ->
+ /// - -10: Failed to spawn client thread
+ /// - -11: Failed to listen on port
+ /// - -12: Exceeded max connection failures
++static CERTIFICATE_PATH: once_cell::sync::Lazy<std::sync::Mutex<Option<String>>> =
++    once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
++
++#[no_mangle]
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeSetCertificatePath(
++    mut env: JNIEnv, _class: JClass, path: JString,
++) {
++    if let Ok(value) = env.get_string(&path) {
++        let value: String = value.into();
++        *CERTIFICATE_PATH.lock().unwrap() = if value.is_empty() { None } else { Some(value) };
++    }
++}
++
+ #[no_mangle]
+ pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStartSlipstreamClient<'local>(
+     mut env: JNIEnv<'local>,
+@@ -459,6 +472,7 @@ fn start_client_impl<'local>(
+     IS_RUNNING.store(true, Ordering::SeqCst);
+ 
+     // Spawn client thread
++    let certificate_path = CERTIFICATE_PATH.lock().unwrap().clone();
+     let listen_port_u16 = listen_port as u16;
+     let keep_alive = keep_alive_interval as usize;
+     let gso = gso_enabled != JNI_FALSE;
+@@ -482,6 +496,7 @@ fn start_client_impl<'local>(
+                 dbg_streams,
+                 idle_poll_ms,
+                 idle_timeout,
++                certificate_path,
+             );
+         });
+ 
+@@ -532,6 +547,7 @@ fn run_client_thread(
+     debug_streams: bool,
+     idle_poll_interval_ms: u64,
+     idle_timeout_ms: u64,
++    certificate_path: Option<String>,
+ ) {
+     info!("Client thread started");
+ 
+@@ -541,7 +557,7 @@ fn run_client_thread(
+             tcp_listen_port: listen_port,
+             resolvers: &resolvers,
+             domain: &domain,
+-            cert: None, // TODO: Support certificate pinning from Android
++            cert: certificate_path.as_deref(),
+             congestion_control: congestion_control.as_deref(),
+             gso,
+             keep_alive_interval,

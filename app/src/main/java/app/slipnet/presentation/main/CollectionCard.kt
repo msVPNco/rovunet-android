@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import app.slipnet.presentation.theme.collectionTones
+import app.slipnet.presentation.theme.SoftPopIconButton
 import app.slipnet.R
 import app.slipnet.domain.model.*
 
@@ -47,13 +48,13 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     val tones = collectionTones
     val raised = expanded || selected
     val surface = if (raised) tones.raisedHeader else tones.header
-    Card(onClick = onDetails, modifier = Modifier.fillMaxWidth().testTag("collection-${ProfileCollections.key(profiles.first())}"), shape = RoundedCornerShape(20.dp),
+    Card(onClick = onDetails, modifier = Modifier.fillMaxWidth().testTag("collection-${ProfileCollections.key(profiles.first())}"), shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 10.dp else 2.dp),
         border = BorderStroke(if (selected || connected) 2.dp else 1.dp,
             if (connected) app.slipnet.presentation.theme.ConnectionSuccessColor else if (raised) colors.primary else colors.primary.copy(alpha = .25f)),
         colors = CardDefaults.cardColors(containerColor = surface, contentColor = tones.headerText)) {
         Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(
-            if (expanded) Color.White.copy(alpha = .12f) else Color.Transparent, Color.Transparent)))
+            Color.White.copy(alpha = if (raised) .12f else .06f), Color.Transparent)))
             .padding(start = 14.dp, end = 4.dp, top = 5.dp, bottom = 7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -64,11 +65,11 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                         maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
                         color = tones.headerText.copy(alpha = .8f))
                 }
-                IconButton(onClick = onDetails) {
+                SoftPopIconButton(onClick = onDetails) {
                     Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         stringResource(if (expanded) R.string.ui_hide_paths else R.string.ui_show_paths))
                 }
-                IconButton(onClick = onConnect, modifier = Modifier.testTag("collection-connect-${ProfileCollections.key(profiles.first())}"), enabled = !busy && canConnect) {
+                SoftPopIconButton(onClick = onConnect, modifier = Modifier.testTag("collection-connect-${ProfileCollections.key(profiles.first())}"), enabled = !busy && canConnect) {
                     Icon(if (connecting) Icons.Default.Close else Icons.Default.PowerSettingsNew,
                         if (connecting) stringResource(R.string.ui_cancel_connection)
                         else if (connected) stringResource(R.string.ui_disconnect)
@@ -77,7 +78,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                         tint = if (connected) app.slipnet.presentation.theme.ConnectionSuccessColor else colors.primary)
                 }
                 Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.rv_collection_actions_06a9e8)) }
+                    SoftPopIconButton(onClick = { menuOpen = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.rv_collection_actions_06a9e8)) }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                         app.slipnet.presentation.common.components.ActionMenuSectionLabel(R.string.menu_connection_tests)
                         DropdownMenuItem(text = { Text(stringResource(if (connecting) R.string.ui_cancel_connection else if (connected) R.string.ui_disconnect else R.string.rv_connect_1a2303)) },

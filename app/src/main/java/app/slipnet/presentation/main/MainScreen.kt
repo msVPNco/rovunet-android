@@ -90,6 +90,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Button
 import androidx.compose.ui.platform.testTag
+import app.slipnet.presentation.theme.SoftPopFab
+import app.slipnet.presentation.theme.SoftPopGlass
+import app.slipnet.presentation.theme.softPopBackground
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
@@ -519,8 +522,12 @@ fun MainScreen(
     }
 
     Scaffold(
+        modifier = Modifier.background(softPopBackground),
         topBar = {
+            SoftPopGlass(modifier = Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), header = true) {
             TopAppBar(
+                modifier = Modifier.heightIn(min = 72.dp).padding(vertical = 4.dp),
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -701,12 +708,13 @@ fun MainScreen(
                     containerColor = Color.Transparent
                 )
             )
+            }
         },
         floatingActionButton = {
             Column(
                 horizontalAlignment = Alignment.End
             ) {
-                FloatingActionButton(
+                SoftPopFab(
                     onClick = { showAddMenu = !showAddMenu },
                     containerColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(end = 8.dp)
@@ -730,7 +738,7 @@ fun MainScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         // Auto-switch to chains tab when a chain is connected
@@ -2114,11 +2122,7 @@ private fun ConnectionStatusStrip(
         label = "statusColor"
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        tonalElevation = 2.dp,
-        shape = RoundedCornerShape(16.dp)
-    ) {
+    SoftPopGlass(modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2386,7 +2390,7 @@ private fun ConnectFab(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        FloatingActionButton(
+        SoftPopFab(
             onClick = onToggleConnection,
             containerColor = statusColor,
             modifier = Modifier

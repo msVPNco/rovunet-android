@@ -409,6 +409,7 @@ class ConfigImporter @Inject constructor() {
             }
             val base = parseProfileV32(restored, lineNum)
             if (base is ProfileParseResult.Success) ProfileParseResult.Success(base.profile.copy(
+                slipstreamCertificate = credentials.optString("slipstreamCertificate"),
                 sshUsername = credentials.getString("sshUser"), sshPassword = credentials.getString("sshPass"),
                 socksUsername = credentials.getString("socksUser").ifEmpty { null },
                 socksPassword = credentials.getString("socksPass").ifEmpty { null })) else base

@@ -93,6 +93,7 @@ data class EditProfileUiState(
     val tunnelType: TunnelType = TunnelType.DNSTT,
     // DNSTT-specific fields
     val dnsttPublicKey: String = "",
+    val slipstreamCertificate: String = "",
     val dnsttPublicKeyError: String? = null,
     // SSH tunnel fields (SSH-only tunnel type)
     val sshUsername: String = "",
@@ -397,6 +398,7 @@ class EditProfileViewModel @Inject constructor(
                     tunnelType = profile.tunnelType,
                     coreForm = if (profile.tunnelType == TunnelType.XRAY) app.slipnet.core.CoreForm.decode(profile.coreLink) else null,
                     dnsttPublicKey = profile.dnsttPublicKey,
+                    slipstreamCertificate = profile.slipstreamCertificate,
                     sshUsername = profile.sshUsername,
                     sshPassword = profile.sshPassword,
                     sshPort = profile.sshPort.toString(),
@@ -570,6 +572,10 @@ class EditProfileViewModel @Inject constructor(
 
     fun updateKeepAliveInterval(interval: String) {
         _uiState.value = _uiState.value.copy(keepAliveInterval = interval)
+    }
+
+    fun updateSlipstreamCertificate(pem: String) {
+        _uiState.value = _uiState.value.copy(slipstreamCertificate = pem.take(32768))
     }
 
     fun updateCongestionControl(cc: CongestionControl) {
@@ -1711,6 +1717,7 @@ class EditProfileViewModel @Inject constructor(
                     socksPassword = state.socksPassword.takeIf { it.isNotBlank() },
                     tunnelType = state.tunnelType,
                     dnsttPublicKey = state.dnsttPublicKey.trim(),
+                    slipstreamCertificate = state.slipstreamCertificate.trim(),
                     sshUsername = if (state.useSsh) state.sshUsername.trim() else "",
                     sshPassword = if (state.useSsh && state.sshAuthType == SshAuthType.PASSWORD) state.sshPassword else "",
                     sshPort = state.sshPort.toIntOrNull() ?: 22,

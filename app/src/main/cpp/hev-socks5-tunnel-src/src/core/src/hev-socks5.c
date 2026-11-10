@@ -67,6 +67,7 @@ hev_socks5_construct (HevSocks5 *self, HevSocks5Type type)
 
     self->fd = -1;
     self->timeout = -1;
+    self->terminated = 0;
     self->type = type;
     self->addr_family = HEV_SOCKS5_ADDR_FAMILY_UNSPEC;
 

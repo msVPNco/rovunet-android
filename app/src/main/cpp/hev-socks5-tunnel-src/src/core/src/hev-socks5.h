@@ -49,6 +49,9 @@ struct _HevSocks5
 
     int fd;
     int timeout;
+    /* Sticky cancellation; handshake timeout changes must never clear it.
+     * Accessed only on the cooperative tunnel scheduler thread. */
+    int terminated;
     int udp_associated;
     HevSocks5Type type;
     HevSocks5AddrFamily addr_family;

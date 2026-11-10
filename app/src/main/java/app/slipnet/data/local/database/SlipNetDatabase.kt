@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class, app.slipnet.data.subscription.AccountStatusEntity::class],
-    version = 49,
+    version = 50,
     exportSchema = true
 )
 abstract class SlipNetDatabase : RoomDatabase() {
@@ -17,6 +17,12 @@ abstract class SlipNetDatabase : RoomDatabase() {
     abstract fun chainDao(): ChainDao
 
     companion object {
+        val MIGRATION_49_50 = object : Migration(49, 50) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE server_profiles ADD COLUMN slipstreamCertificate TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         val MIGRATION_48_49 = object : Migration(48, 49) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS account_status (subscriptionId TEXT NOT NULL PRIMARY KEY, sourceFingerprint TEXT NOT NULL, payload TEXT NOT NULL, checkedAt INTEGER NOT NULL, checkedElapsed INTEGER NOT NULL, serverTime INTEGER NOT NULL, error TEXT NOT NULL, FOREIGN KEY(subscriptionId) REFERENCES subscriptions(id) ON UPDATE NO ACTION ON DELETE CASCADE)")

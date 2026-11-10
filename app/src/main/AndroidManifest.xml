@@ -185,5 +185,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <service android:name=".tunnel.SlipstreamProbe0" android:process=":slipstream_probe_0" android:exported="false" />
+        <service android:name=".tunnel.SlipstreamProbe1" android:process=":slipstream_probe_1" android:exported="false" />
+        <service android:name=".tunnel.SlipstreamProbe2" android:process=":slipstream_probe_2" android:exported="false" />
+        <service android:name=".tunnel.SlipstreamProbe3" android:process=":slipstream_probe_3" android:exported="false" />
     </application>
 </manifest>

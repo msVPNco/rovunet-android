@@ -92,7 +92,8 @@ object SlipstreamBridge {
         debugPoll: Boolean = false,
         debugStreams: Boolean = false,
         idlePollIntervalMs: Int = 10000,
-        idleTimeoutMs: Int = 120000
+        idleTimeoutMs: Int = 120000,
+        certificatePath: String = ""
     ): Result<Unit> {
         if (!isLibraryLoaded) {
             return Result.failure(IllegalStateException("Native library not loaded"))
@@ -127,6 +128,7 @@ object SlipstreamBridge {
         }
 
         return try {
+            nativeSetCertificatePath(certificatePath)
             Log.i(TAG, "Starting slipstream client on $tcpListenHost:$actualPort, domain=$domain")
             currentPort = actualPort
 
@@ -353,6 +355,7 @@ object SlipstreamBridge {
         idleTimeoutMs: Int
     ): Int
 
+    private external fun nativeSetCertificatePath(path: String)
     private external fun nativeStopSlipstreamClient()
     private external fun nativeIsClientRunning(): Boolean
     private external fun nativeIsQuicReady(): Boolean
