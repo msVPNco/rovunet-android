@@ -21,10 +21,10 @@ for abi, target, clang in [('arm64-v8a','aarch64-linux-android','aarch64-linux-a
                PICOQUIC_BUILD_DIR=str(SOURCE/'.picoquic-build'/abi), BUILD_TYPE='Release',
                CC=str(bin_dir/(clang+'-clang')), AR=str(bin_dir/'llvm-ar'),
                RANLIB=str(bin_dir/'llvm-ranlib'),
-               RUSTFLAGS='-C link-arg=-Wl,-z,max-page-size=16384')
+               RUSTFLAGS='-C link-arg=-Wl,-z,max-page-size=16384 -C link-arg=-Wl,-soname,librovunet_slipstream.so')
     env['CARGO_TARGET_'+target.upper().replace('-','_')+'_LINKER'] = str(bin_dir/(clang+'-clang'))
     run(['cargo','build','--locked','--release','--target',target,'-p','slipstream-client','--lib','--features','openssl-vendored,picoquic-minimal-build','-j2'], cwd=SOURCE, env=env)
-    dest = ROOT / 'app/src/main/jniLibs'/abi/'libslipstream.so'
+    dest = ROOT / 'app/src/main/jniLibs'/abi/'librovunet_slipstream.so'
     dest.write_bytes((SOURCE/'target'/target/'release/libslipstream.so').read_bytes())
 print('Rebuilt patched pinned Slipstream JNI library for all three Full ABIs.')
 

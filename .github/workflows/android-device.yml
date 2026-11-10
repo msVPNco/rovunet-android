@@ -70,6 +70,8 @@ jobs:
         run: |
           bash gradlew -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2 :app:assembleFullRelease -ProvunetVerifiedBuildInputs=true -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=false -ProvunetUnsignedPublication=true --stacktrace
           python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
+          python3 tools/quality/check-slipstream-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" "$RUNNER_TEMP/rovunet-apksigner.jar"
       - name: Retain verified minified APKs
         if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -83,6 +85,6 @@ jobs:
             app/build/outputs/mapping/fullRelease/mapping.txt
             tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
-            ${{ env.ANDROID_HOME }}/build-tools/36.0.0/lib/apksigner.jar
+            ${{ runner.temp }}/rovunet-apksigner.jar
           if-no-files-found: error
           retention-days: 5

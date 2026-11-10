@@ -5,6 +5,11 @@ review APK on 2026-11-10. No merge, release or public tag is authorized. Preserv
 the alpha17 release bytes, the fixed Android package/signer, README presentation
 and desktop source. Version code 37 is reserved for this review.
 
+The pinned legacy `libslipstream.so` configuration codec is retained byte-for-byte.
+The patched client is a separate `librovunet_slipstream.so` with unique JNI entry
+points and SONAME; it exports no legacy key-retrieval function. Rebuilding a
+client must not silently replace the encryption identity of old shared links.
+
 ## Review scope
 
 - Sticky Hev session cancellation: a handshake timeout change cannot reactivate

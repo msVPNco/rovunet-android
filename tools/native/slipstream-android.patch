@@ -1,8 +1,8 @@
 diff --git a/crates/slipstream-client/src/android.rs b/crates/slipstream-client/src/android.rs
-index 3932ede..9936bce 100644
+index 3932ede..7962c01 100644
 --- a/crates/slipstream-client/src/android.rs
 +++ b/crates/slipstream-client/src/android.rs
-@@ -223,6 +223,19 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _: *mut std::ffi::c_void) ->
+@@ -223,8 +223,21 @@ pub extern "system" fn JNI_OnLoad(vm: jni::JavaVM, _: *mut std::ffi::c_void) ->
  /// - -10: Failed to spawn client thread
  /// - -11: Failed to listen on port
  /// - -12: Exceeded max connection failures
@@ -10,7 +10,7 @@ index 3932ede..9936bce 100644
 +    once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
 +
 +#[no_mangle]
-+pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeSetCertificatePath(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeSetRovunetCertificatePath(
 +    mut env: JNIEnv, _class: JClass, path: JString,
 +) {
 +    if let Ok(value) = env.get_string(&path) {
@@ -20,8 +20,11 @@ index 3932ede..9936bce 100644
 +}
 +
  #[no_mangle]
- pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStartSlipstreamClient<'local>(
+-pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStartSlipstreamClient<'local>(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStartRovunetClient<'local>(
      mut env: JNIEnv<'local>,
+     _class: JClass<'local>,
+     domain: JString<'local>,
 @@ -459,6 +472,7 @@ fn start_client_impl<'local>(
      IS_RUNNING.store(true, Ordering::SeqCst);
  
@@ -55,6 +58,71 @@ index 3932ede..9936bce 100644
              congestion_control: congestion_control.as_deref(),
              gso,
              keep_alive_interval,
+@@ -610,7 +626,7 @@ async fn run_client_with_protection(config: &ClientConfig<'_>) -> Result<i32, Cl
+ 
+ /// Stop the slipstream client.
+ #[no_mangle]
+-pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStopSlipstreamClient(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStopRovunetClient(
+     _env: JNIEnv,
+     _class: JClass,
+ ) {
+@@ -654,7 +670,7 @@ pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeStopSlipst
+ 
+ /// Check if the client is running.
+ #[no_mangle]
+-pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsClientRunning(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsRovunetRunning(
+     _env: JNIEnv,
+     _class: JClass,
+ ) -> jboolean {
+@@ -667,7 +683,7 @@ pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsClientRu
+ 
+ /// Check if the QUIC connection is ready.
+ #[no_mangle]
+-pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsQuicReady(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsRovunetQuicReady(
+     _env: JNIEnv,
+     _class: JClass,
+ ) -> jboolean {
+@@ -681,7 +697,7 @@ pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeIsQuicRead
+ /// Get the last error message from the client thread.
+ /// Returns an empty string if no error occurred.
+ #[no_mangle]
+-pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeGetLastError<'local>(
++pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeGetRovunetError<'local>(
+     env: JNIEnv<'local>,
+     _class: JClass<'local>,
+ ) -> jni::sys::jstring {
+@@ -692,25 +708,9 @@ pub extern "system" fn Java_app_slipnet_tunnel_SlipstreamBridge_nativeGetLastErr
+     }
+ }
+ 
+-// ============================================================================
+-// Config Key Retrieval
+-// ============================================================================
+-
+-/// Return the obfuscated config encryption key (32 bytes) to Kotlin.
+-#[no_mangle]
+-pub extern "system" fn Java_app_slipnet_util_LockPasswordUtil_nativeGetConfigKey<'local>(
+-    env: JNIEnv<'local>,
+-    _class: JClass<'local>,
+-) -> jni::sys::jbyteArray {
+-    let key = config_key::reconstruct_config_key();
+-    match env.byte_array_from_slice(&key) {
+-        Ok(arr) => arr.into_raw(),
+-        Err(e) => {
+-            error!("Failed to create config key byte array: {:?}", e);
+-            std::ptr::null_mut()
+-        }
+-    }
+-}
++// The original pinned libslipstream.so retains the legacy configuration codec.
++// This new client library intentionally exports no legacy key-retrieval symbol,
++// so Android library-load order cannot change existing encrypted-link identity.
+ 
+ // ============================================================================
+ // Tests
 diff --git a/crates/slipstream-ffi/build/picoquic.rs b/crates/slipstream-ffi/build/picoquic.rs
 index d6bb77e..4c99130 100644
 --- a/crates/slipstream-ffi/build/picoquic.rs
