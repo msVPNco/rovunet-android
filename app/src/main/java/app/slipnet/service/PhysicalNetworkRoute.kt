@@ -26,12 +26,17 @@ object PhysicalNetworkRoute {
             ConnectivityManager.TYPE_ETHERNET -> NetworkCapabilities.TRANSPORT_ETHERNET
             else -> null
         }
-        val available = manager.allNetworks.filter(::physical)
+        val available = manager.allNetworks.mapNotNull { candidate ->
+            manager.getNetworkCapabilities(candidate)?.takeIf {
+                it.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN) &&
+                    it.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            }?.let { candidate to it }
+        }
         val selected = app.slipnet.domain.model.PhysicalRouteSelection.choose(active,
             caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true,
             emptyList(),
-            transport, available.map { candidate -> candidate to (0..8).filter {
-                manager.getNetworkCapabilities(candidate)?.hasTransport(it) == true
+            transport, available.map { (candidate, capabilities) -> candidate to (0..8).filter {
+                capabilities.hasTransport(it)
             }.toSet() }, previous)
         previous = selected
         return selected

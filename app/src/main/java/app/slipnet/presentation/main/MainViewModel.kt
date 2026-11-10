@@ -1494,7 +1494,18 @@ class MainViewModel @Inject constructor(
                     current.profile.id != profile.id || current.chainId >= 0) throw ProbeInterrupted(app.slipnet.R.string.probe_changed)
                 _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to PingResult.Testing(
                     if (detailed) "HTTPS $n/3" else "HTTPS")))
-            }, successTarget = if (detailed) 3 else 1) { host -> app.slipnet.core.TunnelProbe.measureCancellable(socks.port, socks.user, socks.password, host, policy.httpsMs) }
+            }, successTarget = if (detailed) 3 else 1) { host ->
+                try {
+                    app.slipnet.core.TunnelProbe.measureCancellable(socks.port, socks.user, socks.password, host, policy.httpsMs).also {
+                        app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_HTTPS_OK, attemptId)
+                    }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (error: Exception) {
+                    app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_HTTPS_FAILED,
+                        attemptId, app.slipnet.util.ConnectionDiagnostics.failure(error))
+                    throw error
+                }
+            }
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             if (!connectionManager.ownsSession(attemptId) || connectionManager.connectionState.value !is ConnectionState.Connected)
                 throw ProbeInterrupted(app.slipnet.R.string.probe_changed)
