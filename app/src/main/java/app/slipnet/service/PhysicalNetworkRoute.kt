@@ -3,7 +3,6 @@ package app.slipnet.service
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.os.Build
 
 /** Resolves the physical default, never treats our own VPN as an offline radio. No network request. */
 object PhysicalNetworkRoute {
@@ -19,9 +18,6 @@ object PhysicalNetworkRoute {
         val active = manager.activeNetwork
         if (physical(active)) return active.also { previous = it }
         val caps = active?.let(manager::getNetworkCapabilities)
-        if (Build.VERSION.SDK_INT >= 31) {
-            caps?.underlyingNetworks?.firstOrNull(::physical)?.let { previous = it; return it }
-        }
         // This compatibility API deliberately reports a VPN's underlying network type.
         val type = manager.activeNetworkInfo?.type
         val transport = when (type) {
@@ -33,7 +29,7 @@ object PhysicalNetworkRoute {
         val available = manager.allNetworks.filter(::physical)
         val selected = app.slipnet.domain.model.PhysicalRouteSelection.choose(active,
             caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true,
-            if (Build.VERSION.SDK_INT >= 31) caps?.underlyingNetworks.orEmpty() else emptyList(),
+            emptyList(),
             transport, available.map { candidate -> candidate to (0..8).filter {
                 manager.getNetworkCapabilities(candidate)?.hasTransport(it) == true
             }.toSet() }, previous)

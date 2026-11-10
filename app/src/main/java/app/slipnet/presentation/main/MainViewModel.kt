@@ -243,7 +243,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { activePathMonitor.latest.collect { sample ->
             if (sample != null && !_uiState.value.isPingRunning && connectionManager.ownsSession(sample.session) &&
                 (_uiState.value.connectionState as? ConnectionState.Connected)?.profile?.id == sample.profile) {
-                _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (sample.profile to sample.result))
+                _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (sample.profile to sample.result),
+                    dataPathState = if (sample.ms != null) app.slipnet.domain.model.DataPathState.VERIFIED else app.slipnet.domain.model.DataPathState.UNKNOWN)
             }
         } }
         observeConnectionState()
@@ -1356,7 +1357,9 @@ class MainViewModel @Inject constructor(
             } catch (e: ProbeInterrupted) {
                 app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.COLLECTION_INTERRUPTED, code = when(e.reason) { app.slipnet.R.string.probe_busy -> 1; app.slipnet.R.string.probe_cleanup -> 2; else -> 3 })
                 showInterruptedTest(e)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.COLLECTION_INTERRUPTED,
+                    failure = app.slipnet.util.ConnectionDiagnostics.failure(error), code = 4)
                 _uiState.value = _uiState.value.copy(error = "Collection test failed; no configuration was removed")
             } finally {
                 withContext(kotlinx.coroutines.NonCancellable) {

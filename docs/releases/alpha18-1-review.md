@@ -8,7 +8,7 @@ production-signed owner APK. No merge, tag or release before explicit acceptance
 ## Changes requiring review
 
 - A common physical-route resolver distinguishes an active VPN from its radio.
-  API 31+ underlying-network information, older-platform compatibility evidence
+  Public physical-default information, the documented compatibility network type
   and a still-valid remembered route prevent temporary VPN creation from looking
   like radio loss. Ambiguous new routes are not guessed. Both collection testing
   and smart mode use the same resolver; service callbacks ignore secondary radios.
