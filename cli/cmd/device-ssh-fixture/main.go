@@ -1,8 +1,10 @@
 // Loopback-only SSH and TLS-wrapped SSH peers for the Android regression gate.
-// Uses synthetic credentials, rejects every forwarded destination, and never accesses an external server.
+// Uses synthetic credentials and only serves an in-memory response for one reserved
+// benchmark address. It never opens a forwarded connection or external server.
 package main
 
 import (
+	"bufio"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -74,7 +76,38 @@ func main() {
 				defer conn.Close()
 				go ssh.DiscardRequests(requests)
 				for channel := range channels {
-					_ = channel.Reject(ssh.Prohibited, "fixture does not forward network traffic")
+					var destination struct {
+						Host string
+						Port uint32
+						Origin string
+						OriginPort uint32
+					}
+					if channel.ChannelType() != "direct-tcpip" || ssh.Unmarshal(channel.ExtraData(), &destination) != nil ||
+						destination.Host != "198.18.0.13" || destination.Port != 80 {
+						_ = channel.Reject(ssh.Prohibited, "fixture does not forward network traffic")
+						continue
+					}
+					stream, requests, err := channel.Accept()
+					if err != nil {
+						continue
+					}
+					go func() {
+						defer stream.Close()
+						go ssh.DiscardRequests(requests)
+						reader := bufio.NewReader(stream)
+						for size := 0; size < 4096; {
+							line, err := reader.ReadString('\n')
+							if err != nil {
+								return
+							}
+							size += len(line)
+							if line == "\r\n" {
+								body := "chain-through-inner-ssh\n"
+								fmt.Fprintf(stream, "HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s", len(body), body)
+								return
+							}
+						}
+					}()
 				}
 			}()
 		}
