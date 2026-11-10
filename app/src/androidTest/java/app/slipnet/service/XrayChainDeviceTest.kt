@@ -33,6 +33,9 @@ class XrayChainDeviceTest {
         val oldProxy = prefs.proxyOnlyMode.first()
         val oldSplit = prefs.splitTunnelingEnabled.first()
         val oldBlock = prefs.blockIpv6.first()
+        val oldAuth = prefs.proxyAuthEnabled.first()
+        val oldUser = prefs.proxyAuthUsername.first()
+        val oldPassword = prefs.proxyAuthPassword.first()
         val db = DatabaseModule.provideDatabase(context)
         val server = CoreProcess(diagnostics = false)
         fun port() = ServerSocket(0).use { it.localPort }
@@ -61,6 +64,9 @@ class XrayChainDeviceTest {
             server.start(File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so"), config,
                 File(context.applicationInfo.nativeLibraryDir, "libveyra_core_launcher.so")).getOrThrow()
             prefs.setProxyOnlyMode(false); prefs.setSplitTunnelingEnabled(false); prefs.setBlockIpv6(true)
+            prefs.setProxyAuthUsername("synthetic-local-user")
+            prefs.setProxyAuthPassword("synthetic-local-password")
+            prefs.setProxyAuthEnabled(true)
             TransportTrust.allowPrompt = true
             ActivityScenario.launch(MainActivity::class.java).use { screen ->
                 screen.onActivity { manager = it.connectionManager }
@@ -76,6 +82,12 @@ class XrayChainDeviceTest {
                     }
                 }
                 assertEquals(chainId, (connection.connectionState.value as ConnectionState.Connected).chainId)
+                java.net.Socket("127.0.0.1", prefs.proxyListenPort.first()).use { socket ->
+                    socket.soTimeout = 2000
+                    socket.outputStream.write(byteArrayOf(5, 1, 0))
+                    assertEquals(5, socket.inputStream.read())
+                    assertEquals("The final SSH listener ignored configured local authentication", 255, socket.inputStream.read())
+                }
                 val response = CompletableDeferred<Pair<Int, Bundle>>()
                 val receiver = object : ResultReceiver(Handler(Looper.getMainLooper())) {
                     override fun onReceiveResult(code: Int, data: Bundle) { response.complete(code to data) }
@@ -101,6 +113,8 @@ class XrayChainDeviceTest {
             profiles.forEach { db.profileDao().deleteProfile(it.id) }
             db.close()
             prefs.setProxyOnlyMode(oldProxy); prefs.setSplitTunnelingEnabled(oldSplit); prefs.setBlockIpv6(oldBlock)
+            prefs.setProxyAuthEnabled(false)
+            prefs.setProxyAuthUsername(oldUser); prefs.setProxyAuthPassword(oldPassword); prefs.setProxyAuthEnabled(oldAuth)
             TransportTrust.allowPrompt = false; TransportTrust.clear()
         }
     }

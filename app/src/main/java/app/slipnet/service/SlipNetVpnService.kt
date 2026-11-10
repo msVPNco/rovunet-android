@@ -1301,6 +1301,13 @@ class SlipNetVpnService : VpnService() {
                 // Create a named SSH instance for this chain layer
                 val sshInstance = SshTunnelBridge.createInstance("chain-ssh-$layerIndex")
                 configureSshInstance(sshInstance, profile)
+                if (isLast) {
+                    // The final named instance is the user-facing listener. The
+                    // default bridge's auth settings do not propagate to it.
+                    val endpoint = preferencesDataStore.configuredSocksEndpoint()
+                    sshInstance.localAuthUsername = endpoint.user
+                    sshInstance.localAuthPassword = endpoint.password
+                }
 
                 if (prevPort > 0) {
                     val resolvedPrevType = prevLayerType
