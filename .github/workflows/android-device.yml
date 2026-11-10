@@ -88,6 +88,7 @@ jobs:
             app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk
             app/build/outputs/apk/androidTest/full/release/*-androidTest.apk
             app/build/outputs/mapping/fullRelease/mapping.txt
+            app/schemas/app.slipnet.data.local.database.SlipNetDatabase/50.json
             tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
             ${{ runner.temp }}/rovunet-apksigner.jar
