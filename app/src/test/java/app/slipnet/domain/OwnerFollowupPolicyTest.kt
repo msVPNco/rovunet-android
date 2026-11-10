@@ -6,6 +6,11 @@ import org.junit.Test
 
 class OwnerFollowupPolicyTest {
     private val radios = listOf("wifi" to setOf(1), "mobile" to setOf(0))
+    @Test fun wholeCollectionCanContinueToDnsWithoutChangingConnectFallbackPolicy() {
+        assertEquals(CollectionPhase.Completion.OFFER_DNS, CollectionPhase.completion(true, false, false, true, includeDnsAfterSuccess = true))
+        assertEquals(CollectionPhase.Completion.COMPLETE, CollectionPhase.completion(true, false, false, true))
+        assertEquals(CollectionPhase.Completion.INCOMPLETE, CollectionPhase.completion(true, true, false, true, includeDnsAfterSuccess = true))
+    }
     @Test fun coreDiagnosticsClassifyWithoutRetainingSecretsOrCallingReadyAHandshake() {
         val f = app.slipnet.core.CoreRuntimeFailure
         assertEquals(app.slipnet.util.ConnectionDiagnostics.Failure.NONE, f.category("2026/11/10 [Warning] core: Xray 26.1.0 started"))

@@ -12,6 +12,10 @@ production-signed owner APK. No merge, tag or release before explicit acceptance
   and a still-valid remembered route prevent temporary VPN creation from looking
   like radio loss. Ambiguous new routes are not guessed. Both collection testing
   and smart mode use the same resolver; service callbacks ignore secondary radios.
+- Whole-collection tests preserve fresh completed results across phases and offer
+  configured DNS testing after direct paths, even when a direct path worked. DNS
+  still needs consent, gets a size-based bounded budget, and reports untested paths.
+  The connection fallback policy still stops on a working direct path.
 - Collection interruption keys survive localization instead of becoming a generic
   operation failure. Redacted typed diagnostics record starts, interruptions and
   physical-route changes. Actual native teardown ownership still gates the next

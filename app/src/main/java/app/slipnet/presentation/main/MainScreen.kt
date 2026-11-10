@@ -377,7 +377,9 @@ fun MainScreen(
     if (uiState.collectionPrompt) AlertDialog(
         onDismissRequest = viewModel::dismissCollectionPrompt,
         title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_try_dns_fallback_a41a7b)) },
-        text = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_direct_paths_failed_in_this_collection_test_its_configured_dns_first_then_search_the_bundl_c79e01)) },
+        text = { Text(androidx.compose.ui.res.stringResource(if (uiState.collectionConnect)
+            app.slipnet.R.string.rv_direct_paths_failed_in_this_collection_test_its_configured_dns_first_then_search_the_bundl_c79e01
+            else app.slipnet.R.string.collection_dns_continue)) },
         confirmButton = { TextButton(enabled = !uiState.isPingRunning, onClick = viewModel::acceptCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_continue_31fbef)) } },
         dismissButton = { TextButton(onClick = viewModel::dismissCollectionPrompt) { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_cancel_19766e)) } }
     )

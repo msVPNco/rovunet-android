@@ -8,4 +8,5 @@
     <string name="update_error_storage">无法保存 APK。请检查可用存储空间后重试。</string>
     <string name="update_official_download">官方下载页</string>
     <string name="update_permission_return">允许从 Rovunet 安装，然后返回继续。Android 将要求确认安装。</string>
+    <string name="collection_dns_continue">接下来测试此集合已配置的 DNS 路径？如果均失败，将进行有限的解析器搜索。这会消耗流量并可能需要几分钟，已完成的结果会保留。</string>
 </resources>

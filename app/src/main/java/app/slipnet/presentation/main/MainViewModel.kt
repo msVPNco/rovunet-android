@@ -1311,7 +1311,7 @@ class MainViewModel @Inject constructor(
         val originalResults = _uiState.value.pingResults
         smartConnections.cancel(); smartConnections.clearResults()
         val memberIds = members.map { it.id }.toSet()
-        val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { it in memberIds })
+        val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { id -> candidates.any { it.id == id } })
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",
             pingResults = _uiState.value.pingResults + historical + candidates.associate { it.id to PingResult.Pending })
@@ -1323,7 +1323,7 @@ class MainViewModel @Inject constructor(
             try {
                 passed = app.slipnet.domain.model.CollectionPhase.run(candidates, connectAfter,
                     when {
-                        dnsOnly -> 180_000L
+                        dnsOnly -> app.slipnet.domain.model.ProbePolicy.testAllBudgetMs(candidates, detailed)
                         connectAfter -> 90_000L // stop at the first verified path
                         else -> app.slipnet.domain.model.ProbePolicy.testAllBudgetMs(candidates, detailed)
                     },
@@ -1336,12 +1336,12 @@ class MainViewModel @Inject constructor(
                     pausedNanos = { app.slipnet.tunnel.TransportTrust.decisionWaitNanos },
                     probe = { p -> probeThroughService(p, keepConnected = connectAfter, profileResolvers = dnsOnly, detailed = detailed) })
                 if (!passed && dnsOnly) passed = discoverCollectionDns(candidates, connectAfter, detailed)
-                val untested = !connectAfter && !dnsOnly && candidates.any {
+                val untested = !connectAfter && candidates.any {
                     _uiState.value.pingResults[it.id].let { r -> r is PingResult.Pending || r is PingResult.Testing }
                 }
                 val needsReview = candidates.any { _uiState.value.pingResults[it.id] == PingResult.ReviewIdentity }
                 when (app.slipnet.domain.model.CollectionPhase.completion(passed, untested, needsReview,
-                        !dnsOnly && members.any { ProfileCollections.isDns(it) })) {
+                        !dnsOnly && members.any { ProfileCollections.isDns(it) }, includeDnsAfterSuccess = !connectAfter && !dnsOnly)) {
                     app.slipnet.domain.model.CollectionPhase.Completion.INCOMPLETE ->
                         _uiState.value = _uiState.value.copy(error = "The test stopped before every path was tested", collectionPrompt = false)
                     app.slipnet.domain.model.CollectionPhase.Completion.OFFER_DNS ->

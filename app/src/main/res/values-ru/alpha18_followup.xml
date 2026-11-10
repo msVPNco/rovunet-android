@@ -8,4 +8,5 @@
     <string name="update_error_storage">Не удалось сохранить APK. Проверьте свободное место и повторите.</string>
     <string name="update_official_download">Официальная страница загрузки</string>
     <string name="update_permission_return">Разрешите установку из Rovunet и вернитесь сюда. Android запросит подтверждение установки.</string>
+    <string name="collection_dns_continue">Проверить настроенные DNS-пути этой группы? Если ни один не работает, возможен ограниченный поиск резолверов. Это расходует трафик и может занять несколько минут. Готовые результаты сохраняются.</string>
 </resources>

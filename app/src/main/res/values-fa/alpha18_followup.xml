@@ -8,4 +8,5 @@
     <string name="update_error_storage">ذخیرهٔ APK ممکن نشد؛ فضای خالی را بررسی و دوباره تلاش کنید.</string>
     <string name="update_official_download">صفحهٔ رسمی دانلود</string>
     <string name="update_permission_return">مجوز نصب از Rovunet را بدهید و به این صفحه برگردید؛ اندروید برای نصب تأیید می‌خواهد.</string>
+    <string name="collection_dns_continue">مسیرهای DNS تنظیم‌شدهٔ این مجموعه هم آزموده شوند؟ اگر هیچ‌کدام کار نکنند، جست‌وجوی محدود ریزالور ادامه می‌یابد. این کار دیتا مصرف می‌کند و ممکن است چند دقیقه طول بکشد؛ نتایج تکمیل‌شده حفظ می‌شوند.</string>
 </resources>
