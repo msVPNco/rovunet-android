@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+artifacts/
+engines/**
+!engines/pins.json
+!engines/transports-pins.json
+*.user
+*.pfx
+*.p12
+*.key
+*.log
+.vs/

@@ -1,0 +1,10 @@
+{
+  "original_sha256": "bfd52774e22329089e19f76fc73fbe219b65f9102e23d0383b53b2a26ed06fb1",
+  "local_source_copy": "src/Rovunet.Desktop/Assets/Brand/Rovunet-original.png",
+  "implementation": "Code-native vector trace in Branding.cs, geometric R and underline, teal brand hue with readable dark-theme variant; existing wordmark text adapts to theme",
+  "owner_supplied": true,
+  "source_artwork_unchanged": true,
+  "wordmark": "Owner requested R symbol followed by ovunet, with no duplicate R; accessible product name remains Rovunet",
+  "header_alignment": "English brand physically left within its own frame in compact and wide layouts, including Persian",
+  "wordmark_spacing_dip": 2
+}
