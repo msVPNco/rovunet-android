@@ -16,6 +16,13 @@ class Alpha19MaintenanceTest {
         for (link in links) {
             val first = CoreLink.parse(link)
             assertTrue(CoreLink.handles(link))
+            assertTrue(app.slipnet.data.export.ConfigSchemes.accepts(link))
+            val imported = app.slipnet.data.export.ConfigImporter().parseAndImport(link, "synthetic-device")
+            assertTrue(imported is app.slipnet.data.export.ImportResult.Success)
+            imported as app.slipnet.data.export.ImportResult.Success
+            assertTrue(imported.warnings.isEmpty())
+            assertEquals(1, imported.profiles.size)
+            assertEquals(TunnelType.XRAY, imported.profiles.single().tunnelType)
             val edited = CoreLink.parse(CoreForm.decode(link).encode("Edited"))
             assertEquals(first.outbound.toString(), edited.outbound.toString())
             assertTrue(CoreLink.runtime(link, 12345, "local", "secret").contains("\"auth\":\"password\""))
