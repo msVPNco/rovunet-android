@@ -1334,7 +1334,7 @@ class MainViewModel @Inject constructor(
         val candidates = (ordered.drop(offset) + ordered.take(offset)).take(50)
         val originalResults = _uiState.value.pingResults
         smartConnections.cancel(); smartConnections.clearResults()
-        val memberIds = members.map { it.id }.toSet()
+        val memberIds = selected.map { it.id }.toSet()
         val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { it in memberIds })
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",

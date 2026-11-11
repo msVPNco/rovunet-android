@@ -42,7 +42,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
         job = scope.launch {
             try { action() }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error = e.message }
+            catch (e: Exception) { error = e.message ?: "DOWNLOAD_FAILED" }
             finally { busy = false }
         }
     }

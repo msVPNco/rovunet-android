@@ -92,7 +92,7 @@ class SubscriptionUiDeviceTest {
                         if (open.value) SubscriptionDialog(repository, address, null,
                             prepare = { name, url, id, auto ->
                                 calls.incrementAndGet(); gate.await()
-                                if (fail.get()) error("DOWNLOAD_FAILED")
+                                if (fail.get()) throw java.io.IOException()
                                 val savedName = id?.let { db.subscriptionDao().get(it)?.name }.orEmpty()
                                 repository.prepareDocument(name.ifBlank { savedName }, url, id, auto, document)
                             }, onDismiss = { dismissed.incrementAndGet(); open.value = false })
