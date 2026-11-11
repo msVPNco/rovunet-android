@@ -1,0 +1,18 @@
+APK versionCode=9, 0.3.0-alpha03, certificate matches alpha02, 33 valid native ELF libraries.
+package: app.veyra.client
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE_DATA_SYNC'
+uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'
+uses-permission: name='android.permission.POST_NOTIFICATIONS'
+uses-permission: name='android.permission.WAKE_LOCK'
+uses-permission: name='android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
+uses-permission: name='android.permission.QUERY_ALL_PACKAGES'
+uses-permission: name='android.permission.BIND_QUICK_SETTINGS_TILE'
+uses-permission: name='android.permission.CAMERA'
+permission: app.veyra.client.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission: name='app.veyra.client.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
+
+SHA256 f41643ee050d8e5cee442a06a2788a29df5c915c6fc27dec58cc689a73224ce0

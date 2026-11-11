@@ -1,0 +1,15 @@
+2026-11-04 validation scope
+PASS: Kotlin real parser/exporter/model JVM harness; four core profile types.
+PASS: Xray config validation for four protocol configurations.
+PASS: TCP + UDP loopback integration for REALITY, XHTTP/TLS, Hysteria2/Salamander, WireGuard.
+PASS: 200 HTTP requests per protocol with 40 worker concurrency, one core client per protocol.
+PASS: WireGuard with 16 separate client processes and unique keys; TCP/UDP + 200 requests / 40 worker concurrency.
+PASS: 30 core start/stop cycles, port-collision failure, malformed-config cleanup, output-reader cleanup.
+PASS: exact native supervisor source on Linux: worker-thread exit preserves core; app-process death kills it.
+PASS: SQLite migration adds coreLink with schema45-compatible properties, preserves 20 synthetic legacy rows.
+PASS: manager Go tests; 300 distinct generated profiles per protocol.
+PASS: manager-generated server configs and 3 clients per protocol pass real core config validation; clients use app converter.
+BUILT: Android Xray and native supervisor for arm64-v8a, armeabi-v7a, x86_64; native engine CGO-enabled, Android API24.
+NOT RUN: Android device/emulator execution (adb devices empty).
+NOT RUN: prolonged battery, background, roaming, real ISP/DPI, production multi-user server capacity tests.
+The loopback tests use Xray on both ends; independent implementation interoperability not measured.

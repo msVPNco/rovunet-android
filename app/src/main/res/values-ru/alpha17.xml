@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alpha17_language_title">Выберите язык</string>
+    <string name="alpha17_free_title">Бесплатные подключения</string>
+    <string name="alpha17_free_hint">Выберите способ или публичный источник. Доступность зависит от сети и провайдера.</string>
+    <string name="alpha17_free_tor">Tor / Snowflake — добавить</string>
+    <string name="alpha17_free_proton">Proton VPN Free — личная конфигурация</string>
+    <string name="alpha17_free_mahsa">Mahsa — сведения об источнике</string>
+    <string name="alpha17_free_anon">Anonymous X — публичная подписка</string>
+    <string name="alpha17_free_other">Другая публичная подписка</string>
+    <string name="alpha17_free_pending">WARP, Psiphon, Mahsa, Patterniha, Riseup/Calyx и Geph ещё проверяются на совместимость и разрешение использования сервиса.</string>
+    <string name="alpha17_public_title">Проверка публичного источника</string>
+    <string name="alpha17_public_consent">У публичных серверов независимые операторы. Тест связи не подтверждает их надёжность. Используйте только разрешённые вам источники; несовместимые записи могут пропускаться.</string>
+    <string name="alpha17_public_ack">Я понимаю и хочу проверить источник</string>
+    <string name="alpha17_public_summary">%1$d совместимых · %2$d неподдерживаемых · %3$d повторов</string>
+    <string name="alpha17_public_import">Импортировать проверенные записи</string>
+    <string name="alpha17_public_empty">В источнике нет совместимых конфигураций.</string>
+    <string name="alpha17_public_limit">Превышен безопасный размер или лимит записей.</string>
+    <string name="alpha17_smart_title">Выбор маршрута</string>
+    <string name="alpha17_manual">Вручную</string>
+    <string name="alpha17_failover">Заменять при отказе</string>
+    <string name="alpha17_smart">Умный выбор</string>
+    <string name="alpha17_smart_hint">Умный режим меняет маршрут при снижении высокого HTTPS-пинга минимум на 50%. Это может прервать звонки и загрузки. Параллельный тест доступен совместимым профилям ядра; другие проверяются после отказа.</string>
+    <string name="alpha17_smart_start">Подключить автоматически</string>
+    <string name="alpha17_monitoring">Умное подключение активно</string>
+    <string name="alpha17_switching">Переход на проверенный маршрут…</string>
+    <string name="alpha17_offline">Ожидание доступа в интернет</string>
+    <string name="alpha17_exhausted">В этой группе нет проверенной замены. Проверьте следующую или выберите маршрут вручную.</string>
+    <string name="alpha17_trying">Проверка маршрута %1$d из %2$d</string>
+    <string name="alpha17_ping">Пинг %1$d мс</string>
+    <string name="alpha17_ping_hint">Пинг — задержка HTTPS через этот маршрут, а не скорость загрузки.</string>
+    <string name="alpha17_next_batch">Проверить следующие 50 маршрутов</string>
+    <string name="alpha17_large_batch">Коллекции проверяются группами до 50 маршрутов.</string>
+    <string name="alpha17_public_refresh_warning">Перед обновлением проверьте источник снова.</string>
+    <string name="alpha17_free_details">Сведения о провайдере</string>
+</resources>

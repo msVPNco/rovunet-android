@@ -1,0 +1,27 @@
+PASS settings/About: 215 resource keys in four languages, format parity, Russian plurals, no raw UI sentences or Activity recreation
+Portable URI, alias routing and bounded diagnostic checks passed
+Real importer/exporter: aliases, mixed profiles, strict VLESS, limits and encrypted bundle round-trip passed
+Core parser: four protocols, native persistence and invalid-option checks passed
+Core lifecycle: 30 start/stop cycles, occupied port and invalid-config cleanup passed
+Core editor: four protocol roundtrips, IPv6, secret escaping, XHTTP options, transport switch and invalid fields passed
+HTTPS probe: SOCKS-only success, authentication, bad credentials, redirect rejection, hostname and certificate verification, unavailable proxy and sample statistics passed
+PASS selected-group export, metadata and sharing restrictions; JNI roundtrip needs device test
+PASS real Go panel v32 output imported by Android parser
+PASS real panel import removes equivalent native/standard VLESS within each user's collection
+PASS actual showUserConfigs full text: two users, each native Soar/VLESS + standard VLESS
+PASS collection identity/isolation, DNS-last policy, native v32 metadata and legacy aliases
+PASS diagnostic categories and secret redaction
+PASS persistent undo, deleted profiles, later edits and credential preservation
+PASS inferred account/server groups, ambiguous isolation, metadata and heading hints
+PASS four cores on one host retained; full-field equality, collection isolation, protected records and import dedup
+PASS bounded collection phase, first-success stop, timeout/external-cancel cleanup and TCP-before-UDP default
+PASS manual selection, deleted target, and active-path measurement isolation
+PASS release comparison, prerelease numbers, invalid versions and downgrade prevention
+PASS lossless v33 secrets, hidden resolver policy, malformed hashes, expired chain and update asset checks
+PASS real manager: stale disconnect/error/onDestroy isolation, scoped stop, delayed-stop delivery, queued connect barrier, queued cancellation and stale teardown isolation
+PASS real transport trust: explicit approval, saved keys, changed-key rejection, certificate/hostname checks and TLS deadline
+PASS real HTTP proxy: unauthenticated/wrong password rejected, authenticated relay, idle sockets/threads closed on stop
+PASS domestic CIDR/domain decisions, generated core routing and shared direct relay
+PASS generated routing on real Xray: loopback CIDR uses direct outbound while proxy endpoint is unreachable
+PASS delayed core listener readiness, bounded never-ready startup and forced-stop cleanup
+PASS foreground-only stall detection, debugger/deep-sleep guards, one report per stall, bounded symbol-only redaction

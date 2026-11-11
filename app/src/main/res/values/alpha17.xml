@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alpha17_language_title">Choose your language</string>
+    <string name="alpha17_free_title">Free connections</string>
+    <string name="alpha17_free_hint">Choose a method or a public source. Availability depends on your network and the provider.</string>
+    <string name="alpha17_free_tor">Tor / Snowflake — add connection</string>
+    <string name="alpha17_free_proton">Proton VPN Free — personal configuration guide</string>
+    <string name="alpha17_free_mahsa">Mahsa — provider details</string>
+    <string name="alpha17_free_anon">Anonymous X — public subscription</string>
+    <string name="alpha17_free_other">Other public subscription</string>
+    <string name="alpha17_free_pending">WARP, Psiphon, Mahsa, Patterniha, Riseup/Calyx and Geph remain under compatibility and service-permission review.</string>
+    <string name="alpha17_public_title">Public source review</string>
+    <string name="alpha17_public_consent">Public relays have independent operators. Connectivity tests do not establish their trustworthiness. Enable only a source you are entitled to use; imported profiles may be skipped.</string>
+    <string name="alpha17_public_ack">I understand and want to review this source</string>
+    <string name="alpha17_public_summary">%1$d compatible · %2$d unsupported · %3$d duplicates</string>
+    <string name="alpha17_public_import">Import reviewed profiles</string>
+    <string name="alpha17_public_empty">No compatible profiles found in this public source.</string>
+    <string name="alpha17_public_limit">This public source exceeds the safe size or entry limit.</string>
+    <string name="alpha17_smart_title">Path selection</string>
+    <string name="alpha17_manual">Manual</string>
+    <string name="alpha17_failover">Replace on failure</string>
+    <string name="alpha17_smart">Smart selection</string>
+    <string name="alpha17_smart_hint">Smart mode can switch when high HTTPS ping drops by at least 50%. Switching may interrupt calls or downloads. Parallel testing is available for compatible core profiles; other paths can be tried after failure.</string>
+    <string name="alpha17_smart_start">Connect automatically</string>
+    <string name="alpha17_monitoring">Smart connection active</string>
+    <string name="alpha17_switching">Switching to a verified path…</string>
+    <string name="alpha17_offline">Waiting for internet access</string>
+    <string name="alpha17_exhausted">No verified alternative in this batch. Try the next batch or choose a path manually.</string>
+    <string name="alpha17_trying">Trying path %1$d of %2$d</string>
+    <string name="alpha17_ping">Ping %1$d ms</string>
+    <string name="alpha17_ping_hint">Ping is HTTPS round-trip latency through this path, not download speed.</string>
+    <string name="alpha17_next_batch">Test next 50 paths</string>
+    <string name="alpha17_large_batch">Collection tests run in batches of at most 50 paths.</string>
+    <string name="alpha17_public_refresh_warning">Review this source again before applying an update.</string>
+    <string name="alpha17_free_details">Provider details</string>
+</resources>

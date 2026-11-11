@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_vpn_toggle_description">连接或断开 VPN</string>
+    <string name="widget_vpn_status_description">VPN 连接状态</string>
+    <string name="qr_pick_from_gallery">从相册选择图片</string>
+    <string name="qr_image_not_found">此图片中未找到二维码。</string>
+    <string name="qr_image_read_failed">无法读取此图片，请选择其他图片。</string>
+</resources>

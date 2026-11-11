@@ -1,0 +1,95 @@
+{
+  "reviewed_at": "2026-11-08",
+  "github_read_only": true,
+  "design_reference": "Owner-provided dark and light images",
+  "reviews": [
+    {
+      "repository": "https://github.com/2dust/v2rayN",
+      "path": "v2rayN/v2rayN/Views/MainWindow.xaml",
+      "blob_sha": "00d4bf68ad49a03f24ffdbd364ae5abb6f644369",
+      "source_url": "https://github.com/2dust/v2rayN/blob/master/v2rayN/v2rayN/Views/MainWindow.xaml",
+      "lesson": "Explicit clipboard/image/manual import; docked status outside scrolling content",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/2dust/v2rayN",
+      "path": "v2rayN/v2rayN/Views/StatusBarView.xaml",
+      "blob_sha": "d337c4cdba9f534ecbb4c97bafc3b5fcc143b2ed",
+      "source_url": "https://github.com/2dust/v2rayN/blob/master/v2rayN/v2rayN/Views/StatusBarView.xaml",
+      "lesson": "Separate transfer statistics",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/hiddify/hiddify-app",
+      "path": "lib/core/theme/app_theme.dart",
+      "blob_sha": "777af688e1720d67a99bde06b76c34f8333c7cdd",
+      "source_url": "https://github.com/hiddify/hiddify-app/blob/main/lib/core/theme/app_theme.dart",
+      "lesson": "Separate light/dark palettes sharing component structure",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/hiddify/hiddify-app",
+      "path": "lib/features/home/widget/home_page.dart",
+      "blob_sha": "8df83526fab9560c9ec91e403c7e44efcd0772e7",
+      "source_url": "https://github.com/hiddify/hiddify-app/blob/main/lib/features/home/widget/home_page.dart",
+      "lesson": "Primary connection control and active-path latency",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/hiddify/hiddify-app",
+      "path": "lib/features/stats/widget/connection_stats_card.dart",
+      "blob_sha": "b8d5ae5f22b0588640ea0bf680bf453e546b5979",
+      "source_url": "https://github.com/hiddify/hiddify-app/blob/main/lib/features/stats/widget/connection_stats_card.dart",
+      "lesson": "Small, separate statistics card",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/clash-verge-rev/clash-verge-rev",
+      "path": "src/pages/home.tsx",
+      "blob_sha": "3937d4e57883430bca8cd66ef18a45a5d2533a67",
+      "source_url": "https://github.com/clash-verge-rev/clash-verge-rev/blob/dev/src/pages/home.tsx",
+      "lesson": "Composed cards and adaptive dashboard layout",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/clash-verge-rev/clash-verge-rev",
+      "path": "src/components/home/enhanced-traffic-stats.tsx",
+      "blob_sha": "dd5c5ebd4bb78ba936760b46aa1dda6e7f1e8cc6",
+      "source_url": "https://github.com/clash-verge-rev/clash-verge-rev/blob/dev/src/components/home/enhanced-traffic-stats.tsx",
+      "lesson": "Visible-page traffic sampling and real-data graph",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/chen08209/FlClash",
+      "path": "lib/pages/home.dart",
+      "blob_sha": "6df0c14673a88b7fe1d3e55a23bbf34858f854a3",
+      "source_url": "https://github.com/chen08209/FlClash/blob/main/lib/pages/home.dart",
+      "lesson": "Preserved page state and focus",
+      "copied_code": false,
+      "copied_assets": false
+    },
+    {
+      "repository": "https://github.com/chen08209/FlClash",
+      "path": "lib/widgets/active_polling.dart",
+      "blob_sha": "5eba51d61bf6caaa655aed56b38658c0d0b7e9e0",
+      "source_url": "https://github.com/chen08209/FlClash/blob/main/lib/widgets/active_polling.dart",
+      "lesson": "Foreground-only, bounded, non-overlapping sampling",
+      "copied_code": false,
+      "copied_assets": false
+    }
+  ],
+  "license_notes": {
+    "v2rayN": "GPL-3.0",
+    "FlClash": "GPL-3.0",
+    "ClashVergeRev": "GPL-3.0",
+    "Hiddify": "Hiddify Extended GPL v3; additional conditions are present in LICENSE.md. No source/assets copied."
+  },
+  "implementation": "Independent C#/WPF implementation; this is a design-pattern review, not incorporation of these projects."
+}

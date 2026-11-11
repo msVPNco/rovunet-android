@@ -1,0 +1,11 @@
+Portable URI, alias routing and bounded diagnostic checks passed
+Real importer/exporter: aliases, mixed profiles, strict VLESS, limits and encrypted bundle round-trip passed
+Core parser: four protocols, native persistence and invalid-option checks passed
+Core lifecycle: 30 start/stop cycles, occupied port and invalid-config cleanup passed
+Core editor: four protocol roundtrips, IPv6, secret escaping, XHTTP options, transport switch and invalid fields passed
+HTTPS probe: SOCKS-only success, authentication, bad credentials, redirect rejection, hostname and certificate verification, unavailable proxy and sample statistics passed
+
+Ranking assertions passed: fast TCP-only result is not ranked above verified HTTPS; optional success-fraction ranking places 3/3 above 1/3.
+Median uses the average middle pair when exactly two samples succeed.
+NOT RUN: Android service cycling and UI interaction on a device. No claim of full VPN-path validation on Android.
+Test trust store is local test-only; production uses platform trust and HTTPS hostname verification.

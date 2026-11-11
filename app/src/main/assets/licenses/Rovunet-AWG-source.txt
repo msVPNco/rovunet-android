@@ -1,0 +1,10 @@
+Rovunet's AmneziaWG adapter runs as an isolated executable process.
+Mihomo source: https://github.com/MetaCubeX/mihomo
+Pinned source: 3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8 (v1.19.33)
+License: GPL-3.0; see Mihomo.txt and upstream third-party notices.
+Project adapter source: tools/native/awg/ and tools/native/build-awg.py.
+The release source archive includes the pinned Mihomo source and its go.mod/go.sum.
+AmneziaWG implementation: github.com/metacubex/amneziawg-go at the revision
+pinned in Mihomo's go.mod/go.sum; original project https://github.com/amnezia-vpn/amneziawg-go.
+Only the imported AWG peer, local authenticated SOCKS listener and app-generated
+routing are enabled; no remote provider, external controller or kernel TUN is loaded.

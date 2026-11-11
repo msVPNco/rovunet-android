@@ -1,0 +1,32 @@
+{
+  "source_license_paths": [
+    "deps/dnstt/COPYING",
+    "deps/noizdns/LICENSE",
+    "deps/vaydns/COPYING",
+    "vendor/github.com/andybalholm/brotli/LICENSE",
+    "vendor/github.com/flynn/noise/LICENSE",
+    "vendor/github.com/getlantern/soar/LICENSE",
+    "vendor/github.com/gorilla/websocket/LICENSE",
+    "vendor/github.com/klauspost/compress/LICENSE",
+    "vendor/github.com/klauspost/compress/internal/snapref/LICENSE",
+    "vendor/github.com/klauspost/compress/zstd/internal/xxhash/LICENSE.txt",
+    "vendor/github.com/klauspost/cpuid/v2/LICENSE",
+    "vendor/github.com/klauspost/reedsolomon/LICENSE",
+    "vendor/github.com/net2share/vaydns/COPYING",
+    "vendor/github.com/pkg/errors/LICENSE",
+    "vendor/github.com/refraction-networking/utls/LICENSE",
+    "vendor/github.com/refraction-networking/utls/dicttls/LICENSE",
+    "vendor/github.com/sirupsen/logrus/LICENSE",
+    "vendor/github.com/tjfoc/gmsm/LICENSE",
+    "vendor/github.com/xtaci/kcp-go/v5/LICENSE",
+    "vendor/github.com/xtaci/smux/LICENSE",
+    "vendor/gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/goptlib/COPYING",
+    "vendor/golang.org/x/crypto/LICENSE",
+    "vendor/golang.org/x/net/LICENSE",
+    "vendor/golang.org/x/sys/LICENSE",
+    "vendor/golang.org/x/text/LICENSE",
+    "vendor/golang.org/x/time/LICENSE",
+    "vendor/noizdns/LICENSE",
+    "vendor/www.bamsoftware.com/git/dnstt.git/COPYING"
+  ]
+}

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scanner_diagnostics_partial">Диагностические проверки не завершены</string>
+    <string name="account_status_unavailable">Сведения об аккаунте недоступны</string>
+    <string name="account_status_partial">Учёт трафика неполный</string>
+    <string name="account_status_waiting">Ожидание первых данных о трафике</string>
+    <string name="account_status_stale">Сведения об аккаунте нужно обновить</string>
+    <string name="account_status_expired">Срок действия аккаунта истёк</string>
+    <string name="account_status_limit_reached">Лимит трафика исчерпан</string>
+    <string name="account_status_remaining_volume">Осталось %1$s %2$s</string>
+    <string name="account_status_unlimited_volume">Безлимитный трафик</string>
+    <string name="account_status_no_expiry">Без срока окончания</string>
+    <string name="account_status_days">Осталось дней: %1$d</string>
+    <string name="account_status_hours">Осталось часов: %1$d</string>
+    <string name="account_status_minutes">Осталось минут: %1$d</string>
+    <string name="account_status_summary">%1$s · %2$s</string>
+</resources>

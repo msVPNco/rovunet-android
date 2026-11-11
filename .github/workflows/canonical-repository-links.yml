@@ -1,0 +1,23 @@
+name: Update canonical repository navigation
+
+on: create
+
+permissions:
+  contents: read
+
+jobs:
+  update-public-navigation:
+    if: github.repository == 'msVPNco/rovunet-app' && github.event.ref_type == 'branch' && github.event.ref == 'maintenance/canonical-repository-links-20261108'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Update release links while preserving every published artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/release/update_repository_links.py

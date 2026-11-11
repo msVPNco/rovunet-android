@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><AssemblyName>Rovunet.Setup</AssemblyName><ApplicationIcon>../../src/Rovunet.Desktop/Assets/rovunet.ico</ApplicationIcon></PropertyGroup>
+  <ItemGroup><Resource Include="../../src/Rovunet.Desktop/Assets/Vazirmatn.ttf" Link="Assets/Vazirmatn.ttf"/><EmbeddedResource Include="../../LICENSE" Link="LICENSE"/><EmbeddedResource Include="Locales/*.json"/></ItemGroup>
+  <ItemGroup Condition="'$(BackendPath)' != ''"><EmbeddedResource Include="$(BackendPath)" LogicalName="ReviewBackend" /></ItemGroup>
+</Project>
+
+

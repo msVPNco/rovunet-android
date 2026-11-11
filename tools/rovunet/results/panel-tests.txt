@@ -1,0 +1,4 @@
+ok  	github.com/anonvector/slipgate/internal/clientcfg	0.016s
+ok  	github.com/anonvector/slipgate/internal/handlers	0.006s
+ok  	github.com/anonvector/slipgate/internal/coreplan	(cached)
+?   	github.com/anonvector/slipgate/cmd	[no test files]

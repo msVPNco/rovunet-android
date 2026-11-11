@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review03_patterniha">Patterniha</string>
+    <string name="review03_patterniha_hint">Only compatible connections are imported. Settings requiring the provider’s special client are reported as unsupported.</string>
+    <string name="review03_protocol_summary">%1$s: %2$d accepted · %3$d rejected</string>
+    <string name="review03_reason_count">%1$s · %2$d</string>
+    <string name="review03_reason_format">Invalid or unreadable format</string>
+    <string name="review03_reason_protocol">Protocol not supported</string>
+    <string name="review03_reason_transport">Transport not supported</string>
+    <string name="review03_reason_tls">TLS verification disabled or TLS required</string>
+    <string name="review03_reason_options">Unsupported connection settings</string>
+    <string name="review03_reason_protected">Locked, expired or device-bound profile</string>
+    <string name="review03_json_connections">Only compatible connections are extracted. This file’s DNS, routing and listeners are not applied.</string>
+    <string name="review03_json_unsupported">Some JSON connections could not be converted and were excluded.</string>
+    <string name="review03_trojan">Trojan</string>
+    <string name="review03_vmess">VMess</string>
+    <string name="review03_vmess_cipher">VMess encryption</string>
+    <string name="review03_grpc_service">gRPC service name</string>
+    <string name="review03_grpc_authority">gRPC authority (optional)</string>
+    <string name="review03_early_data">WebSocket early data size (optional)</string>
+    <string name="review03_early_header">WebSocket early data header (optional)</string>
+    <string name="review03_other">Other</string>
+</resources>

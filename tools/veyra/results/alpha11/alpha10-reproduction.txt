@@ -1,0 +1,1 @@
+REPRODUCED alpha10: old service never acknowledges destruction; UI remains Connecting and new CONNECT is never dispatched
