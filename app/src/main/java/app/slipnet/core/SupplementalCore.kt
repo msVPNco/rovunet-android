@@ -70,7 +70,7 @@ internal object SupplementalCore {
             "mierus" -> {
                 // The official simple format may contain multiple bindings. Reject, never discard them.
                 only("profile", "port", "protocol", "multiplexing", "handshake-mode", "traffic-pattern")
-                val credentials = auth.split(':', limit = 2)
+                val credentials = uri.rawUserInfo.split(':', limit = 2).map(::decode)
                 require(credentials.size == 2 && credentials.all(String::isNotBlank))
                 out.put("username", credentials[0]).put("password", credentials[1])
                 val transport = q["protocol"] ?: error("Missing transport")

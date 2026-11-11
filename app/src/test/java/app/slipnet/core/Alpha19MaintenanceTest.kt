@@ -10,13 +10,14 @@ class Alpha19MaintenanceTest {
         val links = listOf(
             "anytls://secret%2Bvalue@example.invalid:443?sni=tls.example.invalid&idle-session-timeout=30&min-idle-session=0",
             "tuic://$id:secret%3Avalue@example.invalid:8443?sni=tls.example.invalid&alpn=h3&congestion_control=bbr&udp_relay_mode=native&reduce_rtt=0",
-            "mierus://user:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=TCP&multiplexing=MULTIPLEXING_LOW"
+            "mierus://user:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=TCP&multiplexing=MULTIPLEXING_LOW",
+            "mierus://user%3Aname:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=UDP"
         )
         for (link in links) {
             val first = CoreLink.parse(link)
             assertTrue(CoreLink.handles(link))
             val edited = CoreLink.parse(CoreForm.decode(link).encode("Edited"))
-            assertTrue(first.outbound.similar(edited.outbound))
+            assertEquals(first.outbound.toString(), edited.outbound.toString())
             assertTrue(CoreLink.runtime(link, 12345, "local", "secret").contains("\"auth\":\"password\""))
         }
     }
