@@ -34,6 +34,7 @@ internal static class InstallService
     }
     internal static async Task InstallLocal(string destination,bool desktop)
     {
+        destination=InstallTransaction.ValidateTarget(destination);await ClosePrevious.Run(destination);
         destination=InstallTransaction.ValidateTarget(destination);string stagingRoot=Elevated?Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"Temp"):Path.GetTempPath();string staging=Path.Combine(stagingRoot,"Rovunet-setup-"+Guid.NewGuid().ToString("N"));
         if(Elevated){if((File.GetAttributes(stagingRoot)&FileAttributes.ReparsePoint)!=0)throw new InstallProblem("invalidPath");var security=new DirectorySecurity();security.SetAccessRuleProtection(true,false);security.SetOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid,null));foreach(var sid in new[]{WellKnownSidType.BuiltinAdministratorsSid,WellKnownSidType.LocalSystemSid})security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(sid,null),FileSystemRights.FullControl,InheritanceFlags.ContainerInherit|InheritanceFlags.ObjectInherit,PropagationFlags.None,AccessControlType.Allow));new DirectoryInfo(staging).Create(security);}else Directory.CreateDirectory(staging);
         string backend=Path.Combine(staging,"backend.exe"),payload=Path.Combine(staging,"payload");

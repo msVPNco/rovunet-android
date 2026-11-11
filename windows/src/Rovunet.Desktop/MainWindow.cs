@@ -25,7 +25,7 @@ public sealed partial class MainWindow : Window
     Border shield = null!; CheckBox proxy = null!; bool busy, closing, allowClose;
     AgentClient? lostClient;
     string lastError = ""; long lastConnectMs, lastDisconnectMs;
-    public static string Version => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.0-preview.20";
+    public static string Version => Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.1-preview.1";
     static Brush Tone(string key) => (Brush)Application.Current.FindResource(key);
     static Brush Muted => Tone("Muted");
     static Brush Accent => Tone("Accent");
@@ -35,19 +35,20 @@ public sealed partial class MainWindow : Window
     public MainWindow(UserData data, bool uiSmoke = false)
     {
         
-        this.data = data; fixtureMode=uiSmoke; Title = uiSmoke ? "Rovunet — UI fixture" : "Rovunet"; allowClose = uiSmoke;
+        this.data = data; if(data.LiveLatencyRevision<1){data.LiveLatency=true;data.LiveLatencyRevision=1;} fixtureMode=uiSmoke; Title = uiSmoke ? "Rovunet — UI fixture" : "Rovunet"; allowClose = uiSmoke;
         foreach(var p in data.Profiles)if(SshHostKey.Required(p)&&data.SshKeys.ContainsKey(p.Id)&&!data.SshKeyScopes.ContainsKey(p.Id))data.SshKeyScopes[p.Id]=SshHostKey.Scope(p);
         Style = (Style)Application.Current.FindResource(typeof(Window));
         
         var area = SystemParameters.WorkArea;
         
-        Width = UiPolicy.WindowSize(data.WindowWidth > 0 ? data.WindowWidth : 1200, area.Width, 580);
-        Height = UiPolicy.WindowSize(Math.Max(data.WindowHeight,900), area.Height, 880);
-        MinWidth = Math.Min(580, Width); MinHeight = Math.Min(880, Height);
+        Width = UiPolicy.WindowSize(data.WindowWidth > 0 ? data.WindowWidth : 480, area.Width, 480);
+        Height = UiPolicy.WindowSize(Math.Max(data.WindowHeight,880), area.Height, 880);
+        MinWidth = Math.Min(480, Width); MinHeight = Math.Min(880, Height);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         foreach(var sub in data.Subscriptions){try{if(sub.Usage!=null){subscriptionUsage20[sub.Id]=sub.Usage;statuses[sub.Id]=sub.Usage.Snapshot(sub.Id);}else if(sub.StatusBody.Length>0)statuses[sub.Id]=new(){Status=AccountStatus.Read(sub.StatusBody),Error="ACCOUNT_STALE"};}catch{}}
-        ApplyTheme();Build();
+        ApplyTheme();Build();WireAdaptiveBounds21();
         SizeChanged += (_, args) => { if(args.WidthChanged&&!closing){if(NavigationDepth>0)ResizeInnerPage(args.NewSize.Width);else if((args.NewSize.Width<ContextThreshold)!=compactLayout)RebuildForResize();} };
+        SizeChanged += (_, args) => { if(args.HeightChanged&&!closing&&heroCard19!=null)RefreshHeroCollapse19(); };
         foreach (var (id, m) in data.Measurements) measurements[id] = new() { Verified = m.Verified, ElapsedMs = m.ElapsedMs, Error = m.Error, ProbeStage=m.Stage,ProbeFallbackUsed=m.ProbeFallbackUsed };
         RefreshCards();
         Loaded += async (_, _) =>
@@ -364,6 +365,7 @@ public sealed partial class MainWindow : Window
         catch { lastError = "SAVE_FAILED"; SetState(state); }
     }
 }
+
 
 
 

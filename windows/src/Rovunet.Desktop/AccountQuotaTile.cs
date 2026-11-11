@@ -15,18 +15,19 @@ public sealed partial class MainWindow
         internal readonly TextBlock Used,Remaining,Time,Note,Percent;
         readonly ProgressBar meter;
         readonly Grid numbers;
-        internal AccountQuotaTile()
+        internal AccountQuotaTile(Func<bool>? motion = null)
         {
-            var body=new Grid();body.RowDefinitions.Add(new(){Height=GridLength.Auto});body.RowDefinitions.Add(new(){Height=GridLength.Auto});body.RowDefinitions.Add(new(){Height=GridLength.Auto});
-            Used=new TextBlock{FontSize=14,Height=20,LineHeight=20,LineStackingStrategy=LineStackingStrategy.BlockLineHeight,FontWeight=FontWeights.SemiBold,Foreground=Tone("Ink"),TextTrimming=TextTrimming.CharacterEllipsis};body.Children.Add(Used);
-            numbers=new Grid{Margin=new(0,1,0,0),Height=18};numbers.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});numbers.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
-            var bar=new Grid{Margin=new(0,2,12,0)};bar.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});bar.ColumnDefinitions.Add(new(){Width=GridLength.Auto});
-            meter=new ProgressBar{Minimum=0,Maximum=100,Height=8,Background=Tone("Outline"),Foreground=Green,VerticalAlignment=VerticalAlignment.Center,Template=(ControlTemplate)XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='ProgressBar'><Grid x:Name='PART_Track' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'><Border Background='{TemplateBinding Background}' CornerRadius='4' Opacity='.4'/><Border x:Name='PART_Indicator' HorizontalAlignment='Left' Background='{TemplateBinding Foreground}' CornerRadius='4'/></Grid></ControlTemplate>")};bar.Children.Add(meter);
-            Percent=new TextBlock{FontSize=13,Foreground=Muted,Margin=new(8,0,0,0),FlowDirection=FlowDirection.LeftToRight};Grid.SetColumn(Percent,1);bar.Children.Add(Percent);numbers.Children.Add(bar);
-            var detail=new StackPanel{Orientation=Orientation.Horizontal};Remaining=new TextBlock{FontSize=14,Foreground=Muted,Margin=new(0,0,12,0)};Time=new TextBlock{FontSize=14,Foreground=Muted};detail.Children.Add(Remaining);detail.Children.Add(Time);Grid.SetColumn(detail,1);numbers.Children.Add(detail);Grid.SetRow(numbers,1);body.Children.Add(numbers);
-            Note=new TextBlock{FontSize=12,Height=16,LineHeight=16,LineStackingStrategy=LineStackingStrategy.BlockLineHeight,Foreground=Muted,TextWrapping=TextWrapping.NoWrap,TextTrimming=TextTrimming.CharacterEllipsis};Grid.SetRow(Note,2);body.Children.Add(Note);
-            Root=new Border{Child=body,Padding=new(12,4,12,4),Height=68,Margin=new(16,0,16,6),CornerRadius=new(14),Background=GlassBrush(),BorderBrush=Tone("Outline"),BorderThickness=new(1),ToolTip=L.Text("QUOTA_UNIT_HINT"),Tag="ACCOUNT_QUOTA"};
-            static Brush GlassBrush()=>new SolidColorBrush(Color.FromArgb(25,255,255,255));
+            bool Enabled()=>motion?.Invoke()??SystemParameters.ClientAreaAnimation;
+            TextBlock Label(Brush color)=>new(){FontSize=12,LineHeight=18,LineStackingStrategy=LineStackingStrategy.BlockLineHeight,Foreground=color,TextWrapping=TextWrapping.NoWrap,TextTrimming=TextTrimming.None};
+            var body=new Grid();body.RowDefinitions.Add(new(){Height=new(18)});body.RowDefinitions.Add(new(){Height=new(18)});body.RowDefinitions.Add(new(){Height=new(5)});
+            Used=Label(Tone("Ink"));Used.FontWeight=FontWeights.SemiBold;
+            body.Children.Add(new MarqueeLine(Used,18,L.Direction,Enabled));
+            numbers=new Grid{Height=18};var detail=new StackPanel{Orientation=Orientation.Horizontal,FlowDirection=L.Direction};
+            Remaining=Label(Muted);Time=Label(Muted);Note=Label(Muted);Percent=Label(Muted);Percent.FlowDirection=FlowDirection.LeftToRight;
+            foreach(var label in new[]{Remaining,Time,Note,Percent}){label.Margin=new(0,0,9,0);detail.Children.Add(label);}
+            numbers.Children.Add(new MarqueeLine(detail,18,L.Direction,Enabled));Grid.SetRow(numbers,1);body.Children.Add(numbers);
+            meter=new ProgressBar{Minimum=0,Maximum=100,Height=4,Background=Tone("Outline"),Foreground=Accent,VerticalAlignment=VerticalAlignment.Center,Template=(ControlTemplate)XamlReader.Parse("<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='ProgressBar'><Grid x:Name='PART_Track' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'><Border Background='{TemplateBinding Background}' CornerRadius='3' Opacity='.18'/><Border x:Name='PART_Indicator' HorizontalAlignment='Left' Background='{TemplateBinding Foreground}' CornerRadius='3'/></Grid></ControlTemplate>")};Grid.SetRow(meter,2);body.Children.Add(meter);
+            Root=new Border{Child=body,Padding=new(0),Height=44,Margin=new(0,2,0,1),Background=Brushes.Transparent,ToolTip=L.Text("QUOTA_UNIT_HINT"),Tag="ACCOUNT_QUOTA"};
         }
         internal void Update(StatusView? view)
         {
@@ -39,7 +40,7 @@ public sealed partial class MainWindow
             else{Used.Text=L.Text(view?.Status?.Metering is "partial" or "unavailable"?"ACCOUNT_INCOMPLETE":"ACCOUNT_UNKNOWN");Remaining.Text="";}
             Note.Visibility=data.Current?Visibility.Collapsed:Visibility.Visible;Note.Text=view?.Status==null?"":L.Text("QUOTA_CACHED");numbers.Opacity=data.Current?1:.65;
             // Cached values remain visibly labelled; never present incomplete data as unlimited.
-            Note.Margin=new(0,2,0,0);Root.Height=view?.Status==null?24:data.Current?46:64;Used.Height=view?.Status==null?18:20;Used.LineHeight=view?.Status==null?18:20;Root.Padding=view?.Status==null?new(8,2,8,2):new(12,3,12,3);Used.FontSize=view?.Status==null?13:14;
+            Root.Height=44;Used.Height=18;Used.LineHeight=18;Root.Padding=new(0);Used.FontSize=12;
             Used.Foreground=data.Current?Tone("Ink"):Muted;meter.Foreground=!data.Current?Muted:view?.Severity switch{Severity.Critical=>Red,Severity.Warning=>Amber,_=>Green};
             if(view?.Status?.State=="limit_reached")Time.Text=L.Text("ACCOUNT_LIMIT");
         }

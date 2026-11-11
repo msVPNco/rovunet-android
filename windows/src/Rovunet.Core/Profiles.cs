@@ -84,7 +84,7 @@ public static class Importer
         {
             Profile p;
             try { p = Single(item.Link); }
-            catch(SafeError e) when(admission!=null&&(e.Code is "ENGINE_NOT_READY" or "CUSTOM_TRANSPORT_NOT_READY" or "XHTTP_EXTRA_NOT_READY"||e.Code is "UNSUPPORTED_FORMAT" or "TLS_UNVERIFIED"&&!ProfileEditing.IsNative(item.Link))){admission.Total++;admission.Skip(e.Code);string proto=item.Link.Split("://")[0].ToUpperInvariant()+" · "+e.Code;admission.Protocols[proto]=admission.Protocols.GetValueOrDefault(proto)+1;continue;}
+            catch(SafeError e) when(admission!=null&&(e.Code is "ENGINE_NOT_READY" or "CUSTOM_TRANSPORT_NOT_READY" or "XHTTP_EXTRA_NOT_READY"||(e.Code is "UNSUPPORTED_FORMAT" or "TLS_UNVERIFIED")&&!ProfileEditing.IsNative(item.Link)||e.Code=="UNSUPPORTED_FORMAT"&&CanSkipNativeXray(item.Link))){admission.Total++;admission.Skip(e.Code);string proto=item.Link.Split("://")[0].ToUpperInvariant()+" · "+e.Code;admission.Protocols[proto]=admission.Protocols.GetValueOrDefault(proto)+1;continue;}
             if(admission != null) { admission.Total++; string reason=SupportPolicy.Reason(p,experimental); if(reason.Length>0){admission.Skip(reason);continue;} }
             p.ItemId = item.Id;
             if(admission!=null)admission.Protocols[p.Protocol]=admission.Protocols.GetValueOrDefault(p.Protocol)+1;
@@ -98,6 +98,17 @@ public static class Importer
         var result=new CompatibleImport();
         try { result.Profiles.AddRange(ReadInternal(body,result,experimental)); return result; }
         catch(SafeError) { throw; } catch { throw new SafeError("INVALID_IMPORT"); }
+    }
+    static bool CanSkipNativeXray(string raw)
+    {
+        if(!ProfileEditing.IsNative(raw))return false;
+        try{
+            // Validate the complete native envelope, identity and protections first.
+            // Unknown native versions/credential fields remain atomic failures.
+            var f=Fields(raw);if(f.Length<85||f[1]!="xray")return false;
+            string inner=Decode(f[84]);
+            return inner.StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)||new[]{"vless://","socks5://","hy2://","hysteria2://","ss://","trojan://","vmess://","wireguard://"}.Any(s=>inner.StartsWith(s,StringComparison.OrdinalIgnoreCase));
+        }catch{return false;}
     }
     public static void Keys(JsonElement obj, params string[] keys)
     {

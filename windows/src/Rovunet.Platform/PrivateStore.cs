@@ -72,12 +72,14 @@ public sealed class UserData
     public string DnsPoolList { get; set; } = "";
     public bool DnsPoolVerify { get; set; }
     public string Theme { get; set; } = "system";
+    public string MarqueeMotion { get; set; } = "on";
     public Dictionary<string,ScanOptions> ResolverOptions { get; set; } = [];
     public Dictionary<string,ScannerViewOptions> ScannerViews {get;set;}=[];
     public Dictionary<string,GroupChange> RegroupUndo { get; set; }=[];
     public Dictionary<string,ScanHistory> ResolverHistory { get; set; } = [];
     public bool IncludeExperimental { get; set; } = true;
-    public bool LiveLatency { get; set; }
+    public bool LiveLatency { get; set; } = true;
+    public int LiveLatencyRevision { get; set; }
     public bool ProbeFallbacks { get; set; } = true;
     public long RecordedUpload { get; set; }
     public long RecordedDownload { get; set; }
@@ -88,9 +90,9 @@ public sealed class UserData
     public Dictionary<string, DateTimeOffset> SubscriptionUpdated { get; set; } = [];
     public Dictionary<string, PathMeasurement> Measurements { get; set; } = [];
     public Dictionary<string, DateTimeOffset> CollectionTestStarted { get; set; } = [];
-    public double WindowWidth { get; set; } = 1100;
+    public double WindowWidth { get; set; } = 480;
     public bool PortraitShell { get; set; }
-    public double WindowHeight { get; set; } = 740;
+    public double WindowHeight { get; set; } = 900;
 }
 
 public sealed class PathMeasurement
@@ -152,3 +154,4 @@ public sealed class GroupChange
     public string Name { get; set; }="";
     public string Group { get; set; }="";
 }
+

@@ -30,7 +30,7 @@ public sealed partial class MainWindow
             foreach (string theme in new[] { "light", "dark" })
             {
                 data.Theme = theme; ApplyTheme(); Build(); SetState(new() { State = "connected", HttpPort = 21001, SocksPort = 21002 }); UpdateLayout();
-                Check("theme_" + theme, Tone("Bg") is SolidColorBrush brush && brush.Color.R == (theme == "dark" ? 0x1B : 0xF3));
+                Check("theme_" + theme, Tone("Bg") is SolidColorBrush brush && brush.Color == (Color)ColorConverter.ConvertFromString(theme == "dark" ? "#16263C" : "#F0F1FB"));
                 Check("opaque_background_" + theme, Content is System.Windows.Controls.Grid root && root.Background is GradientBrush background && background.Opacity==1 && background.GradientStops.All(stop=>stop.Color.A==255));
                 IEnumerable<DependencyObject> Descendants(DependencyObject parent)
                 {
@@ -82,8 +82,8 @@ public sealed partial class MainWindow
             foreach (var language in new[] { "fa", "en", "ru", "zh-CN" })
             {
                 L.Language = language; Build(); UpdateLayout();
-                double side = sidebarContent.TranslatePoint(new Point(), this).X; double body = homeContent.TranslatePoint(new Point(), this).X;
-                Check("context_panel_direction_" + language, sidebarContent.ActualWidth>=250 && (language == "fa" ? side > body : side < body));
+                double side = sidebarContent.PointToScreen(new Point(sidebarContent.ActualWidth/2,0)).X; double body = homeContent.PointToScreen(new Point(homeContent.ActualWidth/2,0)).X;
+                Check("context_panel_direction_" + language, Math.Abs(sidebarContent.ActualWidth-222)<1 && (language == "fa" ? side > body : side < body));
                 Check("named_radio_" + language, rows.All(r => !string.IsNullOrEmpty(System.Windows.Automation.AutomationProperties.GetName(r.Select))));
             }
         }

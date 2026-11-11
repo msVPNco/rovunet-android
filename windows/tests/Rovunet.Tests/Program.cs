@@ -377,6 +377,7 @@ Test("https-probe-alternatives-stay-https-and-deduplicate",()=>{var targets=Http
 Test("https-probe-rejects-credentials-and-plain-http",()=>{Reject(()=>HttpsProbePolicy.Targets("http://example.com/",true),"HTTPS_REQUIRED");Reject(()=>HttpsProbePolicy.Targets("https://fixture:fixture@example.com/",true),"HTTPS_REQUIRED");});
 Test("probe-uncertain-does-not-weaken-changed-key-or-auth",()=>Check(HttpsProbePolicy.Unconfirmed("PROBE_TIMEOUT")&&HttpsProbePolicy.Unconfirmed("SSH_TRUST_REQUIRED")&&!HttpsProbePolicy.Unconfirmed("SSH_KEY_CHANGED")&&!HttpsProbePolicy.Unconfirmed("SSH_AUTH_FAILED")&&!HttpsProbePolicy.Unconfirmed("CORE_START_FAILED")));
 foreach(var (name,test) in ExtraCases.All())Test(name,test);
+foreach(var (name,test) in Review21Cases.All())Test(name,test);
 int failed = 0;
 foreach (var (name, test) in tests)
 { try { test(); Console.WriteLine("PASS " + name); } catch { failed++; Console.WriteLine("FAIL " + name); } }

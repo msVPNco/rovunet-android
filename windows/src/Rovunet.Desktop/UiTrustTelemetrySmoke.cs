@@ -33,7 +33,7 @@ public sealed partial class MainWindow
             checks["uninstall_missing_owner_refuses"]=Recovery.UninstallScope(new(settings,settings,Path.Combine(outputDirectory,"missing-owner")),scopeA,"")==12;
             foreach(string language in new[]{"en","fa"})foreach(string theme in new[]{"light","dark"}){
                 string id=language+"_"+theme;L.Language=language;data.Theme=theme;data.Profiles=[];data.SelectedId="";data.SlipCertificates.Clear();SetState(new());ApplyTheme();Build();await Idle();
-                checks[id+"_first_run_power_visible_and_actionable"]=connect.IsEnabled&&Equals(connect.Background,Accent)&&connect.ActualWidth>=44;
+                checks[id+"_first_run_power_visible_and_actionable"]=connect.IsEnabled&&Equals(connect.Background,Tone("AddSurface"))&&connect.ActualWidth>=44&&connect.IsVisible;
                 SavePage((FrameworkElement)Content,Path.Combine(outputDirectory,"first-run-"+id+".png"));
                 if(language=="en"&&theme=="light"){
                     Click(connect);await Idle();checks["first_power_click_opens_add_hub"]=addHub?.IsOpen==true&&Visuals<Button>(addHub.Child).Count()==4&&NavigationDepth==0;CloseAddHub();
@@ -50,7 +50,7 @@ public sealed partial class MainWindow
                 var slip=Importer.Single(ManualProfiles.Dns("slipstream_ssh","Slip fixture","t.example.invalid","127.0.0.1:53","udp","","gateway.example.invalid","22","fixture","fixture"));data.Profiles=[slip];BuildCards();var slipPage=BuildDnsProfileEditor(slip);slipPage.Show();await Idle();var pem=Visuals<TextBox>(slipPage.PageVisual).Single(t=>Equals(t.Tag,"SLIP_CERT_PEM"));pem.Text=cert.ExportCertificatePem();Visuals<TextBox>(slipPage.PageVisual).Single(t=>Equals(t.Tag,"SSH_HOST_PUBLIC_KEY")).Text=publicLine;await Idle();slipPage.RestoreScroll(300);await Idle();SavePage(slipPage.PageVisual,Path.Combine(outputDirectory,"slip-identities-"+id+".png"));
                 checks[id+"_slip_certificate_and_ssh_visible"]=pem.IsVisible&&!data.SlipCertificates.ContainsKey(SlipCertificate.Scope(slip));Click(Find(slipPage,"SAVE"));checks[id+"_slip_certificate_and_ssh_saved"]=!slipPage.IsVisible&&StoredSlipPin(slip).Contains("BEGIN CERTIFICATE")&&StoredSshKey(slip)==key;
             }
-            checks["fresh_default_no_automatic_test_traffic"]=!new UserData().LiveLatency;
+            checks["fresh_default_periodic_latency_enabled"]=new UserData().LiveLatency;
             var settingsPage=Dialog("SETTINGS");settingsPage.Content=BuildSettingsPanel(()=>{});settingsPage.Show();await Idle();var liveChoice=Visuals<CheckBox>(settingsPage.PageVisual).Single(c=>Equals(c.Tag,"LIVE_LATENCY"));liveChoice.IsChecked=true;checks["automatic_latency_setting_enables_saved_choice"]=data.LiveLatency;liveChoice.IsChecked=false;checks["automatic_latency_setting_disables_saved_choice"]=!data.LiveLatency;var fallbackChoice=Visuals<CheckBox>(settingsPage.PageVisual).Single(c=>Equals(c.Tag,"PROBE_FALLBACKS"));fallbackChoice.IsChecked=false;checks["alternative_probe_can_be_disabled"]=!data.ProbeFallbacks;fallbackChoice.IsChecked=true;checks["alternative_probe_choice_saved"]=data.ProbeFallbacks;settingsPage.Close();
             L.Language="en";data.Theme="light";ApplyTheme();data.LiveLatency=false;
             await CounterNetwork();
@@ -83,3 +83,4 @@ public sealed partial class MainWindow
         }
     }
 }
+

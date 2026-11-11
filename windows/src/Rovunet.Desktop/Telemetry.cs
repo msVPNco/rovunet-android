@@ -54,7 +54,7 @@ public sealed partial class MainWindow
                 // It never gates manual connect or changes the active route.
                 lastLatencyTick = Stopwatch.GetTimestamp(); var latency = await current.Send(new() { Action = "latency", ProbeUrl = data.LatencyUrl });
                 if (current != client || state.State != "connected" || closing) return;
-                latencySampled = DateTimeOffset.UtcNow; liveLatency = latency.Verified ? latency.ElapsedMs : null; liveLatencyError = latency.Error; RefreshTrafficText();
+                latencySampled = DateTimeOffset.UtcNow; liveLatency = latency.Verified ? latency.ElapsedMs : null; liveLatencyError = latency.Error; RefreshTrafficText(); RefreshCards();
             }
         }
         catch { if (current == client) { rates = new(null, null); RefreshTrafficText(); } }
@@ -80,3 +80,4 @@ public sealed partial class MainWindow
         try { var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle; if (handle != IntPtr.Zero) { int value = darkTheme && !SystemParameters.HighContrast ? 1 : 0; _ = DwmSetWindowAttribute(handle, 20, ref value, 4); } } catch { }
     }
 }
+

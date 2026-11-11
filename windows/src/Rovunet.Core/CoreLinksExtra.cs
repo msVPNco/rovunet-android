@@ -6,7 +6,7 @@ namespace Rovunet.Core;
 
 public static partial class CoreLinks
 {
-    static readonly HashSet<string> ShadowMethods=new(["aes-128-gcm","aes-256-gcm","chacha20-ietf-poly1305","xchacha20-ietf-poly1305"]);
+    public static readonly IReadOnlyList<string> ShadowsocksMethods=Array.AsReadOnly(new[]{"aes-128-gcm","aes-256-gcm","chacha20-ietf-poly1305","xchacha20-ietf-poly1305","2022-blake3-aes-128-gcm","2022-blake3-aes-256-gcm","2022-blake3-chacha20-poly1305"});
     static (string Host,int Port) HostPort(string text)
     {
         if(!Uri.TryCreate("ss://"+text,UriKind.Absolute,out var uri)||uri.Query.Length>0||uri.AbsolutePath is not ("" or "/")||uri.Host.Length==0||uri.Port is <1 or >65535)throw new SafeError("INVALID_IMPORT");
@@ -20,7 +20,13 @@ public static partial class CoreLinks
         if(at>=0){auth=Uri.UnescapeDataString(body[..at]);if(!auth.Contains(':'))auth=Importer.Decode(auth);endpoint=body[(at+1)..];}
         else{body=Importer.Decode(body);at=body.LastIndexOf('@');if(at<1)throw new SafeError("INVALID_IMPORT");auth=body[..at];endpoint=body[(at+1)..];}
         int colon=auth.IndexOf(':');if(colon<1||colon==auth.Length-1)throw new SafeError("INVALID_IMPORT");string method=auth[..colon],password=auth[(colon+1)..];
-        if(!ShadowMethods.Contains(method))throw new SafeError("UNSUPPORTED_FORMAT");var hp=HostPort(endpoint);
+        if(!ShadowsocksMethods.Contains(method))throw new SafeError("UNSUPPORTED_FORMAT");
+        if(method.StartsWith("2022-",StringComparison.Ordinal)){
+            int expected=method=="2022-blake3-aes-128-gcm"?16:32;
+            // Colon-separated identity keys must also be preserved and validated.
+            foreach(string key in password.Split(':')){try{if(key.Any(char.IsWhiteSpace)||Convert.FromBase64String(key).Length!=expected)throw new FormatException();}catch{throw new SafeError("INVALID_IMPORT");}}
+        }
+        var hp=HostPort(endpoint);
         return new(name.Length>0?name:"Shadowsocks","Shadowsocks",Obj(("protocol","shadowsocks"),("settings",Obj(("servers",Arr(Obj(("address",hp.Host),("port",hp.Port),("method",method),("password",password))))))));
     }
     static JsonObject ExtraStream(string host,Dictionary<string,string> query,string defaultSecurity)

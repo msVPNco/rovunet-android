@@ -7,6 +7,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $sourceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+[xml]$buildProperties = Get-Content -LiteralPath (Join-Path $sourceRoot 'Directory.Build.props') -Raw
+$packageVersion = [string]$buildProperties.Project.PropertyGroup.Version
+if ($packageVersion -notmatch '^\d+\.\d+\.\d+(-[A-Za-z0-9.]+)?$') { throw 'Invalid package version.' }
 $outputRoot = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $outputRoot) { throw 'Choose a fresh output folder.' }
 $Dotnet = [IO.Path]::GetFullPath($Dotnet)
@@ -36,7 +39,7 @@ $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | Where-O
 $sourceManifest = @(foreach ($file in $sourceFiles) { @{ path=[IO.Path]::GetRelativePath($sourceRoot,$file.FullName).Replace('\','/'); sha256=(Get-FileHash -LiteralPath $file.FullName).Hash.ToLowerInvariant(); bytes=$file.Length } })
 $sourceManifest | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $outputRoot 'SOURCE-SHA256.json') -Encoding utf8
 Add-Type -AssemblyName System.IO.Compression
-$sourceStream = [IO.File]::Create((Join-Path $outputRoot 'Rovunet-Windows-0.1.0-beta-source.zip'))
+$sourceStream = [IO.File]::Create((Join-Path $outputRoot "Rovunet-Windows-$packageVersion-source.zip"))
 $sourceZip = [IO.Compression.ZipArchive]::new($sourceStream,[IO.Compression.ZipArchiveMode]::Create)
 try { foreach ($file in $sourceFiles) { [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($sourceZip,$file.FullName,'source/'+[IO.Path]::GetRelativePath($sourceRoot,$file.FullName).Replace('\','/'),[IO.Compression.CompressionLevel]::Optimal) | Out-Null } }
 finally { $sourceZip.Dispose(); $sourceStream.Dispose() }
@@ -92,7 +95,7 @@ try {
   Copy-Item -LiteralPath 'LICENSE','NOTICE.md' -Destination $stage
   Set-Content -LiteralPath (Join-Path $stage 'review-install.marker') -Value 'Rovunet-Windows' -NoNewline
   Copy-Item -LiteralPath (Join-Path $outputRoot 'SOURCE-SHA256.json') -Destination $stage
-  $provenance = @{ version='0.1.0-beta'; platform='windows-x64'; source_commit=$commit; source_origin='git-windows-source'; source_manifest_sha256=(Get-FileHash (Join-Path $outputRoot 'SOURCE-SHA256.json')).Hash.ToLowerInvariant(); signed=$false; published=$false; rebuilt_native_engines=@(); reused_pinned_engines=@('rovunet-transports.exe','xray.exe','naive.exe','slipstream-client.exe'); native_engine_rebuild_stage=20; native_engine_rebuild_review=20; native_go_version='go1.27.3 windows/amd64'; sdk=(& $Dotnet --version); compiler_sha256=(Get-FileHash $MakeNsis).Hash }
+  $provenance = @{ version=$packageVersion; platform='windows-x64'; source_commit=$commit; source_origin='local-ui-review-git-commit'; source_baseline='windows-v0.1.0-beta'; source_manifest_sha256=(Get-FileHash (Join-Path $outputRoot 'SOURCE-SHA256.json')).Hash.ToLowerInvariant(); signed=$false; published=$false; rebuilt_native_engines=@(); reused_pinned_engines=@('rovunet-transports.exe','xray.exe','naive.exe','slipstream-client.exe'); native_engine_rebuild_stage=20; native_engine_rebuild_review=20; native_go_version='go1.27.3 windows/amd64'; sdk=(& $Dotnet --version); compiler_sha256=(Get-FileHash $MakeNsis).Hash }
   $provenance | ConvertTo-Json | Set-Content (Join-Path $stage 'BUILD-PROVENANCE.json')
   $manifest = Join-Path $outputRoot 'delete-manifest.nsh'
   $lines = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object { $_.FullName -notin @((Join-Path $stage 'Rovunet.exe'), (Join-Path $stage 'review-install.marker')) } | ForEach-Object {
@@ -116,7 +119,7 @@ try {
     'preflight_' + $index + ':'
   })
   $guards | Set-Content -LiteralPath $preflight -Encoding utf8
-  & $MakeNsis /V2 "/DSTAGING=$stage" "/DOUTPUT=$backend" "/DDELETE_MANIFEST=$manifest" "/DPREFLIGHT_MANIFEST=$preflight" 'installer/ReviewBackend.nsi'
+  & $MakeNsis /V2 "/DREVIEW_VERSION=$packageVersion" "/DSTAGING=$stage" "/DOUTPUT=$backend" "/DDELETE_MANIFEST=$manifest" "/DPREFLIGHT_MANIFEST=$preflight" 'installer/ReviewBackend.nsi'
   if ($LASTEXITCODE -ne 0) { throw 'NSIS failed.' }
   & $Dotnet publish installer/Rovunet.Setup -c Release -r win-x64 --self-contained true --no-restore -m:1 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:SourceRevisionId=$revision" "-p:BackendPath=$backend" -o (Join-Path $outputRoot 'setup')
   if ($LASTEXITCODE -ne 0) { throw 'Setup publish failed.' }

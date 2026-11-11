@@ -45,6 +45,7 @@ public sealed partial class MainWindow
         internal bool CanResumeTunnel=>!TunnelRunning&&entries.Any(e=>Qualifies(e)&&!e.TunnelFinished);
         internal bool CanRetest=>!TunnelRunning&&entries.Any(Qualifies);
         internal int Total=>candidates.Count;
+        internal string Source=>plan.Options.Source;
         internal int Scanned=>DirectTunnel?tunnelCompleted:scanned;
         internal int Working=>DirectTunnel?tunnelPassed:working;
         internal int TunnelTotal=>tunnelTotal;

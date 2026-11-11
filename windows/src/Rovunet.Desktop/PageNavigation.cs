@@ -5,7 +5,8 @@ namespace Rovunet.Desktop;
 public sealed partial class MainWindow
 {
     Grid? navigationShell;
-    readonly ContentControl homeContent=new();
+    readonly ContentControl homeContent=new(){HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Stretch};
+    FrameworkElement? navigationHeader21;
     readonly ContentControl sidebarContent=new(){HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Stretch};
     readonly ContentControl pageContent=new(){HorizontalContentAlignment=HorizontalAlignment.Stretch,VerticalContentAlignment=VerticalAlignment.Stretch,MaxWidth=1000};
     readonly List<DialogWindow> pageStack=[];
@@ -16,13 +17,14 @@ public sealed partial class MainWindow
     internal int NavigationDepth=>pageStack.Count;
     void SetHomeContent(UIElement home)
     {
-        if(navigationShell==null){navigationShell=new Grid();navigationShell.ColumnDefinitions.Add(new());navigationShell.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});navigationShell.SetResourceReference(Panel.BackgroundProperty,"PageBg");navigationShell.Children.Add(sidebarContent);Grid.SetColumn(homeContent,1);Grid.SetColumn(pageContent,1);navigationShell.Children.Add(homeContent);navigationShell.Children.Add(pageContent);Content=navigationShell;
+        if(navigationShell==null){navigationShell=new Grid();navigationShell.ColumnDefinitions.Add(new());navigationShell.ColumnDefinitions.Add(new(){Width=new(1,GridUnitType.Star)});navigationShell.RowDefinitions.Add(new(){Height=GridLength.Auto});navigationShell.RowDefinitions.Add(new());navigationShell.SetResourceReference(Panel.BackgroundProperty,"PageBg");Grid.SetRowSpan(sidebarContent,2);navigationShell.Children.Add(sidebarContent);Grid.SetColumn(homeContent,1);Grid.SetColumn(pageContent,1);Grid.SetRow(homeContent,1);Grid.SetRow(pageContent,1);navigationShell.Children.Add(homeContent);navigationShell.Children.Add(pageContent);Content=navigationShell;
             PreviewKeyDown+=(_,e)=>{if(pageStack.Count>0&&e.Key==Key.Escape){pageStack[^1].Close();e.Handled=true;}};
         }
         // Keep desktop navigation present while the content area hosts a nested editor or scanner.
-        var layout=(Grid)home;var body=layout.Children.Cast<UIElement>().First(e=>e!=contextHost);
-        layout.Children.Remove(body);layout.Children.Remove(contextHost);homeContent.Content=null;sidebarContent.Content=null;
-        navigationShell.FlowDirection=L.Direction;navigationShell.ColumnDefinitions[0].Width=new(compactLayout?0:260);
+        var layout=(Grid)home;var body=layout.Children.Cast<UIElement>().First(e=>e!=contextHost&&e!=header21);
+        layout.Children.Remove(body);layout.Children.Remove(contextHost);layout.Children.Remove(header21);homeContent.Content=null;sidebarContent.Content=null;
+        if(navigationHeader21!=null)navigationShell.Children.Remove(navigationHeader21);navigationHeader21=header21;Grid.SetColumnSpan(header21,2);navigationShell.Children.Add(header21);
+        navigationShell.FlowDirection=L.Direction;navigationShell.ColumnDefinitions[0].Width=new(compactLayout?0:222);
         homeContent.Content=body;sidebarContent.Content=contextHost;RenderPage();
     }
     async void NavigateTo(Action action)
@@ -48,8 +50,7 @@ public sealed partial class MainWindow
     void ResizeInnerPage(double width)
     {
         bool compact=width<ContextThreshold;if(compact==compactLayout||navigationShell==null)return;
-        compactLayout=compact;homeLayoutDirty=true;navigationShell.ColumnDefinitions[0].Width=new(compact?0:260);
-        contextHost.Visibility=compact?Visibility.Collapsed:Visibility.Visible;if(!compact)PopulateContext();
+        compactLayout=compact;homeLayoutDirty=false;Build();
     }
     void RenderPage()
     {

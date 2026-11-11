@@ -24,6 +24,7 @@ public sealed partial class MainWindow
         foreach(var bank in ResolverCatalog.Banks){
             Visuals<Button>(scan.PageVisual).Single(b=>b.Content?.ToString()==L.Text(bank.LabelKey)).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
             checks["bank_"+bank.File+"_selection_reaches_scan_source"]=source.SelectedValue?.ToString()==bank.File;
+            if(bank.File=="resolvers.txt"){checks["bank_default_complete_plan"]=ResolverCatalog.TestCandidates(bank.File,"tcp",1).Count==60370;continue;}
             Visuals<ComboBox>(scan.PageVisual).Single(b=>Equals(b.Tag,"SCAN_MODE")).SelectedValue="advanced";
             foreach(var field in Visuals<TextBox>(scan.PageVisual)){if(Equals(field.Tag,"SCAN_LIMIT")||Equals(field.Tag,"SCAN_WORKERS"))field.Text="1";if(Equals(field.Tag,"SCAN_TIMEOUT"))field.Text="200";}
             var start=Visuals<Button>(scan.PageVisual).Single(b=>AutomationProperties.GetName(b)==L.Text("START_TEST"));start.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));using var bound=new CancellationTokenSource(TimeSpan.FromSeconds(15));while(!start.IsEnabled)await Task.Delay(25,bound.Token);
@@ -34,4 +35,5 @@ public sealed partial class MainWindow
         checks["ip_bank_does_not_downgrade_doh"]=!Visuals<Button>(https.PageVisual).Any(b=>b.Content?.ToString()==L.Text("SCAN_SOURCE_APP"));https.Close();
     }
 }
+
 

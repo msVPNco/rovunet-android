@@ -30,7 +30,7 @@ public partial class App : Application
                 var checks=new Dictionary<string,bool>();
                 foreach(string lang in new[]{"fa","en","ru","zh-CN"})foreach(bool dark in new[]{false,true})
                 {
-                    var window=new SetupWindow(lang,dark,true);window.Show();window.UpdateLayout();
+                    var window=new SetupWindow(lang,dark,true);window.Show();window.UpdateLayout();checks[$"launch_default_{lang}_{dark}"]=window.LaunchChoice.IsChecked==!InstallService.Elevated;checks[$"compact_window_{lang}_{dark}"]=window.Width<=520&&window.Height<=680;
                     if(lang=="fa")checks[$"bundled_persian_font_resolves_{dark}"]=new Typeface(window.FontFamily,FontStyles.Normal,FontWeights.Normal,FontStretches.Normal).TryGetGlyphTypeface(out var glyph)&&glyph.FamilyNames.Values.Any(name=>name=="Vazirmatn");
                     SaveImage((FrameworkElement)window.Content,Path.Combine(Path.GetDirectoryName(preview)!, $"setup-{lang}-{(dark?"dark":"light")}.png"));
                     checks[$"preview_never_installs_{lang}_{dark}"]=!window.InstallButton.IsEnabled;
@@ -53,33 +53,34 @@ public sealed class SetupWindow : Window
 {
     public Button InstallButton { get; }
     internal CheckBox DesktopChoice {get;}
+    internal CheckBox LaunchChoice {get;}
     public TaskCompletionSource<bool> Installation { get; } = new();
     internal bool Completed { get;private set; }
-    public SetupWindow(string language,bool dark,bool fixture=false,string? chosenPath=null,bool desktop=true,bool launch=false,bool closeAppWhenLastWindow=true)
+    public SetupWindow(string language,bool dark,bool fixture=false,string? chosenPath=null,bool desktop=true,bool launch=true,bool closeAppWhenLastWindow=true)
     {
         var assembly=Assembly.GetExecutingAssembly();using var stream=assembly.GetManifestResourceStream(assembly.GetManifestResourceNames().Single(n=>n.EndsWith($".Locales.{language}.json")))!;var strings=JsonSerializer.Deserialize<Dictionary<string,string>>(stream)!;string T(string key)=>strings[key];
         Brush ColorBrush(string value)=>new SolidColorBrush((Color)ColorConverter.ConvertFromString(value));
         Brush ink=ColorBrush(dark?"#F1F1FA":"#202534"),bg=ColorBrush(dark?"#1B1D2C":"#F4F2FA"),card=ColorBrush(dark?"#242D40":"#FFFFFF");
         Resources["SetupInk"]=ink;Resources["SetupBg"]=bg;Resources["SetupCard"]=card;
-        Title="Rovunet · "+T("title");Width=Math.Min(580,SystemParameters.WorkArea.Width-24);Height=Math.Min(820,SystemParameters.WorkArea.Height-24);MinWidth=Math.Min(460,Width);MinHeight=Math.Min(550,Height);
-        FontFamily=language=="fa"?new FontFamily(new Uri($"pack://application:,,,/{assembly.GetName().Name};component/"),"./Assets/#Vazirmatn"):new FontFamily(language=="zh-CN"?"Microsoft YaHei UI":"Segoe UI");FontSize=15;Foreground=ink;Background=bg;FlowDirection=FlowDirection.LeftToRight;WindowStartupLocation=WindowStartupLocation.CenterScreen;
+        Title="Rovunet · "+T("title");Width=Math.Min(520,SystemParameters.WorkArea.Width-24);Height=Math.Min(680,SystemParameters.WorkArea.Height-24);MinWidth=Math.Min(460,Width);MinHeight=Math.Min(550,Height);
+        FontFamily=language=="fa"?new FontFamily(new Uri($"pack://application:,,,/{assembly.GetName().Name};component/"),"./Assets/#Vazirmatn"):new FontFamily(language=="zh-CN"?"Microsoft YaHei UI":"Segoe UI");FontSize=14;Foreground=ink;Background=bg;FlowDirection=FlowDirection.LeftToRight;WindowStartupLocation=WindowStartupLocation.CenterScreen;
         if(!fixture&&closeAppWhenLastWindow)Closed+=(_,_)=>Dispatcher.BeginInvoke(()=>{if(Application.Current.Windows.Count==0)Application.Current.Shutdown();});
         var root=new DockPanel{FlowDirection=language=="fa"?FlowDirection.RightToLeft:FlowDirection.LeftToRight,Background=bg};
         var footer=new DockPanel{Margin=new(20,8,20,20)};DockPanel.SetDock(footer,Dock.Bottom);
         var close=new Button{Content=T("close")};close.Click+=(_,_)=>Close();DockPanel.SetDock(close,Dock.Left);footer.Children.Add(close);
         InstallButton=new Button{Content=T("install"),IsEnabled=InstallService.Available&&!fixture,Background=ColorBrush("#BFB1F0"),Foreground=ColorBrush("#232033"),MinWidth=160,HorizontalAlignment=HorizontalAlignment.Right,IsDefault=true};footer.Children.Add(InstallButton);root.Children.Add(footer);
-        var content=new StackPanel{Margin=new(24,18,24,16)};
+        var content=new StackPanel{Margin=new(16,10,16,10)};
         TextBlock Text(string value,double size=14)=>new(){Text=value,FontSize=size,Foreground=ink,Margin=new(0,6,0,8)};
-        void Card(StackPanel body)=>content.Children.Add(new Border{Background=card,CornerRadius=new(18),Padding=new(18),Margin=new(0,8,0,6),Child=body});
+        void Card(StackPanel body)=>content.Children.Add(new Border{Background=card,CornerRadius=new(18),Padding=new(12),Margin=new(0,5,0,4),Child=body});
         var preferences=new WrapPanel();var languages=new ComboBox{MinHeight=48,MinWidth=140,Margin=new(4),VerticalContentAlignment=VerticalAlignment.Center,ItemsSource=new[]{"فارسی","English","Русский","简体中文"},SelectedIndex=Array.IndexOf(new[]{"fa","en","ru","zh-CN"},language)};var theme=new Button{Content=T(dark?"lightTheme":"darkTheme")};preferences.Children.Add(languages);preferences.Children.Add(theme);content.Children.Add(preferences);
-        content.Children.Add(Text("Rovunet",32));content.Children.Add(Text(T("intro"),18));if(fixture)content.Children.Add(Text(T("preview")));
+        content.Children.Add(Text("Rovunet",26));content.Children.Add(Text(T("intro"),15));if(fixture)content.Children.Add(Text(T("preview")));
         var location=new StackPanel();location.Children.Add(Text(T("location"),18));
         var path=new TextBox{Text=chosenPath??InstallService.ProgramFilesTarget,FlowDirection=FlowDirection.LeftToRight,Background=bg,Foreground=ink,Tag="INSTALL_PATH",TextWrapping=TextWrapping.Wrap};location.Children.Add(path);
         var browse=new Button{Content=T("browse"),HorizontalAlignment=HorizontalAlignment.Left};browse.Click+=(_,_)=>{var picker=new Microsoft.Win32.OpenFolderDialog();if(picker.ShowDialog(this)==true)path.Text=new[]{Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)}.Contains(picker.FolderName,StringComparer.OrdinalIgnoreCase)?Path.Combine(picker.FolderName,"Rovunet"):picker.FolderName;};location.Children.Add(browse);
         string? previous=fixture?null:InstallService.RegisteredPaths().FirstOrDefault();Button? upgrade=null;
         if(previous!=null){upgrade=new Button{Content=T("upgrade"),HorizontalAlignment=HorizontalAlignment.Left};upgrade.Click+=(_,_)=>path.Text=previous;location.Children.Add(upgrade);}
         location.Children.Add(Text(T("private"),12));location.Children.Add(Text(T("admin"),12));Card(location);
-        var options=new StackPanel();var desktopChoice=DesktopChoice=new CheckBox{Foreground=ink,Content=T("shortcut"),IsChecked=desktop,Tag="DESKTOP_SHORTCUT"};var launchChoice=new CheckBox{Foreground=ink,Content=T("launch"),IsChecked=launch&&!InstallService.Elevated,IsEnabled=!InstallService.Elevated,ToolTip=InstallService.Elevated?T("launchUser"):null};options.Children.Add(desktopChoice);options.Children.Add(launchChoice);
+        var options=new StackPanel();var desktopChoice=DesktopChoice=new CheckBox{Foreground=ink,Content=T("shortcut"),IsChecked=desktop,Tag="DESKTOP_SHORTCUT"};var launchChoice=LaunchChoice=new CheckBox{Foreground=ink,Content=T("launch"),IsChecked=launch&&!InstallService.Elevated,IsEnabled=!InstallService.Elevated,ToolTip=InstallService.Elevated?T("launchUser"):null};options.Children.Add(desktopChoice);options.Children.Add(launchChoice);
         var license=new Button{Content=T("license"),HorizontalAlignment=HorizontalAlignment.Left};license.Click+=(_,_)=>{using var source=assembly.GetManifestResourceStream(assembly.GetManifestResourceNames().Single(n=>n.EndsWith(".LICENSE")))!;using var reader=new StreamReader(source);new Window{Title=T("license"),Owner=this,Width=500,Height=650,Content=new TextBox{Text=reader.ReadToEnd(),IsReadOnly=true,TextWrapping=TextWrapping.Wrap,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,FlowDirection=FlowDirection.LeftToRight},WindowStartupLocation=WindowStartupLocation.CenterOwner}.ShowDialog();};options.Children.Add(license);Card(options);
         var status=Text("");status.Tag="INSTALL_STATUS";content.Children.Add(status);var progress=new ProgressBar{Height=6,IsIndeterminate=true,Visibility=Visibility.Collapsed};content.Children.Add(progress);
         var scroll=new ScrollViewer{Content=content,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};root.Children.Add(scroll);Content=root;
@@ -100,6 +101,7 @@ public sealed class SetupWindow : Window
         };
     }
 }
+
 
 
 

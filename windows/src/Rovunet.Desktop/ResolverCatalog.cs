@@ -23,6 +23,7 @@ internal static class ResolverCatalog
         uint first=BinaryPrimitives.ReadUInt32BigEndian(address.GetAddressBytes());ulong size=1UL<<(32-prefix);byte[] bytes=new byte[4];BinaryPrimitives.WriteUInt32BigEndian(bytes,(uint)(first&~(size-1)));return new IPAddress(bytes)+"/"+prefix;
     }
     internal static int Count(ResolverBank bank)=>bank.Networks?Lines(bank.File).Length:Lines(bank.File).Count(l=>IPAddress.TryParse(l,out _));
+    internal static IReadOnlyList<string> TestCandidates(string file,string mode,int limit) => file=="resolvers.txt"?AllAddresses(file,mode):Candidates(file,mode,limit);
     internal static IReadOnlyList<string> Candidates(string file,string mode,int limit)
     {
         var bank=Banks.SingleOrDefault(b=>b.File==file)??throw new SafeError("DNS_BANK_UNAVAILABLE");

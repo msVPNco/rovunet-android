@@ -14,7 +14,7 @@ internal sealed class ElevatedBorder : Border
     internal ElevatedBorder(){AddVisualChild(shadow);AddVisualChild(face);}
     internal void SetDepth(Color color,double opacity)
     {
-        raised=true;shadow.Effect=new DropShadowEffect{Color=color,BlurRadius=20,ShadowDepth=6,Direction=270,Opacity=opacity,RenderingBias=RenderingBias.Quality};InvalidateVisual();
+        raised=true;shadow.Effect=new DropShadowEffect{Color=color,BlurRadius=16,ShadowDepth=4,Direction=270,Opacity=opacity,RenderingBias=RenderingBias.Quality};InvalidateVisual();
     }
     protected override int VisualChildrenCount=>base.VisualChildrenCount+2;
     protected override Visual GetVisualChild(int index)=>index switch{0=>shadow,1=>face,_=>base.GetVisualChild(index-2)};

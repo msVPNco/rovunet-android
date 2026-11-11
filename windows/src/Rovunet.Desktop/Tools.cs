@@ -28,7 +28,10 @@ public sealed partial class MainWindow
         var sort=new MenuItem{Header=L.Text("SORT_RESULTS"),Tag="SORT_RESULTS"};sort.Items.Add(MenuAction("SORT_LATENCY",()=>SortGroup(members,false)));sort.Items.Add(MenuAction("SORT_RELIABILITY",()=>SortGroup(members,true)));sort.Items.Add(MenuAction("CLEAR_TESTS",()=>ClearTests(members)));menu.Items.Add(sort);
         menu.Items.Add(MenuAction("TCP_CHECK",()=>TcpCollection(members)));
         MenuHeading(menu,"MENU_MANAGE");
-        if(members[0].SourceId.Length>0)menu.Items.Add(MenuAction("UPDATE",()=>_ = UpdateCollection20(members[0].SourceId)));
+        if(members[0].SourceId.Length>0){
+            menu.Items.Add(MenuAction("UPDATE",()=>_ = UpdateCollection20(members[0].SourceId)));
+            menu.Items.Add(MenuAction("SUBSCRIPTION_DETAILS",()=>ShowSubscriptionDetails21(members[0].SourceId)));
+        }
         var rename = MenuAction("RENAME", () => Rename(members)); rename.IsEnabled = !busy && state.State != "connected"; menu.Items.Add(rename);
         var move=MenuAction("MOVE_COLLECTION",()=>MoveProfiles(members));move.IsEnabled=members.All(p=>p.SourceId.Length==0);menu.Items.Add(move);
         MenuHeading(menu,"SECTION_TRANSFER");

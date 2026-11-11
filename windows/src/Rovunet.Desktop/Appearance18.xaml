@@ -14,8 +14,8 @@
   </ControlTemplate>
   <ControlTemplate x:Key="HeroPowerTemplate" TargetType="Button">
     <Grid x:Name="RootMotion" RenderTransformOrigin="0.5,0.5">
-      <Border Margin="0,10,0,0" CornerRadius="90" Background="#DC0B0B21"/>
-      <Border x:Name="Face" Margin="0,0,0,10" CornerRadius="90" Background="{TemplateBinding Background}" BorderThickness="2" BorderBrush="#B0FFFFFF">
+      <Border Margin="0,5,0,0" CornerRadius="90" Background="#700B0B21"/>
+      <Border x:Name="Face" Margin="0,0,0,5" CornerRadius="90" Background="{TemplateBinding Background}" BorderThickness="1.5" BorderBrush="#90FFFFFF">
         <Grid><Border CornerRadius="90"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="0.7,1"><GradientStop Color="#50FFFFFF" Offset="0"/><GradientStop Color="#11FFFFFF" Offset="0.35"/><GradientStop Color="#00000000" Offset="0.65"/><GradientStop Color="#320B0825" Offset="1"/></LinearGradientBrush></Border.Background></Border><Border Margin="5,3,5,7" CornerRadius="90" BorderThickness="1.5,2,1,0" BorderBrush="#70FFFFFF"/><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid>
       </Border>
     </Grid>

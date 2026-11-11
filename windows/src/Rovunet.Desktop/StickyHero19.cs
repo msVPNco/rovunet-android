@@ -17,15 +17,16 @@ public sealed partial class MainWindow
     void RefreshHeroCollapse19()
     {
         if(heroCard19==null||heroScrollSpacer19==null||heroRingScale19==null)return;
-        double travel=HeroExpanded19-HeroCompact19,collapse=Math.Clamp(mainScroll.VerticalOffset,0,travel),fraction=collapse/travel;
+        double travel=HeroExpanded19-HeroCompact19,forced=Math.Clamp(600-((Content as FrameworkElement)?.ActualHeight??Height),0,travel),collapse=Math.Max(forced,Math.Clamp(mainScroll.VerticalOffset,0,travel)),fraction=collapse/travel;
         heroCard19.Height=HeroExpanded19-collapse;
         // The spacer grows by exactly the height removed from the header. The scroll range
         // stays constant, avoiding offset clamping, jumps or oscillation at the bottom.
-        heroScrollSpacer19.Height=collapse;
-        double ring=124-60*fraction;heroRingScale19.Width=heroRingScale19.Height=ring;heroRingColumn19.Width=new(ring+16);
-        heroTitle.FontSize=Typography.Size(24-4*fraction);heroTitle.MaxHeight=58-28*fraction;heroTitle.TextWrapping=fraction>.9?TextWrapping.NoWrap:TextWrapping.Wrap;heroTitle.TextTrimming=TextTrimming.CharacterEllipsis;
-        heroDetail.Visibility=fraction>=1?Visibility.Collapsed:Visibility.Visible;heroDetail.MaxHeight=40*(1-fraction);heroDetail.Margin=new(0,8*(1-fraction),0,0);heroDetail.Opacity=1-fraction;
-        heroCard19.ToolTip=heroTitle.Text+"\n"+heroDetail.Text;
+        heroScrollSpacer19.Height=collapse-forced;
+        double expandedRing=compactLayout?112:124;double ring=expandedRing-(expandedRing-64)*fraction;heroRingScale19.Width=heroRingScale19.Height=ring;heroRingColumn19.Width=new(ring+16);
+        heroTitle.FontSize=Typography.Size(24-4*fraction);heroTitle.MaxHeight=58-28*fraction;heroTitle.TextWrapping=TextWrapping.NoWrap;heroTitle.TextTrimming=TextTrimming.None;
+        heroNameLine21.Visibility=fraction>=.95||string.IsNullOrEmpty(heroName21.Text)?Visibility.Collapsed:Visibility.Visible;heroNameLine21.Opacity=1-fraction;
+        heroDetail.Visibility=fraction>=1?Visibility.Collapsed:Visibility.Visible;heroDetail.MaxHeight=20;heroDetail.Margin=new(0);heroDetail.Opacity=1-fraction;
+        heroCard19.ToolTip=heroTitle.Text+" · "+heroName21.Text+"\n"+heroDetail.Text;
     }
     void WireHeroScroll19()
     {

@@ -131,6 +131,14 @@ public sealed partial class MainWindow
         foreach (var (value, label) in new[] { ("system", "SYSTEM_THEME"), ("light", "LIGHT_THEME"), ("dark", "DARK_THEME"), ("amoled", "AMOLED_THEME") })
             themes.Children.Add(Button(label, () => { SetTheme(value); close(); }, data.Theme == value));
         appearance.Children.Add(themes);
+        appearance.Children.Add(Text(L.Text("TEXT_MOTION"),14));
+        var textMotion=new ComboBox{Tag="TEXT_MOTION",ItemsSource=new[]{L.Text("TEXT_MOTION_SYSTEM"),L.Text("TEXT_MOTION_ON"),L.Text("TEXT_MOTION_OFF")},SelectedIndex=data.MarqueeMotion=="on"?1:data.MarqueeMotion=="off"?2:0};
+        textMotion.SelectionChanged+=(_,_)=>{
+            string prior=data.MarqueeMotion;data.MarqueeMotion=textMotion.SelectedIndex==1?"on":textMotion.SelectedIndex==2?"off":"system";
+            try{Save();}catch{data.MarqueeMotion=prior;throw;}
+            MarqueeLine.RefreshAll(homeContent);MarqueeLine.RefreshAll((DependencyObject)Content);
+        };
+        appearance.Children.Add(textMotion);appearance.Children.Add(Text(L.Text("TEXT_MOTION_HINT"),12,Muted));
 
         var diagnostics = Section("SECTION_DIAGNOSTICS");
         var experimental = new CheckBox { Content = L.Text("INCLUDE_EXPERIMENTAL"), IsChecked = data.IncludeExperimental };

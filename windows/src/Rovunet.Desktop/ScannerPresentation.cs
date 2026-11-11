@@ -15,6 +15,7 @@ public sealed partial class MainWindow
         internal readonly ProgressBar DnsProgress=new(){Height=5,Minimum=0,Maximum=1,Margin=new(2,8,2,8),Tag="SCAN_DNS_PROGRESS"};
         internal readonly ProgressBar TunnelProgress=new(){Height=5,Minimum=0,Maximum=1,Margin=new(2,6,2,8),Tag="SCAN_TUNNEL_PROGRESS"};
         internal readonly StackPanel TunnelPanel=new();
+        internal readonly TextBlock BankScope=new(){Margin=new(4,4,4,6),FontSize=13,TextWrapping=TextWrapping.Wrap,Tag="SCAN_BANK_SCOPE"};
         internal readonly TextBlock StageHint=new(){Margin=new(4,2,4,6),FontSize=13,TextWrapping=TextWrapping.Wrap,Tag="SCAN_STAGE_HINT"};
         readonly TextBlock percent;
         readonly UniformGrid runningSlots=new(){Columns=2};
@@ -28,7 +29,7 @@ public sealed partial class MainWindow
             var header=new StackPanel();var summary=new DockPanel();var controls=new StackPanel{Orientation=Orientation.Horizontal};controls.Children.Add(stop);controls.Children.Add(resume);controls.Children.Add(restart);foreach(var b in new[]{stop,resume,restart}){b.MinWidth=88;b.MinHeight=52;b.Margin=new(3);b.FontSize=13;b.Padding=new(8,6,8,6);}DockPanel.SetDock(controls,Dock.Right);summary.Children.Add(controls);
             var values=new UniformGrid{Columns=3};
             TextBlock Stat(string key,Brush color){var value=new TextBlock{Text="0",FontSize=25,FontWeight=FontWeights.SemiBold,Foreground=color,FlowDirection=FlowDirection.LeftToRight,Tag=key};var body=new StackPanel{Margin=new(4,3,4,0)};body.Children.Add(value);body.Children.Add(new TextBlock{Text=L.Text(key),Foreground=Muted,FontSize=13});values.Children.Add(body);return value;}
-            Total=Stat("SCAN_TOTAL",Accent);Scanned=Stat("SCAN_SCANNED",Tone("ScanCyan"));Working=Stat("SCAN_WORKING",Green);summary.Children.Add(values);header.Children.Add(summary);
+            Total=Stat("SCAN_TOTAL",Accent);Scanned=Stat("SCAN_SCANNED",Tone("ScanCyan"));Working=Stat("SCAN_WORKING",Green);summary.Children.Add(values);header.Children.Add(summary);BankScope.Foreground=Muted;header.Children.Add(BankScope);
             var dnsBar=new DockPanel();percent=new TextBlock{Text="0%",Foreground=Accent,FontSize=13,Margin=new(10,3,3,0),FlowDirection=FlowDirection.LeftToRight};DockPanel.SetDock(percent,Dock.Right);dnsBar.Children.Add(percent);dnsBar.Children.Add(DnsProgress);header.Children.Add(dnsBar);
             foreach(var b in new[]{testTunnel,stopTunnel,resumeTunnel,retest}){b.HorizontalAlignment=HorizontalAlignment.Stretch;b.MinHeight=50;b.Margin=new(2,4,2,6);if(b==testTunnel||b==stopTunnel)header.Children.Add(b);}var tunnelActions=new UniformGrid{Columns=2};tunnelActions.Children.Add(resumeTunnel);tunnelActions.Children.Add(retest);header.Children.Add(tunnelActions);
             TunnelStatus=new TextBlock{FontSize=16,FontWeight=FontWeights.SemiBold,Foreground=Tone("ScanCyan"),Margin=new(4,8,4,6),Tag="SCAN_TUNNEL_STATUS"};TunnelPanel.Children.Add(TunnelStatus);

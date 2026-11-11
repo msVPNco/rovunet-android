@@ -123,7 +123,8 @@ public sealed partial class MainWindow
         string code = value.Error.Length > 0 ? value.Error : lastError;
         errorText.Visibility = code.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         errorText.Foreground=HttpsProbePolicy.Unconfirmed(code)?Amber:Red;
-        errorText.Text = code.Length > 0 ? (HttpsProbePolicy.Unconfirmed(code)?L.Text("TEST_UNCONFIRMED")+" · ":"")+L.Text(code) + "\n" + ErrorHelp(code) : "";
+        errorText.Text = code.Length > 0 ? (HttpsProbePolicy.Unconfirmed(code)?L.Text("TEST_UNCONFIRMED")+" · ":"")+L.Text(code) + " · " + ErrorHelp(code) : "";
+        errorText.Visibility = code.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         if (code.Length > 0 && (safeEvents.Count == 0 || !safeEvents.Last().EndsWith(" " + code, StringComparison.Ordinal))) { safeEvents.Enqueue(DateTimeOffset.UtcNow.ToString("HH:mm:ss", CultureInfo.InvariantCulture) + " " + code); while (safeEvents.Count > 3) safeEvents.Dequeue(); }
         if(value.State!="connected")rates=new(null,null);RefreshTrafficText();
         tray?.Update(value.State=="connected"?"connected":value.State=="error"||value.State=="disconnected"&&code.Length>0&&code!="CANCELLED"?"error":value.State,CanConnectFromTray20(),busy);
@@ -160,6 +161,7 @@ public sealed partial class MainWindow
             group.Card.Visibility = query.Length == 0 || rows.Any(r => group.Members.Contains(r.Profile) && r.Tile.Visibility == Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
             RenderCollectionProgress(group);
         }
+        PromoteActive23();
         statusExpiry.Stop(); var pending = statuses.Values.Select(s => 901 - Stopwatch.GetElapsedTime(s.ReceivedTick).TotalSeconds).Where(n => n > 0).ToList(); if (data.Measurements.Values.Any(m => UiPolicy.MeasurementFresh(m.SampledAt, DateTimeOffset.UtcNow))) pending.AddRange(data.Measurements.Values.Select(m => 901 - (DateTimeOffset.UtcNow - m.SampledAt).TotalSeconds).Where(n => n > 0)); if (pending.Count > 0) { statusExpiry.Interval = TimeSpan.FromSeconds(pending.Min()); statusExpiry.Start(); }
     }
     Button MoreButton(ContextMenu menu)
@@ -214,18 +216,12 @@ public sealed partial class MainWindow
             Application.Current.Resources["Appearance18Loaded"]=true;
         }
         glassSurfaces.Clear();
-        bool dark = darkTheme = EffectiveDark();
-        var palette = dark ? new Dictionary<string, string> { { "Bg", "#0B1020" }, { "Card", "#11182B" }, { "Soft", "#172137" }, { "Sidebar", "#11182B" }, { "Ink", "#F1F3FC" }, { "Muted", "#C1CADD" }, { "Accent", "#C4B5FD" }, { "Outline", "#45536D" }, { "Selected", "#30264C" }, { "Green", "#73D7AB" }, { "Red", "#FF9BAB" }, { "Amber", "#F3CF7D" } } : new Dictionary<string, string> { { "Bg", "#F3F5FC" }, { "Card", "#FFFFFF" }, { "Soft", "#FAFBFF" }, { "Sidebar", "#F9FAFF" }, { "Ink", "#19233A" }, { "Muted", "#46526A" }, { "Accent", "#5C3DB8" }, { "Outline", "#BCC6D9" }, { "Selected", "#E9E0FF" }, { "Green", "#087849" }, { "Red", "#AD2645" }, { "Amber", "#885706" } };
-        palette["PowerSurface"] = dark ? "#43864A" : "#087849"; palette["Collection"] = dark ? "#49395D" : "#E9E0FF"; palette["StatusSurface"] = dark ? "#2B2D43" : "#E8E5F3";
-        if(dark){palette["Bg"]="#1B263D";palette["Card"]="#172137";palette["Soft"]="#1D293E";palette["Sidebar"]="#172137";palette["Accent"]="#BFB1F0";palette["Selected"]="#332C4E";palette["Collection"]="#322B4A";palette["StatusSurface"]="#1B1E2B";palette["Outline"]="#52617C";}
-        else{palette["Bg"]="#F3F4FC";palette["Soft"]="#F7F6FC";palette["Sidebar"]="#F0EFF8";palette["Selected"]="#E7DFF6";palette["Collection"]="#E7E0F5";palette["StatusSurface"]="#EAE7F2";palette["Accent"]="#6345AC";palette["Outline"]="#BAC2D5";}
-        if (IsAmoled) { palette["Bg"]="#111927"; palette["Card"]="#0B0D14"; palette["Soft"]="#11141B"; palette["Sidebar"]="#0B0D14"; palette["Selected"]="#2A2340"; palette["Collection"]="#2A2340"; palette["StatusSurface"]="#15151B"; palette["Outline"]="#343D52"; }
-        if(dark){palette["Card"]=IsAmoled?"#11192C":"#1B2740";palette["Soft"]=IsAmoled?"#26314C":"#33415F";palette["Sidebar"]=IsAmoled?"#0D1426":"#19243C";palette["Collection"]=IsAmoled?"#504366":"#62517C";palette["Selected"]=IsAmoled?"#655181":"#746191";palette["StatusSurface"]=IsAmoled?"#252D47":"#303B57";palette["Outline"]="#726B91";palette["Accent"]="#CEBBFF";palette["Muted"]="#CBD0E4";palette["Green"]="#7DE0B9";}
-        palette["ScanCyan"]=dark?"#83D4DD":"#146A78";
-        foreach (var (key, color) in palette) { var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); brush.Freeze(); Application.Current.Resources[key] = brush; }
+        darkTheme = EffectiveDark();
+        ApplyApprovedPalette21();
         if (SystemParameters.HighContrast) foreach (var (key, brush) in new (string, Brush)[] { ("Bg", SystemColors.WindowBrush), ("Card", SystemColors.WindowBrush), ("Soft", SystemColors.WindowBrush), ("Sidebar", SystemColors.WindowBrush), ("Ink", SystemColors.WindowTextBrush), ("Muted", SystemColors.WindowTextBrush), ("Accent", SystemColors.HighlightBrush), ("Selected", SystemColors.WindowBrush), ("Outline", SystemColors.WindowTextBrush), ("Green", SystemColors.WindowTextBrush), ("Red", SystemColors.WindowTextBrush), ("Amber", SystemColors.WindowTextBrush) }) Application.Current.Resources[key] = brush;
         if(SystemParameters.HighContrast)Application.Current.Resources["ScanCyan"]=SystemColors.WindowTextBrush;
         Application.Current.Resources["PageBg"]=HomeBackdrop();
     }
 }
+
 

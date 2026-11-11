@@ -27,7 +27,7 @@ public sealed partial class MainWindow
     {
         var flags=new StackPanel{Orientation=Orientation.Horizontal,FlowDirection=FlowDirection.LeftToRight,Tag="LANGUAGE_FLAGS"};
         foreach(var (code,title) in new[]{("fa","فارسی"),("en","English"),("ru","Русский"),("zh-CN","简体中文")}){
-            var button=new Button{Width=44,Height=44,Padding=new(5),Margin=new(1),Tag="language:"+code,ToolTip=title,Content=FlagImage(code),Background=code==L.Language?GlassSurface("Selected"):Brushes.Transparent,BorderBrush=code==L.Language?Accent:Brushes.Transparent,BorderThickness=new(1),Template=(ControlTemplate)Application.Current.FindResource(code==L.Language?"RaisedButtonTemplate":"FlatContentButtonTemplate")};
+            var button=new Button{Width=44,Height=44,Padding=new(6),Margin=new(0),Tag="language:"+code,ToolTip=title,Content=FlagImage(code),Background=code==L.Language?GlassSurface("Selected"):Brushes.Transparent,BorderBrush=code==L.Language?Accent:Brushes.Transparent,BorderThickness=new(1),Template=(ControlTemplate)Application.Current.FindResource(code==L.Language?"RaisedButtonTemplate":"FlatContentButtonTemplate")};
             AutomationProperties.SetName(button,L.Text("LANGUAGE")+" · "+title);AutomationProperties.SetHelpText(button,code==L.Language?L.Text("SELECTED"):title);
             button.Click+=(_,_)=>ChangeLanguage(code);flags.Children.Add(button);
         }return flags;

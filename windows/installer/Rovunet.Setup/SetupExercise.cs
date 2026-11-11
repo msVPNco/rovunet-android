@@ -22,12 +22,16 @@ internal static class SetupExercise
             checks["program_files_target_resolves_to_product_subfolder"]=InstallService.ProgramFilesTarget==Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"Rovunet")&&InstallService.MachinePath(InstallService.ProgramFilesTarget);
             checks["custom_user_target_has_user_scope"]=!InstallService.MachinePath(destination);
             if(!InstallService.Elevated){using var helper=Process.Start(new ProcessStartInfo(Environment.ProcessPath!){UseShellExecute=false,CreateNoWindow=true,ArgumentList={"--install-elevated",InstallService.ProgramFilesTarget,"0","1"}})!;await helper.WaitForExitAsync();checks["elevated_helper_refuses_without_admin_token"]=helper.ExitCode==44;}
-            var window=new SetupWindow("fa",true,false,destination,closeAppWhenLastWindow:false);window.Show();window.UpdateLayout();window.InstallButton.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+            var window=new SetupWindow("fa",true,false,destination,launch:false,closeAppWhenLastWindow:false);window.Show();window.UpdateLayout();window.InstallButton.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
             bool success=await window.Installation.Task.WaitAsync(TimeSpan.FromMinutes(3));window.UpdateLayout();
             checks["wpf_install_button_completed"]=success;checks["dedicated_success_page_with_finish"]=window.Completed&&window.InstallButton.Content?.ToString()=="پایان";
             checks["default_desktop_shortcut_actually_created"]=File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),"Rovunet Installer Test.lnk"));
             App.SaveImage((System.Windows.FrameworkElement)window.Content,Path.Combine(root,"setup-completed-fa-dark.png"));window.InstallButton.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));checks["finish_closes_installer"]=!window.IsVisible;if(window.IsVisible)window.Close();
             checks["payload_installed_to_space_path"]=File.Exists(Path.Combine(destination,"Rovunet.exe"));checks["test_registration_scope"]=File.ReadAllText(Path.Combine(destination,".install-id"))=="1"&&File.ReadAllText(Path.Combine(destination,".install-scope"))=="0";
+            using(var running=Process.Start(new ProcessStartInfo(Path.Combine(destination,"Rovunet.exe")){UseShellExecute=false,CreateNoWindow=true,ArgumentList={"--ui-upgrade-exit-fixture"}})!){
+                for(int i=0;i<100&&!running.HasExited;i++){running.Refresh();if(running.MainWindowHandle!=IntPtr.Zero)break;await Task.Delay(100);}
+                await ClosePrevious.Run(destination);checks["previous_app_exits_cooperatively_before_upgrade"]=running.HasExited;
+            }
             using(var hive=RegistryKey.OpenBaseKey(RegistryHive.CurrentUser,RegistryView.Registry64))using(var key=hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\RovunetInstallerTest"))checks["stable_registration_survives_legacy_cleanup"]=key?.GetValue("InstallLocation")?.ToString()==destination;
             string keep=Path.Combine(destination,"user-note.txt");File.WriteAllText(keep,"keep-fixture");string dll=Hash(Path.Combine(destination,"Rovunet.dll"));
             // Simulate the recognized Review9 marker, then upgrade through the actual embedded service.

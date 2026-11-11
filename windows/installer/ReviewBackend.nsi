@@ -5,7 +5,7 @@ Unicode True
 !include "WinVer.nsh"
 Name "Rovunet"
 !ifndef REVIEW_VERSION
-!define REVIEW_VERSION "0.1.0-beta"
+!define REVIEW_VERSION "0.1.1-preview.1"
 !endif
 OutFile "${OUTPUT}"
 RequestExecutionLevel user

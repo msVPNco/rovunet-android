@@ -20,7 +20,7 @@ public sealed partial class MainWindow
             foreach(string language in new[]{"en","fa"})foreach(string theme in new[]{"amoled","light"}){
                 L.Language=language;data.Theme=theme;Width=1180;Height=860;ApplyTheme();Build();await Idle17();string prefix=language+"-"+theme;
                 var page=BuildResolverFinder(profile);page.Show();await Idle17();
-                checks[prefix+"_wide_sidebar"]=contextHost.IsVisible&&contextHost.ActualWidth>=250;
+                checks[prefix+"_wide_sidebar"]=contextHost.IsVisible&&Math.Abs(contextHost.ActualWidth-222)<1;
                 checks[prefix+"_same_window"]=NavigationDepth==1&&!Application.Current.Windows.Cast<Window>().Any(w=>w is DialogWindow&&w.IsLoaded);
                 var input=Visuals<TextBox>(page.PageVisual).Single(b=>Equals(b.Tag,"SCAN_INPUT"));input.Text="1.1.1.1:53\n8.8.8.8:53";
                 var source=Visuals<ComboBox>(page.PageVisual).Single(b=>Equals(b.Tag,"SCAN_SOURCE"));source.SelectedValue="input";input.Text="1.1.1.1:53\n8.8.8.8:53";
@@ -60,3 +60,4 @@ public sealed partial class MainWindow
     }
     async Task Idle17(){UpdateLayout();await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);UpdateLayout();}
 }
+

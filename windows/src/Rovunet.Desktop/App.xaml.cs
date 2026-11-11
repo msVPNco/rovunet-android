@@ -28,6 +28,16 @@ public partial class App : Application
             try { Directory.CreateDirectory(PrivateStore.Root); File.WriteAllText(Path.Combine(PrivateStore.Root, "last-crash.json"), System.Text.Json.JsonSerializer.Serialize(new { code = "UNEXPECTED_ERROR", utc = DateTimeOffset.UtcNow, version = Rovunet.Desktop.MainWindow.Version })); } catch { }
         };
         TaskScheduler.UnobservedTaskException += (_, args) => args.SetObserved();
+        if(e.Args is ["--ui-upgrade-exit-fixture"]){
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,Title="Rovunet"};MainWindow=fixture;SessionEnding+=(_,args)=>{args.Cancel=true;_=fixture.ExitApplication();};fixture.Closed+=(_,_)=>Shutdown();fixture.Show();return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-default22-smoke"){
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunDefault22Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-approved21-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunApproved21Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
         if(e.Args.Length==2&&e.Args[0]=="--ui-card20-smoke"){
             if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
             var fixture=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=fixture;fixture.Show();bool passed=await fixture.RunCard20Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;

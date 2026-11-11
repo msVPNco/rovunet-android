@@ -22,7 +22,7 @@ if(reportIndex>=0 && File.Exists(reportPath))return 12;
 var report = new Dictionary<string, object?> { ["suite"] = "windows-local-smoke", ["utc"] = DateTimeOffset.UtcNow, ["system_proxy_tested"] = applyProxy, ["external_network_tested"] = false };
 string stage = "setup";
 int result = 1; Process? server = null; ProcessJob? job = null;
-await using var client = new AgentClient();
+await using var client = new AgentClient(probeOnly: !applyProxy);
 using var lifetime = new CancellationTokenSource();
 var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start(); int targetPort = ((IPEndPoint)listener.LocalEndpoint).Port;
 using var rsa = RSA.Create(2048);
@@ -135,3 +135,4 @@ finally
     Console.WriteLine(json);
 }
 return result;
+
