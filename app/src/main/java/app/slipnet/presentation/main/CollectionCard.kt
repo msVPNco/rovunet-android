@@ -113,8 +113,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
             }
             if (updating) { Text(stringResource(R.string.subscription_updating_inline), style = MaterialTheme.typography.labelSmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
             accountStatus?.let { AccountStatusSummary(it) }
-            if (profiles.size > 50) Text(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
-            if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),
+            if (profiles.size > 50) MarqueeText(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
+            if (profiles.any { it.needsCredentials }) MarqueeText(stringResource(R.string.collection_needs_credentials),
                 color = colors.error, style = MaterialTheme.typography.bodySmall)
             if (completed.isNotEmpty()) MarqueeText(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
                 style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))

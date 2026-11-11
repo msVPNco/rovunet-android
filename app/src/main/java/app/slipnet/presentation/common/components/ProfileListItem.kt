@@ -64,9 +64,9 @@ fun ProfileListItem(
                             fontWeight = FontWeight.SemiBold)
                         val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
                             androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
-                        Text(if (isConnected && fresh) stringResource(R.string.live_probe_age, ((measurementNowMillis - pingResult.measuredAt).coerceAtLeast(0) / 1000).toInt())
+                        MarqueeText(if (isConnected && fresh) stringResource(R.string.live_probe_age, ((measurementNowMillis - pingResult.measuredAt).coerceAtLeast(0) / 1000).toInt())
                             else stringResource(if (fresh) R.string.review02_ping_fresh else R.string.review02_ping_previous, time),
-                            Modifier.testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
+                            Modifier.widthIn(max = 140.dp).testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
                     }
                 }
                 val status = when {
