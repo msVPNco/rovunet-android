@@ -16,6 +16,16 @@ Backlog recording only: this entry does not authorize application implementation
 4. Complete physical-phone whole-collection tests and cancellation, repeated connect/disconnect, Wi-Fi/mobile handover, lower-end UI responsiveness, and screen-off/idle battery and data measurements. Keep manual selection intact and distinguish automated/emulator evidence from physical-device results.
 5. After existing-format completeness and validation, consider AnyTLS and TUIC, then Mieru. AmneziaWG engine/import support already shipped in alpha18.1; its remaining form/field validation work is not a new protocol implementation.
 
+### P1 — Existing subscription update/re-import failure
+
+Owner report on alpha18.1: updating an existing panel subscription displays a generic failure; importing the supplied current feed is blocked until the previous subscription is deleted, after which import succeeds. The panel now provides a primary Android feed and a separate `.windows.json` feed. Screenshots show the generic update error and unavailable account information. Account-status failure may be separate; do not assume a shared root cause.
+
+A read-only HTTP check at report time returned 200/application-json for both feeds, each with the expected version/name/items schema and unique item IDs (24 primary items, 22 Windows items). This proves basic HTTP/schema availability only, not full app parser acceptance, device network behavior, successful update reconciliation or account-status correctness. Do not publish the supplied private URLs, tokens or profile credentials.
+
+Reproduce old-subscription-to-current-feed updates and re-import without deleting prior subscriptions. Investigate saved-source URL versus edited URL handling, duplicate-source/collection identity checks, item reconciliation, changed feed membership and format compatibility. Treat these as investigation targets, not established causes. Verify platform-feed distinctions without silently merging incompatible sources. Also check status URL derivation and status retrieval for platform-suffixed feeds.
+
+Acceptance: existing subscriptions can update; re-import of an existing source offers a clear update/review flow; a changed URL can be reviewed and migrated safely where appropriate; unrelated subscriptions and user edits are preserved; removals retain review requirements; failure leaves existing profiles intact. Add redacted actionable error categories instead of only the generic failure, and verify UI outcome/closure after success. No deletion workaround or forced removal of duplicate protection. Use synthetic fixtures for regressions, including changed item sets, source changes, platform feeds and unavailable status metadata. This record requests a future fix, not an immediate implementation/build/release.
+
 Track capability status separately as import, manual form, runtime engine, verified data transfer and published version; do not count a menu label as complete support.
 
 For the separate server investigation, first inspect the server environment, then test a compatible new protocol independently and obtain an importable phone configuration. Panel integration or replacement of existing Hy2/WireGuard outputs is a later decision based on physical-phone data transfer; no panel/server changes are made by this documentation update.
