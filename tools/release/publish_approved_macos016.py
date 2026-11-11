@@ -71,7 +71,10 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--manifest',type=pathlib.Path,required=True);parser.add_argument('--output',type=pathlib.Path,required=True);args=parser.parse_args()
     manifest=json.loads(args.manifest.read_text(encoding='utf8'));current=approved_release(manifest)
     if not manifest['ready']:
-        print(json.dumps({'preflight':True,'release':RELEASE,'draft':current['draft'],'prerelease':True,'fixedFileDigestsChecked':12,'source':SOURCE,'buildOrSigningCommands':False}));return
+        chunk=manifest['files'][0]['chunks'][0]
+        blob=api('/git/blobs/'+chunk['sha']);raw=base64.b64decode(blob['content'])
+        assert len(raw)==chunk['bytes'] and hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()==chunk['sha']
+        print(json.dumps({'preflight':True,'release':RELEASE,'draft':current['draft'],'prerelease':True,'fixedFileDigestsChecked':12,'source':SOURCE,'transportBlobReadAndVerified':True,'buildOrSigningCommands':False}));return
     args.output.mkdir(parents=True,exist_ok=True);cache=args.output/'chunks';cache.mkdir(exist_ok=True)
     existing={a['name']:a for a in current['assets']}
     assert set(existing)<=set(APPROVED),'Unexpected draft assets require review'
