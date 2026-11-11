@@ -2,9 +2,9 @@
 
 Subscription refresh/reimport, direct-first DNS fallback, moving labels, manual controls and AnyTLS/TUIC/Mieru are implemented. [Notes](releases/alpha19.md), [validation](releases/alpha19-completion.md) and [provenance](releases/alpha19-provenance.json). No new physical-phone, carrier or screen-off battery/data measurement is claimed. Panel WireGuard/Hy2 remains a separate investigation.
 
-## macOS 0.1.6 Beta — publication in preparation
+## macOS 0.1.6 Beta
 
-Apple Silicon's dev.6 functional base was tested and accepted by the owner on a real Mac. **Intel: limited testing**, with host and package validation only. Both require macOS 15+. This Beta changes version and packaging metadata, retaining the functional base. [Mac guide](macos/README.md). Installers are prepared locally; GitHub release assets have not been uploaded yet.
+Apple Silicon's dev.6 functional base was tested and accepted by the owner on a real Mac. **Intel: limited testing**, with host and package validation only. Both require macOS 15+. This Beta changes version and packaging metadata, retaining the functional base. [Mac guide](macos/README.md). [Pre-release](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta).
 
 ## Historical alpha18.1 status
 

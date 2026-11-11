@@ -8,7 +8,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 | Android | alpha19/code40 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
 | Windows | Public **0.1.1 Beta x64** (pre-release); [scope and limits](../windows/docs/STATUS.md) | `windows-v0.1.1-beta` (prerelease) | [Windows installer/source](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) |
 | Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
-| macOS | **0.1.6 Beta; publication in preparation**; Apple Silicon owner-accepted base; **Intel: limited testing**; macOS 15+ | `macos-v0.1.6-beta` | [Mac page](macos/README.md); install assets not uploaded yet |
+| macOS | **0.1.6 Beta prerelease**; Apple Silicon owner-accepted base; **Intel: limited testing**; macOS 15+ | `macos-v0.1.6-beta` | [PKG / DMG](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) |
 
 This records repository organization, not a claim of desktop protocol support,
 installation testing, code signing or a completed installer. Desktop work must

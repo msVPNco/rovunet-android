@@ -30,7 +30,7 @@
 | **اندروید** | انتشار عمومی: **آلفا۱۹ Full با کد نسخهٔ ۴۰** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [صفحهٔ اندروید](docs/android/README.fa.md) |
 | **ویندوز** | **0.1.1 Beta · نسخهٔ x64 · پیش‌انتشار** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [صفحهٔ ویندوز](windows/README.md) |
 | **لینوکس** | برنامه‌ریزی‌شده | هنوز انتشاری ندارد |
-| **مک** | **0.1.6 Beta · Apple Silicon / Intel · در حال آماده‌سازی انتشار** | [صفحهٔ مک](docs/macos/README.fa.md) · Intel: تست محدود |
+| **مک** | **0.1.6 Beta · Apple Silicon / Intel · پری‌ریلیز** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) · [صفحهٔ مک](docs/macos/README.fa.md) · Intel: تست محدود |
 
 هر پلتفرم برچسب، فایل، هش و امضای جداگانهٔ خودش را دارد. «آخرین انتشار» گیت‌هاب برای کل مخزن است و فید مخصوص هر پلتفرم نیست؛ پس همیشه از انتشاری دانلود کنید که نام پلتفرم شما را دارد. قاعدهٔ برچسب‌ها و به‌روزرسانی: [پلتفرم‌ها و کانال‌های انتشار](docs/PLATFORMS.md). تا وقتی یک انتشار صریحاً نگفته باشد، هیچ چیز در این جدول ادعای پشتیبانی پروتکل یا آزمون نصب روی دسکتاپ نیست.
 

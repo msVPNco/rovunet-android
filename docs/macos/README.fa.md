@@ -1,8 +1,6 @@
 [English](README.md) · [فارسی](README.fa.md) · [Русский](README.ru.md) · [简体中文](README.zh-CN.md)
 
-Publication of 0.1.6 Beta is in preparation; installation assets have not been uploaded yet. / انتشار 0.1.6 Beta در حال آماده‌سازی است؛ فایل‌های نصب هنوز بارگذاری نشده‌اند. / Публикация готовится; установщики ещё не загружены. / 正在准备发布，安装包尚未上传。
-
-[Source](https://github.com/msVPNco/rovunet-app/tree/macos/release-0.1.6-beta/macos)
+[Download 0.1.6 Beta](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) · [Source](https://github.com/msVPNco/rovunet-app/tree/macos/release-0.1.6-beta/macos)
 
 # رووُنت برای مک — 0.1.6 Beta
 
