@@ -23,8 +23,8 @@ internal class AccountStatusStore(private val db: SlipNetDatabase, private val s
         if (!url.isHttps || url.username.isNotEmpty() || url.password.isNotEmpty() || url.fragment != null) return null
         val last = url.pathSegments.lastOrNull() ?: return null
         // Only the panel's documented sibling URL; no probing arbitrary imported formats.
-        if (url.pathSegments.dropLast(1).lastOrNull() != "sub" || !last.matches(Regex("[0-9a-fA-F]{32}\\.json"))) return null
-        return url.newBuilder().setPathSegment(url.pathSegments.lastIndex, last.removeSuffix(".json") + ".status.json").build().toString()
+        if (url.pathSegments.dropLast(1).lastOrNull() != "sub" || !last.matches(Regex("[0-9a-fA-F]{32}(?:\\.windows)?\\.json"))) return null
+        return url.newBuilder().setPathSegment(url.pathSegments.lastIndex, last.removeSuffix(".json").removeSuffix(".windows") + ".status.json").build().toString()
     }
 
     fun observe(): Flow<List<AccountStatusEntity>> = combine(db.subscriptionDao().observe(), db.accountStatusDao().observe()) { sources, cached ->

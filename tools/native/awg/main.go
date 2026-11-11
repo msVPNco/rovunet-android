@@ -52,7 +52,7 @@ func convert(data []byte) ([]byte, string, auth.Authenticator, error) {
 	if err := json.Unmarshal(data, &r); err != nil {
 		return nil, "", nil, err
 	}
-	if len(r.Inbounds) != 1 || len(r.Outbounds) != 2 || r.Outbounds[0].Protocol != "amneziawg" || r.Outbounds[1].Protocol != "freedom" {
+	if len(r.Inbounds) != 1 || len(r.Outbounds) != 2 || !supportedProtocol(r.Outbounds[0].Protocol) || r.Outbounds[1].Protocol != "freedom" {
 		return nil, "", nil, errors.New("invalid runtime")
 	}
 	in := r.Inbounds[0]
@@ -73,7 +73,7 @@ func convert(data []byte) ([]byte, string, auth.Authenticator, error) {
 		return nil, "", nil, errors.New("invalid auth")
 	}
 	proxy := r.Outbounds[0].Settings
-	if proxy["type"] != "wireguard" || proxy["amnezia-wg-option"] == nil {
+	if !validProxy(r.Outbounds[0].Protocol, proxy) {
 		return nil, "", nil, errors.New("invalid outbound")
 	}
 	proxy["name"] = "proxy"
@@ -162,4 +162,44 @@ func main() {
 		fmt.Fprintln(os.Stdout, "ROVUNET_AWG_FAILED")
 		os.Exit(1)
 	}
+}
+
+func supportedProtocol(protocol string) bool {
+	switch protocol {
+	case "amneziawg", "anytls", "tuic", "mieru":
+		return true
+	}
+	return false
+}
+func validProxy(protocol string, proxy map[string]any) bool {
+	if protocol == "amneziawg" {
+		return proxy["type"] == "wireguard" && proxy["amnezia-wg-option"] != nil
+	}
+	if proxy["type"] != protocol {
+		return false
+	}
+	allowed := map[string]bool{"name": true, "type": true, "server": true, "port": true, "udp": true, "password": true}
+	var extra []string
+	switch protocol {
+	case "anytls":
+		extra = []string{"sni", "alpn", "skip-cert-verify", "client-fingerprint", "idle-session-check-interval", "idle-session-timeout", "min-idle-session"}
+	case "tuic":
+		extra = []string{"sni", "alpn", "skip-cert-verify", "uuid", "congestion-controller", "udp-relay-mode", "reduce-rtt", "heartbeat-interval"}
+	case "mieru":
+		extra = []string{"username", "transport", "multiplexing", "handshake-mode", "traffic-pattern"}
+	default:
+		return false
+	}
+	for _, key := range extra {
+		allowed[key] = true
+	}
+	for key := range proxy {
+		if !allowed[key] {
+			return false
+		}
+	}
+	if protocol != "mieru" && proxy["skip-cert-verify"] != false {
+		return false
+	}
+	return true
 }

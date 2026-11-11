@@ -1,6 +1,6 @@
-# Build and verification — alpha18.1
+# Build and verification — alpha19
 
-Target: 0.3.0-alpha18.1, versionCode 39. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
+Target: 0.3.0-alpha19, versionCode 40. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
 
 ## Source and native provenance
 
@@ -22,7 +22,7 @@ bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:testF
   -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2
 ```
 
-This produces app.veyra.client.candidate / Rovunet Test, code 39, version 0.3.0-alpha18.1-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
+This produces app.veyra.client.candidate / Rovunet Test, code 40, version 0.3.0-alpha19-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
 
 ## Signed public Release
 
@@ -65,13 +65,13 @@ bash gradlew :app:assembleFullRelease :app:assembleFullReleaseAndroidTest \
   -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2
 ```
 
-The default Debug tests use AndroidJUnitRunner. The Release JNI driver uses Android's framework Instrumentation and Java-only shared assertions, with no AndroidX/JUnit/Kotlin runtime dependency in that test APK. `run-device-gate.py` first checks all 73 Debug cases, then installs the minified private Release and matching test APK and requires both JNI cases. It checks actual DEX definitions and rejects incomplete, failed or skipped results. Never substitute a Debug APK as evidence that R8 retained the JNI ABI. The shared gomobile consumer rules must remain in the reconstructed AAR and the app's Release configuration.
+The default Debug tests use AndroidJUnitRunner. The Release JNI driver uses Android's framework Instrumentation and Java-only shared assertions, with no AndroidX/JUnit/Kotlin runtime dependency in that test APK. `run-device-gate.py` first checks all required Debug cases, then installs the minified private Release and matching test APK and requires both JNI cases. It checks actual DEX definitions and rejects incomplete, failed or skipped results. Never substitute a Debug APK as evidence that R8 retained the JNI ABI. The shared gomobile consumer rules must remain in the reconstructed AAR and the app's Release configuration.
 
 For a disposable emulator with VPN consent, build the private application/tests and run `tools/veyra/run-device-gate.py` with ANDROID_SERIAL. The gate rejects skipped, failed, incomplete or missing required tests. It exercises cross-UID VPN traffic/MTU, SSH identity and cancellation, scanner lifecycle, migration/recovery, choices/history and UI/RTL. Local fixture success does not prove real Iranian-network availability or every architecture/backend.
 
 Before delivering an APK, verify ZIP integrity, manifest, apksigner output, all native entries and `tools/quality/check-apk-native.py`. Only record checks actually executed on the final source and distinguish the private validation binary from the unsigned/public Release.
 
-Application source: `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, tree `3e890261420f7bbc87bf55cc324f240caffdc490`. [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42905223390): 144 JVM tests; 18 real local encrypted TCP/UDP modes; AWG 1/2/3.1 TCP/UDP and shutdown fixtures. Android device/minified gates are recorded in [release provenance](releases/alpha18-1-provenance.json).
+Exact alpha19 source, executed checks and signed artifact identities are recorded in [release provenance](releases/alpha19-provenance.json).
 
 The final unsigned Full APK is signed offline with the fixed production key. Publication metadata/tooling cannot alter application/build/test inputs; the public copy record restores exactly the signed bytes without possessing that key. Exact artifact, APK hashes and public certificate are in release provenance. Full sources include pinned Xray and Mihomo sources, the AWG adapter and available inherited expanded trees; the unavailable old dnstt-mobile tree is disclosed. No complete offline build kit or battery saving is claimed.
 

@@ -50,9 +50,8 @@ fun ProfileListItem(
         border = BorderStroke(if (isConnected || isSelected) 1.5.dp else 1.dp, if (isConnected || isSelected) border else tones.childOutline),
         colors = CardDefaults.cardColors(containerColor = if (isSelected || isConnected) tones.selectedChild else tones.child)) {
         Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 5.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
-                    itemVerticalAlignment = Alignment.CenterVertically) {
-                    Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MarqueeText(profile.name, modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
@@ -65,9 +64,9 @@ fun ProfileListItem(
                             fontWeight = FontWeight.SemiBold)
                         val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
                             androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
-                        Text(if (isConnected && fresh) stringResource(R.string.live_probe_age, ((measurementNowMillis - pingResult.measuredAt).coerceAtLeast(0) / 1000).toInt())
+                        MarqueeText(if (isConnected && fresh) stringResource(R.string.live_probe_age, ((measurementNowMillis - pingResult.measuredAt).coerceAtLeast(0) / 1000).toInt())
                             else stringResource(if (fresh) R.string.review02_ping_fresh else R.string.review02_ping_previous, time),
-                            Modifier.testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
+                            Modifier.widthIn(max = 140.dp).testTag("profile-measured-${profile.id}"), style = MaterialTheme.typography.labelSmall, color = green)
                     }
                 }
                 val status = when {
@@ -94,16 +93,18 @@ fun ProfileListItem(
                         TunnelType.NAIVE, TunnelType.NAIVE_SSH -> "${profile.domain}:${profile.naivePort}"
                         else -> profile.domain
                     }
-                    Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    MarqueeText(destination, modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
                     val protocolLabel = if (profile.tunnelType == TunnelType.XRAY) when (profile.coreLink.substringBefore("://").lowercase()) {
+                        "anytls" -> "AnyTLS"
+                        "tuic" -> "TUIC"
+                        "mierus" -> "Mieru"
                         "ss" -> stringResource(R.string.review02_shadowsocks)
                         "trojan" -> stringResource(R.string.review03_trojan)
                         "vmess" -> stringResource(R.string.review03_vmess)
                         else -> profile.tunnelType.displayName
                     } else profile.tunnelType.displayName
-                    Text(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                    MarqueeText(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "), modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
                         color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onEditClick, enabled = canEdit, modifier = Modifier.testTag("profile-edit-${profile.id}")) {

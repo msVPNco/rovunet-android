@@ -1,15 +1,15 @@
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-Alpha18.1 Full, код 39: обновление подписки прямо на карточке, необязательное имя, расход/срок по данным провайдера, поддерживаемые `cs`/`fm`, Shadowsocks 2022, смена портов Hy2 и импорт AmneziaWG с одним peer. Сохранены спокойные темы Soft Pop, измерение задержки только при видимом приложении, ограниченное умное восстановление, изолированные проверки Slipstream и исправления нативной остановки. Patterniha удалён из встроенного каталога; прежние импорты сохраняются.
+Alpha19 Full, код 40: обновление подписки прямо на карточке, необязательное имя, расход/срок по данным провайдера, поддерживаемые `cs`/`fm`, Shadowsocks 2022, смена портов Hy2 и импорт AmneziaWG с одним peer. Сохранены спокойные темы Soft Pop, измерение задержки только при видимом приложении, ограниченное умное восстановление, изолированные проверки Slipstream и исправления нативной остановки. Patterniha удалён из встроенного каталога; прежние импорты сохраняются.
 
-Локальные тесты и эмулятор не доказывают экономию батареи телефона, ночную/Doze-стабильность, доступность оператора или исправление сообщённых узлов WireGuard/Hy2 панели. Новая приёмка на физическом телефоне не заявляется. AnyTLS, TUIC и Mieru остаются на будущее. Новых Lite/desktop-файлов нет.
+Локальные тесты и эмулятор не доказывают экономию батареи телефона, ночную/Doze-стабильность, доступность оператора или исправление сообщённых узлов WireGuard/Hy2 панели. Новая приёмка на физическом телефоне не заявляется. AnyTLS, TUIC v5 и однопортовый Mieru включены; см. alpha19. Новых Lite/desktop-файлов нет.
 
 <h1 align="center">Rovunet для Android</h1>
 
 <p align="center"><b>Несколько путей к вашему серверу в одном Android-приложении</b><br>DNS-туннели, SSH, HTTPS-прокси и профили Xray в именованных группах, с прямым подключением и настоящими тестами HTTPS.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -19,27 +19,27 @@ Alpha18.1 Full, код 39: обновление подписки прямо на
 
 <p align="center"><a href="../../README.md">← Все приложения Rovunet</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1">Скачать</a> · 📘 <a href="../guides/Rovunet-App-Guide-RU.pdf">Полное руководство (PDF)</a> · <a href="../USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/msVPNco/rovunet-panel">Серверная панель</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19">Скачать</a> · 📘 <a href="../guides/Rovunet-App-Guide-RU.pdf">Полное руководство (PDF)</a> · <a href="../USER_GUIDE.ru.md">Руководство</a> · <a href="https://github.com/msVPNco/rovunet-panel">Серверная панель</a></p>
 
 ---
 
 **Многопротокольный VPN-клиент Android для нескольких путей к собственному серверу.** Объединяет DNS-туннели, транспорты SSH, HTTPS-прокси и профили Xray. Связанные пути хранятся в коллекциях: подключайте выбранный напрямую или отдельно измеряйте HTTPS через настоящий туннель.
 
-Общий репозиторий приложений Rovunet для Android, Windows и будущей macOS. Android alpha18.1 опубликован; проверенного публичного GUI-выпуска для настольных систем пока нет. [Платформы и каналы выпуска](../PLATFORMS.md).
+Общий репозиторий приложений Rovunet для Android, Windows и будущей macOS. Android alpha19 опубликован; проверенного публичного GUI-выпуска для настольных систем пока нет. [Платформы и каналы выпуска](../PLATFORMS.md).
 
 ## Состояние выпуска
 
-Текущий выпуск — **0.3.0-alpha18.1 Full, код 39**. Сохранена [производственная подпись alpha14](../SIGNING-IDENTITY.md): устанавливайте поверх публичной alpha14 без удаления. У старой alpha11 и приватной Rovunet Test другие идентичности. [Скачать Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) · [Запись выпуска](../releases/alpha18-1.md) · [Состояние](../STATUS.md).
+Текущий выпуск — **0.3.0-alpha19 Full, код 40**. Сохранена [производственная подпись alpha14](../SIGNING-IDENTITY.md): устанавливайте поверх публичной alpha14 без удаления. У старой alpha11 и приватной Rovunet Test другие идентичности. [Скачать Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) · [Запись выпуска](../releases/alpha19.md) · [Состояние](../STATUS.md).
 
 **Подписки:** Update на карточке обновляет её без перехода; повторные нажатия блокируются, результат остаётся на главной. Для замены профилей VPN должен быть отключён. Имя необязательно: введённое/сохранённое, затем безопасный заголовок провайдера, затем hostname. `subscription-userinfo` из того же ответа содержит суммарный расход, лимит и срок; отсутствующие поля неизвестны. Показываются давность и происхождение данных; это не независимый учёт. Нового периодического скачивания всей подписки нет.
 
 **Импорт:** совместимые `cs`/`fm` VLESS/VMess/Trojan сохраняются при проверяемом TLS; неподдерживаемые настройки/скрипты отклоняются явно. Для Shadowsocks 2022 проверяется длина ключа; Hy2 поддерживает ограниченные `mport` и `hop-interval`. Поддержаны совместимые WireGuard URI и AmneziaWG `.conf`/параметры URI с одним peer. AWG использует отдельный аутентифицированный userspace-процесс; по одному адресу семейства IP, без скриптов, нескольких peer и диапазона keepalive. Произвольный YAML не выполняется.
 
-**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены.
+**Для публичных alpha14–alpha16 (до кода32) нужна прямая установка:** скачайте [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) и установите поверх **без удаления приложения или данных**. Старый обновлятор содержит прежний адрес; веб-перенаправление не исправляет встроенную проверку. Пакет и производственная подпись сохранены.
 
 ## Быстрый старт
 
-1. **Скачайте** Full APK из [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) и установите. Публичные alpha14 и новее ставятся поверх без удаления.
+1. **Скачайте** Full APK из [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) и установите. Публичные alpha14 и новее ставятся поверх без удаления.
 2. **Откройте** Rovunet, выберите язык и тему и дайте Android разрешение VPN.
 3. **Импорт**: Подписки → вставьте HTTPS-ссылку подписки → **Импорт**, или **+ → Импорт** для ссылки, QR-кода или файла.
 4. **Подключение**: раскройте группу, коснитесь пути, чтобы выбрать, и ещё раз — чтобы подключиться.
@@ -105,7 +105,7 @@ Soar предлагает Quick, Advanced, E2E и Prism. Повторные ру
 | [Руководство пользователя](../USER_GUIDE.ru.md) | Установка, импорт, подключение, проверки, Soar, учётные данные и диагностика |
 | [Текущее состояние](../STATUS.md) · [Обновление](../UPGRADE.md) | Состояние выпуска, подпись и миграция |
 
-PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha18.1](../releases/alpha18-1.md).
+PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha19](../releases/alpha19.md).
 
 ## Исходники, проверки и поддержка
 

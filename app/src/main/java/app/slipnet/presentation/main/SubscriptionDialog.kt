@@ -42,7 +42,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
         job = scope.launch {
             try { action() }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { error = e.message }
+            catch (e: Exception) { error = e.message ?: "DOWNLOAD_FAILED" }
             finally { busy = false }
         }
     }
@@ -60,7 +60,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                     enabled = connection !is app.slipnet.domain.model.ConnectionState.Disconnecting,
                     onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(url, { url = it }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) },
+                OutlinedTextField(url, { url = it; error = null }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
                     trailingIcon = { TextButton(onClick = { visible = !visible }) { Text(stringResource(if (visible) R.string.rv_hide_ac20a5 else R.string.rv_show_0df6f1)) } })
                 Row { Checkbox(automatic, { automatic = it; automaticEdited = true }, enabled = !busy); Text(stringResource(R.string.subscription_automatic)) }
@@ -78,9 +78,10 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                     Button(modifier = Modifier.weight(1f).testTag("subscription-import"),
                         enabled = !busy && url.isNotBlank(), onClick = {
                         execute {
-                            require(repository.findSource(url) == null) { "SOURCE_EXISTS" }
-                            val item = prepare(name, url, null, automatic)
-                            if (item.importWarnings.isNotEmpty()) preview = item else { repository.apply(item); onDismiss() }
+                            val row = repository.findSource(url)
+                            val item = prepare(name, url, row?.id, if (row != null && !automaticEdited) row.autoUpdate else automatic)
+                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.importWarnings.isNotEmpty()) preview = item
+                            else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_import_action)) }
                 }
@@ -137,7 +138,9 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
 }
 
 @Composable
-private fun subscriptionError(code: String): String = stringResource(when (code) {
+internal fun subscriptionError(code: String): String = stringResource(subscriptionErrorResource(code))
+
+internal fun subscriptionErrorResource(code: String?): Int = when (code) {
     "PUBLIC_FEED_EMPTY" -> R.string.alpha17_public_empty
     "PUBLIC_FEED_LIMIT" -> R.string.alpha17_public_limit
     "HTTPS_REQUIRED" -> R.string.subscription_https_required
@@ -148,5 +151,6 @@ private fun subscriptionError(code: String): String = stringResource(when (code)
     "SOURCE_CHANGED" -> R.string.subscription_source_changed
     "SOURCE_EXISTS" -> R.string.subscription_source_exists
     "SOURCE_NOT_FOUND" -> R.string.subscription_source_not_found
+    "Saved credential key unavailable", "Unknown saved credential format", "Invalid saved credential" -> R.string.profile_credentials_unavailable
     else -> R.string.subscription_failed
-})
+}

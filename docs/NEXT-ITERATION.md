@@ -1,6 +1,49 @@
 # Rovunet next iteration
 
-## Current alpha18.1 completion
+## Current alpha19/code40 completion — 2026-11-11
+
+The owner authorized implementing the discussed Android work, self-testing and
+release without a preview/phone-acceptance hold. This supersedes all backlog-only
+and review-only wording below for this iteration. PR #19 contains the work; do
+not report publication until its verified signed artifact is actually published.
+
+Implemented in alpha19:
+- Import on an existing HTTPS source now refreshes the saved subscription instead
+  of requiring deletion. Source/profile identities, automatic-update preference,
+  local edits and removal review remain protected. Duplicate URL ownership is
+  checked transactionally when changing a source URL. Card and dialog errors use
+  the same specific localized mapping. A failed/unsupported feed preserves rows.
+- Primary and `.windows.json` panel feeds share the account-status endpoint.
+  Missing or old account data stays explicitly unknown/stale.
+- Whole-card tests finish after direct success. Resolver transports, including
+  Soar variants, remain deferred unless direct paths fail and consent is given.
+  Prior results for excluded DNS members are marked historical for the new run.
+- Overflowing card/profile labels move within a fixed single-line container;
+  short labels stay still, with motion suspended offscreen/background.
+- Manual SS2022, Hy2 hopping, supported cs/fm, AWG-from-zero, VLESS encryption,
+  WS heartbeat and mKCP fields are exposed. External WireGuard links open Import.
+- AnyTLS, TUIC v5 and single-binding Mieru `mierus://` inputs/forms/runtime use
+  the already pinned constrained Mihomo child. General YAML, arbitrary scripts,
+  unverified TLS and unsupported effective URI options are not silently accepted.
+
+Verified source `e8c93787fc4703cf4fea6c52ae056fae2724b105`: 148 portable/JUnit cases, 151 Gradle unit cases, 75 Debug emulator cases and two minified Release JNI cases pass in both recorded CI runs. Existing 18 encrypted TCP/UDP modes and AWG 1/2/3.1 regressions pass; AnyTLS, TUIC and Mieru TCP/UDP have actual local encrypted TCP/UDP and shutdown tests. The public Full APK uses the fixed production signer. See [provenance](releases/alpha19-provenance.json) and the [release](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19). Phone/network/battery limits remain separate.
+
+Remaining evidence-dependent work, in priority order:
+1. Re-test the panel's WireGuard/Hy2 outputs on the affected physical network,
+   compare a known-good peer and establish why data does not pass. Neither the
+   previous local tests nor AWG success establishes a WireGuard/Hy2 panel fix.
+2. Physical-phone whole-card stop/restart, weaker-device responsiveness,
+   Wi-Fi/mobile handover and selected-card versus active-session behavior.
+3. Measure screen-off/idle battery and data, including the four independent
+   Slipstream resolver workers. No battery saving claim without measurements.
+4. Extend explicitly rejected new-protocol dialects/options only with preserved
+   semantics and interoperability tests; keep manual imports and panel integration
+   separate. Panel/server and desktop changes belong to their own coordinated work.
+
+Everything below is historical context unless explicitly referenced above.
+
+
+## Historical alpha18.1 completion
 
 The owner explicitly authorized implementation and release on 2026-11-10. This supersedes the review-only holds recorded below for this iteration. Subscription card updates, optional names, provider usage/expiry, supported cs/fm, SS2022, Hy2 hopping and AmneziaWG are implemented. See [completion and validation limits](releases/alpha18-1-completion.md) and [provenance](releases/alpha18-1-provenance.json). Earlier planning below is historical; it is not evidence of an additional regression.
 

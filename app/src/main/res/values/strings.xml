@@ -6,4 +6,14 @@
     <string name="preview_release_channel">Include public preview releases</string>
     <string name="private_test_channel">Private device test · updates are delivered separately</string>
 
+    <string name="editor_amnezia_options">AmneziaWG parameters</string>
+    <string name="editor_vless_encryption">VLESS encryption (must match server)</string>
+    <string name="editor_cipher_suites">TLS cipher suites (cs, colon-separated)</string>
+    <string name="editor_final_mask">Final mask (fm, supported JSON only)</string>
+    <string name="editor_kcp_tti">mKCP interval (tti, ms)</string>
+    <string name="editor_ws_heartbeat">WebSocket heartbeat (seconds)</string>
+    <string name="editor_hy2_ports">Hy2 hopping ports (mport)</string>
+    <string name="editor_hy2_interval">Hy2 hopping interval (seconds)</string>
+    <string name="editor_mieru_username">Mieru username</string>
+    <string name="editor_tuic_auth">TUIC credentials (UUID:password)</string>
 </resources>

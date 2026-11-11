@@ -1088,9 +1088,10 @@ fun MainScreen(
                             "Web / TCP paths" to listOf(Triple("REALITY", "reality", Icons.Default.Shield), Triple("XHTTP", "xhttp", Icons.Default.Language), Triple("VLESS WS", "vless", VlessIcon), Triple("SSH", "ssh", Icons.Default.Lock), Triple("SOCKS5", "socks5", Icons.Default.Share),
                                 Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_trojan), "trojan", Icons.Default.Shield),
                                 Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review03_vmess), "vmess", Icons.Default.Shield),
-                                Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks), "ss", Icons.Default.Shield)) +
+                                Triple(androidx.compose.ui.res.stringResource(app.slipnet.R.string.review02_shadowsocks), "ss", Icons.Default.Shield),
+                                Triple("AnyTLS", "anytls", Icons.Default.Shield), Triple("Mieru", "mierus", Icons.Default.Shield)) +
                                 (if (BuildConfig.INCLUDE_NAIVE) listOf(Triple("NaiveProxy", "naive", Icons.Default.Shield)) else emptyList()),
-                            "UDP paths" to listOf(Triple("Hysteria2", "hysteria2", Icons.Default.Waves), Triple("WireGuard", "wireguard", Icons.Default.Lock)),
+                            "UDP paths" to listOf(Triple("Hysteria2", "hysteria2", Icons.Default.Waves), Triple("WireGuard", "wireguard", Icons.Default.Lock), Triple("TUIC", "tuic", Icons.Default.Waves)),
                             "DNS / alternative paths" to listOf(Triple("DNSTT", "dnstt", Icons.Default.Dns), Triple("NoizDNS", TunnelType.NOIZDNS.value, Icons.Default.VisibilityOff), Triple("VayDNS", "vaydns", Icons.Default.Air), Triple("Soar", "soar", Icons.Default.FlightTakeoff), Triple("Slipstream", "slipstream", Icons.Default.Waves), Triple("DOH", "doh", Icons.Default.Language)) +
                                 (if (BuildConfig.INCLUDE_TOR) listOf(Triple("Tor", "snowflake", TorIcon)) else emptyList())
                         )

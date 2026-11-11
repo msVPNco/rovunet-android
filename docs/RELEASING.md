@@ -30,7 +30,10 @@ The authoritative digest is versioned in `config/release-signing-certificate.sha
 
 ## Artifact identity
 
-Current alpha18.1/code39: application source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, APK SHA-256 `a649930c42e236226c903a43c5a8acc315864c87a2cb1a5b8902fc487f554e21`. Both recorded source CI runs passed verify/device gates; see [provenance](releases/alpha18-1-provenance.json). Owner authorized implementation and publication, with no new physical-phone acceptance claim. The one-version workflow restores and verifies the offline-signed APK after the exact PR is merged; it cannot replace a public release.
+Alpha19/code40: the owner authorized self-testing and publication without a preview hold on 2026-11-11. Keep the production signer; record the exact source, checks and signed bytes in [provenance](releases/alpha19-provenance.json). Phone/carrier and screen-off battery/data results remain separate. Historical alpha18.1 evidence follows.
+
+
+Historical alpha18.1/code39: application source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`, APK SHA-256 `a649930c42e236226c903a43c5a8acc315864c87a2cb1a5b8902fc487f554e21`. Both recorded source CI runs passed verify/device gates; see [provenance](releases/alpha18-1-provenance.json). Owner authorized implementation and publication, with no new physical-phone acceptance claim. The one-version workflow restores and verifies the offline-signed APK after the exact PR is merged; it cannot replace a public release.
 
 Historical alpha17/code36: owner accepted the exact APK on 2026-11-09. APK SHA-256 `eb5ac7bd474b37e361e8ca126c8e2f7d445faaf876ddd7b9ecd158548324a871`; application source `bbb30d7146c3f308f37943a0e3c9456b185167f0`. PR CI 42626133278 passed 119 JVM, Gradle unit task, 64 Debug device, two minified JNI and nine TCP/UDP modes. Parallel push UI timeout remains disclosed. Publication restores the exact accepted bytes without rebuilding or re-signing. [Record](releases/alpha17.md).
 

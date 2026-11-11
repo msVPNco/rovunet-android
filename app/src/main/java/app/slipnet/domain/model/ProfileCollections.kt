@@ -14,7 +14,8 @@ object ProfileCollections {
         it.startsWith("[Interface]", true) || it.startsWith("wireguard://", true)
     }
     fun isUdp(p: ServerProfile): Boolean = isWireguard(p) || p.tunnelType == TunnelType.XRAY &&
-        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2") ||
+        (p.coreLink.substringBefore("://").lowercase() in setOf("hysteria2", "hy2", "tuic") ||
+            p.coreLink.trimStart().startsWith("mierus://", true) && runCatching { app.slipnet.core.CoreLink.parse(p.coreLink).outbound.getJSONObject("settings").optString("transport") == "UDP" }.getOrDefault(false) ||
             p.coreLink.trimStart().startsWith("vless://", true) && runCatching { java.net.URI(p.coreLink.trim().substringBefore('#')).rawQuery.orEmpty().split('&').any {
                 val pair = it.split('=', limit = 2)
                 java.net.URLDecoder.decode(pair[0], "UTF-8") == "type" &&
@@ -34,6 +35,10 @@ object ProfileCollections {
             val port = found.groupValues[2].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null
             return found.groupValues[1].trim('[', ']') to port
         }
+        if (app.slipnet.core.SupplementalCore.handles(link)) return runCatching {
+            val parsed = app.slipnet.core.CoreLink.parse(link)
+            parsed.host to parsed.outbound.getJSONObject("settings").getInt("port")
+        }.getOrNull()
         if (!link.startsWith("ss://", true)) return null
         return runCatching {
             val parsed = app.slipnet.core.CoreLink.parse(link)

@@ -10,7 +10,6 @@ object CollectionPhase {
     /** Pick exactly one outcome; a budget expiry must not be replaced with a generic failure. */
     fun completion(passed: Boolean, untested: Boolean, needsReview: Boolean, hasDnsFallback: Boolean, includeDnsAfterSuccess: Boolean = false): Completion = when {
         untested -> Completion.INCOMPLETE
-        passed && includeDnsAfterSuccess && hasDnsFallback -> Completion.OFFER_DNS
         passed -> Completion.COMPLETE
         needsReview -> Completion.NEEDS_REVIEW
         hasDnsFallback -> Completion.OFFER_DNS

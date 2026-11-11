@@ -67,6 +67,8 @@ class AccountStatusDeviceTest {
             db.subscriptionDao().delete(id)
             wait!!.complete(Unit); detached.join()
             assertNull(db.accountStatusDao().get(id))
+            assertEquals(store.endpoint(address), store.endpoint(address.removeSuffix(".json") + ".windows.json"))
+            assertNull(store.endpoint("https://example.invalid/ordinary.windows.json"))
             assertNull(store.endpoint("https://example.invalid/ordinary.json"))
             assertNull(store.endpoint(address.replace("https:", "http:")))
         } finally { db.close() }

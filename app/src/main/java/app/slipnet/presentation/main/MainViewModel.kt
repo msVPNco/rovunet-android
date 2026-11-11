@@ -1030,7 +1030,7 @@ class MainViewModel @Inject constructor(
                 subscriptionRepository.refreshAccountStatuses(force = true)
             } catch (e: kotlinx.coroutines.CancellationException) { throw e
             } catch (e: Exception) {
-                val key = if (e.message == "DISCONNECT_TO_UPDATE") app.slipnet.R.string.subscription_disconnect else app.slipnet.R.string.subscription_failed
+                val key = subscriptionErrorResource(e.message)
                 _uiState.value = _uiState.value.copy(subscriptionNotice = resources.getString(key))
             } finally {
                 _uiState.value = _uiState.value.copy(updatingSubscriptions = _uiState.value.updatingSubscriptions - id)
@@ -1328,14 +1328,14 @@ class MainViewModel @Inject constructor(
         if (onlyUnavailable(selected)) return
         val members = selected.filter { !it.needsCredentials && !it.isExpired && it.tunnelType.isAvailable() }
         if (members.isEmpty()) { _uiState.value = _uiState.value.copy(error = "Select a collection with an available, unexpired profile"); return }
-        val ordered = members.filter { ProfileCollections.isDns(it) == dnsOnly }.sortedBy { it.id }
+        val ordered = ProfileCollections.ordered(members.filter { ProfileCollections.isDns(it) == dnsOnly }, _uiState.value.pingResults)
         val batchKey = ProfileCollections.key(members.first()) + ":" + dnsOnly
         val offset = (testBatchOffsets[batchKey] ?: 0).coerceAtMost((ordered.size - 1).coerceAtLeast(0))
         val candidates = (ordered.drop(offset) + ordered.take(offset)).take(50)
         val originalResults = _uiState.value.pingResults
         smartConnections.cancel(); smartConnections.clearResults()
-        val memberIds = members.map { it.id }.toSet()
-        val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { id -> candidates.any { it.id == id } })
+        val memberIds = selected.map { it.id }.toSet()
+        val historical = app.slipnet.domain.model.ProbeCache.historical(originalResults.filterKeys { it in memberIds })
         _uiState.value = _uiState.value.copy(isPingRunning = true, collectionConnect = connectAfter,
             selectedCollection = ProfileCollections.key(members.first()), collectionProgress = if (dnsOnly) "Testing configured DNS" else "Testing direct paths",
             pingResults = _uiState.value.pingResults + historical + candidates.associate { it.id to PingResult.Pending })
@@ -1365,7 +1365,7 @@ class MainViewModel @Inject constructor(
                 }
                 val needsReview = candidates.any { _uiState.value.pingResults[it.id] == PingResult.ReviewIdentity }
                 when (app.slipnet.domain.model.CollectionPhase.completion(passed, untested, needsReview,
-                        !dnsOnly && members.any { ProfileCollections.isDns(it) }, includeDnsAfterSuccess = !connectAfter && !dnsOnly)) {
+                        !dnsOnly && members.any { ProfileCollections.isDns(it) }, includeDnsAfterSuccess = false)) {
                     app.slipnet.domain.model.CollectionPhase.Completion.INCOMPLETE ->
                         _uiState.value = _uiState.value.copy(error = "The test stopped before every path was tested", collectionPrompt = false)
                     app.slipnet.domain.model.CollectionPhase.Completion.OFFER_DNS ->

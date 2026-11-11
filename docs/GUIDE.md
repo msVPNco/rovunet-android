@@ -1,4 +1,4 @@
-> Inherited advanced engineering reference. For current alpha16.1 release, signing and installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
+> Inherited advanced engineering reference. For the current alpha19 release, signing and installation, connection behavior, supported release files and limits, start with [the user guide](USER_GUIDE.md), [status](STATUS.md) and [build notes](BUILDING.md). This reference is not a device-validation report.
 
 # Rovunet — Guide
 

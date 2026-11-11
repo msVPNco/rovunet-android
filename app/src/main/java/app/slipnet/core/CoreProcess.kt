@@ -58,7 +58,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
             require(it.isFile && it.canExecute()) { "Core lifecycle helper missing" }
             command.add(it.absolutePath)
         }
-        val auxiliary = outboundProtocol == "amneziawg"
+        val auxiliary = outboundProtocol in setOf("amneziawg", "anytls", "tuic", "mieru")
         val executable = if (auxiliary) File(binary.parentFile, "librovunet_awg.so") else binary
         require(executable.isFile && executable.canExecute()) { "Core binary missing for this ABI" }
         command.add(executable.absolutePath)

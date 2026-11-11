@@ -56,6 +56,13 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             CoreLink.parse(link)
             return link
         }
+        if (kind == "mierus") {
+            val query = linkedMapOf("profile" to name, "port" to this["port"], "protocol" to this["protocol"].ifBlank { "TCP" })
+            for (key in listOf("multiplexing", "handshake-mode", "traffic-pattern")) if (this[key].isNotBlank()) query[key] = this[key]
+            val link = "mierus://${enc(this["username"])}:${enc(this["auth"])}@${if (':' in host) "[$host]" else host}?" + query.entries.joinToString("&") { enc(it.key) + "=" + enc(it.value) }
+            CoreLink.parse(link)
+            return link
+        }
         val q = fields.filterKeys { it !in setOf("server", "port", "auth") }.toMutableMap()
         if (kind == "vless") {
             if (q["type"] != "tcp" && q["type"] != "raw") q.remove("flow")
@@ -76,6 +83,8 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
     }
     companion object {
         fun fresh(mode: String) = when (mode) {
+            "anytls", "tuic" -> CoreForm(mode, mapOf("port" to "443"))
+            "mierus" -> CoreForm(mode, mapOf("port" to "443", "protocol" to "TCP"))
             "wireguard" -> CoreForm(mode, mapOf("mtu" to "1420", "allowedips" to "0.0.0.0/0", "persistentkeepalive" to "25"))
             "hysteria2" -> CoreForm(mode, mapOf("port" to "443"))
             "trojan" -> CoreForm(mode, mapOf("port" to "443", "type" to "tcp", "security" to "tls"))
@@ -105,6 +114,12 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             fields["server"] = uri.host.removeSurrounding("[", "]")
             fields["port"] = (if (uri.port < 0) 443 else uri.port).toString()
             fields["auth"] = dec(uri.rawUserInfo)
+            if (uri.scheme.equals("mierus", ignoreCase = true)) {
+                val credentials = uri.rawUserInfo.split(':', limit = 2).map(::dec)
+                fields["username"] = credentials[0]; fields["auth"] = credentials[1]
+                fields["port"] = parsed.outbound.getJSONObject("settings").getInt("port").toString()
+                fields.remove("profile")
+            }
             val kind = if (uri.scheme in setOf("hysteria2", "hy2")) "hysteria2" else uri.scheme.lowercase()
             if (kind == "vmess" && fields.containsKey("encryption")) {
                 fields["cipher"] = fields.getValue("encryption"); fields.remove("encryption")

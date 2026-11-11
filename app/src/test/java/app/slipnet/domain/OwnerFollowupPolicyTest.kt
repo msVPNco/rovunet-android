@@ -6,9 +6,11 @@ import org.junit.Test
 
 class OwnerFollowupPolicyTest {
     private val radios = listOf("wifi" to setOf(1), "mobile" to setOf(0))
-    @Test fun wholeCollectionCanContinueToDnsWithoutChangingConnectFallbackPolicy() {
-        assertEquals(CollectionPhase.Completion.OFFER_DNS, CollectionPhase.completion(true, false, false, true, includeDnsAfterSuccess = true))
+    @Test fun wholeCollectionNeverOffersDnsAfterVerifiedDirectSuccess() {
+        assertEquals(CollectionPhase.Completion.COMPLETE, CollectionPhase.completion(true, false, false, true, includeDnsAfterSuccess = true))
         assertEquals(CollectionPhase.Completion.COMPLETE, CollectionPhase.completion(true, false, false, true))
+        assertEquals(CollectionPhase.Completion.OFFER_DNS, CollectionPhase.completion(false, false, false, true))
+        assertEquals(CollectionPhase.Completion.NEEDS_REVIEW, CollectionPhase.completion(false, false, true, true))
         assertEquals(CollectionPhase.Completion.INCOMPLETE, CollectionPhase.completion(true, true, false, true, includeDnsAfterSuccess = true))
     }
     @Test fun coreDiagnosticsClassifyWithoutRetainingSecretsOrCallingReadyAHandshake() {
