@@ -12,6 +12,7 @@ TAG='macos-v0.1.6-beta'
 RELEASE=442151196
 APPROVED={'Rovunet-macOS-0.1.6-beta-AppleSilicon-arm64.pkg': [172531604, '7899ccb8734fb1ec56e74ed03ef971a72b28c74fe941b6f851318ce4a2e6a6ee'], 'Rovunet-macOS-0.1.6-beta-AppleSilicon-arm64.dmg': [172792476, 'd080c04a325ce0210b1555a82ae07cdd8510fc1463ce76bb95efa7e1074a8865'], 'Rovunet-macOS-0.1.6-beta-Intel-x64.pkg': [186345504, 'a5e4074dafa27fc06fa27bebd27847b2d8ca9802baf3739291cc3f916f9f9320'], 'Rovunet-macOS-0.1.6-beta-Intel-x64.dmg': [186581944, 'ccd28c53b938c566bbd24206a7b8b05f1321784fe51e52faacd2b5e3e7577aa1'], 'Rovunet-macOS-0.1.6-beta-source.zip': [11231130, 'bb3f2f5d768e11415e7819997713367935e1ceb74d02cc80c013f82c6aca2687'], 'Rovunet-macOS-0.1.6-beta-native-source.zip': [22858193, 'f40ca8934962540b548a703dfece9eef219025086072788b79d9821c16866902'], 'SHA256SUMS.txt': [5027, '9227db3336b1ee911741ec5dfc2899e076e651c42cccefeff33a3332ff3e8c2f'], 'VERIFICATION.json': [9586, '5d3f54e2bb1f6429d03b6d8ff5c876e421b5606663e3b2405b0e0241daf90384'], 'RELEASE-FA.md': [3950, '7f64e1772997772c48273ae5ea90b69c88254cb7e779228034ce4abbfea50f2c'], 'RELEASE-EN.md': [2683, '98a0a904baf565af04009cd651083e59db4303e11aeb471a35141994204b817c'], 'RELEASE-RU.md': [3993, '8b7c5eb266114200c71843c0552edaa625832d7ee1c79437c6fcc7bec4b36c87'], 'RELEASE-ZH-CN.md': [2136, '711cb376588196bf85868fd9d0182983d60a3c9484032967b68397f16b3f2f84']}  # Replaced with the locally verified immutable upload plan.
 BODY_SHA='5f17af8db90dca81e4e5259b2e48e33f7f0aea353fdcc2dd85ceb03d4eff957b'  # Replaced with the prepared four-language release body digest.
+OPTIONAL={'GITHUB-RELEASE-BODY.md':[3469,'8a492e39263251bc801eb805f36677e9e3768bc3c8eabd3d9f88eb89b01ba9c8']}
 
 def digest(path):
     with path.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
@@ -77,7 +78,9 @@ def main():
         print(json.dumps({'preflight':True,'release':RELEASE,'draft':current['draft'],'prerelease':True,'fixedFileDigestsChecked':12,'source':SOURCE,'transportBlobReadAndVerified':True,'buildOrSigningCommands':False}));return
     args.output.mkdir(parents=True,exist_ok=True);cache=args.output/'chunks';cache.mkdir(exist_ok=True)
     existing={a['name']:a for a in current['assets']}
-    assert set(existing)<=set(APPROVED),'Unexpected draft assets require review'
+    assert set(existing)<=set(APPROVED)|set(OPTIONAL),'Unexpected draft assets require review'
+    for name,(size,sha) in OPTIONAL.items():
+        if name in existing:assert_asset(existing[name],{'name':name,'bytes':size,'sha256':sha})
     for entry in manifest['files']:
         if entry['name'] in existing:assert_asset(existing[entry['name']],entry)
     pending=[e for e in manifest['files'] if e['name'] not in existing]
@@ -88,8 +91,10 @@ def main():
         print(json.dumps({'uploaded':entry['name'],'bytes':entry['bytes'],'sha256':entry['sha256'],'rebuilt':False,'resigned':False}),flush=True)
         return asset
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:list(pool.map(transfer,pending))
-    current=approved_release(manifest);assets={a['name']:a for a in current['assets']};assert set(assets)==set(APPROVED)
+    current=approved_release(manifest);assets={a['name']:a for a in current['assets']};assert set(APPROVED)<=set(assets)<=set(APPROVED)|set(OPTIONAL)
     for entry in manifest['files']:assert_asset(assets[entry['name']],entry)
+    for name,(size,sha) in OPTIONAL.items():
+        if name in assets:assert_asset(assets[name],{'name':name,'bytes':size,'sha256':sha})
     if current['draft']:
         current=api('/releases/'+str(RELEASE),method='PATCH',data={'draft':False,'prerelease':True,'make_latest':'false','target_commitish':SOURCE})
     assert not current['draft'] and current['prerelease'] and current['tag_name']==TAG

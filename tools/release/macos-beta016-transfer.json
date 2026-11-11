@@ -5,7 +5,7 @@
   "sourceCommit": "9b2acee98d376a0c9edf50462c0698253dd3caa4",
   "draftReleaseId": 442151196,
   "bodySHA256": "5f17af8db90dca81e4e5259b2e48e33f7f0aea353fdcc2dd85ceb03d4eff957b",
-  "ready": false,
+  "ready": true,
   "files": [
     {
       "name": "Rovunet-macOS-0.1.6-beta-AppleSilicon-arm64.pkg",
