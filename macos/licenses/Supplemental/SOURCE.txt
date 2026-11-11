@@ -1,0 +1,14 @@
+Rovunet AnyTLS, TUIC and Mieru adapter: GNU GPL version 3.
+Mihomo source: https://github.com/MetaCubeX/mihomo/tree/3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8
+Adapter source: macos/native/extra; macos/scripts/build-extra.py uses an overlay
+to build it without changing the AWG/TUN adapters in the pinned source tree.
+Corresponding Mihomo source and all vendored dependencies accompany this private
+delivery in Rovunet-macOS-0.1.0-dev.6-native-source.zip. The Mac adapter and build
+script accompany it in Rovunet-macOS-0.1.0-dev.6-source.zip.
+Dependency license texts are included under licenses/AmneziaWG/dependencies.
+The explicit import dialects follow Android SupplementalCore at
+5e66f167c85aecac26008d930a7a24df6f2a31f2. Full mieru:// documents and multiple
+Mieru bindings are rejected; the official single-binding mierus:// format is supported.
+
+Go 1.27.3; CGO_ENABLED=0 GOOS=darwin GOARCH=arm64:
+python macos/scripts/build-extra.py --source native-source --output rovunet-extra --go go

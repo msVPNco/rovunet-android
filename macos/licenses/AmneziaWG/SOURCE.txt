@@ -1,0 +1,5 @@
+AmneziaWG gateway: GNU GPL version 3, Mihomo source 3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8.
+Corresponding source and vendored dependencies accompany this private delivery in Rovunet-macOS-0.1.0-dev.6-native-source.zip.
+Adapter source: macos/native/awg. Original Android APK source e6359aae2e2e19164ad7e9ec87267f09a0c1152d, adapted only for Mac packaging and Windows test shutdown.
+Build using Go 1.27.3, CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 (or amd64):
+go build -mod=vendor -buildvcs=false -trimpath -ldflags="-s -w -checklinkname=0" -o rovunet-awg ./cmd/rovunet-awg

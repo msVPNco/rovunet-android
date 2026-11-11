@@ -1,0 +1,14 @@
+Rovunet TUN native client, privileged service and worker.
+License: GNU GPL version 3, as part of the pinned Mihomo-derived native adapters.
+Mihomo: https://github.com/MetaCubeX/mihomo/tree/3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8
+Adapter: macos/native/tun; copied to cmd/rovunet-tun in the corresponding source.
+The framework-call trampolines in dl.go/dl_darwin_*.s come from vendored
+github.com/metacubex/sing-tun/internal/systemconfiguration at this pin.
+Dependency license texts are included under licenses/AmneziaWG/dependencies.
+The complete pinned tree, adapters and vendor accompany this private delivery as
+Rovunet-macOS-0.1.0-dev.6-native-source.zip. No external Go download is needed.
+
+Go 1.27.3, CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 (or amd64):
+go build -mod=vendor -tags with_gvisor -buildvcs=false -trimpath -ldflags="-s -w -checklinkname=0" -o rovunet-tun ./cmd/rovunet-tun
+For data-plane tests use -tags with_gvisor as well. The scripts-only Installer
+is generated from the final hardened native signature; see scripts/package-tun-service.py.

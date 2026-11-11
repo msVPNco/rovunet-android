@@ -1,0 +1,97 @@
+# github.com/metacubex/cpu v0.1.2
+## explicit; go 1.20
+github.com/metacubex/cpu
+# github.com/metacubex/hkdf v0.1.0
+## explicit; go 1.20
+github.com/metacubex/hkdf
+github.com/metacubex/hkdf/hkdf
+# github.com/metacubex/hpke v0.1.0
+## explicit; go 1.20
+github.com/metacubex/hpke
+# github.com/metacubex/mlkem v0.1.0
+## explicit; go 1.20
+github.com/metacubex/mlkem
+# github.com/metacubex/quic-go v0.61.1-0.20260727080200-2548683b76f4
+## explicit; go 1.20
+github.com/metacubex/quic-go
+github.com/metacubex/quic-go/congestion
+github.com/metacubex/quic-go/internal/ackhandler
+github.com/metacubex/quic-go/internal/congestion
+github.com/metacubex/quic-go/internal/handshake
+github.com/metacubex/quic-go/internal/monotime
+github.com/metacubex/quic-go/internal/protocol
+github.com/metacubex/quic-go/internal/qerr
+github.com/metacubex/quic-go/internal/utils
+github.com/metacubex/quic-go/internal/utils/linkedlist
+github.com/metacubex/quic-go/internal/utils/ringbuffer
+github.com/metacubex/quic-go/internal/utils/tree
+github.com/metacubex/quic-go/internal/wire
+github.com/metacubex/quic-go/monotime
+github.com/metacubex/quic-go/qlog
+github.com/metacubex/quic-go/qlogwriter
+github.com/metacubex/quic-go/qlogwriter/jsontext
+github.com/metacubex/quic-go/quicvarint
+# github.com/metacubex/randv2 v0.2.0
+## explicit; go 1.18
+github.com/metacubex/randv2
+github.com/metacubex/randv2/internal/byteorder
+github.com/metacubex/randv2/internal/chacha8rand
+github.com/metacubex/randv2/internal/goarch
+# github.com/metacubex/tls v0.1.9
+## explicit; go 1.20
+github.com/metacubex/tls
+# github.com/miekg/dns v1.1.63
+## explicit; go 1.19
+github.com/miekg/dns
+# github.com/stretchr/testify v1.12.1
+## explicit; go 1.17
+# golang.org/x/crypto v0.33.0
+## explicit; go 1.20
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/internal/alias
+golang.org/x/crypto/internal/poly1305
+golang.org/x/crypto/sha3
+# golang.org/x/exp v0.0.0-20240904232852-e7e105dedf7e
+## explicit; go 1.20
+golang.org/x/exp/constraints
+golang.org/x/exp/slices
+# golang.org/x/mod v0.20.0
+## explicit; go 1.18
+golang.org/x/mod/semver
+# golang.org/x/net v0.35.0
+## explicit; go 1.18
+golang.org/x/net/bpf
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
+# golang.org/x/sync v0.11.0
+## explicit; go 1.18
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.30.0
+## explicit; go 1.18
+golang.org/x/sys/cpu
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/tools v0.24.0
+## explicit; go 1.19
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/packages
+golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/internal/aliases
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gcimporter
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/pkgbits
+golang.org/x/tools/internal/stdlib
+golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typesinternal
+golang.org/x/tools/internal/versions

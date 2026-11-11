@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+artifacts/
+engines/osx-*/
+engines/win-*/
+.DS_Store

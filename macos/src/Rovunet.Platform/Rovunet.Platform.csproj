@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><ProjectReference Include="../Rovunet.Core/Rovunet.Core.csproj" /></ItemGroup>
+</Project>

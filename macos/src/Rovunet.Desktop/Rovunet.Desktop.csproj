@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><AssemblyName>Rovunet</AssemblyName><AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
+  <PropertyGroup><RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Rovunet.Platform/Rovunet.Platform.csproj" />
+    <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+    <EmbeddedResource Include="../../../windows/src/Rovunet.Desktop/Locales/*.json" Link="Locales/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Locales/**/*.json" />
+    <AvaloniaResource Include="../../../windows/src/Rovunet.Desktop/Assets/rovunet.ico" Link="Assets/rovunet.ico" />
+    <AvaloniaResource Include="../../../windows/src/Rovunet.Desktop/Assets/*.ttf" Link="Assets/%(Filename)%(Extension)" />
+    <Compile Include="../../../windows/src/Rovunet.Desktop/ResolverCatalog.cs" Link="Shared/ResolverCatalog.cs" />
+    <EmbeddedResource Include="../../../windows/transports/resolverdata/*" LogicalName="Rovunet.ResolverData.%(Filename)%(Extension)" />
+    <Compile Include="../../../windows/src/Rovunet.Desktop/PublicFeed.cs" Link="Shared/PublicFeed.cs" />
+  </ItemGroup>
+</Project>

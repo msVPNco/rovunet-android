@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Rovunet.Core/Rovunet.Core.csproj" />
+    <Compile Include="../../../windows/tests/Rovunet.Tests/*.cs" Link="Shared/%(Filename)%(Extension)" />
+    <Compile Include="../../../windows/src/Rovunet.Desktop/UiPolicy.cs" Link="Shared/UiPolicy.cs" />
+    <Compile Include="../../../windows/src/Rovunet.Desktop/QrCodeReader.cs" Link="Shared/QrCodeReader.cs" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
+  </ItemGroup>
+</Project>

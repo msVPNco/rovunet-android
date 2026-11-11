@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/Rovunet.Agent/Rovunet.Agent.csproj" /></ItemGroup>
+  <Target Name="CopyProbeAgent" AfterTargets="Build">
+    <ItemGroup><ProbeAssets Include="../../src/Rovunet.Agent/bin/$(Configuration)/$(TargetFramework)/Rovunet.Agent.*" /></ItemGroup>
+    <Copy SourceFiles="@(ProbeAssets)" DestinationFolder="$(TargetDir)" />
+  </Target>
+</Project>

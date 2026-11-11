@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Rovunet.Core</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../windows/src/Rovunet.Core/*.cs" Exclude="../../../windows/src/Rovunet.Core/Wire.cs" Link="Shared/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,8 @@
+Iranian Lion and Sun language flag.
+Source: https://commons.wikimedia.org/wiki/File:State_flag_of_Iran_(1964%E2%80%931980).svg
+Original SVG: https://upload.wikimedia.org/wikipedia/commons/f/fd/State_flag_of_Iran_%281964%E2%80%931980%29.svg
+Retrieved 2026-11-11. Wikimedia Commons identifies the work as public domain.
+Vector contributors listed by the source: Sodacan, Pouya, Jooja and ConflictFan.
+The unmodified SVG is retained in macos/src/Rovunet.Desktop/Assets/iran-lion-sun.svg.
+scripts/generate-iran-flag.py converts its paths to Avalonia vector drawings.
+The app uses native geometry, without a font glyph or an extra SVG runtime.

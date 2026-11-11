@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<installer-gui-script minSpecVersion="2">
+  <title>Rovunet 0.1.6 Beta — Apple Silicon</title>
+  <product id="org.rovunet.macos.development" version="0.1.6.0"/>
+  <options customize="never" require-scripts="false" hostArchitectures="arm64" rootVolumeOnly="true"/>
+  <domains enable_localSystem="true" enable_currentUserHome="false" enable_anywhere="false"/>
+  <volume-check><allowed-os-versions><os-version min="15.0"/></allowed-os-versions></volume-check>
+  <welcome file="welcome.html" mime-type="text/html"/>
+  <readme file="readme.html" mime-type="text/html"/>
+  <choices-outline><line choice="default"><line choice="rovunet"/></line></choices-outline>
+  <choice id="default" title="Rovunet 0.1.6 Beta"/>
+  <choice id="rovunet" visible="false"><pkg-ref id="org.rovunet.macos.development.pkg"/></choice>
+  <pkg-ref id="org.rovunet.macos.development.pkg" version="0.1.6.0" onConclusion="none">Rovunet-App.pkg</pkg-ref>
+  <pkg-ref id="org.rovunet.macos.development.pkg"><must-close><app id="org.rovunet.macos.development"/></must-close></pkg-ref>
+</installer-gui-script>

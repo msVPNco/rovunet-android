@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-11",
+  "xraySource": "a4a3dff5b20c2faae567b742c172c7b95e75c083",
+  "slipstreamSource": "c7b265c11dd13d6dfd601bc81d54d61ee9bdde23",
+  "assets": [
+    {
+      "engine": "xray",
+      "rid": "osx-x64",
+      "name": "Xray-macos-64.zip",
+      "url": "https://github.com/XTLS/Xray-core/releases/download/v26.10.31/Xray-macos-64.zip",
+      "sha256": "37c60b63c77ef5edcfb46a0d70349f7d96e0c132e6a356ead4fd20aeeacc5c75",
+      "size": 16442002
+    },
+    {
+      "engine": "xray",
+      "rid": "osx-arm64",
+      "name": "Xray-macos-arm64-v8a.zip",
+      "url": "https://github.com/XTLS/Xray-core/releases/download/v26.10.31/Xray-macos-arm64-v8a.zip",
+      "sha256": "0a05dca3bd311b0bc5a89c7ce56350cab1e829e131e4b2bcd48eb304fac07e9a",
+      "size": 15255983
+    },
+    {
+      "engine": "naive",
+      "rid": "osx-arm64",
+      "name": "naiveproxy-v154.0.8037.49-5-mac-arm64-arm64.tar.xz",
+      "url": "https://github.com/klzgrad/naiveproxy/releases/download/v154.0.8037.49-5/naiveproxy-v154.0.8037.49-5-mac-arm64-arm64.tar.xz",
+      "sha256": "8b330140e0fed15fae71732cefee16f052325c30352ae3e5638a1e9f9d54d542",
+      "size": 2789424
+    },
+    {
+      "engine": "naive",
+      "rid": "osx-x64",
+      "name": "naiveproxy-v154.0.8037.49-5-mac-x64-x64.tar.xz",
+      "url": "https://github.com/klzgrad/naiveproxy/releases/download/v154.0.8037.49-5/naiveproxy-v154.0.8037.49-5-mac-x64-x64.tar.xz",
+      "sha256": "a3904193bd8d099eb034366c19a019f22573171aeece34e8d0206a92f0b8141d",
+      "size": 3472732
+    },
+    {
+      "engine": "slipstream-client",
+      "rid": "osx-arm64",
+      "name": "slipstream-macos-arm64.tar.gz",
+      "url": "https://github.com/Mygod/slipstream-rust/releases/download/v0.1.1/slipstream-macos-arm64.tar.gz",
+      "sha256": "ca48e23090575d4170dea79a077f2c9680d91de9cf5d57e5a666e5d658c1466d",
+      "size": 1745466
+    },
+    {
+      "engine": "slipstream-client",
+      "rid": "osx-x64",
+      "name": "slipstream-macos-x86_64.tar.gz",
+      "url": "https://github.com/Mygod/slipstream-rust/releases/download/v0.1.1/slipstream-macos-x86_64.tar.gz",
+      "sha256": "6e348795a8afbdec141b56c3126cecdedc16c7d88d2894c09d9c2488570276ad",
+      "size": 1912865
+    }
+  ]
+}
