@@ -9,4 +9,5 @@
     <string name="editor_hy2_ports">پورت‌های پرش Hy2 (mport)</string>
     <string name="editor_hy2_interval">فاصلهٔ پرش Hy2 (ثانیه)</string>
     <string name="editor_mieru_username">نام کاربری Mieru</string>
+    <string name="editor_tuic_auth">اطلاعات TUIC به‌صورت UUID:password</string>
 </resources>

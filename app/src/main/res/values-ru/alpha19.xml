@@ -9,4 +9,5 @@
     <string name="editor_hy2_ports">Порты переключения Hy2 (mport)</string>
     <string name="editor_hy2_interval">Интервал переключения Hy2 (секунды)</string>
     <string name="editor_mieru_username">Имя пользователя Mieru</string>
+    <string name="editor_tuic_auth">Данные TUIC (UUID:пароль)</string>
 </resources>

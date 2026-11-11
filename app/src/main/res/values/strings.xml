@@ -15,4 +15,5 @@
     <string name="editor_hy2_ports">Hy2 hopping ports (mport)</string>
     <string name="editor_hy2_interval">Hy2 hopping interval (seconds)</string>
     <string name="editor_mieru_username">Mieru username</string>
+    <string name="editor_tuic_auth">TUIC credentials (UUID:password)</string>
 </resources>

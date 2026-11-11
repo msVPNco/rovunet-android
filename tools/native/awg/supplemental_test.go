@@ -162,7 +162,12 @@ func TestSupplementalEncryptedRelayAndShutdown(t *testing.T) {
 			server, _ := json.Marshal(map[string]any{"mode": "rule", "log-level": "silent", "dns": map[string]bool{"enable": false}, "listeners": []any{listener}, "rules": []string{"MATCH,DIRECT"}})
 			peer := startFixtureChild(t, server, "FIXTURE_READY", "ROVUNET_SUPPLEMENTAL_FIXTURE", "DISABLE_LOOPBACK_DETECTOR=1")
 			runtime := map[string]any{"inbounds": []any{map[string]any{"listen": "127.0.0.1", "port": local, "protocol": "socks", "settings": map[string]any{"auth": "password", "accounts": []any{map[string]string{"user": "test", "pass": "pass"}}}}}, "outbounds": []any{map[string]any{"protocol": kind, "settings": proxy}, map[string]any{"protocol": "freedom"}}}
-			if jar := os.Getenv("CORE_TEST_JAR"); jar != "" {
+			jar := os.Getenv("CORE_TEST_JAR")
+			_, jarError := os.Stat(jar)
+			if os.Getenv("ROVUNET_REQUIRE_KOTLIN") == "true" && jarError != nil {
+				t.Fatal("Kotlin fixture JAR unavailable")
+			}
+			if jar != "" && jarError == nil {
 				dir := t.TempDir()
 				input := filepath.Join(dir, "profile.txt")
 				output := filepath.Join(dir, "runtime.json")

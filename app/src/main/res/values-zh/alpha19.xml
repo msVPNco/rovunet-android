@@ -9,4 +9,5 @@
     <string name="editor_hy2_ports">Hy2 跳跃端口（mport）</string>
     <string name="editor_hy2_interval">Hy2 跳跃间隔（秒）</string>
     <string name="editor_mieru_username">Mieru 用户名</string>
+    <string name="editor_tuic_auth">TUIC 凭据（UUID:密码）</string>
 </resources>

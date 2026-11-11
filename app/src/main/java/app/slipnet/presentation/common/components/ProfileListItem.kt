@@ -96,6 +96,9 @@ fun ProfileListItem(
                     MarqueeText(destination, modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
                     val protocolLabel = if (profile.tunnelType == TunnelType.XRAY) when (profile.coreLink.substringBefore("://").lowercase()) {
+                        "anytls" -> "AnyTLS"
+                        "tuic" -> "TUIC"
+                        "mierus" -> "Mieru"
                         "ss" -> stringResource(R.string.review02_shadowsocks)
                         "trojan" -> stringResource(R.string.review03_trojan)
                         "vmess" -> stringResource(R.string.review03_vmess)
