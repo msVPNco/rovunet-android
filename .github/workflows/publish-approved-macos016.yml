@@ -1,0 +1,34 @@
+name: Publish owner-approved macOS 0.1.6 Beta bytes
+
+# Owner-authorized transfer only: no compiler, packager or signing invocation.
+on: create
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-approved-macos-0.1.6-beta
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'msVPNco/rovunet-app' && github.event.ref_type == 'branch' && startsWith(github.event.ref, 'publish/macos-0.1.6-beta-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Read the exact approved transfer manifest
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+      - name: Verify frozen bytes, upload and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 tools/release/publish_approved_macos016.py
+          --manifest tools/release/macos-beta016-transfer.json
+          --output "$RUNNER_TEMP/macos-beta016-approved"
