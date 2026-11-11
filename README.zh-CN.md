@@ -28,7 +28,7 @@
 | **Android** | 公开版本：**0.3.0-alpha19 Full，代码 40** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [Android 页面](docs/android/README.zh-CN.md) |
 | **Windows** | **0.1.1 Beta · x64 · 预发布** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Windows 页面](windows/README.md) |
 | **Linux** | 计划中 | 暂无发布 |
-| **macOS** | 计划中 | 发布将使用标签 `macos-v<version>` |
+| **macOS** | **0.1.6 Beta · Apple Silicon / Intel · 准备发布中** | [Mac 页面](docs/macos/README.zh-CN.md) · Intel：有限测试 |
 
 每个平台都有各自的标签、文件、校验和与签名。GitHub 的“Latest”针对整个仓库，并非各平台专属更新源，请从名称包含你所用平台的发布下载。标签与更新规则见[平台与发布渠道](docs/PLATFORMS.md)。在某个发布明确说明之前，此表中的任何内容都不代表桌面端的协议支持或安装测试结论。
 
@@ -80,3 +80,4 @@ PDF 保留 alpha15.4 版本和版式；新的账户状态、菜单与空闲行�
 AGPL-3.0：[LICENSE](LICENSE)、[NOTICE](NOTICE.md)。Xray-core 为 MPL-2.0，版本与声明保留。
 
 基于 Anonvector 的 [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full。Rovunet 是独立项目，与 SlipNet 无隶属关系。
+

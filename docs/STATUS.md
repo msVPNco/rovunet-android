@@ -2,6 +2,10 @@
 
 Subscription refresh/reimport, direct-first DNS fallback, moving labels, manual controls and AnyTLS/TUIC/Mieru are implemented. [Notes](releases/alpha19.md), [validation](releases/alpha19-completion.md) and [provenance](releases/alpha19-provenance.json). No new physical-phone, carrier or screen-off battery/data measurement is claimed. Panel WireGuard/Hy2 remains a separate investigation.
 
+## macOS 0.1.6 Beta — publication in preparation
+
+Apple Silicon's dev.6 functional base was tested and accepted by the owner on a real Mac. **Intel: limited testing**, with host and package validation only. Both require macOS 15+. This Beta changes version and packaging metadata, retaining the functional base. [Mac guide](macos/README.md). Installers are prepared locally; GitHub release assets have not been uploaded yet.
+
 ## Historical alpha18.1 status
 
 ## Windows 0.1.1 Beta
@@ -51,3 +55,4 @@ Alpha18.1 Full, код 39: обновление подписки прямо на
 Локальные тесты и эмулятор не доказывают экономию батареи телефона, ночную/Doze-стабильность, доступность оператора или исправление сообщённых узлов WireGuard/Hy2 панели. Новая приёмка на физическом телефоне не заявляется. AnyTLS, TUIC и Mieru остаются на будущее. Новых Lite/desktop-файлов нет.
 
 [CI](https://github.com/msVPNco/rovunet-app/actions/runs/42905223390): 144 JVM tests; 18 real local encrypted TCP/UDP modes; AWG 1/2/3.1 TCP/UDP and shutdown fixtures. Android device/minified gates are recorded in [release provenance](releases/alpha18-1-provenance.json).
+

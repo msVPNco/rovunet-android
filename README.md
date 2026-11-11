@@ -28,7 +28,7 @@
 | **Android** | Public release: **0.3.0-alpha19 Full, code 40** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [Android page](docs/android/README.md) |
 | **Windows** | **0.1.1 Beta · x64 · Pre-release** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Windows page](windows/README.md) |
 | **Linux** | Planned | No release yet |
-| **macOS** | Planned | Releases will be tagged `macos-v<version>` |
+| **macOS** | **0.1.6 Beta · Apple Silicon / Intel · publication in preparation** | [Mac page](docs/macos/README.md) · Intel: limited testing |
 
 Each platform has its own tags, files, checksums and signing. The repository-wide “Latest” badge on GitHub is not a per-platform feed, so always download from the release that names your platform. Rules for tags and updates: [Platforms and release channels](docs/PLATFORMS.md). Nothing in this table is a claim of desktop protocol support or installer testing until a release says so.
 
@@ -80,3 +80,4 @@ If you would like to help improve Rovunet, donations are voluntary and never req
 AGPL-3.0: [LICENSE](LICENSE), [NOTICE](NOTICE.md). Xray-core is under MPL-2.0; source pins and notices are retained.
 
 Based on [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full by Anonvector. Rovunet is an independent project, not affiliated with SlipNet.
+

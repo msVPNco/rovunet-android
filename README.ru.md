@@ -28,7 +28,7 @@
 | **Android** | Публичный выпуск: **0.3.0-alpha19 Full, код 40** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [Страница Android](docs/android/README.ru.md) |
 | **Windows** | **0.1.1 Beta · x64 · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Страница Windows](windows/README.md) |
 | **Linux** | Планируется | Выпусков пока нет |
-| **macOS** | Планируется | Выпуски будут с тегом `macos-v<version>` |
+| **macOS** | **0.1.6 Beta · Apple Silicon / Intel · подготовка публикации** | [Страница Mac](docs/macos/README.ru.md) · Intel: ограниченное тестирование |
 
 У каждой платформы свои теги, файлы, контрольные суммы и подпись. «Latest» на GitHub относится ко всему репозиторию и не является каналом конкретной платформы, поэтому скачивайте из выпуска, в названии которого указана ваша платформа. Правила тегов и обновлений: [Платформы и каналы выпусков](docs/PLATFORMS.md). Пока выпуск прямо не сообщает об обратном, ничто в этой таблице не означает поддержку протоколов или проверенную установку на десктопе.
 
@@ -80,3 +80,4 @@ PDF сохраняют оформление и редакцию alpha15.4; но�
 AGPL-3.0: [LICENSE](LICENSE), [NOTICE](NOTICE.md). Xray-core — MPL-2.0; версии и уведомления сохранены.
 
 На основе [SlipNet](https://github.com/anonvector/SlipNet) 2.5.6 Full автора Anonvector. Rovunet — независимый проект, не связанный официально со SlipNet.
+

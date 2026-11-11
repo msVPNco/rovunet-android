@@ -8,7 +8,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 | Android | alpha19/code40 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
 | Windows | Public **0.1.1 Beta x64** (pre-release); [scope and limits](../windows/docs/STATUS.md) | `windows-v0.1.1-beta` (prerelease) | [Windows installer/source](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) |
 | Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
-| macOS | Planned for this repository | `macos-v<version>` | macOS-specific package, when implemented |
+| macOS | **0.1.6 Beta; publication in preparation**; Apple Silicon owner-accepted base; **Intel: limited testing**; macOS 15+ | `macos-v0.1.6-beta` | [Mac page](macos/README.md); install assets not uploaded yet |
 
 This records repository organization, not a claim of desktop protocol support,
 installation testing, code signing or a completed installer. Desktop work must
@@ -48,7 +48,7 @@ appropriate for new desktop code; coordinate its path with the existing work.
 
 ## Русский
 
-Android, Windows и будущая macOS находятся в одном репозитории. У каждой платформы
+Android, Windows и macOS находятся в одном репозитории. У каждой платформы
 свои теги, файлы, хеши и подпись; общий Latest не является каналом Android.
 Разработка Android приостановлена, кроме явно запрошенной совместимости с новым
 именем. Новая публикация требует одобрения владельца; оформление README и история
@@ -56,5 +56,6 @@ Android, Windows и будущая macOS находятся в одном реп
 
 ## 简体中文
 
-Android、Windows 与未来 macOS 共用此仓库，各平台使用独立标签、文件、校验和及签名。
+Android、Windows 与 macOS 共用此仓库，各平台使用独立标签、文件、校验和及签名。
 全仓库 Latest 不是 Android 专用更新渠道。所有者已恢复 Android 开发并批准 alpha19；后续反馈进入待办。新版本须经所有者批准发布，保留 README 版式与历史发布证据。
+
