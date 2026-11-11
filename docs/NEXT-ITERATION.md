@@ -6,6 +6,20 @@ The owner explicitly authorized implementation and release on 2026-11-10. This s
 
 Next priority: validate physical-phone whole-card cancellation, low-end UI, screen-off battery/data and the reported panel WG/Hy2 endpoints; finish remaining existing-format options with explicit rejection. Then AnyTLS and TUIC, followed by Mieru. AmneziaWG is already included this iteration. Do not repeat the previously reported Hev alert without new evidence.
 
+## Planned Android follow-up — 2026-11-11
+
+Backlog recording only: this entry does not authorize application implementation, builds or publication. Recheck each reported gap against the implementation before changing it; preserve existing desktop work and README formatting.
+
+1. Complete Android manual creation/editing for engine-supported options: Shadowsocks 2022 methods with key validation; Hy2 `mport`/`hop-interval`; supported `cs`/`fm` per protocol; AmneziaWG creation from scratch with compatible single-peer parameters; and supported advanced VLESS encryption, WebSocket heartbeat and mKCP settings. Extend existing family forms rather than duplicating protocol buttons. Preserve effective settings through import, edit, save and export; reject unsupported settings explicitly.
+2. Add external `wireguard://` link handling to the Android import flow, with the same validation and user review as other imports.
+3. Validate the reported panel WireGuard/Hy2 paths on a physical phone, comparing a known-working profile and checking server/client agreement and actual data transfer. Source-format compatibility alone does not establish reachability or the root cause.
+4. Complete physical-phone whole-collection tests and cancellation, repeated connect/disconnect, Wi-Fi/mobile handover, lower-end UI responsiveness, and screen-off/idle battery and data measurements. Keep manual selection intact and distinguish automated/emulator evidence from physical-device results.
+5. After existing-format completeness and validation, consider AnyTLS and TUIC, then Mieru. AmneziaWG engine/import support already shipped in alpha18.1; its remaining form/field validation work is not a new protocol implementation.
+
+Track capability status separately as import, manual form, runtime engine, verified data transfer and published version; do not count a menu label as complete support.
+
+For the separate server investigation, first inspect the server environment, then test a compatible new protocol independently and obtain an importable phone configuration. Panel integration or replacement of existing Hy2/WireGuard outputs is a later decision based on physical-phone data transfer; no panel/server changes are made by this documentation update.
+
 ## Historical planning and observations
 
 The owner authorized implementation on a separate review branch, GitHub checks and a test APK on 2026-11-10; merging and release still require acceptance. See [alpha18 review](releases/alpha18-review.md). Keep the published alpha17/code36 APK unchanged. Current decisions below supersede older planning notes, including the old request to move Patterniha beside other providers.
