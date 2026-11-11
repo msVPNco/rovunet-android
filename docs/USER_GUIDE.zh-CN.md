@@ -1,8 +1,10 @@
-# Rovunet 用户指南 — alpha18.1
+# Rovunet 用户指南 — alpha19
 
-Alpha18.1 Full（版本代码 39）支持直接在集合卡片更新订阅、可选名称、提供方报告的流量和到期时间、兼容的 `cs`/`fm`、Shadowsocks 2022、Hy2 端口跳跃及单对端 AmneziaWG 导入。保留柔和 Soft Pop 主题、仅界面可见时的延迟测量、有次数限制的智能恢复、隔离的 Slipstream 检测及原生停止改进。内置列表移除了 Patterniha，既有用户导入保持不变。
+Alpha19：重复导入 URL 会刷新原订阅。直接路径失败并获同意后才检查 DNS。长文字在固定单行内滚动。添加 AnyTLS、TUIC v5 和单端口 Mieru `mierus://`。[Alpha19](releases/alpha19.md)。
 
-本地和模拟器测试不证明实体手机省电、整夜/Doze 稳定、运营商网络可达或已修复面板 WireGuard/Hy2 节点。未声称有新的实体手机验收。AnyTLS、TUIC 和 Mieru 留待后续；没有新的 Lite 或桌面安装包。
+Alpha19 Full（版本代码 40）支持直接在集合卡片更新订阅、可选名称、提供方报告的流量和到期时间、兼容的 `cs`/`fm`、Shadowsocks 2022、Hy2 端口跳跃及单对端 AmneziaWG 导入。保留柔和 Soft Pop 主题、仅界面可见时的延迟测量、有次数限制的智能恢复、隔离的 Slipstream 检测及原生停止改进。内置列表移除了 Patterniha，既有用户导入保持不变。
+
+本地和模拟器测试不证明实体手机省电、整夜/Doze 稳定、运营商网络可达或已修复面板 WireGuard/Hy2 节点。未声称有新的实体手机验收。添加了 AnyTLS、TUIC v5 和单端口 Mieru；没有新的 Lite 或桌面安装包。
 
 **订阅：**在集合卡片选择更新即可原地更新；进度会阻止重复点击，结果留在首页。替换现有配置仍需断开 VPN。名称可留空：依次使用显式/已存名称、安全的提供方标题、主机名。同一响应的 `subscription-userinfo` 提供双向总流量、上限和到期时间；缺失字段保持未知，显示快照时间及来源，不是独立审计计量。没有新增定期下载整个订阅的任务。
 
@@ -12,9 +14,9 @@ Panel v1.19 状态在原卡片中显示剩余 GiB 与时间。黄色：≤20% �
 
 Soar 恢复重复协议握手，BOTH 等待 UDP 和 TCP 两项结果。保留显式 TCP-only 及信任检查。本地测试通过不代表特定网络中的解析器可用。
 
-**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。
+**公开 alpha14 至 alpha16（截至代码32）需要直接升级：**下载 [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) 并覆盖安装，**不要卸载或清除数据**。旧更新器内置原仓库地址，网页重定向不能修复该检查。包名与生产签名不变。
 
-[CI](https://github.com/msVPNco/rovunet-app/actions/runs/42905223390)：144 项 JVM 测试、18 种真实加密 TCP/UDP 本地模式、AWG 1/2/3.1 传输和停止测试。Android 及精简 JNI 结果记录在[发布来源信息](releases/alpha18-1-provenance.json)。
+Exact current checks and artifact identities: [alpha19 provenance](releases/alpha19-provenance.json).
 
 HTTPS 订阅提供 **更新** 和 **导入**。新来源一次导入成功后关闭整个窗口；错误保留表单，重复来源地址被拒绝，本地编辑得到保留。更新已有来源前须断开 VPN；移除旧条目仍需审核。可选自动刷新约每 12 小时在合适的网络/电池条件下运行。小集合可用 QR/PNG 分享，过大集合使用文件。
 
@@ -24,7 +26,7 @@ Soar 扫描有快速、高级、E2E 和 Prism。快速/Prism 用配置的 Ed2551
 
 ## 安装与更新
 
-版本为 **alpha18.1 Full，代码 39**。从[公开发布](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
+版本为 **alpha19 Full，代码 39**。从[公开发布](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk)下载签名 APK，直接覆盖公开 alpha14，无需卸载；包名和生产签名均不变。旧 alpha11、私有 Rovunet Test 的身份不同，参见[迁移](UPGRADE.md)。未签名文件不能安装。
 
 需要 Android 7.0/API 24，支持目标 ARM32/ARM64/x86_64，继承的 Naive/Tor 不提供 x86_64。没有承诺新的 Lite 或商店/桌面版本。
 

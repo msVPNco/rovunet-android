@@ -1,8 +1,10 @@
-# Rovunet user guide — alpha18.1 / راهنمای کاربر
+# Rovunet user guide — alpha19 / راهنمای کاربر
 
-Alpha18.1 Full / code 39 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
+**Alpha19:** Import refreshes an existing URL without deleting its source. Direct success finishes collection tests without a DNS prompt; resolver fallback requires failure and consent. Long labels move inside fixed single-line bounds. AnyTLS, TUIC v5 and single-binding Mieru `mierus://` have import, manual and runtime support. Unsupported effective settings are rejected explicitly. [Details](releases/alpha19.md).
 
-Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC and Mieru remain future work. No new Lite or desktop binary is published.
+Alpha19 Full / code 40 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
+
+Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC v5 and single-binding Mieru are included; see alpha19 details. No new Lite or desktop binary is published.
 
 [English](#english) · [فارسی](#فارسی) · [简体中文](USER_GUIDE.zh-CN.md) · [Русский](USER_GUIDE.ru.md)
 
@@ -12,11 +14,11 @@ Automated local/emulator checks do not establish physical-phone battery savings,
 
 **Imports:** supported VLESS/VMess/Trojan `cs` and `fm` are preserved with verified TLS; unsupported masks/scripts/settings are rejected explicitly. Shadowsocks 2022 validates key lengths. Hy2 supports bounded `mport` lists and `hop-interval`. Standard WireGuard sharing URIs and single-peer AmneziaWG `.conf`/supported URI parameters are accepted. AWG runs in a separate authenticated userspace engine; one address per IP family, no scripts, multi-peer or ranged keepalive. Arbitrary core/Mihomo YAML is not executed.
 
-**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
+**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
 
-[CI](https://github.com/msVPNco/rovunet-app/actions/runs/42905223390): 144 JVM tests; 18 real local encrypted TCP/UDP modes; AWG 1/2/3.1 TCP/UDP and shutdown fixtures. Android device/minified gates are recorded in [release provenance](releases/alpha18-1-provenance.json).
+Exact current checks and artifact identities: [alpha19 provenance](releases/alpha19-provenance.json).
 
-HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
+HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, reimporting a saved URL refreshes the existing source, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
 
 Soar scanning offers Quick, Advanced, E2E and Prism. Quick/Prism use authenticated Soar handshakes with the configured Ed25519 key; E2E also checks HTTP 204 or the SSH account with existing trust approval. Advanced is diagnostic DNS only. UDP and TCP are tested independently; Soar scanner defaults to both without rewriting saved connection choices. Imported candidates survive discarded foreign/legacy proof.
 
@@ -27,7 +29,7 @@ Soar restores repeated protocol handshakes and BOTH waits for both UDP/TCP resul
 
 ### Installation and updates
 
-The version is **0.3.0-alpha18.1 Full, code 39**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
+The version is **0.3.0-alpha19 Full, code 40**. Download the signed [published Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk). Public alpha14 can be updated in place: package and production signer are unchanged. Do not uninstall as part of this update. Historical alpha11 and private Rovunet Test have different identities; see [migration](UPGRADE.md). Unsigned preparation files are not installable.
 
 Android 7.0/API 24 is the minimum. ARM32/ARM64 and x86_64 are build targets, but inherited Naive/Tor binaries are absent on x86_64. No new Lite APK is promised. Google Play, App Store and Rovunet desktop GUI versions are not available.
 
@@ -75,20 +77,20 @@ Remote SOCKS data flow and Soar auto/on differences still need field diagnosis. 
 
 ## فارسی
 
-آلفا۱۸.۱ Full با کد ۳۹، آپدیت اشتراک روی همان کارت، نام اختیاری، نمایش مصرف و انقضای اعلام‌شدهٔ ارائه‌دهنده، گزینه‌های سازگار `cs`/`fm`، Shadowsocks 2022، جابه‌جایی پورت Hy2 و ورود AmneziaWG تک‌همتا را اضافه می‌کند. تم‌های آرام Soft Pop، سنجش تأخیر هنگام نمایش اپ، بازیابی هوشمند محدود، اسکنرهای مستقل اسلیپ‌استریم و اصلاح توقف بومی حفظ شده‌اند. پترنیها از فهرست داخلی حذف شده؛ ورودی‌های قبلی کاربر حفظ می‌شوند.
+آلفا۱۹ Full با کد ۴۰، آپدیت اشتراک روی همان کارت، نام اختیاری، نمایش مصرف و انقضای اعلام‌شدهٔ ارائه‌دهنده، گزینه‌های سازگار `cs`/`fm`، Shadowsocks 2022، جابه‌جایی پورت Hy2 و ورود AmneziaWG تک‌همتا را اضافه می‌کند. تم‌های آرام Soft Pop، سنجش تأخیر هنگام نمایش اپ، بازیابی هوشمند محدود، اسکنرهای مستقل اسلیپ‌استریم و اصلاح توقف بومی حفظ شده‌اند. پترنیها از فهرست داخلی حذف شده؛ ورودی‌های قبلی کاربر حفظ می‌شوند.
 
 **اشتراک‌ها:** آپدیت روی کارت، همان‌جا انجام می‌شود؛ پیشرفت جلوی کلیک تکراری را می‌گیرد و نتیجه در صفحهٔ اصلی می‌ماند. جایگزینی پروفایل موجود همچنان به قطع VPN نیاز دارد. نام اختیاری است: نام واردشده یا ذخیره‌شده، سپس عنوان امن ارائه‌دهنده و در نهایت نام میزبان. هدر `subscription-userinfo` مجموع ارسال و دریافت، حجم و انقضا را از همان پاسخ می‌خواند؛ دادهٔ غایب «نامشخص» می‌ماند. سن داده و اعلامی‌بودن آن مشخص است؛ این شمارش مستقل اپ نیست. دانلود دوره‌ای تازه‌ای برای کل اشتراک اضافه نشده است. قرارداد وضعیت پنل جدا حفظ شده است.
 
 **ورودی‌ها:** گزینه‌های سازگار `cs` و `fm` در VLESS/VMess/Trojan با TLS معتبر حفظ می‌شوند؛ ماسک، اسکریپت یا تنظیم ناسازگار صریحاً رد می‌شود. طول کلید Shadowsocks 2022 بررسی می‌شود. Hy2 از فهرست محدود `mport` و `hop-interval` پشتیبانی می‌کند. لینک‌های سازگار WireGuard و فایل `.conf` تک‌همتای AmneziaWG با پارامترهای سازگار وارد می‌شوند. AWG موتور فضای کاربر مستقل با احراز هویت دارد؛ یک آدرس برای هر خانوادهٔ IP؛ اسکریپت، چند همتا و keepalive بازه‌ای پشتیبانی نمی‌شوند. YAML دلخواه هسته/Mihomo اجرا نمی‌شود.
 
-تست‌های محلی و شبیه‌ساز، صرفه‌جویی باتری گوشی، پایداری شبانه/Doze، دسترسی اپراتور یا رفع مشکل WireGuard/Hy2 پنل گزارش‌شده را اثبات نمی‌کنند. تأیید تازهٔ گوشی واقعی ادعا نمی‌شود. AnyTLS، TUIC و Mieru برای مراحل بعد می‌مانند. بستهٔ Lite یا دسکتاپ تازه‌ای منتشر نمی‌شود.
+تست‌های محلی و شبیه‌ساز، صرفه‌جویی باتری گوشی، پایداری شبانه/Doze، دسترسی اپراتور یا رفع مشکل WireGuard/Hy2 پنل گزارش‌شده را اثبات نمی‌کنند. تأیید تازهٔ گوشی واقعی ادعا نمی‌شود. AnyTLS، TUIC v5 و Mieru تک‌پورت اضافه شده‌اند؛ محدودیت‌ها در یادداشت آلفا۱۹ آمده است. بستهٔ Lite یا دسکتاپ تازه‌ای منتشر نمی‌شود.
 
 وضعیت حساب پنل ۱.۱۹، حجم باقی‌مانده برحسب GiB و زمان را در همان کارت مجموعه نشان می‌دهد. زرد یعنی حداکثر ۲۰٪ حجم یا ۳ روز؛ قرمز یعنی حداکثر ۵٪ یا ۲۴ ساعت. نامحدود، نامشخص و منقضی جدا هستند. ۴۰۴ یا شمارش قدیمی/ناقص، اطلاعات نامعتبر است و انقضا را ثابت نمی‌کند. وضعیت فقط هنگام دیده‌شدن صفحهٔ اصلی تازه می‌شود و مانع اتصال دستی نیست. مرجع سهمیه و اعمال محدودیت، سرور است.
 
 Soar دست‌دهی‌های تکراری را حفظ می‌کند و حالت BOTH منتظر نتیجهٔ UDP و TCP می‌ماند. انتخاب صریح «فقط TCP» و بررسی اعتماد تغییر نمی‌کنند. موفقیت آزمون محلی، دسترسی ریزالور روی شبکهٔ واقعی را اثبات نمی‌کند.
 
 
-**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند.
+**ارتقا:** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) را بدون حذف اپ یا پاک‌کردن داده روی آلفا۱۴ عمومی یا جدیدتر نصب کنید. بسته، امضای تولیدی و پروفایل‌ها حفظ شده‌اند.
 
 اشتراک HTTPS دو دکمهٔ **آپدیت** و **ایمپورت** دارد. ایمپورت منبع تازه را با یک اقدام ثبت می‌کند و پس از موفقیت کل پنجره بسته می‌شود؛ خطا فرم را حفظ می‌کند و نشانی تکراری دوباره ثبت نمی‌شود. ویرایش‌های محلی حفظ می‌شوند. آپدیت منبع قبلی به قطع VPN نیاز دارد؛ کنارگذاشتن ورودی‌های قدیمی بازبینی می‌خواهد. تازه‌سازی خودکار اختیاری، تقریباً هر ۱۲ ساعت با شرایط مناسب شبکه و باتری انجام می‌شود. QR کل مجموعه و PNG برای مجموعهٔ کوچک وجود دارد؛ مجموعهٔ بزرگ از خروجی فایل استفاده می‌کند.
 
@@ -96,7 +98,7 @@ Soar دست‌دهی‌های تکراری را حفظ می‌کند و حالت
 
 ### نصب و به‌روزرسانی
 
-نسخه **آلفا۱۸.۱ Full، کد ۳۹** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
+نسخه **آلفا۱۹ Full، کد ۴۰** است. [APK کاملِ انتشار عمومی](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) را نصب کنید. بسته و امضای تولیدی نسبت به آلفا۱۴ عوض نشده‌اند؛ برای این به‌روزرسانی برنامه را حذف نکنید. آلفا۱۱ تاریخی و Rovunet Test هویت متفاوت دارند؛ [راهنمای مهاجرت](UPGRADE.md) را بخوانید. فایل بدون امضا قابل نصب نیست.
 
 اندروید ۷ یا جدیدتر لازم است. هدف ساخت ARM32، ARM64 و x86_64 است؛ Naive/Tor به‌ارث‌رسیده برای x86_64 وجود ندارند. فایل Lite جدید وعده داده نمی‌شود و انتشار گوگل‌پلی، اپ‌استور یا رابط دسکتاپ نداریم.
 
@@ -141,3 +143,7 @@ Soar دست‌دهی‌های تکراری را حفظ می‌کند و حالت
 مسیر دادهٔ SOCKS و تفاوت auto/on در Soar روی شبکهٔ گزارش‌شده هنوز بررسی میدانی می‌خواهند. پذیرش CONNECT اثبات عبور داده نیست؛ خطای DNS هم سانسور یا ACL را قطعی نمی‌کند. DoH به‌تنهایی فقط DNS را رمز می‌کند و SOCKS5 معمولی رمزنگاری انتقال ندارد. تعویض خودکار مسیر و سنجش نرخ دانلود اضافه نشده‌اند. [وضعیت](STATUS.md) · [تلگرام](https://t.me/RovunetVPN).
 
 </div>
+
+## نکات آلفا۱۹
+
+واردسازی لینک ذخیره‌شده همان اشتراک را آپدیت می‌کند. آزمون کارت پس از موفقیت مستقیم سراغ DNS نمی‌رود؛ این مرحله فقط پس از شکست و تأیید شماست. خود نوشتهٔ بلند داخل کادر تک‌خطی حرکت می‌کند. AnyTLS، TUIC v5 و Mieru تک‌پورت اضافه شده‌اند؛ تنظیم ناسازگار صریحاً رد می‌شود. [جزئیات](releases/alpha19.md).

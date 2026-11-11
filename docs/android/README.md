@@ -1,15 +1,15 @@
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
-Alpha18.1 Full / code 39 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
+Alpha19 Full / code 40 completes subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.
 
-Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC and Mieru remain future work. No new Lite or desktop binary is published.
+Automated local/emulator checks do not establish physical-phone battery savings, overnight/Doze stability, carrier reachability or repair of the reported panel WireGuard/Hy2 endpoints. No new physical-phone acceptance is claimed. AnyTLS, TUIC v5 and single-binding Mieru are included; see alpha19 details. No new Lite or desktop binary is published.
 
 <h1 align="center">Rovunet for Android</h1>
 
 <p align="center"><b>Several routes to your own server, in one Android app</b><br>DNS tunnels, SSH, HTTPS proxies and Xray profiles in named collections, with direct connection and real HTTPS tests.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -19,34 +19,34 @@ Automated local/emulator checks do not establish physical-phone battery savings,
 
 <p align="center"><a href="../../README.md">← All Rovunet apps</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1">Download</a> · 📘 <a href="../guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="../USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19">Download</a> · 📘 <a href="../guides/Rovunet-App-Guide-EN.pdf">Complete guide (PDF)</a> · <a href="../USER_GUIDE.md">User guide</a> · <a href="https://github.com/msVPNco/rovunet-panel">Server panel</a></p>
 
 ---
 
 **A multi-protocol Android VPN client for several routes to your own server.** Rovunet brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel.
 
-This is the shared Rovunet app repository for Android, Windows and future macOS work. Android alpha18.1 is published; desktop clients have no validated public GUI release yet. [Platform and release channels](../PLATFORMS.md).
+This is the shared Rovunet app repository for Android, Windows and future macOS work. Android alpha19 is published; Windows has its own 0.1.0 Beta; see its platform page for its supported capabilities. [Platform and release channels](../PLATFORMS.md).
 
 ## Release status
 
-The current release is **0.3.0-alpha18.1 Full, version code 39**. It retains the [production signing identity](../SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) · [Release record](../releases/alpha18-1.md) · [Current status](../STATUS.md).
+The current release is **0.3.0-alpha19 Full, version code 40**. It retains the [production signing identity](../SIGNING-IDENTITY.md) introduced in alpha14, so install it over public alpha14 without uninstalling. Historical alpha11 and private Rovunet Test use different identities. [Download Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) · [Release record](../releases/alpha19.md) · [Current status](../STATUS.md).
 
 **Subscriptions:** choose Update on the collection card to update in place; progress blocks repeated clicks and the outcome stays on Home. Existing-profile replacement still requires a disconnected VPN. Names are optional: explicit/saved name, safe provider title, then hostname. `subscription-userinfo` reports upload + download, volume and expiry from the same response; missing fields stay unknown. Provider snapshots show their age and are not independent metering. No additional periodic full-feed downloads are introduced. Panel status retains its separate contract.
 
 **Imports:** supported VLESS/VMess/Trojan `cs` and `fm` are preserved with verified TLS; unsupported masks/scripts/settings are rejected explicitly. Shadowsocks 2022 validates key lengths. Hy2 supports bounded `mport` lists and `hop-interval`. Standard WireGuard sharing URIs and single-peer AmneziaWG `.conf`/supported URI parameters are accepted. AWG runs in a separate authenticated userspace engine; one address per IP family, no scripts, multi-peer or ranged keepalive. Arbitrary core/Mihomo YAML is not executed.
 
-**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
+**Direct upgrade for public alpha14–alpha16 (through code32):** download the [Full APK](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) and install over the existing app **without uninstalling or clearing data**. The old updater embeds the former repository URL; web redirects cannot repair that check. Package and production signer are unchanged.
 
 ## Quick start
 
-1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) and install it. Public alpha14 and later install in place, without uninstalling.
+1. **Download** the Full APK from [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) and install it. Public alpha14 and later install in place, without uninstalling.
 2. **Open** Rovunet, choose language and theme, and grant the Android VPN permission when asked.
 3. **Import**: Subscriptions → paste your HTTPS subscription link → **Import**, or **+ → Import** for a link, QR code or file.
 4. **Connect**: expand the collection, tap a path to select it and tap it again to connect.
 
 ## Subscriptions, sharing and Soar scanning
 
-HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, duplicate source URLs are rejected, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
+HTTPS subscriptions have **Update** and **Import** actions. Import adds a new source once and closes the dialog after success; errors preserve the form, reimporting a saved URL refreshes the existing source, and updates preserve local changes. Existing-source updates require VPN disconnection; removals require review. Optional refresh runs approximately every 12 hours under suitable network/battery conditions. Collection QR/PNG sharing is supported when the payload fits; larger collections use files.
 
 Panel v1.19 account status shows remaining GiB and time in the existing collection card. Amber means ≤20% remaining or ≤3 days; red means ≤5% or ≤24 hours. Unlimited, unknown and expired are distinct. A 404 or stale/incomplete counting is unavailable information, not proof of expiry. Status refresh runs while Home is visible and never blocks manual connection. Server-side metering and limits remain authoritative.
 
@@ -105,7 +105,7 @@ Automatic recovery is opt-in and bounded; manual mode never switches automatical
 | [User guide](../USER_GUIDE.md) | Installation, import, connection, tests, Soar, credentials and troubleshooting |
 | [Current status](../STATUS.md) · [Upgrade](../UPGRADE.md) | Release state, signer and migration notes |
 
-The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha18.1 notes](../releases/alpha18-1.md) for the new status, menu and idle behavior.
+The PDF guides retain their alpha15.4 edition and layout; use the current user guide and [alpha19 notes](../releases/alpha19.md) for the new status, menu and idle behavior.
 
 ## Source, verification and support
 

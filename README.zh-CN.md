@@ -5,7 +5,7 @@
 <p align="center"><b>多条通往你自己服务器的路径，覆盖每一台设备</b><br>DNS 隧道、SSH、HTTPS 代理和 Xray 配置归入命名配置组，支持直接连接和真实 HTTPS 测试。</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -25,7 +25,7 @@
 
 | 平台 | 状态 | 下载与详情 |
 | --- | --- | --- |
-| **Android** | 公开版本：**0.3.0-alpha18.1 Full，代码 39** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) · [Android 页面](docs/android/README.zh-CN.md) |
+| **Android** | 公开版本：**0.3.0-alpha19 Full，代码 39** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [Android 页面](docs/android/README.zh-CN.md) |
 | **Windows** | **0.1.0 Beta · x64 · 未签名安装程序** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta) · [Windows 页面](windows/README.md) |
 | **Linux** | 计划中 | 暂无发布 |
 | **macOS** | 计划中 | 发布将使用标签 `macos-v<version>` |
@@ -47,7 +47,7 @@
 
 ## Android 快速开始
 
-1. **下载**：从[发布页](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1)获取 Full APK 并安装。公开 alpha14 及更新版本可直接覆盖安装，无需卸载。
+1. **下载**：从[发布页](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19)获取 Full APK 并安装。公开 alpha14 及更新版本可直接覆盖安装，无需卸载。
 2. **打开**：选择语言和主题，并在提示时授予 Android VPN 权限。
 3. **导入**：订阅 → 粘贴 HTTPS 订阅链接 → **导入**；或 **+ → 导入** 链接、二维码或文件。
 4. **连接**：展开配置组，点按路径选中，再点按一次连接。
@@ -61,7 +61,7 @@
 | [Android 页面](docs/android/README.zh-CN.md) | 发布状态、功能、协议与限制 |
 | [平台](docs/PLATFORMS.md) · [当前状态](docs/STATUS.md) · [升级](docs/UPGRADE.md) | 发布渠道、发布状态、签名与迁移说明 |
 
-PDF 保留 alpha15.4 版本和版式；新的账户状态、菜单与空闲行为见当前用户指南及 [alpha18.1 说明](docs/releases/alpha18-1.md)。
+PDF 保留 alpha15.4 版本和版式；新的账户状态、菜单与空闲行为见当前用户指南及 [alpha19 说明](docs/releases/alpha19.md)。
 
 ## 源码与支持
 

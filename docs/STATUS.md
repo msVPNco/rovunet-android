@@ -1,3 +1,9 @@
+# Current Android alpha19/code40
+
+Subscription refresh/reimport, direct-first DNS fallback, moving labels, manual controls and AnyTLS/TUIC/Mieru are implemented. [Notes](releases/alpha19.md), [validation](releases/alpha19-completion.md) and [provenance](releases/alpha19-provenance.json). No new physical-phone, carrier or screen-off battery/data measurement is claimed. Panel WireGuard/Hy2 remains a separate investigation.
+
+## Historical alpha18.1 status
+
 ## Windows 0.1.0 Beta
 
 Windows x64 beta: [release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta), [source and scope](../windows/README.md), [verification](releases/windows-0.1.0-beta-provenance.json). Unsigned; Hysteria2/WireGuard and TUN/per-process routing limitations are disclosed.386 fresh Windows/installer assertions and239 domain tests passed; platform-specific prerelease leaves Android Latest unchanged.

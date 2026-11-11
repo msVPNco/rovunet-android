@@ -5,7 +5,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 
 | Platform | Current status | Release channel | Installable asset |
 | --- | --- | --- | --- |
-| Android | alpha18.1/code39 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
+| Android | alpha19/code40 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
 | Windows | Public **0.1.0 Beta x64**, unsigned; [scope and limits](../windows/docs/STATUS.md) | `windows-v0.1.0-beta` (prerelease) | [Windows installer/source](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta) |
 | Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
 | macOS | Planned for this repository | `macos-v<version>` | macOS-specific package, when implemented |
@@ -29,7 +29,7 @@ appropriate for new desktop code; coordinate its path with the existing work.
   disable checksum/signature verification or change the Android package/signer
   just to make a renamed download work.
 - Existing alpha16/code32 embeds the former repository URL and needs one direct
-  compatibility APK installation using the published alpha18.1 Full APK. Changing
+  compatibility APK installation using the published alpha19 Full APK. Changing
   web links alone does not update an installed APK.
 - Public alpha16 assets remain unchanged. Historical manifests, APK reconstruction
   records and archived PDF editions keep their original release identities.
@@ -39,7 +39,7 @@ appropriate for new desktop code; coordinate its path with the existing work.
 ## فارسی
 
 همهٔ کلاینت‌ها در همین مخزن قرار می‌گیرند؛ مخزن مستقل ویندوز ساخته نمی‌شود.
-توسعهٔ اندروید با دستور مالک از سر گرفته شده و آلفا۱۸.۱ با کد ۳۹ شامل اصلاح اشتراک‌ها و سازگاری پروتکل‌هاست. نسخه‌های ویندوز و مک، برچسب، فایل و امضای مخصوص خود را دارند.
+توسعهٔ اندروید با دستور مالک از سر گرفته شده و آلفا۱۹ با کد ۴۰ شامل اصلاح اشتراک‌ها و سازگاری پروتکل‌هاست. نسخه‌های ویندوز و مک، برچسب، فایل و امضای مخصوص خود را دارند.
 «آخرین انتشار» گیت‌هاب می‌تواند متعلق به هر پلتفرم باشد؛ آپدیتر و لینک دانلود هر
 کلاینت باید نسخهٔ سازگار خودش را انتخاب کند. انتشار نسخهٔ تازه به تأیید مالک نیاز
 دارد. قالب فعلی READMEها و سابقهٔ انتشارهای قبلی حفظ می‌شوند.
@@ -57,4 +57,4 @@ Android, Windows и будущая macOS находятся в одном реп
 ## 简体中文
 
 Android、Windows 与未来 macOS 共用此仓库，各平台使用独立标签、文件、校验和及签名。
-全仓库 Latest 不是 Android 专用更新渠道。所有者已恢复 Android 开发并批准 alpha18.1；后续反馈进入待办。新版本须经所有者批准发布，保留 README 版式与历史发布证据。
+全仓库 Latest 不是 Android 专用更新渠道。所有者已恢复 Android 开发并批准 alpha19；后续反馈进入待办。新版本须经所有者批准发布，保留 README 版式与历史发布证据。

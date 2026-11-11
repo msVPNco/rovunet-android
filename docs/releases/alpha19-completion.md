@@ -38,12 +38,12 @@ measurement.
 
 ## Configuration capability matrix
 
-| Capability | Import | Manual form | Runtime | Data-transfer evidence |
-| --- | --- | --- | --- | --- |
-| SS2022, Hy2 hopping, supported cs/fm, AWG | Existing support retained | Exposed/completed | Existing pinned engines | Existing interoperability regressions; reported panel WG/Hy2 failure remains separate |
-| AnyTLS | Explicit URI subset | Yes | Pinned auxiliary child | Local encrypted TCP/UDP + shutdown |
-| TUIC v5 | UUID/password URI subset | Yes | Pinned auxiliary child | Local encrypted TCP/UDP + shutdown |
-| Mieru | Single-binding `mierus://` TCP/UDP | Yes | Pinned auxiliary child | Local encrypted TCP/UDP over both transports + shutdown |
+| Capability | Import | Manual form | Runtime | Data-transfer evidence | Published version |
+| --- | --- | --- | --- | --- | --- |
+| SS2022, Hy2 hopping, supported cs/fm, AWG | Existing support retained | Exposed/completed | Existing pinned engines | Existing interoperability regressions; reported panel WG/Hy2 failure remains separate | Import/runtime alpha18.1; manual completion alpha19 |
+| AnyTLS | Explicit URI subset | Yes | Pinned auxiliary child | Local encrypted TCP/UDP + shutdown | alpha19 |
+| TUIC v5 | UUID/password URI subset | Yes | Pinned auxiliary child | Local encrypted TCP/UDP + shutdown | alpha19 |
+| Mieru | Single-binding `mierus://` TCP/UDP | Yes | Pinned auxiliary child | Local encrypted TCP/UDP over both transports + shutdown | alpha19 |
 
 The auxiliary engine remains Mihomo commit
 `3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8`, GPL-3.0. Only whitelisted proxy settings

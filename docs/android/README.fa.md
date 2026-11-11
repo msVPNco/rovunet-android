@@ -1,8 +1,8 @@
 <div dir="rtl">
 
-آلفا۱۸.۱ Full با کد ۳۹، آپدیت اشتراک روی همان کارت، نام اختیاری، نمایش مصرف و انقضای اعلام‌شدهٔ ارائه‌دهنده، گزینه‌های سازگار `cs`/`fm`، Shadowsocks 2022، جابه‌جایی پورت Hy2 و ورود AmneziaWG تک‌همتا را اضافه می‌کند. تم‌های آرام Soft Pop، سنجش تأخیر هنگام نمایش اپ، بازیابی هوشمند محدود، اسکنرهای مستقل اسلیپ‌استریم و اصلاح توقف بومی حفظ شده‌اند. پترنیها از فهرست داخلی حذف شده؛ ورودی‌های قبلی کاربر حفظ می‌شوند.
+آلفا۱۹ Full با کد ۴۰، آپدیت اشتراک روی همان کارت، نام اختیاری، نمایش مصرف و انقضای اعلام‌شدهٔ ارائه‌دهنده، گزینه‌های سازگار `cs`/`fm`، Shadowsocks 2022، جابه‌جایی پورت Hy2 و ورود AmneziaWG تک‌همتا را اضافه می‌کند. تم‌های آرام Soft Pop، سنجش تأخیر هنگام نمایش اپ، بازیابی هوشمند محدود، اسکنرهای مستقل اسلیپ‌استریم و اصلاح توقف بومی حفظ شده‌اند. پترنیها از فهرست داخلی حذف شده؛ ورودی‌های قبلی کاربر حفظ می‌شوند.
 
-تست‌های محلی و شبیه‌ساز، صرفه‌جویی باتری گوشی، پایداری شبانه/Doze، دسترسی اپراتور یا رفع مشکل WireGuard/Hy2 پنل گزارش‌شده را اثبات نمی‌کنند. تأیید تازهٔ گوشی واقعی ادعا نمی‌شود. AnyTLS، TUIC و Mieru برای مراحل بعد می‌مانند. بستهٔ Lite یا دسکتاپ تازه‌ای منتشر نمی‌شود.
+تست‌های محلی و شبیه‌ساز، صرفه‌جویی باتری گوشی، پایداری شبانه/Doze، دسترسی اپراتور یا رفع مشکل WireGuard/Hy2 پنل گزارش‌شده را اثبات نمی‌کنند. تأیید تازهٔ گوشی واقعی ادعا نمی‌شود. AnyTLS، TUIC v5 و Mieru تک‌پورت اضافه شده‌اند؛ محدودیت‌ها در یادداشت آلفا۱۹ آمده است. بستهٔ Lite یا دسکتاپ تازه‌ای منتشر نمی‌شود.
 
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
@@ -11,7 +11,7 @@
 <p align="center"><b>چند مسیر به سرور خودتان، در یک اپ اندروید</b><br>تونل‌های DNS، SSH، پروکسی‌های HTTPS و پروفایل‌های Xray در مجموعه‌های نام‌دار، با اتصال مستقیم و تست واقعی HTTPS.</p>
 
 <p align="center" dir="ltr">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19"><img alt="Release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=release&color=0E7C86"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%207%2B-14304D">
   <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -21,7 +21,7 @@
 
 <p align="center"><a href="../../README.md">→ همهٔ برنامه‌های رووُنت</a></p>
 
-<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1">دانلود</a> · 📘 <a href="../guides/Rovunet-App-Guide-FA.pdf">راهنمای جامع (PDF)</a> · <a href="../USER_GUIDE.md">راهنمای کاربر</a> · <a href="https://github.com/msVPNco/rovunet-panel">پنل سرور</a></p>
+<p align="center">📥 <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19">دانلود</a> · 📘 <a href="../guides/Rovunet-App-Guide-FA.pdf">راهنمای جامع (PDF)</a> · <a href="../USER_GUIDE.md">راهنمای کاربر</a> · <a href="https://github.com/msVPNco/rovunet-panel">پنل سرور</a></p>
 
 ---
 
@@ -31,17 +31,17 @@
 
 ## وضعیت نسخه
 
-نسخهٔ فعلی **آلفا۱۸.۱ Full با کد نسخهٔ ۳۹** است و [امضای تولیدی آلفا۱۴](../SIGNING-IDENTITY.md) را حفظ می‌کند؛ آن را بدون حذف برنامه روی آلفا۱۴ عمومی نصب کنید. آلفا۱۱ تاریخی و بستهٔ خصوصی Rovunet Test هویت متفاوت دارند. [دانلود مستقیم APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) · [ثبت انتشار](../releases/alpha18-1.md) · [وضعیت فعلی](../STATUS.md).
+نسخهٔ فعلی **آلفا۱۹ Full با کد نسخهٔ ۴۰** است و [امضای تولیدی آلفا۱۴](../SIGNING-IDENTITY.md) را حفظ می‌کند؛ آن را بدون حذف برنامه روی آلفا۱۴ عمومی نصب کنید. آلفا۱۱ تاریخی و بستهٔ خصوصی Rovunet Test هویت متفاوت دارند. [دانلود مستقیم APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) · [ثبت انتشار](../releases/alpha19.md) · [وضعیت فعلی](../STATUS.md).
 
 **اشتراک‌ها:** آپدیت روی کارت، همان‌جا انجام می‌شود؛ پیشرفت جلوی کلیک تکراری را می‌گیرد و نتیجه در صفحهٔ اصلی می‌ماند. جایگزینی پروفایل موجود همچنان به قطع VPN نیاز دارد. نام اختیاری است: نام واردشده یا ذخیره‌شده، سپس عنوان امن ارائه‌دهنده و در نهایت نام میزبان. هدر `subscription-userinfo` مجموع ارسال و دریافت، حجم و انقضا را از همان پاسخ می‌خواند؛ دادهٔ غایب «نامشخص» می‌ماند. سن داده و اعلامی‌بودن آن مشخص است؛ این شمارش مستقل اپ نیست. دانلود دوره‌ای تازه‌ای برای کل اشتراک اضافه نشده است. قرارداد وضعیت پنل جدا حفظ شده است.
 
 **ورودی‌ها:** گزینه‌های سازگار `cs` و `fm` در VLESS/VMess/Trojan با TLS معتبر حفظ می‌شوند؛ ماسک، اسکریپت یا تنظیم ناسازگار صریحاً رد می‌شود. طول کلید Shadowsocks 2022 بررسی می‌شود. Hy2 از فهرست محدود `mport` و `hop-interval` پشتیبانی می‌کند. لینک‌های سازگار WireGuard و فایل `.conf` تک‌همتای AmneziaWG با پارامترهای سازگار وارد می‌شوند. AWG موتور فضای کاربر مستقل با احراز هویت دارد؛ یک آدرس برای هر خانوادهٔ IP؛ اسکریپت، چند همتا و keepalive بازه‌ای پشتیبانی نمی‌شوند. YAML دلخواه هسته/Mihomo اجرا نمی‌شود.
 
-**ارتقای مستقیم برای آلفا۱۴ تا آلفا۱۶ عمومی (تا کد۳۲):** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha18.1/Rovunet-v0.3.0-alpha18.1-Full.apk) را **بدون حذف اپ یا پاک‌کردن داده‌ها** روی برنامهٔ فعلی نصب کنید. آپدیتر قدیمی نشانی قبلی مخزن را درون خود دارد و تغییر مسیر وب آن بررسی را اصلاح نمی‌کند. بسته و امضای تولیدی ثابت‌اند.
+**ارتقای مستقیم برای آلفا۱۴ تا آلفا۱۶ عمومی (تا کد۳۲):** [APK کامل](https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha19/Rovunet-v0.3.0-alpha19-Full.apk) را **بدون حذف اپ یا پاک‌کردن داده‌ها** روی برنامهٔ فعلی نصب کنید. آپدیتر قدیمی نشانی قبلی مخزن را درون خود دارد و تغییر مسیر وب آن بررسی را اصلاح نمی‌کند. بسته و امضای تولیدی ثابت‌اند.
 
 ## شروع سریع
 
-1. **دانلود**: APK کامل را از [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha18.1) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
+1. **دانلود**: APK کامل را از [Releases](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) بگیرید و نصب کنید. نسخه‌های عمومی آلفا۱۴ به بعد بدون حذف برنامه روی هم نصب می‌شوند.
 2. **باز کردن**: زبان و تم را انتخاب کنید و مجوز VPN اندروید را بدهید.
 3. **ورود کانفیگ**: اشتراک‌ها ← لینک اشتراک HTTPS را بچسبانید ← **ایمپورت**؛ یا **+ ← ورود** برای لینک، QR یا فایل.
 4. **اتصال**: مجموعه را باز کنید، مسیر را یک بار لمس کنید تا انتخاب شود و دوباره لمس کنید تا وصل شود.
@@ -107,7 +107,7 @@
 | [راهنمای کاربر](../USER_GUIDE.md) | نصب، ورود کانفیگ، اتصال، تست، Soar، اطلاعات ورود و عیب‌یابی |
 | [وضعیت فعلی](../STATUS.md) · [ارتقا](../UPGRADE.md) | وضعیت انتشار، امضا و مهاجرت |
 
-قالب و ویرایش آلفا۱۵.۴ راهنماهای PDF حفظ شده است؛ رفتار تازهٔ وضعیت حساب، منو و بیکاری را در راهنمای کاربر فعلی و [یادداشت آلفا۱۸.۱](../releases/alpha18-1.md) بخوانید.
+قالب و ویرایش آلفا۱۵.۴ راهنماهای PDF حفظ شده است؛ رفتار تازهٔ وضعیت حساب، منو و بیکاری را در راهنمای کاربر فعلی و [یادداشت آلفا۱۹](../releases/alpha19.md) بخوانید.
 
 ## سورس، بررسی و پشتیبانی
 
