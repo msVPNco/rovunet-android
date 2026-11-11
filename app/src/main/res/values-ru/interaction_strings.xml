@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="widget_vpn_toggle_description">Подключить или отключить VPN</string>
-    <string name="widget_vpn_status_description">Состояние подключения VPN</string>
-    <string name="qr_pick_from_gallery">Выбрать изображение из галереи</string>
-    <string name="qr_image_not_found">На изображении не найден QR-код.</string>
-    <string name="qr_image_read_failed">Не удалось прочитать изображение. Выберите другое.</string>
-</resources>

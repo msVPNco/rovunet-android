@@ -1,9 +1,0 @@
-<resources>
-    <string name="probe_review_identity">Server identity not approved; run the test to review it</string>
-    <string name="probe_busy">Test paused while another VPN session is active or stopping. Unmeasured paths keep their previous results.</string>
-    <string name="probe_changed">Test interrupted because the VPN session changed.</string>
-    <string name="probe_cleanup">Test paused while the VPN releases the previous path.</string>
-    <string name="probe_quick_test">Quick HTTPS test</string>
-    <string name="probe_stability_test">Stability test (3 samples)</string>
-    <string name="probe_quick_summary">HTTPS verified once • setup %1$d ms • stability not measured</string>
-</resources>

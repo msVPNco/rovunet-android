@@ -114,7 +114,7 @@ data class CoreForm(val kind: String, val fields: Map<String, String>) {
             fields["server"] = uri.host.removeSurrounding("[", "]")
             fields["port"] = (if (uri.port < 0) 443 else uri.port).toString()
             fields["auth"] = dec(uri.rawUserInfo)
-            if (uri.scheme == "mierus") {
+            if (uri.scheme.equals("mierus", ignoreCase = true)) {
                 val credentials = uri.rawUserInfo.split(':', limit = 2).map(::dec)
                 fields["username"] = credentials[0]; fields["auth"] = credentials[1]
                 fields["port"] = parsed.outbound.getJSONObject("settings").getInt("port").toString()

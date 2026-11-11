@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="widget_vpn_toggle_description">اتصال یا قطع VPN</string>
-    <string name="widget_vpn_status_description">وضعیت اتصال VPN</string>
-    <string name="qr_pick_from_gallery">انتخاب تصویر از گالری</string>
-    <string name="qr_image_not_found">در این تصویر کد QR پیدا نشد.</string>
-    <string name="qr_image_read_failed">خواندن این تصویر ممکن نشد. تصویر دیگری انتخاب کنید.</string>
-</resources>

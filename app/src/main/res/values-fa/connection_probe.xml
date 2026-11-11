@@ -1,9 +1,0 @@
-<resources>
-    <string name="probe_review_identity">هویت سرور تأیید نشده؛ برای بررسی دوباره تست را اجرا کنید</string>
-    <string name="probe_busy">جلسهٔ دیگری فعال یا در حال توقف است. تست متوقف شد و نتیجهٔ مسیرهای سنجیده‌نشده حفظ می‌شود.</string>
-    <string name="probe_changed">با تغییر اتصال VPN، تست متوقف شد.</string>
-    <string name="probe_cleanup">تست تا آزاد شدن منابع اتصال قبلی متوقف شد.</string>
-    <string name="probe_quick_test">تست سریع HTTPS</string>
-    <string name="probe_stability_test">تست پایداری (۳ نمونه)</string>
-    <string name="probe_quick_summary">HTTPS یک بار تأیید شد • راه‌اندازی %1$d میلی‌ثانیه • پایداری سنجیده نشده</string>
-</resources>

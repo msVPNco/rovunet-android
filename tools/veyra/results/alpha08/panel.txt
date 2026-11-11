@@ -1,3 +1,0 @@
-ok  	github.com/anonvector/slipgate/internal/clientcfg	0.006s
-ok  	github.com/anonvector/slipgate/internal/coreplan	0.299s
-ok  	github.com/anonvector/slipgate/internal/handlers	0.010s

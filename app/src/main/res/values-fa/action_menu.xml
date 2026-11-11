@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="menu_connection_tests">اتصال و آزمون</string>
-    <string name="menu_manage">مدیریت</string>
-    <string name="menu_share">خروجی و اشتراک‌گذاری</string>
-    <string name="ui_hide_test_details">پنهان کردن جزئیات آزمون</string>
-</resources>

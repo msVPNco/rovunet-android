@@ -1,5 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><ApplicationIcon>Assets/rovunet.ico</ApplicationIcon><EnableWindowsTargeting>true</EnableWindowsTargeting><AssemblyName>Rovunet</AssemblyName><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup>
-  <PropertyGroup><UseWindowsForms>true</UseWindowsForms></PropertyGroup>
-  <ItemGroup><Using Remove="System.Windows.Forms"/><Using Remove="System.Drawing"/><ProjectReference Include="../Rovunet.Platform/Rovunet.Platform.csproj" /><EmbeddedResource Include="Locales/*.json" /><Resource Include="Assets/*.ttf" /><EmbeddedResource Include="../../transports/resolverdata/*" LogicalName="Rovunet.ResolverData.%(Filename)%(Extension)" /></ItemGroup>
-<ItemGroup><PackageReference Include="ZXing.Net" Version="0.16.11" /></ItemGroup></Project>

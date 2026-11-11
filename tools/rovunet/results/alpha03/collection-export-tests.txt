@@ -1,4 +1,0 @@
-PASS selected-group export, metadata and sharing restrictions; JNI roundtrip needs device test
-PASS real Go panel v32 output imported by Android parser
-PASS actual showUserConfigs full text: two users, each native Soar/VLESS + standard VLESS
-PASS collection identity/isolation, DNS-last policy, native v32 metadata and legacy aliases

@@ -1,7 +1,0 @@
-Rovunet uses Xray-core in a separate executable process.
-Source: https://github.com/XTLS/Xray-core
-Pinned commit: 63ca2e0c1d31b89f67700c33842431f541fedd25
-Core version: 26.10.31
-License: Mozilla Public License 2.0; see Xray-core.txt and upstream third-party notices.
-No changes to Xray-core source in this build.
-Original SlipNet 2.5.6 Full native libraries remain under their upstream licenses.

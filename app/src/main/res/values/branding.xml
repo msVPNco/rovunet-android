@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="prism_server_verification_intro" formatted="false">"Server-verified scan: only resolvers that cryptographically prove they reach your server are shown. Requires "</string>
-    <string name="prism_server_verification_suffix" formatted="false">" installed on your server."</string>
-</resources>

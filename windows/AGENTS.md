@@ -1,5 +1,0 @@
-# Rovunet Windows maintenance
-
-Canonical repository: msVPNco/rovunet-app; Windows belongs in windows/. Preserve Android/panel code, root README layouts, language order and attribution.
-The owner requested Windows0.1.0 Beta publication on2026-11-11 after reporting successful traffic on tested paths except Hysteria2/WireGuard. This authorizes this release, not future releases or unrelated changes. Use windows-v0.1.0-beta, mark prerelease and preserve Android Latest.
-Keep profiles, subscription URLs, DPAPI/recovery files and private evidence outside public assets. Manual connect is independent of ping/account/scanning. Preserve TLS/SSH, protected restrictions and explicit TCP. System proxy is not TUN. Record exact source/hash and actual test scope; update STATUS/TESTING/BACKLOG. Never replace published bytes or tags.

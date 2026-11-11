@@ -1,2 +1,0 @@
-PASS real manager: protocol readiness updates UI, stuck cleanup becomes Error, timed-out starts never run later and retry recovers
-PASS real manager: stale disconnect/error/onDestroy isolation, scoped stop, delayed-stop delivery, queued connect barrier, queued cancellation and stale teardown isolation

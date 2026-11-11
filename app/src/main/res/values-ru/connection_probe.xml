@@ -1,9 +1,0 @@
-<resources>
-    <string name="probe_review_identity">Подлинность сервера не подтверждена; запустите тест для проверки</string>
-    <string name="probe_busy">Другой сеанс VPN активен или завершается. Тест остановлен, прежние результаты непроверенных маршрутов сохранены.</string>
-    <string name="probe_changed">Сеанс VPN изменился, тест прерван.</string>
-    <string name="probe_cleanup">Тест приостановлен, пока VPN освобождает предыдущий маршрут.</string>
-    <string name="probe_quick_test">Быстрый тест HTTPS</string>
-    <string name="probe_stability_test">Тест стабильности (3 замера)</string>
-    <string name="probe_quick_summary">HTTPS проверен один раз • подключение %1$d мс • стабильность не проверена</string>
-</resources>

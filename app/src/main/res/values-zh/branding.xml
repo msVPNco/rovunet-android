@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="prism_server_verification_intro" formatted="false">"服务器验证扫描：仅显示已通过加密验证、能够访问您服务器的解析器。需要在服务器上安装 "</string>
-    <string name="prism_server_verification_suffix" formatted="false">"。"</string>
-</resources>

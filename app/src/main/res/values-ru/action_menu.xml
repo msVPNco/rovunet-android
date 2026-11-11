@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="menu_connection_tests">Подключение и тесты</string>
-    <string name="menu_manage">Управление</string>
-    <string name="menu_share">Экспорт и обмен</string>
-    <string name="ui_hide_test_details">Скрыть результаты теста</string>
-</resources>

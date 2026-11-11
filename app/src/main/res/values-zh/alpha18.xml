@@ -1,6 +1,0 @@
-<resources>
-    <string name="alpha18_slipstream_certificate">Slipstream 公共证书（PEM）</string>
-    <string name="alpha18_slipstream_certificate_hint">可选的服务器证书固定验证，与 SSH 身份分开；切勿输入私钥。</string>
-    <string name="alpha18_chain_outer_ssh">此链路先使用外层 Xray 传输，再连接 SSH。暂不支持通过 SSH 反向承载 UDP 协议。</string>
-    <string name="alpha18_invalid_certificate">请输入一个有效的 PEM 公共证书，不接受私钥或其他文本。</string>
-</resources>

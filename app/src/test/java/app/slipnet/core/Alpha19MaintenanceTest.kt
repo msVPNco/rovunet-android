@@ -11,7 +11,8 @@ class Alpha19MaintenanceTest {
             "anytls://secret%2Bvalue@example.invalid:443?sni=tls.example.invalid&idle-session-timeout=30&min-idle-session=0",
             "tuic://$id:secret%3Avalue@example.invalid:8443?sni=tls.example.invalid&alpn=h3&congestion_control=bbr&udp_relay_mode=native&reduce_rtt=0",
             "mierus://user:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=TCP&multiplexing=MULTIPLEXING_LOW",
-            "mierus://user%3Aname:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=UDP"
+            "mierus://user%3Aname:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=UDP",
+            "MIERUS://user%3Aname:secret%3Avalue@example.invalid?profile=fixture&port=9000&protocol=TCP"
         )
         for (link in links) {
             val first = CoreLink.parse(link)
