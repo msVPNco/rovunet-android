@@ -32,6 +32,16 @@ For collection cards and configuration/profile cards, when a display label is wi
 
 Record for the next Android update; implementation/build/publication is not authorized by this backlog entry.
 
+### P1 — Restore fast-first collection-test DNS fallback policy
+
+Owner report, 2026-11-11: a whole-card test appears to give Soar a latency result before asking whether to test DNS paths. Required policy: first test non-DNS/direct candidates; only if no usable verified direct path exists offer DNS fallback with consent. Successful direct testing must not automatically offer or start DNS tests. Explicit manual testing of a DNS profile remains available.
+
+Confirmed source discrepancy in published alpha18.1 APK source `e6359aae2e2e19164ad7e9ec87267f09a0c1152d`: `MainViewModel.runCollection` calls `CollectionPhase.completion` with `includeDnsAfterSuccess = !connectAfter && !dnsOnly`; `CollectionPhase.completion` consequently returns OFFER_DNS after a successful whole-card direct test. This violates the requested fallback-only policy.
+
+Do not claim that Soar is definitely being probed during phase one: `ProfileCollections.isDns` includes SOAR/SOAR_SSH and the phase-one candidate filter excludes DNS types. A separate source-supported display hypothesis is that only current candidates' results are made historical/reset, while excluded DNS results remain in the result map; a prior fresh Soar measurement can remain visible during a new direct-only run. Also inspect imported runtime tunnel types and alternate single-profile/monitor test entry points. Reproduce before assigning the Soar symptom a root cause.
+
+Acceptance: no Soar/Soar+SSH, DNSTT/NoizDNS/VayDNS/Slipstream variants are probed or scanned during the first phase; correct classification follows the actual transport rather than a display name. A successful verified direct path completes that phase without the DNS fallback prompt. If direct candidates finish without a usable path, offer the consent-based DNS phase; distinguish cancellation, incomplete budget and unresolved identity approval from confirmed failure. Keep old measurements with age/source markers, and label deferred DNS paths as not tested in the current run instead of implying fresh success. Preserve manual choices, cancellation/cleanup and deliberate manual DNS tests. Add regressions for direct success/failure, prior Soar cache, imported types and phase boundaries. Backlog only: no implementation/build/release in this recording.
+
 Track capability status separately as import, manual form, runtime engine, verified data transfer and published version; do not count a menu label as complete support.
 
 For the separate server investigation, first inspect the server environment, then test a compatible new protocol independently and obtain an importable phone configuration. Panel integration or replacement of existing Hy2/WireGuard outputs is a later decision based on physical-phone data transfer; no panel/server changes are made by this documentation update.
