@@ -1,0 +1,60 @@
+{
+  "version_name": "0.3.0-alpha19",
+  "version_code": 40,
+  "application_id": "app.veyra.client",
+  "source_commit": "e8c93787fc4703cf4fea6c52ae056fae2724b105",
+  "source_tree": "ffec741371d61d26ef27a7efaf9123cd8beba01a",
+  "ci_run_id": 43048852566,
+  "ci_event": "push",
+  "ci_run_url": "https://github.com/msVPNco/rovunet-app/actions/runs/43048852566",
+  "additional_pr_ci": {
+    "run": 43048865374,
+    "conclusion": "success"
+  },
+  "artifact_id": 13869439962,
+  "artifact_zip_sha256": "37cbc73ff7a742ab3f7bcb67734a797db437ac9a7ec3bc90678c12292234b23e",
+  "unsigned_apk_sha256": "c21b6590f12b83e1b1facfb57a63755ce10a93a0fbdada6c8253047c85f6ea10",
+  "apk_name": "Rovunet-v0.3.0-alpha19-Full.apk",
+  "apk_sha256": "d44c432113035329ef83f8f84cc7c005290c434089f0cdddc384f4530bd1bc46",
+  "apk_bytes": 158670158,
+  "signing_certificate_sha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+  "signed_payload_matches_ci_unsigned": true,
+  "signature_schemes": [
+    "v2",
+    "v3"
+  ],
+  "native_alignment": "All shipped 64-bit ELF LOAD segments verified for 16-KiB pages",
+  "tests": {
+    "jvm": 148,
+    "gradle_unit": 151,
+    "debug_device": 75,
+    "minified_jni": 2,
+    "loopback_modes": 18,
+    "per_mode_requests": 200,
+    "concurrency": 40,
+    "awg_userspace_tcp_udp_and_shutdown_versions": [
+      "1",
+      "2",
+      "3.1"
+    ],
+    "supplemental_encrypted_tcp_udp_and_shutdown_modes": [
+      "AnyTLS",
+      "TUIC v5",
+      "Mieru TCP",
+      "Mieru UDP"
+    ]
+  },
+  "native_scope": "Pinned Xray, launcher, Hev/JNI, patched Slipstream/JNI and constrained Mihomo AWG/AnyTLS/TUIC/Mieru adapter rebuilt for three Full ABIs; remaining checksum-pinned Full transports reused",
+  "auxiliary_upstream_commit": "3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8",
+  "auxiliary_native_sha256": {
+    "lib/arm64-v8a/librovunet_awg.so": "44b1a5ca4f0cd9f913427003f42a88820396b15c612bb1d7cf4fa527efa65c64",
+    "lib/armeabi-v7a/librovunet_awg.so": "0f7dc0a392a08144ca7556bde6531d4a3fcab5de7efcb039fa111e99e0f99af8",
+    "lib/x86_64/librovunet_awg.so": "15d68b6b37841f9b728f180a56887cbcefbb63cbf82ee1419753785ddda1b553"
+  },
+  "owner_authorized_implementation_and_release": true,
+  "owner_approved_exact_apk": false,
+  "owner_approval_date": "2026-11-11",
+  "physical_phone_validation": "No new physical-phone/carrier, Wi-Fi/mobile handover, weaker-device or screen-off battery/data measurement. Own-panel WireGuard/Hy2 failures are not claimed fixed.",
+  "source_tree_file_count": 2996,
+  "publication": "Owner authorized self-testing and release without a preview hold. Signed offline with the unchanged production key; no signing/recovery material is public."
+}

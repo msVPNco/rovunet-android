@@ -43,3 +43,5 @@ Alpha19 可以通过“导入”刷新已有订阅，无需先删除，保留来
 ## Upgrade and evidence
 
 Install the signed Full APK over the existing production installation without uninstalling or clearing data. Package `app.veyra.client` and the production signing certificate remain unchanged; versionCode increases from 39 to 40. The final asset checksums, exact source, CI and native rebuild scope are recorded in the attached verification and source manifests. No new physical-device acceptance is claimed.
+
+[Verified source and signing evidence](alpha19-provenance.json): 148 JVM, 151 Gradle unit, 75 Debug emulator and two minified Release JNI cases; 18 existing encrypted transport modes, AWG and the new auxiliary encrypted TCP/UDP fixtures. Phone/carrier and battery measurements remain separate.

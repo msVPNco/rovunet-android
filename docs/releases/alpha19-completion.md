@@ -72,3 +72,7 @@ No physical-phone/carrier, Wi-Fi/mobile handover, weaker-phone responsiveness or
 screen-off/idle battery/data measurement was performed in this environment. The
 owner's earlier AWG/SS2022/Trojan/VLESS field successes remain historical owner
 reports. No new fix is claimed for the own-panel WireGuard/Hy2 failure.
+
+## Final source and evidence
+
+Application source `e8c93787fc4703cf4fea6c52ae056fae2724b105`, tree `ffec741371d61d26ef27a7efaf9123cd8beba01a`. Push CI 43048852566 and independent PR CI 43048865374 pass verification and device gates: 148 JVM, 151 Gradle unit, 75 Debug emulator and two minified Release JNI cases. The final unsigned APK is signed offline with the unchanged production signer; all payload entries are checked byte-for-byte against CI. Exact artifact, APK, native and certificate hashes are in [provenance](alpha19-provenance.json). Earlier pending/fixture notes above describe intermediate work, not the final state.

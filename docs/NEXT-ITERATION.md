@@ -1,13 +1,13 @@
 # Rovunet next iteration
 
-## Current alpha19/code40 implementation — 2026-11-11
+## Current alpha19/code40 completion — 2026-11-11
 
 The owner authorized implementing the discussed Android work, self-testing and
 release without a preview/phone-acceptance hold. This supersedes all backlog-only
 and review-only wording below for this iteration. PR #19 contains the work; do
 not report publication until its verified signed artifact is actually published.
 
-Implemented and under verification:
+Implemented in alpha19:
 - Import on an existing HTTPS source now refreshes the saved subscription instead
   of requiring deletion. Source/profile identities, automatic-update preference,
   local edits and removal review remain protected. Duplicate URL ownership is
@@ -26,10 +26,7 @@ Implemented and under verification:
   the already pinned constrained Mihomo child. General YAML, arbitrary scripts,
   unverified TLS and unsupported effective URI options are not silently accepted.
 
-Validation recorded so far: 148 portable/JUnit cases and encrypted local TCP/UDP
-relay plus shutdown for AnyTLS, TUIC and Mieru over TCP/UDP pass. Required Android
-compile, instrumentation, minified JNI and public unsigned build are pending.
-Keep final release evidence in the alpha19 release record.
+Verified source `e8c93787fc4703cf4fea6c52ae056fae2724b105`: 148 portable/JUnit cases, 151 Gradle unit cases, 75 Debug emulator cases and two minified Release JNI cases pass in both recorded CI runs. Existing 18 encrypted TCP/UDP modes and AWG 1/2/3.1 regressions pass; AnyTLS, TUIC and Mieru TCP/UDP have actual local encrypted TCP/UDP and shutdown tests. The public Full APK uses the fixed production signer. See [provenance](releases/alpha19-provenance.json) and the [release](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19). Phone/network/battery limits remain separate.
 
 Remaining evidence-dependent work, in priority order:
 1. Re-test the panel's WireGuard/Hy2 outputs on the affected physical network,
