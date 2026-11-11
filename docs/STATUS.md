@@ -4,9 +4,9 @@ Subscription refresh/reimport, direct-first DNS fallback, moving labels, manual 
 
 ## Historical alpha18.1 status
 
-## Windows 0.1.0 Beta
+## Windows 0.1.1 Beta
 
-Windows x64 beta: [release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta), [source and scope](../windows/README.md), [verification](releases/windows-0.1.0-beta-provenance.json). Unsigned; Hysteria2/WireGuard and TUN/per-process routing limitations are disclosed.386 fresh Windows/installer assertions and239 domain tests passed; platform-specific prerelease leaves Android Latest unchanged.
+Windows x64 [pre-release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta): [source and scope](../windows/README.md), [verification manifest](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.1-beta/VERIFICATION.json). Includes active-card priority, fresh green latency, three themes, responsive layout and the full 60,370-entry Default resolver bank. Passed 738 UI/behavior assertions, 97 installer assertions and a real local HTTPS fixture. No trusted Authenticode signature yet; Hysteria2/WireGuard remain limited, AmneziaWG is not integrated, and there is no device-wide TUN. Android Latest remains separate.
 
 # Rovunet — current release / وضعیت فعلی
 

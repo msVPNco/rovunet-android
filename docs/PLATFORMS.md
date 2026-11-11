@@ -6,7 +6,7 @@ The original repository was renamed; its numeric identity remains 1445854036.
 | Platform | Current status | Release channel | Installable asset |
 | --- | --- | --- | --- |
 | Android | alpha19/code40 public; owner-approved public subscriptions and broader imports | Existing `v<version>` tags | Signed Full/Lite `.apk`, when provided |
-| Windows | Public **0.1.0 Beta x64**, unsigned; [scope and limits](../windows/docs/STATUS.md) | `windows-v0.1.0-beta` (prerelease) | [Windows installer/source](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.0-beta) |
+| Windows | Public **0.1.1 Beta x64** (pre-release); [scope and limits](../windows/docs/STATUS.md) | `windows-v0.1.1-beta` (prerelease) | [Windows installer/source](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) |
 | Linux | Planned for this repository | `linux-v<version>` (proposed; not yet used) | Linux-specific package, when implemented |
 | macOS | Planned for this repository | `macos-v<version>` | macOS-specific package, when implemented |
 
