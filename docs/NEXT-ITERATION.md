@@ -26,6 +26,12 @@ Reproduce old-subscription-to-current-feed updates and re-import without deletin
 
 Acceptance: existing subscriptions can update; re-import of an existing source offers a clear update/review flow; a changed URL can be reviewed and migrated safely where appropriate; unrelated subscriptions and user edits are preserved; removals retain review requirements; failure leaves existing profiles intact. Add redacted actionable error categories instead of only the generic failure, and verify UI outcome/closure after success. No deletion workaround or forced removal of duplicate protection. Use synthetic fixtures for regressions, including changed item sets, source changes, platform feeds and unavailable status metadata. This record requests a future fix, not an immediate implementation/build/release.
 
+### Android card/profile overflow text — owner request, 2026-11-11
+
+For collection cards and configuration/profile cards, when a display label is wider than its own text container, keep it on one line and show the full text with a scrolling marquee. Do not clip/ellipsize it or wrap it onto two lines. Labels that fit remain stationary. Keep action buttons, card geometry and touch targets intact; constrain scrolling to the label container. Support Persian/RTL, English/LTR and mixed-direction names, and larger font settings. Run marquee work only for overflowing labels on visible cards while the app is visible; suspend it off-screen/background to limit CPU/battery cost. This is a specific requested text animation, not permission for unrelated continuous decorative animation.
+
+Record for the next Android update; implementation/build/publication is not authorized by this backlog entry.
+
 Track capability status separately as import, manual form, runtime engine, verified data transfer and published version; do not count a menu label as complete support.
 
 For the separate server investigation, first inspect the server environment, then test a compatible new protocol independently and obtain an importable phone configuration. Panel integration or replacement of existing Hy2/WireGuard outputs is a later decision based on physical-phone data transfer; no panel/server changes are made by this documentation update.
