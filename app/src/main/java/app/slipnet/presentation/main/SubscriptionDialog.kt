@@ -151,6 +151,6 @@ internal fun subscriptionErrorResource(code: String?): Int = when (code) {
     "SOURCE_CHANGED" -> R.string.subscription_source_changed
     "SOURCE_EXISTS" -> R.string.subscription_source_exists
     "SOURCE_NOT_FOUND" -> R.string.subscription_source_not_found
-    "Saved credentials unavailable" -> R.string.profile_credentials_unavailable
+    "Saved credential key unavailable", "Unknown saved credential format", "Invalid saved credential" -> R.string.profile_credentials_unavailable
     else -> R.string.subscription_failed
 }

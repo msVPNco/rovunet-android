@@ -50,9 +50,8 @@ fun ProfileListItem(
         border = BorderStroke(if (isConnected || isSelected) 1.5.dp else 1.dp, if (isConnected || isSelected) border else tones.childOutline),
         colors = CardDefaults.cardColors(containerColor = if (isSelected || isConnected) tones.selectedChild else tones.child)) {
         Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 5.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
-                    itemVerticalAlignment = Alignment.CenterVertically) {
-                    MarqueeText(profile.name, modifier = Modifier.fillMaxWidth(),
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MarqueeText(profile.name, modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))

@@ -9,6 +9,33 @@ import java.net.Socket
 
 /** Requires an attached Android device/emulator. This is NOT an internet test. */
 class CoreDeviceSmokeTest {
+    @Test fun packagedSupplementalProtocolsOwnAuthenticatedEndpointsAndReleaseThem() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val binary = File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so")
+        val launcher = File(context.applicationInfo.nativeLibraryDir, "libveyra_core_launcher.so")
+        val links = listOf(
+            "anytls://synthetic@127.0.0.1:12345?sni=example.invalid",
+            "tuic://00000000-0000-4000-8000-000000000001:synthetic@127.0.0.1:12345?sni=example.invalid",
+            "mierus://fixture:synthetic@127.0.0.1?profile=fixture&port=12345&protocol=TCP",
+            "mierus://fixture:synthetic@127.0.0.1?profile=fixture&port=12345&protocol=UDP"
+        )
+        for (link in links) {
+            val core = CoreProcess(diagnostics = false)
+            val endpoint = LocalSocksEndpoint.privateCore()
+            try {
+                core.start(binary, CoreLink.runtime(link, endpoint.port, endpoint.user, endpoint.password), launcher,
+                    workDirectory = context.cacheDir).getOrThrow()
+                assertTrue(core.isRunning())
+                Socket("127.0.0.1", endpoint.port).use { socket ->
+                    socket.soTimeout = 2000
+                    socket.outputStream.write(byteArrayOf(5, 1, 2))
+                    assertEquals(5, socket.inputStream.read()); assertEquals(2, socket.inputStream.read())
+                }
+            } finally { core.stop() }
+            assertFalse(core.isRunning())
+            ServerSocket(endpoint.port).close()
+        }
+    }
     @Test fun packagedAmneziaCoreOwnsAuthenticatedPortAndStopsWithoutAHandshake() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val core = CoreProcess(diagnostics = false)
