@@ -93,7 +93,8 @@ class SubscriptionUiDeviceTest {
                             prepare = { name, url, id, auto ->
                                 calls.incrementAndGet(); gate.await()
                                 if (fail.get()) error("DOWNLOAD_FAILED")
-                                repository.prepareDocument(name, url, id, auto, document)
+                                val savedName = id?.let { db.subscriptionDao().get(it)?.name }.orEmpty()
+                                repository.prepareDocument(name.ifBlank { savedName }, url, id, auto, document)
                             }, onDismiss = { dismissed.incrementAndGet(); open.value = false })
                     }
                 }
