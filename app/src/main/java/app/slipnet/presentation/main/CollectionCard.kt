@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import app.slipnet.presentation.theme.collectionTones
 import app.slipnet.presentation.theme.SoftPopIconButton
+import app.slipnet.presentation.common.components.MarqueeText
 import app.slipnet.R
 import app.slipnet.domain.model.*
 
@@ -58,11 +59,10 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
             .padding(start = 14.dp, end = 4.dp, top = 5.dp, bottom = 7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(ProfileCollections.name(profiles.first()), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    MarqueeText(ProfileCollections.name(profiles.first()), modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     val count = androidx.compose.ui.platform.LocalResources.current.getQuantityString(R.plurals.connection_paths, profiles.size, profiles.size)
-                    Text(if (path != null) "${path.name} · $count" else count,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                    MarqueeText(if (path != null) "${path.name} · $count" else count, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
                         color = tones.headerText.copy(alpha = .8f))
                 }
                 SoftPopIconButton(onClick = onDetails) {
@@ -116,7 +116,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
             if (profiles.size > 50) Text(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
             if (profiles.any { it.needsCredentials }) Text(stringResource(R.string.collection_needs_credentials),
                 color = colors.error, style = MaterialTheme.typography.bodySmall)
-            if (completed.isNotEmpty()) Text(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
+            if (completed.isNotEmpty()) MarqueeText(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
                 style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
         }
     }

@@ -126,13 +126,22 @@ class SubscriptionUiDeviceTest {
             assertTrue(requireNotNull(repository.findSource(address)).autoUpdate)
             assertEquals(stored.id, db.profileDao().getAllProfiles().first().single { it.collectionId == source.id }.id)
 
+            // Importing an already saved URL is a refresh, not a duplicate-source error.
+            compose.runOnIdle { open.value = true }
+            compose.onNodeWithTag("subscription-import").performScrollTo().performClick()
+            compose.waitUntil(8000) { !open.value }
+            assertEquals(source.id, repository.findSource(address)?.id)
+            assertEquals(stored.id, db.profileDao().getAllProfiles().first().single { it.collectionId == source.id }.id)
+            assertTrue(requireNotNull(repository.findSource(address)).autoUpdate)
+            assertEquals(3, dismissed.get())
+
             fail.set(true)
             compose.runOnIdle { open.value = true }
             compose.onNode(hasSetTextAction() and hasText(resources.getString(R.string.subscription_name))).performTextReplacement("Failed update")
             compose.onNodeWithTag("subscription-update").performScrollTo().performClick()
             compose.waitUntil(8000) { compose.onAllNodesWithTag("subscription-error", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("subscription-error", useUnmergedTree = true).performScrollTo().assertTextEquals(resources.getString(R.string.subscription_failed))
-            assertTrue(open.value); assertEquals(2, dismissed.get())
+            assertTrue(open.value); assertEquals(3, dismissed.get())
             assertEquals("Updated source", repository.findSource(address)?.name)
             assertNotNull(db.profileDao().getProfileById(stored.id))
         } finally {

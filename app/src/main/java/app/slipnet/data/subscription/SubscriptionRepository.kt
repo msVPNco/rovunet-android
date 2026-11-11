@@ -129,11 +129,12 @@ class SubscriptionRepository @Inject constructor(
         error("DOWNLOAD_FAILED")
     }
     suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
-        val initial = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
+        val resolvedId = existingId ?: findSource(address)?.id
+        val initial = resolvedId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
         val response = if (initial?.id?.startsWith("public:") == true) null else fetchDocument(address, 2 * 1024 * 1024, false)
         val document = response?.text ?: PublicProviders.download(url(address).toString(), ::fetch)
         val resolvedName = SubscriptionMetadata.name(name, response?.title, url(address).host, initial?.name)
-        val preview = prepareDocument(resolvedName, address, existingId, auto, document).copy(
+        val preview = prepareDocument(resolvedName, address, resolvedId, if (existingId == null && initial != null) initial.autoUpdate else auto, document).copy(
             metadata = response?.let { DownloadMetadata(it.userInfo, it.serverTime, it.receivedAt) })
         require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
         preview
@@ -215,10 +216,10 @@ class SubscriptionRepository @Inject constructor(
     private suspend fun applyTransaction(preview: SubscriptionPreview, addition: Boolean) = db.withTransaction {
         val current = db.subscriptionDao().get(preview.source.id)
         require(current == preview.expectedSource) { "SOURCE_CHANGED" }
-        if (addition) {
-            val address = url(sourceUrl(preview.source)).toString()
-            require(db.subscriptionDao().all().none { runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false) }) { "SOURCE_EXISTS" }
-        }
+        val address = url(sourceUrl(preview.source)).toString()
+        require(db.subscriptionDao().all().none {
+            it.id != preview.source.id && runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false)
+        }) { "SOURCE_EXISTS" }
         val old = JSONArray(current?.membersJson ?: "[]")
         val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }.toMutableMap()
         require(preview.legacyKeys.values.distinct().size == preview.legacyKeys.size) { "SOURCE_CHANGED" }

@@ -32,6 +32,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	if os.Getenv("ROVUNET_SUPPLEMENTAL_FIXTURE") == "1" {
+		runSupplementalFixture()
+		os.Exit(0)
+	}
 	if os.Getenv("ROVUNET_AWG_TEST_CHILD") == "1" {
 		main()
 		os.Exit(0)

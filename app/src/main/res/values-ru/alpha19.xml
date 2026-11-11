@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="editor_amnezia_options">Параметры AmneziaWG</string>
+    <string name="editor_vless_encryption">Шифрование VLESS (как на сервере)</string>
+    <string name="editor_cipher_suites">Наборы шифров TLS (cs, через :)</string>
+    <string name="editor_final_mask">Маска fm (поддерживаемый JSON)</string>
+    <string name="editor_kcp_tti">Интервал mKCP (tti, мс)</string>
+    <string name="editor_ws_heartbeat">Пульс WebSocket (секунды)</string>
+    <string name="editor_hy2_ports">Порты переключения Hy2 (mport)</string>
+    <string name="editor_hy2_interval">Интервал переключения Hy2 (секунды)</string>
+    <string name="editor_mieru_username">Имя пользователя Mieru</string>
+</resources>

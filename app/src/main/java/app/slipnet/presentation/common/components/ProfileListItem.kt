@@ -52,7 +52,7 @@ fun ProfileListItem(
         Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 9.dp, bottom = 5.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
                     itemVerticalAlignment = Alignment.CenterVertically) {
-                    Text(profile.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    MarqueeText(profile.name, modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
@@ -94,7 +94,7 @@ fun ProfileListItem(
                         TunnelType.NAIVE, TunnelType.NAIVE_SSH -> "${profile.domain}:${profile.naivePort}"
                         else -> profile.domain
                     }
-                    Text(destination, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    MarqueeText(destination, modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr), color = colors.onSurfaceVariant)
                     val protocolLabel = if (profile.tunnelType == TunnelType.XRAY) when (profile.coreLink.substringBefore("://").lowercase()) {
                         "ss" -> stringResource(R.string.review02_shadowsocks)
@@ -102,8 +102,7 @@ fun ProfileListItem(
                         "vmess" -> stringResource(R.string.review03_vmess)
                         else -> profile.tunnelType.displayName
                     } else profile.tunnelType.displayName
-                    Text(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "),
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                    MarqueeText(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "), modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
                         color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
                 }
                 IconButton(onClick = onEditClick, enabled = canEdit, modifier = Modifier.testTag("profile-edit-${profile.id}")) {

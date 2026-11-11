@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import app.slipnet.R
 import app.slipnet.data.subscription.*
 import app.slipnet.presentation.theme.collectionTones
+import app.slipnet.presentation.common.components.MarqueeText
 import java.text.NumberFormat
 
 /** A compact addition inside the existing collection surface, shared by all its paths. */
@@ -51,8 +52,8 @@ internal fun AccountStatusSummary(view: AccountStatusView) {
         else -> stringResource(R.string.account_status_unavailable)
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-        Text(message, style = MaterialTheme.typography.labelSmall, color = color)
-        if (status?.providerReported == true) Text(stringResource(R.string.subscription_provider_snapshot,
+        MarqueeText(message, style = MaterialTheme.typography.labelSmall, color = color)
+        if (status?.providerReported == true) MarqueeText(stringResource(R.string.subscription_provider_snapshot,
             java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(status.generatedAt))),
             style = MaterialTheme.typography.labelSmall, color = collectionTones.headerText.copy(alpha = .65f))
         if (view.trustworthy && status != null && (status.metering == "complete" || status.providerReported) && status.limitBytes != null && status.state == "active") {

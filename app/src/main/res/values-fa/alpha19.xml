@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="editor_amnezia_options">پارامترهای AmneziaWG</string>
+    <string name="editor_vless_encryption">رمزنگاری VLESS (مطابق سرور)</string>
+    <string name="editor_cipher_suites">مجموعه‌رمزهای TLS (cs، جداشده با :)</string>
+    <string name="editor_final_mask">ماسک نهایی (fm، فقط JSON پشتیبانی‌شده)</string>
+    <string name="editor_kcp_tti">فاصلهٔ mKCP (tti، میلی‌ثانیه)</string>
+    <string name="editor_ws_heartbeat">ضربان WebSocket (ثانیه)</string>
+    <string name="editor_hy2_ports">پورت‌های پرش Hy2 (mport)</string>
+    <string name="editor_hy2_interval">فاصلهٔ پرش Hy2 (ثانیه)</string>
+    <string name="editor_mieru_username">نام کاربری Mieru</string>
+</resources>

@@ -41,6 +41,18 @@ new physical-phone/carrier/battery acceptance. Keep alpha18.1 with a higher buil
 code because code38 was already delivered as alpha18.1; never replace its bytes.
 AnyTLS/TUIC remain subsequent work. Preserve README formatting and desktop code.
 
+## Alpha19 implementation and publication authorization
+
+On 2026-11-11 the owner explicitly requested implementing all discussed Android
+fixes, running our own tests, then publishing without a preview or phone acceptance
+hold. This supersedes the review-before-publication rule for alpha19/code40 only.
+Scope includes subscription refresh/reimport, direct-first collection testing and
+DNS fallback, moving overflowing labels, manual forms, external WireGuard links,
+and AnyTLS/TUIC/Mieru through the constrained auxiliary runtime. Preserve desktop
+and panel work. Keep the production signer. Report automated/emulator evidence
+separately from carrier, physical-phone, screen-off battery and data measurements;
+the latter and the panel WireGuard/Hy2 failure need real-device evidence.
+
 ## Owner review before publication
 
 From 2026-11-07, deliver each new installable APK to the owner for testing on

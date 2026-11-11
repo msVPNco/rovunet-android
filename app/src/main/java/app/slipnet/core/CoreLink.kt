@@ -64,6 +64,7 @@ object CoreLink {
         }
     }
     fun handles(text: String): Boolean {
+        if (SupplementalCore.handles(text)) return true
         if (text.trimStart().startsWith("[Interface]", true)) return true
         val scheme = text.substringBefore("://").lowercase()
         if (scheme in setOf("hysteria2", "hy2", "wireguard", "ss", "trojan", "vmess")) return true
@@ -115,6 +116,7 @@ object CoreLink {
     fun parse(raw: String): Parsed {
         val text = CoreSharing.normalize(raw.trim())
         require(text.length <= 65536) { "Core profile too large" }
+        if (SupplementalCore.handles(text)) return SupplementalCore.parse(text)
         if (text.trimStart().startsWith("[Interface]", true)) return if (AmneziaConfig.handles(text)) AmneziaConfig.parse(text) else wireguard(text)
         if (text.startsWith("wireguard://", true)) return parse(wireguardDocument(text)).copy(
             name = URI(text).rawFragment?.let(::decode)?.ifBlank { null } ?: "WireGuard")
