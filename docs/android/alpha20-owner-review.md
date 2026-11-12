@@ -62,6 +62,8 @@ for AWG/AnyTLS/TUIC/Mieru. Remaining engines come from the SHA256-pinned SlipNet
 2.5.6 APK in prepare-native.py. Each final packaged library hash belongs in the
 artifact inventory, with rebuilt and reused classifications kept separate.
 Existing source/license pins are retained, including lyrebird's Tor GitLab URL.
+The app assets now also include Rovunet's complete AGPL-3.0 text and original
+NOTICE, alongside the existing Xray/Mihomo license and pinned-source notices.
 No claim of binary reproducibility or all-source completeness is made.
 
 ## Review, upgrade and rollback

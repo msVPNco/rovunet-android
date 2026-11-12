@@ -3451,7 +3451,8 @@ private fun DohServerSelector(
             .filter { it.startsWith("https://", ignoreCase = true) }.toList()
         if (urls.isNotEmpty()) {
             val merged = (customDohUrls.trim().lineSequence() + urls.asSequence()).filter(String::isNotBlank).distinct().joinToString("\n")
-            if (merged.length <= 2 * 1024 * 1024 && merged.lines().size <= 1000) onCustomDohUrlsChange(merged)
+            require(merged.length <= 2 * 1024 * 1024 && merged.lines().size <= 1000) { "Input too large" }
+            onCustomDohUrlsChange(merged)
         }
     }
 

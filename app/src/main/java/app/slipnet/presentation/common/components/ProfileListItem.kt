@@ -80,7 +80,12 @@ fun ProfileListItem(
                 }
                 val test = when (pingResult) {
                     is PingResult.Success -> if (pingResult.verified) "" else stringResource(R.string.ui_not_verified)
-                    is PingResult.Error -> stringResource(R.string.ui_last_test_failed)
+                    is PingResult.Error -> {
+                        val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
+                            androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
+                        stringResource(R.string.ui_last_test_failed) + " · " + stringResource(
+                            if (ProbeCache.fresh(pingResult, measurementNowMillis)) R.string.review02_ping_fresh else R.string.review02_ping_previous, time)
+                    }
                     is PingResult.Pending, is PingResult.Testing -> stringResource(R.string.ui_testing)
                     PingResult.ReviewIdentity -> stringResource(R.string.probe_review_identity)
                     else -> ""
