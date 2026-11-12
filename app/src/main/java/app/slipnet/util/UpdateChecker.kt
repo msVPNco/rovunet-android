@@ -9,8 +9,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
+import kotlinx.coroutines.sync.withLock
 import java.security.MessageDigest
 
 data class AppUpdate(val versionName: String, val downloadUrl: String, val releaseNotes: String, val sha256: String, val size: Long)
@@ -21,88 +20,127 @@ object UpdateChecker {
     private const val API = UpdateManifest.API_URL
     const val CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000L
 
-    private fun connection(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
-        require(URL(url).protocol == "https")
-        connectTimeout = 15_000
-        readTimeout = 15_000
-        useCaches = false
-        setRequestProperty("Cache-Control", "no-cache")
-        setRequestProperty("Accept", "application/vnd.github+json")
-        setRequestProperty("User-Agent", "Rovunet-Android")
-    }
-    private fun readText(url: String, maxBytes: Int): String {
-        val conn = connection(url)
-        try {
-            check(conn.responseCode == 200) { "Update service unavailable" }
-            return conn.inputStream.use { input ->
+    private suspend fun readText(route: UpdateNetwork.Route, url: String, maxBytes: Int): String =
+        route.get(url) { response ->
+            check(response.code == 200) { "Update service unavailable" }
+            check(response.body.contentLength() <= maxBytes) { "Update response too large" }
+            response.body.byteStream().use { input ->
                 val output = java.io.ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
-                while (output.size() <= maxBytes) {
-                    val n = input.read(buffer, 0, minOf(buffer.size, maxBytes + 1 - output.size()))
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    route.ensureRoute()
+                    val n = input.read(buffer)
                     if (n < 0) break
+                    check(output.size() + n <= maxBytes) { "Update response too large" }
                     output.write(buffer, 0, n)
                 }
-                val bytes = output.toByteArray()
-                check(bytes.size <= maxBytes) { "Update response too large" }
-                String(bytes, Charsets.UTF_8)
+                String(output.toByteArray(), Charsets.UTF_8)
             }
-        } finally { conn.disconnect() }
-    }
-    suspend fun check(currentVersionName: String, includePreview: Boolean): AppUpdate? = withContext(Dispatchers.IO) {
+        }
+    suspend fun check(context: Context, currentVersionName: String, includePreview: Boolean): AppUpdate? = withContext(Dispatchers.IO) {
         // A desktop release can be global Latest. Scan the shared feed and select
         // only this Android flavour, preserving the explicit preview preference.
+        val route = UpdateNetwork.from(context).route()
         val lite = currentVersionName.endsWith("-lite")
         var newest: org.json.JSONObject? = null
         var page = 1
         while (true) {
-            val releases = org.json.JSONArray(readText("$API?per_page=30&page=$page", 3_000_000))
+            val releases = org.json.JSONArray(readText(route, "$API?per_page=30&page=$page", 3_000_000))
             newest = UpdateManifest.newestPublished(releases, newest, lite, includePreview)
             if (releases.length() < 30) break
             check(++page <= 10) { "Release listing incomplete" }
         }
         val body = newest?.toString() ?: return@withContext null
         val manifest = UpdateManifest.parse(body, currentVersionName, lite) ?: return@withContext null
-        val digest = manifest.digest.ifEmpty { UpdateManifest.checksum(readText(manifest.checksumsUrl, 64_000), manifest.url) }
+        val digest = manifest.digest.ifEmpty { UpdateManifest.checksum(readText(route, manifest.checksumsUrl, 64_000), manifest.url) }
         AppUpdate(manifest.version, manifest.url, manifest.notes, digest, manifest.size)
     }
-    suspend fun download(context: Context, update: AppUpdate, progress: suspend (Int) -> Unit): File = withContext(Dispatchers.IO) {
-        require(UpdateManifest.trustedAsset(update.downloadUrl) && update.sha256.matches(Regex("[a-f0-9]{64}")))
+    private val downloadMutex = kotlinx.coroutines.sync.Mutex()
+    suspend fun download(context: Context, update: AppUpdate, progress: suspend (Int) -> Unit): File =
+        downloadMutex.withLock() {
+            downloadLocked(context, update, progress)
+        }
+
+    private suspend fun downloadLocked(context: Context, update: AppUpdate, progress: suspend (Int) -> Unit): File = withContext(Dispatchers.IO) {
+        require(UpdateManifest.trustedAsset(update.downloadUrl) && update.sha256.matches(Regex("[a-f0-9]{64}")) &&
+            update.size in 1..400_000_000)
+        val route = UpdateNetwork.from(context).route()
         val folder = File(context.cacheDir, "shared/updates").apply { mkdirs() }
         folder.listFiles()?.forEach { it.delete() }
         val part = File(folder, "update.part")
         val apk = File(folder, "Rovunet-update.apk")
-        val conn = connection(update.downloadUrl)
         try {
-            check(conn.responseCode == 200) { "Download unavailable" }
-            val hash = MessageDigest.getInstance("SHA-256")
-            var total = 0L
+            downloadBody(route, update, part, progress)
+            verifyPackage(context, part)
+            route.ensureRoute()
+            check(part.renameTo(apk)) { "Could not save APK" }
+            apk
+        } finally { part.delete() }
+    }
+    internal suspend fun downloadBody(route: UpdateNetwork.Route, update: AppUpdate, part: File,
+        progress: suspend (Int) -> Unit) {
+            var complete = false
+            var attempts = 0
             var previous = -1
-            conn.inputStream.use { input -> part.outputStream().use { out ->
+            while (!complete) {
+                currentCoroutineContext().ensureActive()
+                route.ensureRoute()
+                val offset = if (part.exists()) part.length() else 0L
+                try {
+                    route.get(update.downloadUrl, offset) { response ->
+                        val append = response.code == 206 && offset > 0
+                        check(response.code == 200 || append) { "Download unavailable" }
+                        if (append) check(app.slipnet.core.UpdateNetworkPolicy.rangeStart(
+                            response.header("Content-Range"), offset, update.size)) { "Unexpected APK size" }
+                        check(response.header("Content-Encoding").let { it == null || it.equals("identity", true) }) { "Unexpected APK encoding" }
+                        var total = if (append) offset else 0L
+                        if (!append && offset > 0) { previous = -1; progress(0) }
+                        java.io.FileOutputStream(part, append).use { out ->
+                            response.body.byteStream().use { input ->
+                                val buffer = ByteArray(64 * 1024)
+                                while (true) {
+                                    currentCoroutineContext().ensureActive()
+                                    route.ensureRoute()
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    total += count
+                                    check(total <= update.size) { "Unexpected APK size" }
+                                    out.write(buffer, 0, count)
+                                    val percent = (total * 100 / update.size).toInt()
+                                    if (percent != previous) { previous = percent; progress(percent) }
+                                }
+                            }
+                        }
+                        if (total != update.size) throw java.io.EOFException("Incomplete APK")
+                        complete = true
+                    }
+                } catch (error: java.io.IOException) {
+                    currentCoroutineContext().ensureActive()
+                    route.ensureRoute()
+                    // Same-session, bounded retries only. Every resumed byte is covered by the final digest.
+                    if (++attempts >= 3 || error is javax.net.ssl.SSLException) throw error
+                    kotlinx.coroutines.delay(attempts * 750L)
+                }
+            }
+            val hash = MessageDigest.getInstance("SHA-256")
+            part.inputStream().use { input ->
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
                     currentCoroutineContext().ensureActive()
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    total += count
-                    check(total <= update.size && total <= 400_000_000) { "Unexpected APK size" }
-                    out.write(buffer, 0, count); hash.update(buffer, 0, count)
-                    val percent = (total * 100 / update.size).toInt()
-                    if (percent != previous) { previous = percent; progress(percent) }
+                    val count = input.read(buffer); if (count < 0) break
+                    hash.update(buffer, 0, count)
                 }
-            } }
-            check(total == update.size) { "Incomplete APK" }
+            }
             val actual = hash.digest().joinToString("") { "%02x".format(it) }
             check(MessageDigest.isEqual(actual.toByteArray(), update.sha256.toByteArray())) { "APK checksum mismatch" }
-            verifyPackage(context, part)
-            check(part.renameTo(apk)) { "Could not save APK" }
-            apk
-        } finally { conn.disconnect(); part.delete() }
     }
     fun errorResource(error: Throwable): Int = when {
+        error.message in setOf("Update route changed", "Update route unavailable") -> app.slipnet.R.string.update_error_route
         error is java.net.UnknownHostException || error is java.net.SocketTimeoutException ||
             error is java.net.ConnectException || error.message in setOf("Update service unavailable", "Download unavailable") -> app.slipnet.R.string.update_error_network
         error.message in setOf("Wrong application package", "APK signing identity mismatch") -> app.slipnet.R.string.update_error_identity
-        error.message in setOf("Incomplete APK", "APK checksum mismatch", "Invalid APK", "Unexpected APK size") -> app.slipnet.R.string.update_error_integrity
+        error.message in setOf("Incomplete APK", "APK checksum mismatch", "Invalid APK", "Unexpected APK size", "Unexpected APK encoding") -> app.slipnet.R.string.update_error_integrity
         error.message == "Could not save APK" || error is java.io.FileNotFoundException -> app.slipnet.R.string.update_error_storage
         else -> app.slipnet.R.string.update_failed
     }

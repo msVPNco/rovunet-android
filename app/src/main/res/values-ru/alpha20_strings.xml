@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_error_route">Маршрут обновления изменился или недоступен. Подключите VPN и повторите попытку. Загрузка через цепочки пока не поддерживается.</string>
+    <string name="file_import_invalid">Не удалось прочитать файл. Нужен корректный UTF-8 размером до 2 МиБ (ключ SSH: 128 КиБ). Прежние настройки сохранены.</string>
+</resources>

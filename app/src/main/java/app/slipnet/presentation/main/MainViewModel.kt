@@ -507,7 +507,7 @@ class MainViewModel @Inject constructor(
             val skipped = preferencesDataStore.skippedUpdateVersion.first()
             val current = app.slipnet.BuildConfig.VERSION_NAME
 
-            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null } ?: return@launch
+            val update = try { app.slipnet.util.UpdateChecker.check(appContext, current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null } ?: return@launch
 
             // Don't show if user already skipped this version
             if (update.versionName == skipped) return@launch

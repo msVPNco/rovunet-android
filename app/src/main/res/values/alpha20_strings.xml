@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_error_route">The update route changed or is unavailable. Reconnect your VPN and try again. Chain downloads are not supported yet.</string>
+    <string name="legal_attribution_english" translatable="false">AGPL-3.0 | Based on SlipNet 2.5.6 by Anonvector and its contributors; independent fork, not affiliated.\nXray-core | MPL-2.0\nLicences and corresponding-source information are included in the app and source bundle.</string>
+    <string name="file_import_invalid">Could not read this file. Use valid UTF-8 text within the size limit (2 MiB; SSH keys: 128 KiB). Existing settings were kept.</string>
+</resources>

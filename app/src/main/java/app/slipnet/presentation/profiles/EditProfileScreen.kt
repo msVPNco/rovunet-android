@@ -3031,16 +3031,8 @@ fun EditProfileScreen(
                         } else {
                             // Key auth
                             val context = LocalContext.current
-                            val keyFileLauncher = rememberLauncherForActivityResult(
-                                ActivityResultContracts.OpenDocument()
-                            ) { uri: Uri? ->
-                                uri?.let {
-                                    try {
-                                        val content = context.contentResolver.openInputStream(it)
-                                            ?.bufferedReader()?.readText() ?: ""
-                                        viewModel.updateSshPrivateKey(content)
-                                    } catch (_: Exception) {}
-                                }
+                            val keyFileLauncher = app.slipnet.presentation.common.components.rememberTextFileImport(128 * 1024) {
+                                viewModel.updateSshPrivateKey(it)
                             }
 
                             OutlinedTextField(
@@ -3454,33 +3446,17 @@ private fun DohServerSelector(
 
     // Import + Test buttons
     val context = LocalContext.current
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { stream ->
-                    val content = stream.bufferedReader().readText()
-                    // Extract lines that look like DoH URLs
-                    val urls = content.lines()
-                        .map { line -> line.trim() }
-                        .filter { line -> line.startsWith("https://", ignoreCase = true) }
-                    if (urls.isNotEmpty()) {
-                        val existing = customDohUrls.trim()
-                        val merged = if (existing.isNotEmpty()) {
-                            existing + "\n" + urls.joinToString("\n")
-                        } else {
-                            urls.joinToString("\n")
-                        }
-                        onCustomDohUrlsChange(merged)
-                    }
-                }
-            } catch (_: Exception) { }
+    val importLauncher = app.slipnet.presentation.common.components.rememberTextFileImport { content ->
+        val urls = content.lineSequence().map(String::trim)
+            .filter { it.startsWith("https://", ignoreCase = true) }.toList()
+        if (urls.isNotEmpty()) {
+            val merged = (customDohUrls.trim().lineSequence() + urls.asSequence()).filter(String::isNotBlank).distinct().joinToString("\n")
+            if (merged.length <= 2 * 1024 * 1024 && merged.lines().size <= 1000) onCustomDohUrlsChange(merged)
         }
     }
 
     OutlinedButton(
-        onClick = { importLauncher.launch("text/*") },
+        onClick = { importLauncher.launch(arrayOf("text/*")) },
         modifier = Modifier.fillMaxWidth()
     ) {
         Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))

@@ -331,17 +331,8 @@ fun MainScreen(
         pendingChain = null
     }
 
-    val importFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    val json = inputStream.bufferedReader().readText()
-                    viewModel.parseImportConfig(json)
-                }
-            } catch (_: Exception) {}
-        }
+    val importFileLauncher = app.slipnet.presentation.common.components.rememberTextFileImport {
+        viewModel.parseImportConfig(it)
     }
 
     val qrScanLauncher = rememberLauncherForActivityResult(
