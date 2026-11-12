@@ -1,0 +1,337 @@
+{
+  "status": "unpublished-owner-review",
+  "version_name": "0.3.0-alpha20",
+  "version_code": 41,
+  "application_id": "app.veyra.client",
+  "application_source_commit": "7afeb7eb1724c18cfeb93c6049c94ba4366d5032",
+  "application_source_tree": "0fd96a34cafff94ebbab7982ee381356bd9b48c7",
+  "ci_checkout_commit": "93c74e564f918da3543f16248f339424bcd40e15",
+  "ci_checkout_tree_matches_source": true,
+  "ci_run": 43193939117,
+  "ci_jobs": {
+    "verify": 131099938967,
+    "android_device": 131099939331
+  },
+  "ci_artifact": {
+    "id": 13933881486,
+    "name": "rovunet-code41-review-validation",
+    "zip_sha256": "8ce942e063d1c5dd1a304faf2d8c43b4fb3473f5a2a8d9045794761ef40c78b6",
+    "bytes": 322525472
+  },
+  "apk": {
+    "name": "Rovunet-v0.3.0-alpha20-Full-review01.apk",
+    "sha256": "bf8cb2cebc0aba34deee1bb155a73f6fecd0d17c08bd193ed2c145870ccef97b",
+    "bytes": 158690799,
+    "unsigned_sha256": "85e3f8883c9ec445cff2d910bb6b0467bde3ee528839083d36c4f4be0e67ee40",
+    "debuggable": false,
+    "payload_matches_ci_unsigned": true
+  },
+  "signing": {
+    "certificate_sha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+    "schemes": [
+      "v2",
+      "v3"
+    ],
+    "verified_api_ranges": [
+      [
+        24,
+        27
+      ],
+      [
+        28,
+        36
+      ]
+    ],
+    "tool_verification": {
+      "official_archive": "build-tools_r36_linux.zip",
+      "metadata_checksum_sha1": "b0b6376977657e8ad9b969bacf4093601da2c6fb",
+      "archive_sha256": "5d9ac77fb6ff43d9da518a337b4fcf8f9097113df531d99ccefe80ef7ce8250b",
+      "apksigner_jar_sha256": "3716d9311e55d2b0918a2fd9d54ba9e406c5f6abeea700b287f11259bc163dec"
+    }
+  },
+  "tests": {
+    "local_portable_junit": 151,
+    "gradle_unit_task": "passed in final CI; individual count not asserted",
+    "debug_emulator": 81,
+    "minified_release_jni": 2,
+    "native_domain_length_subcases": 256,
+    "native_domain_fqdn_test": "pass",
+    "negative_native_reproduction": "unpatched length253 has wrong port;254 panics; patched tests pass",
+    "encrypted_kotlin_native_modes": [
+      "AWG1",
+      "AWG2",
+      "AWG3.1",
+      "AnyTLS",
+      "TUIC v5",
+      "Mieru TCP",
+      "Mieru UDP"
+    ],
+    "native_relay_scope": "real local encrypted TCP/UDP and shutdown; no carrier claim",
+    "ui_matrix": "four languages x Light/Dark/AMOLED; red failure independent of green connection, English centered LTR legal footer",
+    "updater": "local authenticated SOCKS + TLS + remote hostname + CDN redirect, untrusted TLS rejection, cancellation, session-change stop, resume, bad-range and bad-checksum rejection"
+  },
+  "native_patch": {
+    "base": "3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8",
+    "upstream_fix": "c65570ed0924a7e48a48160463c68015b9a84ca8",
+    "path": "tools/native/mihomo-socks-domain.patch",
+    "sha256": "8a4bc0fa9d7ff4e73dca835043aaa839fe5f46627ac7e43f903d76aee636e1fa"
+  },
+  "packaged_checks": {
+    "native_libraries": 39,
+    "64bit_elf_16k_load_aligned": 25,
+    "gomobile_dex_definitions": "pass",
+    "schemes": [
+      "wireguard",
+      "anytls",
+      "tuic",
+      "mierus"
+    ],
+    "agpl_and_notice_assets": true
+  },
+  "native_inventory": [
+    {
+      "path": "lib/arm64-v8a/libandroidx.graphics.path.so",
+      "sha256": "41e9a793c43a0f4fddb19e33f346bace464f30f888ba7b9eaf96294ea115bfb6",
+      "size": 10096,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libdatastore_shared_counter.so",
+      "sha256": "96c1396995cc8ee32c85b88cb414a67a7327f7f5faa1195d241bc2fe1579266d",
+      "size": 51752,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libgojni.so",
+      "sha256": "38fde6051ba8157b18605b6c8ec8bed92722e98070cb99318955f19972961aa2",
+      "size": 18375912,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libhev-socks5-tunnel.so",
+      "sha256": "017a5a3fb54d6c75a4255fa54fc74931222e2cbbf1a5e2c46e2a2f2e934fbebb",
+      "size": 319544,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/arm64-v8a/libhev-tunnel-jni.so",
+      "sha256": "62c31ba0ad3d4d844524c99f343a56e9952ce06ac596223a9d0e2bec16b502dc",
+      "size": 7864,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/arm64-v8a/libnaive.so",
+      "sha256": "23f950b4a813a63456070a7780001658da21e059b352f5a441ae8e66e5c97a74",
+      "size": 7226896,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libobfs4proxy.so",
+      "sha256": "b3863fd14a23a478cfdca139df70881598e46138c9051c8fbdbbf7a6024f5a5e",
+      "size": 17042248,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/librovunet_awg.so",
+      "sha256": "dc0c1b40aaa50915054ded7ead1ba3b01531eff2048bf496830795391487f4c1",
+      "size": 51880168,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/arm64-v8a/librovunet_slipstream.so",
+      "sha256": "ea6179536a3dbe8d7518112ccc748eb9121f36a1a7ac46316a6d2971e6d36083",
+      "size": 5845672,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/arm64-v8a/libslipnet-sockops.so",
+      "sha256": "bb38ffb3f4bda886d92a142b7740b274f0758c309039b68022c9d1162c9f177b",
+      "size": 7400,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libslipstream.so",
+      "sha256": "4976b633d35432094f21b01eafc2c4b4fd0acfa0e92e2b20c1270560d1489e0e",
+      "size": 5659408,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libtor.so",
+      "sha256": "42fcb483688fb4db001346edc2fe838a7cd75a652a0bfcc399973403bb796aed",
+      "size": 8679904,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/arm64-v8a/libveyra_core_launcher.so",
+      "sha256": "d11a0f2b4ded65b83d891d21d82bb1e2bc5c9aaa465f712334b89fde68793476",
+      "size": 5664,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/arm64-v8a/libveyra_xray.so",
+      "sha256": "1e7ddaa15abd62f1013d7af4af5ea36dd6babd6a02156bc9e37e71dc846075e4",
+      "size": 33434488,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/libandroidx.graphics.path.so",
+      "sha256": "41399eba6fc2a60f6f14642375c1824f3cf25eb8fec7397d753730a3ceda3e2b",
+      "size": 7252,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libdatastore_shared_counter.so",
+      "sha256": "b3aaaf476444e2773db581f36efeba2ee829f3d0a79741ad8cb60f44ed69bb2c",
+      "size": 51004,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libgojni.so",
+      "sha256": "86a3f72f9ecb7aba1f0b01839f94cdefa461cdbd99d1cc7304a42b4fbd6dd929",
+      "size": 17816612,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libhev-socks5-tunnel.so",
+      "sha256": "1ccec92a53d60a9428008afdba5e2fbebe5385b1db002921e1c544d9aa54b9e7",
+      "size": 197948,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/libhev-tunnel-jni.so",
+      "sha256": "39a44d39155a1badb69864599284830d937653781ca8e1085cd09e48ebe56abe",
+      "size": 5868,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/libnaive.so",
+      "sha256": "e9a0268da4b2e1ba6e89fbac3333ea232c041cc6d5ee75bd2bed2854b0cdac14",
+      "size": 5270656,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libobfs4proxy.so",
+      "sha256": "e395f0ea03ea918b7282ee9207f00c8b06c1b49fcd3faec47511006a62cb4590",
+      "size": 16260196,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/librovunet_awg.so",
+      "sha256": "6bb06c9a35e50e0bed6aa418235fcde1ae401e0b0b360f2a118da0146206ffbe",
+      "size": 47580096,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/librovunet_slipstream.so",
+      "sha256": "c265ec88b9d1d30dc24ac5151b23f5f483ff14d2613f34bcfff616ce02c733a5",
+      "size": 3825020,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/libslipnet-sockops.so",
+      "sha256": "b8dcdcf8663ab9317f778b14379fbafce1dec7c074db9a522bfb5d37cfd481a4",
+      "size": 5200,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libslipstream.so",
+      "sha256": "fb060df2b0d7ece10b5f965aff43262e19993524630e6a22e4a1d520b0780eed",
+      "size": 4205556,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libtor.so",
+      "sha256": "7e6c56ac4ef46aeba2c9ed9c35795c1af9a4f6d9c74765a8194e2103bcd733db",
+      "size": 5425404,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/armeabi-v7a/libveyra_core_launcher.so",
+      "sha256": "6b74e9e58254bdbbf030f03227b9eba58d28bc3ee80b56efe366987a0197e6bd",
+      "size": 4100,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/armeabi-v7a/libveyra_xray.so",
+      "sha256": "70442d7cdd0b42ab672ea33b4ca2d4fd985860be68ef8f6eec7e607afc4fdc87",
+      "size": 32726904,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/libandroidx.graphics.path.so",
+      "sha256": "4e56c996f13670e70082658de7880c4020eabf4f25e43387f88ed78a713fc9f0",
+      "size": 10760,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/x86_64/libdatastore_shared_counter.so",
+      "sha256": "7840269969e5ff63c075a6d627a9d5f402bce2836ce2187e36071cca5789abee",
+      "size": 51752,
+      "origin": "gradle-verified-library"
+    },
+    {
+      "path": "lib/x86_64/libgojni.so",
+      "sha256": "03dacaa79b5ace02523c6def15b1f31bf2f9ba7b2db1d38377146002d80a738f",
+      "size": 20797672,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/x86_64/libhev-socks5-tunnel.so",
+      "sha256": "52f1c9cfc384191049d81649e9b31d7c070c8eaee08d1769a529b3590f559e40",
+      "size": 324408,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/libhev-tunnel-jni.so",
+      "sha256": "ff598c489f3c9acd0ad4bb47ad103aaceac57bb1b3037c1dd5c130839971e5f9",
+      "size": 7800,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/librovunet_awg.so",
+      "sha256": "5b0f4d19590b5c1a68fcbf7c1c15b272bd5f8b2e7a346a2392428576c53c83a2",
+      "size": 55069672,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/librovunet_slipstream.so",
+      "sha256": "933786f918e2f6783ae3973a904f859145bd7f3f25cd75606c06e8464f529440",
+      "size": 6496720,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/libslipnet-sockops.so",
+      "sha256": "daa73c88eb18e146c1a2bdb7617920e6594669dd8597fa2f18aa63a179ca008d",
+      "size": 7336,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/x86_64/libslipstream.so",
+      "sha256": "3b3c2dd3f6b016b70963fc67b619a31f96a1e0a1b181900c83c85e02cdb54fe6",
+      "size": 6031144,
+      "origin": "reused-checksum-pinned-SlipNet-2.5.6-library"
+    },
+    {
+      "path": "lib/x86_64/libveyra_core_launcher.so",
+      "sha256": "4e16b6d7ad4b16e0104f7f116230074e3ce0bfc6fd444b644144dfc6013c0892",
+      "size": 5568,
+      "origin": "rebuilt-from-pinned-source"
+    },
+    {
+      "path": "lib/x86_64/libveyra_xray.so",
+      "sha256": "96b7898b1b39ef41d30e43768d5739796264e84fb9716f0c4d8412f1920022c9",
+      "size": 35758360,
+      "origin": "rebuilt-from-pinned-source"
+    }
+  ],
+  "room_schema": 50,
+  "public_release_authorized": false,
+  "owner_accepted_exact_apk": false,
+  "physical_phone_validation": "pending owner; no new physical carrier/handover/low-end/screen-off battery or data measurements",
+  "open_dependencies": [
+    "Exact dnstt-mobile b265e04c40835ec1bacd447fff79169e6c2c2233 source unavailable; existing pinned binary reused",
+    "Panel WireGuard/Hy2 physical-network cause remains unresolved",
+    "Chained-session updater refuses with a specific error until final endpoint ownership is exposed"
+  ],
+  "rollback": "Do not uninstall or clear data. Code41 uses the unchanged signer and schema50; normal Android downgrade to40 is not promised. Use an authorized backup and a corrective higher-code build if needed."
+}

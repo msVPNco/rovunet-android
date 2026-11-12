@@ -1,4 +1,4 @@
-# Android alpha20 / code41 — owner review in progress
+# Android alpha20 / code41 — signed owner APK ready; phone acceptance pending
 
 Baseline: main `c8da349ab4f4e4b413cbaa5b1d4a4a9a18adf866`, public Android
 alpha19/code40, APK source `e8c93787fc4703cf4fea6c52ae056fae2724b105`.
@@ -34,7 +34,7 @@ a claim that every past request or physical acceptance is complete.
 
 | ID / section | Finding / classification | Action and evidence | Open dependency / acceptance |
 | --- | --- | --- | --- |
-| AUD-01 §3 identity | Existing production pin/package and offline-publication gate confirmed | Keep package app.veyra.client, certificate 1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416; version41; inspect final signed artifact independently | Final hashes/CI recorded with delivered bytes; no new key |
+| AUD-01 §3 identity | Existing production pin/package and offline-publication gate confirmed | Keep package app.veyra.client, certificate 1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416; version41; inspect final signed artifact independently | Final hashes/CI recorded in alpha20-review-verification.json; no new key; owner phone upgrade pending |
 | AUD-02 §4 source | Known dnstt-mobile exact-source gap persists | Read exact gitlink b265e04c40835ec1bacd447fff79169e6c2c2233; GitHub commit lookup returns404 on 2026-11-12, git remote unavailable; preserve checksum-pinned inherited binary | Recover exact tree or explicitly reviewed interoperable replacement; not fully self-contained/reproducible |
 | AUD-03 §5 credentials/recovery | Keystore AES-GCM envelope, fail-closed read, guarded repair and encrypted backup already exist | DeviceSecrets, ProfileSecrets, repository and CredentialRecoveryTest inspected; keep schema50 and no lock/binding bypass | Device suite rerun; compromised-process resistance not claimed |
 | AUD-04 §5 diagnostics | Typed bounded diagnostic exporter already excludes arbitrary endpoint/credential messages | ConnectionDiagnostics and redaction regressions retained | Raw engine log is not safe-report output; physical report optional |
@@ -80,8 +80,8 @@ same signer and compatible storage; do not delete or weaken protected records.
 Git revert/source rollback is separate from installed-app downgrade.
 
 Final evidence: exact application commit, CI runs/artifact hash, native inventory,
-APK SHA256 and signing verification will accompany the owner APK. Until recorded,
-checks below are pending rather than passed. No new physical Wi-Fi/mobile,
+APK SHA256 and signing verification will accompany the owner APK. The final candidate section and verification JSON below record completed
+automated checks; owner acceptance and physical measurements remain pending. No new physical Wi-Fi/mobile,
 weaker-phone, overnight/Doze, battery or carrier acceptance is implied.
 
 ## Confirmed native parser finding during current review
@@ -107,3 +107,31 @@ pinned26.10.31 is newer than that fix. This is not a claim of a comprehensive
 security clearance. Mihomo's public advisory index had no published advisories
 at inspection time; release notes nevertheless identified the concrete parser
 fix above. Known source-availability and physical-test limits remain open.
+
+## Final owner candidate — 2026-11-12
+
+Application `7afeb7eb1724c18cfeb93c6049c94ba4366d5032` / tree `0fd96a34cafff94ebbab7982ee381356bd9b48c7`.
+PR CI checkout 93c74e564f918da3543f16248f339424bcd40e15 has the identical source
+tree. Run 43193939117 passed verify and device gates: 151 portable/JUnit cases,
+Gradle unit task, 81 Debug emulator and 2 minified Release JNI cases. Local
+patched native 0..255/FQDN tests and actual Kotlin/native AWG 1/2/3.1, AnyTLS,
+TUIC and Mieru TCP/UDP encrypted relay/shutdown tests pass. The new packaged
+core also survives 253/254/255 SOCKS-domain frames. Before-patch reproduction
+failed with port corruption and panic; this confirmed finding is now repaired
+with host and packaged-device evidence.
+
+Owner APK: `Rovunet-v0.3.0-alpha20-Full-review01.apk`, 158690799 bytes, SHA256
+`bf8cb2cebc0aba34deee1bb155a73f6fecd0d17c08bd193ed2c145870ccef97b`.
+It has the unchanged production signer, package app.veyra.client, versionCode 41,
+non-debuggable Release manifest,81-case tested source and byte-identical CI
+payloads after offline signing. Independently verified with official Android
+Build Tools 36.0.0: signatures for API 24..36, manifest/schemes, 39 native libraries,
+25 aligned 64-bit ELFs and actual DEX gomobile definitions. Exact hashes,
+per-library origin and test limits: [verification](alpha20-review-verification.json).
+
+No merge, public tag or release has been performed. Owner phone acceptance is
+still pending. Keep the exact APK bytes after acceptance; do not rebuild for
+publication-only documentation changes. Independent push CI 43193931245 is a
+separate run; its completion must be checked before public release. Remaining
+physical measurements, panel WG/Hy2 investigation and source availability are
+not closed by these tests.
