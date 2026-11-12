@@ -19,7 +19,8 @@ import kotlinx.coroutines.*
 
 @Composable
 internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: String?, initialId: String?, onDisconnect: (() -> Unit)? = null,
-    prepare: suspend (String, String, String?, Boolean) -> SubscriptionPreview = repository::prepare, onDismiss: () -> Unit) {
+    prepare: suspend (String, String, String?, Boolean) -> SubscriptionPreview = repository::prepare,
+    initialPreview: SubscriptionPreview? = null, onDismiss: () -> Unit) {
     val sources by repository.observe().collectAsState(initial = emptyList())
     val connection by repository.connectionState.collectAsState()
     val hosts by produceState<Map<String, String>>(emptyMap(), sources) {
@@ -31,7 +32,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
     var automatic by remember { mutableStateOf(false) }
     var automaticEdited by remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
-    var preview by remember { mutableStateOf<SubscriptionPreview?>(null) }
+    var preview by remember { mutableStateOf(initialPreview) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -60,11 +61,16 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                     enabled = connection !is app.slipnet.domain.model.ConnectionState.Disconnecting,
                     onClick = onDisconnect) { Text(stringResource(R.string.ui_disconnect)) }
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(url, { url = it; error = null }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) },
+                val hiddenSource = PublicProviders.hidesAddress(editing, url)
+                if (hiddenSource) Text(stringResource(R.string.public_source_address_hidden), modifier = Modifier.testTag("subscription-source-address-hidden"),
+                    style = MaterialTheme.typography.bodySmall)
+                else OutlinedTextField(url, { url = it; error = null }, enabled = !busy, label = { Text(stringResource(R.string.subscription_url)) },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
                     trailingIcon = { TextButton(onClick = { visible = !visible }) { Text(stringResource(if (visible) R.string.rv_hide_ac20a5 else R.string.rv_show_0df6f1)) } })
-                Row { Checkbox(automatic, { automatic = it; automaticEdited = true }, enabled = !busy); Text(stringResource(R.string.subscription_automatic)) }
-                Text(stringResource(R.string.subscription_automatic_hint), style = MaterialTheme.typography.bodySmall)
+                if (!hiddenSource) {
+                    Row { Checkbox(automatic, { automatic = it; automaticEdited = true }, enabled = !busy); Text(stringResource(R.string.subscription_automatic)) }
+                    Text(stringResource(R.string.subscription_automatic_hint), style = MaterialTheme.typography.bodySmall)
+                }
                 if (!connection.isDisconnected) Text(stringResource(R.string.subscription_disconnect), style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(modifier = Modifier.weight(1f).testTag("subscription-update"),
@@ -72,7 +78,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         execute {
                             val row = editing?.let { id -> sources.firstOrNull { it.id == id } } ?: repository.findSource(url) ?: error("SOURCE_NOT_FOUND")
                             val item = prepare(name, url, row.id, if (editing != null || automaticEdited) automatic else row.autoUpdate)
-                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.importWarnings.isNotEmpty()) preview = item else { repository.apply(item); onDismiss() }
+                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.unsupported > 0 || item.importWarnings.isNotEmpty()) preview = item else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_update_action)) }
                     Button(modifier = Modifier.weight(1f).testTag("subscription-import"),
@@ -80,12 +86,12 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                         execute {
                             val row = repository.findSource(url)
                             val item = prepare(name, url, row?.id, if (row != null && !automaticEdited) row.autoUpdate else automatic)
-                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.importWarnings.isNotEmpty()) preview = item
+                            if (item.removed > 0 || item.source.id.startsWith("public:") || item.unsupported > 0 || item.importWarnings.isNotEmpty()) preview = item
                             else { repository.apply(item); onDismiss() }
                         }
                     }) { Text(stringResource(R.string.subscription_import_action)) }
                 }
-                if (editing != null) TextButton(enabled = !busy, onClick = { editing = null; name = ""; url = ""; automatic = false; automaticEdited = false }) { Text(stringResource(R.string.subscription_add)) }
+                if (editing != null || hiddenSource) TextButton(enabled = !busy, onClick = { editing = null; name = ""; url = ""; automatic = false; automaticEdited = false }) { Text(stringResource(R.string.subscription_add)) }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("subscription-error")) }
                 HorizontalDivider()
@@ -95,7 +101,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 sources.forEach { row ->
                     Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(10.dp)) {
                         Text(row.name, style = MaterialTheme.typography.titleSmall)
-                        Text(hosts[row.id] ?: "—", style = MaterialTheme.typography.bodySmall)
+                        hosts[row.id]?.takeIf { it.isNotEmpty() }?.let { host -> Text(host, style = MaterialTheme.typography.bodySmall) }
                         Text(stringResource(R.string.subscription_last_success, if (row.lastSuccess == 0L) "—" else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(row.lastSuccess))), style = MaterialTheme.typography.bodySmall)
                         if (row.lastError.isNotEmpty()) Text(subscriptionError(row.lastError), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                         TextButton(enabled = !busy, onClick = {
@@ -104,7 +110,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                             execute { preview = prepare(row.name, url, row.id, row.autoUpdate) }
                         }) { Text(stringResource(R.string.subscription_update_review)) }
                         TextButton(enabled = !busy, onClick = { editing = row.id; name = row.name; automatic = row.autoUpdate; url = runCatching { repository.sourceUrl(row) }.getOrDefault("") }) { Text(stringResource(R.string.subscription_edit_source)) }
-                        if (!row.id.startsWith("public:")) TextButton(enabled = !busy, onClick = { execute { repository.setAutomatic(row.id, !row.autoUpdate) } }) { Text(stringResource(if (row.autoUpdate) R.string.subscription_auto_off else R.string.subscription_auto_on)) }
+                        if (!row.id.startsWith("public:") && hosts[row.id]?.isNotEmpty() == true) TextButton(enabled = !busy, onClick = { execute { repository.setAutomatic(row.id, !row.autoUpdate) } }) { Text(stringResource(if (row.autoUpdate) R.string.subscription_auto_off else R.string.subscription_auto_on)) }
                         TextButton(enabled = !busy, onClick = { execute { repository.detach(row.id) } }) { Text(stringResource(R.string.subscription_detach)) }
                     } }
                 }
@@ -115,7 +121,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
             title = { Text(stringResource(R.string.subscription_preview)) },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.subscription_preview_summary, item.profiles.size, item.removed))
-                if (item.source.id.startsWith("public:")) {
+                if (PublicProviders.hidesAddress(item.source.id, runCatching { repository.sourceUrl(item.source) }.getOrDefault(""))) {
                     Text(stringResource(R.string.alpha17_public_summary, item.profiles.size, item.unsupported, item.duplicates))
                 }
                 PublicImportDetails(item)
@@ -131,7 +137,7 @@ internal fun SubscriptionDialog(repository: SubscriptionRepository, initialUrl: 
                 error?.let { Text(subscriptionError(it), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("subscription-error")) }
             } },
             confirmButton = { TextButton(enabled = !busy && connection.isDisconnected && item.profiles.isNotEmpty(), onClick = {
-                execute { repository.apply(item); preview = null; onDismiss() }
+                execute { repository.apply(item.copy(reviewedUnsupported = true)); preview = null; onDismiss() }
             }) { Text(stringResource(R.string.rv_apply_31e392)) } },
             dismissButton = { TextButton(onClick = { job?.cancel(); preview = null }) { Text(stringResource(android.R.string.cancel)) } })
     }

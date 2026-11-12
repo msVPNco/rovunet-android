@@ -353,7 +353,7 @@ fun MainScreen(
     var showSubscriptions by remember { mutableStateOf(false) }
     if (showSubscriptions || uiState.subscriptionUrl != null || uiState.subscriptionId != null) SubscriptionDialog(
         viewModel.subscriptionRepository, uiState.subscriptionUrl, uiState.subscriptionId,
-        onDisconnect = viewModel::disconnect, onDismiss = { showSubscriptions = false; viewModel.closeSubscription() })
+        onDisconnect = viewModel::disconnect, initialPreview = uiState.subscriptionPreview, onDismiss = { showSubscriptions = false; viewModel.closeSubscription() })
     if (showLanguage) AlertDialog(
         onDismissRequest = { showLanguage = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_language_a4fe65)) },
         text = { Column {

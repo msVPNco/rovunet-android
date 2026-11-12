@@ -89,6 +89,7 @@ data class MainUiState(
     val isImporting: Boolean = false,
     val subscriptionUrl: String? = null,
     val subscriptionId: String? = null,
+    val subscriptionPreview: app.slipnet.data.subscription.SubscriptionPreview? = null,
     val subscriptionIds: Set<String> = emptySet(),
     val smartStatus: app.slipnet.service.SmartConnectionController.Status = app.slipnet.service.SmartConnectionController.Status(),
     val smartVersion: Long = 0,
@@ -1014,7 +1015,7 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(exportedJson = null)
     }
 
-    fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null) }
+    fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null, subscriptionPreview = null) }
     fun requestSubscription(id: String) {
         if (id in _uiState.value.updatingSubscriptions) return
         _uiState.value = _uiState.value.copy(updatingSubscriptions = _uiState.value.updatingSubscriptions + id)
@@ -1023,6 +1024,10 @@ class MainViewModel @Inject constructor(
             try {
                 val row = subscriptionRepository.observe().first().firstOrNull { it.id == id } ?: error("SOURCE_NOT_FOUND")
                 val preview = subscriptionRepository.prepare(row.name, subscriptionRepository.sourceUrl(row), id, row.autoUpdate)
+                if (preview.unsupported > 0) {
+                    _uiState.value = _uiState.value.copy(subscriptionId = id, subscriptionPreview = preview)
+                    return@launch
+                }
                 subscriptionRepository.apply(preview)
                 _uiState.value = _uiState.value.copy(subscriptionNotice = resources.getString(
                     app.slipnet.R.string.subscription_updated_inline, preview.profiles.size, preview.unsupported, preview.removed) +

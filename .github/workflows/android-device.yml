@@ -76,12 +76,12 @@ jobs:
           python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
           python3 tools/quality/check-slipstream-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" "$RUNNER_TEMP/rovunet-apksigner.jar"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk > "$RUNNER_TEMP/rovunet-code41-apk-badging.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk > "$RUNNER_TEMP/rovunet-code42-apk-badging.txt"
       - name: Retain verified minified APKs
         if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: rovunet-code41-review-validation
+          name: rovunet-code42-review-validation
           path: |
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
@@ -92,6 +92,6 @@ jobs:
             tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
             ${{ runner.temp }}/rovunet-apksigner.jar
-            ${{ runner.temp }}/rovunet-code41-apk-badging.txt
+            ${{ runner.temp }}/rovunet-code42-apk-badging.txt
           if-no-files-found: error
           retention-days: 5

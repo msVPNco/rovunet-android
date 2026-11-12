@@ -16,6 +16,9 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.service.MahsaSubscriptionDeviceTest", "legacyMahsaRefreshIsDirectAtomicAndRemovesOnlyUnmodifiedRetiredFeedRows"),
+    ("app.slipnet.presentation.main.PublicSourcePrivacyDeviceTest", "bothBuiltinDialogsHideUrlsInFourLanguagesAndThreeThemes"),
+    ("app.slipnet.presentation.main.PublicSourcePrivacyDeviceTest", "savedPublicSubscriptionCannotRevealOrCopyItsSourceWhilePrivateEntryRemainsEditable"),
     ("app.slipnet.core.CoreDeviceSmokeTest", "packagedAuxiliarySurvivesMaximumSocksDomainLengths"),
     ("app.slipnet.util.UpdateNetworkDeviceTest", "partialDownloadResumesAndStillRejectsWrongRangeOrChecksum"),
     ("app.slipnet.presentation.Alpha20UiDeviceTest", "failedTextIsRedAndLegalFooterStaysEnglishInFourLanguagesAndThreeThemes"),
