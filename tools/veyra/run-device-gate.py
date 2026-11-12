@@ -16,6 +16,7 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.core.CoreDeviceSmokeTest", "packagedAuxiliarySurvivesMaximumSocksDomainLengths"),
     ("app.slipnet.util.UpdateNetworkDeviceTest", "partialDownloadResumesAndStillRejectsWrongRangeOrChecksum"),
     ("app.slipnet.presentation.Alpha20UiDeviceTest", "failedTextIsRedAndLegalFooterStaysEnglishInFourLanguagesAndThreeThemes"),
     ("app.slipnet.util.UpdateNetworkDeviceTest", "authenticatedTunnelCarriesHttpsAndCdnRedirectWithoutLocalDns"),

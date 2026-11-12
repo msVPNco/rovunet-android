@@ -8,3 +8,9 @@ AmneziaWG implementation: github.com/metacubex/amneziawg-go at the revision
 pinned in Mihomo's go.mod/go.sum; original project https://github.com/amnezia-vpn/amneziawg-go.
 Only the imported AWG peer, local authenticated SOCKS listener and app-generated
 routing are enabled; no remote provider, external controller or kernel TUN is loaded.
+
+Android alpha20 additionally applies tools/native/mihomo-socks-domain.patch,
+backported from upstream commit c65570ed0924a7e48a48160463c68015b9a84ca8
+(PR3359, GPL-3.0). It fixes SOCKS domain-length byte arithmetic and includes
+regressions for encoded lengths 0..255 and FQDN trailing-dot handling.
+The reviewed upstream base commit is unchanged; the patch is part of the source.

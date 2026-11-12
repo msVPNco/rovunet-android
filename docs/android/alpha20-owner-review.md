@@ -83,3 +83,27 @@ Final evidence: exact application commit, CI runs/artifact hash, native inventor
 APK SHA256 and signing verification will accompany the owner APK. Until recorded,
 checks below are pending rather than passed. No new physical Wi-Fi/mobile,
 weaker-phone, overnight/Doze, battery or carrier acceptance is implied.
+
+## Confirmed native parser finding during current review
+
+Upstream Mihomo PR3359 / commit c65570ed0924a7e48a48160463c68015b9a84ca8
+fixes byte arithmetic in adapter/inbound/util.go. The pinned Oct21 revision
+contains the affected expression; our authenticated TCP/UDP adapter calls
+inbound.NewSocket/NewPacket, so this parser is in the executable path. Framed
+domain lengths253..255 can corrupt the destination port or panic the child.
+The minimal upstream patch and boundary/FQDN tests are backported, retaining
+the base pin and all protocol/routing policies. No broad core upgrade is made.
+
+Sources: https://github.com/MetaCubeX/mihomo/pull/3359 and the exact patch under
+tools/native/mihomo-socks-domain.patch. Local reproduction on Go1.26.10: the unpatched upstream tests fail at253
+and panic at254; the exact same tests pass after the patch (256 lengths plus
+FQDN). A new packaged-core device test also sends253/254/255-length framed
+addresses to the authenticated child and checks that it stays alive and accepts
+another handshake. Rebuilt-native/device evidence remains required before
+closing this finding.
+
+The official Xray advisory GHSA-5wf9-h793-w73c lists fixes from26.7.11; our
+pinned26.10.31 is newer than that fix. This is not a claim of a comprehensive
+security clearance. Mihomo's public advisory index had no published advisories
+at inspection time; release notes nevertheless identified the concrete parser
+fix above. Known source-availability and physical-test limits remain open.
