@@ -53,7 +53,7 @@ class PublicSourcePrivacyDeviceTest {
             compose.onNodeWithTag("public-source-confirm").assertIsNotEnabled()
         }
     }
-    @Test fun savedPublicSubscriptionCannotRevealOrCopyItsSourceWhilePrivateEntryRemainsEditable() = runBlocking {
+    @Test fun savedPublicSubscriptionCannotRevealOrCopyItsSourceWhilePrivateEntryRemainsEditable() = runBlocking<Unit> {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val repository=EntryPointAccessors.fromApplication(context,SubscriptionWorkerEntryPoint::class.java).subscriptions()
         val db=DatabaseModule.provideDatabase(context)
