@@ -1,0 +1,85 @@
+{
+  "status": "signed-owner-review-pending-phone-acceptance",
+  "publicationAuthorized": false,
+  "sourceCommit": "abdc9badcb9a9d8a718ddd2a7a7ccf89d2d94b6f",
+  "sourceTree": "c888c1f9983de9d4e5b071268aae67211f301c1a",
+  "prCheckoutCommit": "f78a83a013dfc22f2be674b1417315359d1f7e43",
+  "prCheckoutTree": "c888c1f9983de9d4e5b071268aae67211f301c1a",
+  "ci": {
+    "run": 43289444004,
+    "verifyJob": 131431454228,
+    "deviceJob": 131431454551,
+    "conclusion": "success",
+    "artifactId": 13977384084,
+    "artifactName": "rovunet-code42-review-validation",
+    "artifactZipBytes": 322573381,
+    "artifactZipSha256": "5256f0bc0d812281e74c37af883dfb842a86480f95c4d17355a02d03360de939"
+  },
+  "tests": {
+    "portableJUnit": 152,
+    "debugEmulator": 84,
+    "minifiedReleaseJNI": 2,
+    "publicSourcePrivacy": "Mahsa and Anonymous across four languages and three themes; saved public source hidden, private entry editable",
+    "mahsaTransaction": "Legacy alias resolves before request; atomic replacement; unchanged retired member removed; edits/chains/manual/unrelated profiles preserved; errors/cancellation/empty and unreviewed partial result preserve data"
+  },
+  "apk": {
+    "filename": "Rovunet-v0.3.0-alpha20-Full-review02.apk",
+    "bytes": 158698991,
+    "sha256": "8fd303ff3dbbf25a3909766898d651012e3e2125c29fcc3b6bb987067ff8a799",
+    "versionName": "0.3.0-alpha20",
+    "versionCode": 42,
+    "package": "app.veyra.client",
+    "signerSha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+    "ciPayloadUnchanged": true,
+    "slipstreamValidation": "CI against rebuilt native outputs; signed ZIP payload preserved byte for byte"
+  },
+  "verification": {
+    "signingApis": [
+      "24-27",
+      "28-36"
+    ],
+    "officialApksignerJarSha256": "3716d9311e55d2b0918a2fd9d54ba9e406c5f6abeea700b287f11259bc163dec",
+    "debuggable": false,
+    "nativeLibraries": 39,
+    "aligned64BitElfFiles": 25,
+    "gomobileDexDefinitions": "pass",
+    "externalSchemes": [
+      "wireguard",
+      "anytls",
+      "tuic",
+      "mierus"
+    ],
+    "slipstream": "Passed CI symbol/SONAME and pinned legacy codec checks for all three ABIs; signed payload identical to unsigned CI APK"
+  },
+  "priorFailedAttempt": {
+    "run": 43285026964,
+    "cause": "New privacy test method inferred a non-Unit result, so JUnit rejected class initialization. Both privacy tests did not run; this attempt is not counted as successful.",
+    "correction": "abdc9badcb9a9d8a718ddd2a7a7ccf89d2d94b6f changes only the test return type; production application code is unchanged from d5220254b776bcf4dabee47c1add27089be2aefd"
+  },
+  "liveFeedInspection": {
+    "uniqueLinks": 10,
+    "importable": 7,
+    "rejected": 3,
+    "reasons": [
+      "Two Hy2 links require unverified TLS",
+      "One VLESS flow variant is unsupported"
+    ],
+    "scope": "Parser evidence only; no physical phone/carrier connection test."
+  },
+  "preserved": [
+    "production package and signing identity",
+    "desktop and panel code",
+    "root README formatting",
+    "schema 50",
+    "all previously delivered code41 bytes and verification history"
+  ],
+  "limitations": [
+    "Owner phone acceptance pending",
+    "No public release, tag or merge",
+    "No claim of new carrier reachability or screen-off battery/data improvement",
+    "Exact dnstt-mobile source availability remains a separately documented limitation"
+  ],
+  "deferred": [
+    "Translate Telegram as channel, not group, in four languages; keep project link."
+  ]
+}
