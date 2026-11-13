@@ -21,6 +21,7 @@ public sealed partial class MainWindow
         Entry("ADD_SUBSCRIPTION",MenuIcon("SUBSCRIPTIONS"),SubscriptionDialog);
         Entry("ADD_MANUAL",MenuIcon("EDIT"),NewProfileSelection);
         Entry("PUBLIC_SOURCES",MenuIcon("PUBLIC_SOURCES"),PublicSourcesPage);
+        Entry("CHAIN_TITLE","M3,8 A5,5 0 0 1 13,8 V14 A5,5 0 0 1 3,14 Z M11,10 A5,5 0 0 1 21,10 V16 A5,5 0 0 1 11,16 Z",()=>BuildChainEditor25().ShowDialog());
         var surface=new ElevatedBorder{Child=list,Background=GlassSurface("Collection"),BorderBrush=GlassEdge(Accent),BorderThickness=new(1),CornerRadius=new(20),Padding=new(5),FlowDirection=L.Direction};CardDepth(surface);
         // Geometry fixtures must not be dismissed by unrelated desktop focus or pointer changes.
         addHub=new Popup{FlowDirection=FlowDirection.LeftToRight,PlacementTarget=addButton,Placement=PlacementMode.Custom,AllowsTransparency=true,StaysOpen=fixtureMode,Focusable=true,Child=new Border{Padding=new(18),FlowDirection=FlowDirection.LeftToRight,Child=surface},CustomPopupPlacementCallback=(popup,target,offset)=>[new(new Point(target.Width-popup.Width+18,-popup.Height+10),PopupPrimaryAxis.Horizontal)]};

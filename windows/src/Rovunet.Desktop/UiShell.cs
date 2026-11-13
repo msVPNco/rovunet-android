@@ -14,11 +14,12 @@ namespace Rovunet.Desktop;
 
 public sealed partial class MainWindow
 {
-    string ProbeResultText(AgentReply reply)=>reply.Verified?L.Text(reply.ProbeFallbackUsed?"TEST_OK_FALLBACK":"TEST_OK"):reply.Error.Length==0?L.Text("PATH_READY_UNVERIFIED"):reply.Error=="SSH_TRUST_REQUIRED"?L.Text("TEST_IDENTITY_PENDING"):HttpsProbePolicy.Unconfirmed(reply.Error)?L.Text("TEST_UNCONFIRMED")+" · "+L.Text(reply.Error):L.Text(reply.Error.Length>0?reply.Error:"PATH_READY_UNVERIFIED");
+    string ProbeResultText(AgentReply reply)=>reply.Verified?L.Text(reply.ProbeFallbackUsed?"TEST_OK_FALLBACK":"TEST_OK"):reply.Error.Length==0?L.Text("TEST_UNCONFIRMED"):reply.Error=="SSH_TRUST_REQUIRED"?L.Text("TEST_IDENTITY_PENDING"):HttpsProbePolicy.Unconfirmed(reply.Error)?L.Text("TEST_UNCONFIRMED")+" · "+L.Text(reply.Error):L.Text(reply.Error.Length>0?reply.Error:"TEST_UNCONFIRMED");
     TrayIcon? tray;
     TaskCompletionSource? operationDone;
     bool connectCancelled, reportingError;
-    Profile? activeProfile;
+    Profile? activeProfileValue;
+    Profile? activeProfile {get=>activeProfileValue;set {if(activeProfileValue?.Id!=value?.Id||activeProfileValue?.Raw!=value?.Raw)routeGeneration.Advance();activeProfileValue=value;}}
     DateTimeOffset connectedSince;
     readonly DispatcherTimer durationTimer = new() { Interval = TimeSpan.FromSeconds(1) };
     TextBlock globalStatus = null!, durationValue = null!, pathValue = null!, protocolValue = null!, lastTestValue = null!, notice = null!;
@@ -53,6 +54,9 @@ public sealed partial class MainWindow
         public required Button Connect;
         public required Border Header;
         public required TextBlock Summary;
+        public StackPanel? Details26;
+        public TextBlock? ClosedStatus26;
+        public FrameworkElement? ClosedLine26;
         public required TextBlock Account;
         public AccountQuotaTile? Quota;
         public required ContextMenu Menu;
@@ -98,15 +102,16 @@ public sealed partial class MainWindow
     }
     void SetState(AgentReply value)
     {
+        if(state.State!=value.State||state.HttpPort!=value.HttpPort||state.SocksPort!=value.SocksPort)routeGeneration.Advance();
         state = value; RefreshLocalProxyPanels19(); if (connectionText == null) return; UpdateSleepTimer();
         if(addButton!=null)addButton.IsEnabled=!busy&&!closing;
         connectionText.Text = L.Text(value.State.ToUpperInvariant()); globalStatus.Text = connectionText.Text;
-        Brush color = value.State == "connected" ? Green : value.State == "error" ? Red : value.State is "connecting" or "disconnecting" ? Accent : Muted;
+        Brush color = ConnectionInk28(value.State);
         var display=value.State is "connected" or "connecting" or "disconnecting" or "error"?value.State:"disconnected";
         shieldOutline.Data=(Geometry)Application.Current.FindResource("Shield_"+display);shieldOutline.Fill=color;shieldMark.Stroke=color;shieldMark.Visibility=value.State=="connected"?Visibility.Visible:Visibility.Collapsed;
-        detail.Text = L.Text(value.State switch { "connected" => value.Verified ? "HTTPS_VERIFIED" : "PATH_READY_UNVERIFIED", "connecting" => "CONNECTING_HINT", "disconnecting" => "DISCONNECTING_HINT", "error" => "ERROR_HINT", _ => "SELECT_PATH" });
+        detail.Text = L.Text(value.State switch { "connected" => ConnectionDetailKey(), "connecting" => "CONNECTING_HINT", "disconnecting" => "DISCONNECTING_HINT", "error" => "ERROR_HINT", _ => "CONNECTION_IDLE" });
         if (value.State == "connected") detail.Text = (activeProfile ?? Selected)?.Name + " · " + (activeProfile ?? Selected)?.Protocol;
-        connectionText.Foreground = color;
+        connectionText.Foreground = globalStatus.Foreground = color;detail.Foreground=value.State=="error"?Red:Muted;
         string key = value.State == "connected" ? "DISCONNECT" : value.State == "connecting" ? "CANCEL" : "CONNECT";
         if (connect != null) { AutomationProperties.SetName(connect, L.Text(key)); connect.IsEnabled = !closing && (value.State is "connecting" or "connected" || !busy); }
         if (verify != null) verify.IsEnabled = !busy && value.State == "connected";
@@ -122,7 +127,7 @@ public sealed partial class MainWindow
         if (value.State == "connected") { if (connectedSince == default) connectedSince = DateTimeOffset.UtcNow;BeginTrafficSampling(); durationTimer.Start(); } else durationTimer.Stop(); RefreshDuration();
         string code = value.Error.Length > 0 ? value.Error : lastError;
         errorText.Visibility = code.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
-        errorText.Foreground=HttpsProbePolicy.Unconfirmed(code)?Amber:Red;
+        errorText.Foreground=MessageInk28(code);
         errorText.Text = code.Length > 0 ? (HttpsProbePolicy.Unconfirmed(code)?L.Text("TEST_UNCONFIRMED")+" · ":"")+L.Text(code) + " · " + ErrorHelp(code) : "";
         errorText.Visibility = code.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         if (code.Length > 0 && (safeEvents.Count == 0 || !safeEvents.Last().EndsWith(" " + code, StringComparison.Ordinal))) { safeEvents.Enqueue(DateTimeOffset.UtcNow.ToString("HH:mm:ss", CultureInfo.InvariantCulture) + " " + code); while (safeEvents.Count > 3) safeEvents.Dequeue(); }
@@ -147,35 +152,42 @@ public sealed partial class MainWindow
             if (has)
             {
                 row.Result.Text = ProbeResultText(measured!);
-                bool fresh = data.Measurements.TryGetValue(p.Id, out var saved) && liveMeasurements.Contains(p.Id)&&LatestRound(p,saved)&&UiPolicy.MeasurementFresh(saved.SampledAt, DateTimeOffset.UtcNow);row.Result.Foreground=fresh?measured!.Verified?Green:HttpsProbePolicy.Unconfirmed(measured.Error)?Amber:Red:Muted;row.Timing.Foreground=fresh&&measured!.Verified?Green:Muted;if(saved?.Attempts>1)row.Result.Text+=" · "+saved.Passes+"/"+saved.Attempts;if(!fresh)row.Result.Text+=" · "+L.Text("RESULT_STALE");row.Result.ToolTip=row.Result.Text; row.Timing.Text = measured!.Verified ? measured.ElapsedMs.ToString(CultureInfo.InvariantCulture) + " ms" : "—"; row.Timing.ToolTip = saved?.SampledAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+                bool fresh = data.Measurements.TryGetValue(p.Id, out var saved) && liveMeasurements.Contains(p.Id)&&LatestRound(p,saved)&&UiPolicy.MeasurementFresh(saved.SampledAt, DateTimeOffset.UtcNow);row.Result.Foreground=ProbeInk28(measured!,fresh);row.Timing.Foreground=fresh&&measured!.Verified?Green:Muted;if(saved?.Attempts>1)row.Result.Text+=" · "+saved.Passes+"/"+saved.Attempts;if(!fresh)row.Result.Text+=" · "+L.Text("RESULT_STALE");row.Result.ToolTip=row.Result.Text; row.Timing.Text = measured!.Verified ? measured.ElapsedMs.ToString(CultureInfo.InvariantCulture) + " ms" : "—"; row.Timing.ToolTip = saved?.SampledAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
             }
             RenderCollectionRow(row);
         }
         foreach (var group in groups)
         {
-            bool open = data.ExpandedCollections.GetValueOrDefault(group.Key, false) || query.Length > 0; bool reveal=open&&group.Paths.Visibility!=Visibility.Visible;group.Paths.Visibility = open ? Visibility.Visible : Visibility.Collapsed;if(reveal)Reveal(group.Paths); group.Toggle.Content = new System.Windows.Shapes.Path {Data=Geometry.Parse(open?"M4,16 L12,8 L20,16":"M4,8 L12,16 L20,8"),Stroke=Tone("Ink"),StrokeThickness=1.7,Width=16,Height=10,Stretch=Stretch.Uniform}; group.Toggle.ToolTip=L.Text(open?"HIDE_PATHS":"SHOW_PATHS"); group.Connect.IsEnabled = group.Members.Any(p=>p.Id==data.SelectedId) && state.State is "connected" or "connecting" || !busy && group.Members.Any(p => p.CanConnect);
+            bool open = data.OpenCollectionId==group.Key; bool reveal=open&&group.Paths.Visibility!=Visibility.Visible;group.Paths.Visibility = open ? Visibility.Visible : Visibility.Collapsed;if(reveal)Reveal(group.Paths); group.Toggle.Content = new System.Windows.Shapes.Path {Data=Geometry.Parse(open?"M4,16 L12,8 L20,16":"M4,8 L12,16 L20,8"),Stroke=Tone("Ink"),StrokeThickness=1.7,Width=16,Height=10,Stretch=Stretch.Uniform}; group.Toggle.ToolTip=L.Text(open?"HIDE_PATHS":"SHOW_PATHS"); group.Connect.IsEnabled = group.Members.Any(p=>p.Id==data.SelectedId) && state.State is "connected" or "connecting" || !busy && group.Members.Any(p => p.CanConnect);
             bool selectedCollection=group.Members.Any(p=>p.Id==data.SelectedId);bool activeCollection=group.Members.Any(p=>p.Id==activeProfile?.Id);group.Header.BorderBrush=group.Card.BorderBrush=GlassEdge(activeCollection&&state.State=="connected"?Green:selectedCollection?Accent:Tone("Outline")); if(group.Connect.Content is System.Windows.Shapes.Path icon)icon.Stroke=activeCollection&&state.State=="connected"?Green:Tone("Ink"); string action=activeCollection&&state.State=="connecting"?"CANCEL":activeCollection&&state.State=="connected"?"DISCONNECT":"CONNECT";group.Connect.ToolTip=L.Text(action);AutomationProperties.SetName(group.Connect,L.Text(action));
             var results=group.Members.Select(p=>(p,m:data.Measurements.GetValueOrDefault(p.Id))).Where(x=>x.m!=null&&LatestRound(x.p,x.m)).Select(x=>x.m!).ToArray();int passed=results.Count(m=>m.Verified),unknown=results.Count(m=>!m.Verified&&HttpsProbePolicy.Unconfirmed(m.Error));group.Summary.Text=string.Format(CultureInfo.CurrentCulture,L.Text("COLLECTION_RESULT_COUNTS"),passed,results.Length-passed-unknown,group.Members.Count-results.Length)+(unknown>0?" · "+string.Format(L.Text("GROUP_UNCONFIRMED_COUNT"),unknown):"");group.Summary.Visibility=results.Length>0?Visibility.Visible:Visibility.Collapsed;
             RefreshCollectionMenu(group.Menu,group.Members);OrderPinnedPaths(group);
             UpdateAccountQuota(group);
             group.Card.Visibility = query.Length == 0 || rows.Any(r => group.Members.Contains(r.Profile) && r.Tile.Visibility == Visibility.Visible) ? Visibility.Visible : Visibility.Collapsed;
             RenderCollectionProgress(group);
+            RefreshCollectionLayout26(group,open);
         }
         PromoteActive23();
+        ApplyUsageOrder17();
         statusExpiry.Stop(); var pending = statuses.Values.Select(s => 901 - Stopwatch.GetElapsedTime(s.ReceivedTick).TotalSeconds).Where(n => n > 0).ToList(); if (data.Measurements.Values.Any(m => UiPolicy.MeasurementFresh(m.SampledAt, DateTimeOffset.UtcNow))) pending.AddRange(data.Measurements.Values.Select(m => 901 - (DateTimeOffset.UtcNow - m.SampledAt).TotalSeconds).Where(n => n > 0)); if (pending.Count > 0) { statusExpiry.Interval = TimeSpan.FromSeconds(pending.Min()); statusExpiry.Start(); }
+    }
+    static System.Windows.Shapes.Path FilledMoreIcon28()
+    {
+        var geometry=new GeometryGroup();foreach(double y in new[]{4d,10d,16d})geometry.Children.Add(new EllipseGeometry(new Point(10,y),2,2));geometry.Freeze();
+        var dots=new System.Windows.Shapes.Path{Data=geometry,Width=20,Height=20,Stretch=Stretch.None,IsHitTestVisible=false,SnapsToDevicePixels=true};dots.SetResourceReference(System.Windows.Shapes.Shape.FillProperty,"Ink");
+        return dots;
     }
     Button MoreButton(ContextMenu menu)
     {
-        var button = Button("MORE", () => { }); var dots = new StackPanel { Orientation = Orientation.Vertical, Margin = new(5) };
-        for (int i = 0; i < 3; i++) dots.Children.Add(new System.Windows.Shapes.Ellipse { Width = 3, Height = 3, Fill = Muted, Margin = new(1) });
-        button.Template=(ControlTemplate)Application.Current.FindResource("IconButtonTemplate");button.Content = dots; button.ToolTip = L.Text("MORE"); button.ContextMenu = menu; button.Click += (_, _) => { menu.PlacementTarget = button; menu.IsOpen = true; }; return button;
+        var button=Button("MORE",()=>{});button.Width=button.Height=44;button.Padding=new(8);button.Tag="CARD_MORE";
+        button.Template=(ControlTemplate)Application.Current.FindResource("IconButtonTemplate");button.Content=FilledMoreIcon28();button.ToolTip=L.Text("MORE");button.ContextMenu=menu;button.Click+=(_,_)=>{menu.PlacementTarget=button;menu.IsOpen=true;};return button;
     }
     void SwitchPath(Profile p)
     {
         if (busy || !SupportPolicy.Allowed(p, data.IncludeExperimental)) return;
-        _ = Run(async () => { if (client != null) await Disconnect(); data.SelectedId = p.Id; Save(); await Connect(); });
+        _ = Run(async () => { if (client != null) await Disconnect();var oldId=data.SelectedId;data.SelectedId=p.Id;try{Save();}catch{data.SelectedId=oldId;throw;}await Connect(); });
     }
-    void Notify(string text) { if (notice != null) { notice.Text = text; notice.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible; } }
+    void Notify(string text,Brush? ink=null) { if (notice != null) { notice.Text = text;notice.Foreground=ink??Green; notice.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible; } }
     string ErrorHelp(string code) => L.Text(code switch { "SLIP_CERT_REQUIRED" or "SLIP_CERT_INVALID" => "ACTION_CERT", "SSH_TRUST_REQUIRED" or "SSH_KEY_CHANGED" => "SSH_TRUST_HINT", "PROXY_RECOVERY_CONFLICT" or "RECOVERY_REQUIRED" or "PROXY_RECOVERY_FAILED" => "ACTION_RECOVER", "INVALID_IMPORT" => "IMPORT_HINT", _ => "ACTION_CONNECTION" });
     void SaveWindowSize() { if (WindowState == WindowState.Normal) { data.WindowWidth = ActualWidth; data.WindowHeight = ActualHeight; } try { Save(); } catch { lastError = "SAVE_FAILED"; } }
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr handle);
@@ -221,7 +233,6 @@ public sealed partial class MainWindow
         if (SystemParameters.HighContrast) foreach (var (key, brush) in new (string, Brush)[] { ("Bg", SystemColors.WindowBrush), ("Card", SystemColors.WindowBrush), ("Soft", SystemColors.WindowBrush), ("Sidebar", SystemColors.WindowBrush), ("Ink", SystemColors.WindowTextBrush), ("Muted", SystemColors.WindowTextBrush), ("Accent", SystemColors.HighlightBrush), ("Selected", SystemColors.WindowBrush), ("Outline", SystemColors.WindowTextBrush), ("Green", SystemColors.WindowTextBrush), ("Red", SystemColors.WindowTextBrush), ("Amber", SystemColors.WindowTextBrush) }) Application.Current.Resources[key] = brush;
         if(SystemParameters.HighContrast)Application.Current.Resources["ScanCyan"]=SystemColors.WindowTextBrush;
         Application.Current.Resources["PageBg"]=HomeBackdrop();
+        ApplyUnifiedSurfaces25();
     }
 }
-
-

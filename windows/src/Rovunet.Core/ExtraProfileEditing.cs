@@ -10,7 +10,7 @@ public static class ExtraProfileEditing
     static string Inner(Profile p)=>ProfileEditing.IsNative(p.Raw)&&Importer.Fields(p.Raw)[1]=="xray"?Importer.Decode(Importer.Fields(p.Raw)[84]):p.Raw;
     public static CoreProfileForm? Read(Profile p)
     {
-        string raw=Inner(p);string kind=raw.Split("://")[0].ToLowerInvariant();if(kind is not ("trojan" or "vmess" or "ss"))return null;
+        string raw=Inner(p);if(SupplementalLinks.Handles(raw))return SupplementalLinks.Form(raw);string kind=raw.Split("://")[0].ToLowerInvariant();if(kind is not ("trojan" or "vmess" or "ss"))return null;
         var link=CoreLinks.Parse(raw);var outbound=link.Outbound;string family=kind=="vmess"?"vnext":"servers";var server=outbound["settings"]![family]![0]!;
         var f=new Dictionary<string,string>{{"server",server["address"]!.GetValue<string>()},{"port",server["port"]!.ToString()},{"auth",""},{"type","tcp"},{"security","none"},{"sni",""},{"fp",""},{"alpn",""},{"host",""},{"path","/"},{"serviceName",""},{"authority",""},{"method","aes-256-gcm"},{"cipher","auto"}};
         if(kind=="vmess"){f["auth"]=server["users"]![0]!["id"]!.GetValue<string>();f["cipher"]=server["users"]![0]!["security"]!.GetValue<string>();}else f["auth"]=server["password"]!.GetValue<string>();
@@ -26,6 +26,7 @@ public static class ExtraProfileEditing
     }
     public static Profile Apply(Profile original,string name,IReadOnlyDictionary<string,string> values)
     {
+        if(SupplementalLinks.Handles(Inner(original)))return SupplementalLinks.Apply(original,name,values);
         var form=Read(original)??throw new SafeError("UNSUPPORTED_FORMAT");name=name.Trim();if(name.Length==0||name.Length>200||name.Any(char.IsControl))throw new SafeError("CORE_NAME_INVALID");
         if(values.Count!=form.Fields.Count||values.Keys.Any(k=>!form.Fields.ContainsKey(k))||values.Values.Any(v=>v.Any(char.IsControl)))throw new SafeError("CORE_FIELD_INVALID");
         if(name==original.Name&&form.Fields.All(p=>values[p.Key]==p.Value))return ProfileEditing.Replace(original,original.Raw);

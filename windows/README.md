@@ -1,3 +1,9 @@
+# Rovunet Windows 0.1.2-preview.14 — prerelease
+
+Compact collection cards, one open collection at a time, and preserved connection-only recent ordering: [changes and limits](docs/UI26.md). Includes the independent Panel feed1/status2 adapter described in [STATUS21](docs/STATUS21.md). Current source is a proxy consumer; laboratory TUN/kill-switch/service components are not enabled by this release. Previous releases remain unchanged. Publication identity and asset checksums accompany the release.
+
+---
+Previous release documentation:
 <div align="center">
 
 # Rovunet · Windows

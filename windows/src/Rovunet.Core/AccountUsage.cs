@@ -8,7 +8,7 @@ public sealed record AccountUsage(bool HasQuota,bool Unlimited,long? Limit,long?
         var status=view?.Status;if(status==null)return new(false,false,null,null,null,null,false,null,false);
         bool quota=status.Metering=="complete"&&status.LimitBytes is >0&&status.UsedBytes is >=0;
         TimeSpan? left=status.ExpiresAt.HasValue&&view?.ServerNow is {} now?status.ExpiresAt.Value-now:null;
-        return new(quota,status.Metering=="not_metered",quota?status.LimitBytes:null,quota?status.UsedBytes:null,quota?status.RemainingBytes:null,
+        return new(quota,status.BodyVersion==2?status.LimitKind=="unlimited":status.Metering=="not_metered",quota?status.LimitBytes:null,quota?status.UsedBytes:null,quota?status.RemainingBytes:null,
             quota?Math.Clamp((double)status.UsedBytes!.Value/status.LimitBytes!.Value*100,0,100):null,view?.Trustworthy==true,left,status.State=="expired"||left<=TimeSpan.Zero);
     }
     // Subscription panels conventionally express their quota in decimal GB; name the unit honestly.

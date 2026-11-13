@@ -60,7 +60,7 @@ public static class Importer
             {
                 Keys(item, "id", "link");
                 string id = item.GetProperty("id").GetString()!, link = item.GetProperty("link").GetString()!;
-                if (string.IsNullOrWhiteSpace(id) || id.Length > 200 || items.Any(i => i.Id == id)) throw new SafeError("INVALID_IMPORT");
+                if (string.IsNullOrWhiteSpace(id) || id.EnumerateRunes().Count() > 200 || items.Any(i => i.Id == id)) throw new SafeError("INVALID_IMPORT");
                 items.Add((id, link));
             }
         }
@@ -107,7 +107,7 @@ public static class Importer
             // Unknown native versions/credential fields remain atomic failures.
             var f=Fields(raw);if(f.Length<85||f[1]!="xray")return false;
             string inner=Decode(f[84]);
-            return inner.StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)||new[]{"vless://","socks5://","hy2://","hysteria2://","ss://","trojan://","vmess://","wireguard://"}.Any(s=>inner.StartsWith(s,StringComparison.OrdinalIgnoreCase));
+            return inner.StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)||new[]{"vless://","socks5://","hy2://","hysteria2://","ss://","trojan://","vmess://","wireguard://","anytls://","tuic://","mierus://"}.Any(s=>inner.StartsWith(s,StringComparison.OrdinalIgnoreCase));
         }catch{return false;}
     }
     public static void Keys(JsonElement obj, params string[] keys)
@@ -118,6 +118,7 @@ public static class Importer
     public static Profile Single(string raw)
     {
         raw = raw.Trim();
+        if(ChainProfiles.IsChain(raw))return ChainProfiles.Parse(raw);
         if (raw.Length > 131072) throw new SafeError("IMPORT_TOO_LARGE");
         if (raw.StartsWith("rovunet-enc://") || raw.StartsWith("slipnet-enc://") || raw.StartsWith("rovunet-bundle-enc://") || raw.StartsWith("slipnet-bundle-enc://")) throw new SafeError("PROTECTED_PROFILE");
         var p = new Profile { Raw = raw };
@@ -132,13 +133,14 @@ public static class Importer
                 if (p.CollectionId.Length > 128 || p.CollectionName.Length > 120) throw new SafeError("INVALID_IMPORT");
             }
             if (f[1] == "vless" && f.Length < 79) throw new SafeError("INVALID_IMPORT");
-            p.Protocol = f[1] switch { "vless" => "VLESS WS", "sayedns" => "NoizDNS", "sayedns_ssh" => "NoizDNS + SSH", "ssh" => "SSH", "dnstt" => "DNSTT", "dnstt_ssh" => "DNSTT + SSH", "soar" => "Soar", "soar_ssh" => "Soar + SSH", "ss" or "slipstream" => "Slipstream", "slipstream_ssh" => "Slipstream + SSH", "vaydns" => "VayDNS", "vaydns_ssh" => "VayDNS + SSH", "naive" => "NaiveProxy", "naive_ssh" => "NaiveProxy + SSH", _ => f[1] };
+            p.Protocol = f[1] switch { "vless" => "VLESS WS", "sayedns" => "NoizDNS", "sayedns_ssh" => "NoizDNS + SSH", "ssh" => "SSH", "dnstt" => "DNSTT", "dnstt_ssh" => "DNSTT + SSH", "soar" => "Soar", "soar_ssh" => "Soar + SSH", "ss" or "slipstream" => "Slipstream", "slipstream_ssh" => "Slipstream + SSH", "vaydns" => "VayDNS", "vaydns_ssh" => "VayDNS + SSH", "naive" => "NaiveProxy", "naive_ssh" => "NaiveProxy + SSH", "snowflake"=>"Tor", "doh"=>"DoH", _ => f[1] };
             if (f[1] == "xray") { if (f.Length < 85) throw new SafeError("INVALID_IMPORT"); var inner = Single(Decode(f[84])); p.Protocol = inner.Protocol; p.BlockReason = inner.BlockReason; }
+            else if(AlternativeProfiles.Handles(raw))AlternativeProfiles.Validate(raw);
             else if (TransportPlan.Supports(f[1])) p.BlockReason = TransportPlan.Validate(f);
             else if (f[1] is not ("vless" or "socks5")) p.BlockReason = "ENGINE_NOT_READY";
             if (f[1] == "vless") p.BlockReason = TransportPlan.Validate(f);
         }
-        else if (raw.StartsWith("vless://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("socks5://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("hy2://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("[Interface]", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("ss://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("trojan://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase)||raw.StartsWith("wireguard://",StringComparison.OrdinalIgnoreCase))
+        else if (raw.StartsWith("vless://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("socks5://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("hy2://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("hysteria2://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("[Interface]", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("ss://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("trojan://", StringComparison.OrdinalIgnoreCase) || raw.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase)||raw.StartsWith("wireguard://",StringComparison.OrdinalIgnoreCase)||SupplementalLinks.Handles(raw))
         {
             var parsed = CoreLinks.Parse(raw); p.Name = parsed.Name; p.Protocol = parsed.Protocol;
         }
@@ -181,6 +183,7 @@ public static class Importer
         if (!p.CanConnect) throw new SafeError(p.BlockReason);
         if (!p.Raw.StartsWith("rovunet://") && !p.Raw.StartsWith("slipnet://")) return CoreLinks.Parse(p.Raw);
         var f = Fields(p.Raw);
+        if(AlternativeProfiles.Handles(p.Raw))return AlternativeProfiles.Descriptor(p);
         if (f[1] == "xray") return CoreLinks.Parse(Decode(f[84]));
         if (f[1] == "socks5") return CoreLinks.Socks(p.Name, f[3], Port(f[40]), f[12], f[13]);
         if (f[1] != "vless" || f[64] != "ws") throw new SafeError("ENGINE_NOT_READY");
@@ -208,7 +211,8 @@ public static partial class CoreLinks
     {
         try
         {
-            if (raw.TrimStart().StartsWith("[Interface]", StringComparison.OrdinalIgnoreCase)) return WireGuard(raw);
+            if (raw.TrimStart().StartsWith("[Interface]", StringComparison.OrdinalIgnoreCase)) return AmneziaConfig.Handles(raw)?AmneziaConfig.Parse(raw):WireGuard(raw);
+            if(SupplementalLinks.Handles(raw))return SupplementalLinks.Parse(raw);
             if(raw.StartsWith("wireguard://",StringComparison.OrdinalIgnoreCase))return WireGuardLink(raw);
             if(raw.StartsWith("ss://",StringComparison.OrdinalIgnoreCase))return Shadowsocks(raw,"Shadowsocks");
             if(raw.StartsWith("vmess://",StringComparison.OrdinalIgnoreCase))return Vmess(raw,"VMess");
@@ -301,16 +305,24 @@ public static partial class CoreLinks
         var outbound = Obj(("protocol", "vless"), ("settings", Obj(("vnext", Arr(Obj(("address", host), ("port", port), ("users", Arr(user))))))), ("streamSettings", stream));
         return new(name, transport == "ws" ? "VLESS WS" : transport == "xhttp" ? "VLESS XHTTP" : transport=="kcp"?"VLESS mKCP":transport=="grpc"?"VLESS gRPC":transport=="httpupgrade"?"VLESS HTTPUpgrade":security == "reality" ? "VLESS REALITY" : "VLESS TCP", outbound);
     }
-    public static string Runtime(Profile p, int httpPort, int socksPort, int helperPort = 0, int statsPort = 0)
+    public static string Runtime(Profile p, int httpPort, int socksPort, int helperPort = 0, int statsPort = 0, string helperUser = "", string helperPassword = "",int chainSocksPort=0,bool localSocksUdp=false)
     {
         p = Importer.Single(p.Raw);
         if (!p.CanConnect) throw new SafeError(p.BlockReason);
-        if (helperPort == 0 && (TransportPlan.UsesHelper(p.Raw) || TransportPlan.UsesNaive(p.Raw))) throw new SafeError("ENGINE_NOT_READY");
-        var outbound = (helperPort > 0 ? Socks(p.Name, "127.0.0.1", helperPort, "", "") : Importer.Connection(p)).Outbound.DeepClone().AsObject(); outbound["tag"] = "proxy";
+        LocalProxyUdp30.Require(p,localSocksUdp);
+        if (helperPort == 0 && (p.Protocol is "AmneziaWG" or "AnyTLS" or "TUIC" or "Mieru" or "Tor" || TransportPlan.UsesHelper(p.Raw) || TransportPlan.UsesNaive(p.Raw))) throw new SafeError("ENGINE_NOT_READY");
+        if(p.Protocol is "AmneziaWG" or "AnyTLS" or "TUIC" or "Mieru"&&(helperUser.Length==0||helperPassword.Length==0))throw new SafeError("INVALID_MESSAGE");
+        var outbound = (helperPort > 0 ? Socks(p.Name, "127.0.0.1", helperPort, helperUser, helperPassword) : Importer.Connection(p)).Outbound.DeepClone().AsObject(); outbound["tag"] = "proxy";
+        if(chainSocksPort>0){
+            if(helperPort>0)throw new SafeError("CHAIN_UNSUPPORTED");
+            if(ChainProfiles.Kind(p)!="socks5")throw new SafeError("CHAIN_UNSUPPORTED");
+            outbound["streamSettings"]=Obj(("sockopt",Obj(("dialerProxy","previous-layer"))));
+        }
         var inbounds = Arr(Obj(("tag","local-http"),("listen", "127.0.0.1"), ("port", httpPort), ("protocol", "http"), ("settings", new JsonObject())),
-            Obj(("tag","local-socks"),("listen", "127.0.0.1"), ("port", socksPort), ("protocol", "socks"), ("settings", Obj(("auth", "noauth"), ("udp", false)))));
+            Obj(("tag","local-socks"),("listen", "127.0.0.1"), ("port", socksPort), ("protocol", "socks"), ("settings", Obj(("auth", "noauth"), ("udp", localSocksUdp)))));
         // No freedom/direct fallback: every accepted inbound uses this one outbound.
         var config=Obj(("log", Obj(("loglevel", "none"))), ("inbounds", inbounds), ("outbounds", Arr(outbound)));
+        if(chainSocksPort>0){var prior=Socks("previous-layer","127.0.0.1",Importer.Port(chainSocksPort.ToString()),"","").Outbound;prior["tag"]="previous-layer";config["outbounds"]!.AsArray().Add(prior);}
         if(statsPort>0){_=Importer.Port(statsPort.ToString());config["stats"]=new JsonObject();config["policy"]=Obj(("system",Obj(("statsInboundUplink",true),("statsInboundDownlink",true))));config["api"]=Obj(("tag","metrics"),("listen","127.0.0.1:"+statsPort),("services",Arr("StatsService")));}
         return config.ToJsonString();
     }

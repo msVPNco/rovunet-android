@@ -6,6 +6,7 @@ namespace Rovunet.Desktop;
 
 public sealed class SubscriptionClient
 {
+    internal static Func<int,HttpMessageHandler>? HttpFixture;
     public sealed record Payload(string Body,DateTimeOffset? Date,string UserInfo)
     {
         public override string ToString()=>"SubscriptionPayload(redacted)";
@@ -13,7 +14,7 @@ public sealed class SubscriptionClient
     public static async Task<Payload> Fetch(Uri uri, int proxyPort = 0, int maxBytes = Importer.MaxBytes, CancellationToken cancellation = default)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation); timeout.CancelAfter(TimeSpan.FromSeconds(20));
-        using var handler = new SocketsHttpHandler { AllowAutoRedirect = false, UseProxy = proxyPort > 0, Proxy = proxyPort > 0 ? new WebProxy($"http://127.0.0.1:{proxyPort}") : null, ConnectTimeout = TimeSpan.FromSeconds(10) };
+        using var handler = HttpFixture?.Invoke(proxyPort) ?? new SocketsHttpHandler { AllowAutoRedirect = false, UseProxy = proxyPort > 0, Proxy = proxyPort > 0 ? new WebProxy($"http://127.0.0.1:{proxyPort}") : null, ConnectTimeout = TimeSpan.FromSeconds(10) };
         using var client = new HttpClient(handler);
         try
         {

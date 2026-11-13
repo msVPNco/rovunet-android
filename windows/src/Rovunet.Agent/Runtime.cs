@@ -8,7 +8,7 @@ using Rovunet.Platform;
 
 namespace Rovunet.Agent;
 
-public sealed class Runtime(bool probeOnly = false) : IDisposable
+public sealed partial class Runtime(bool probeOnly = false) : IDisposable
 {
     readonly HttpClient statsClient=new(new SocketsHttpHandler {UseProxy=false,AllowAutoRedirect=false});
     int statsPort;TrafficSnapshot? lastTraffic;
@@ -18,9 +18,11 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     public event Action? UnexpectedExit;
     void OnCoreExit(object? sender, EventArgs args) => UnexpectedExit?.Invoke();
     public const string EngineSha256 = "d5b558191cccb1e92a5772b68b8cab67717b26f634b0f15153215f65ae982a7e";
-    public async Task<AgentReply> Connect(Profile profile, bool applyProxy, CancellationToken ct, string hostKey = "", string slipCertificate = "", int? slipInterval = null,string sshTlsCa="",int localHttpPort=0,int localSocksPort=0)
+    public async Task<AgentReply> Connect(Profile profile, bool applyProxy, CancellationToken ct, string hostKey = "", string slipCertificate = "", int? slipInterval = null,string sshTlsCa="",int localHttpPort=0,int localSocksPort=0,int chainSocksPort=0,int chainHttpPort=0,IReadOnlyList<ChainIdentity>? chainIdentities=null,bool enableUdp=false)
     {
-        if (core != null || transport != null) throw new SafeError("ALREADY_CONNECTED");
+        if (core != null || transport != null || chainStages.Count>0) throw new SafeError("ALREADY_CONNECTED");
+        LocalProxyUdp30.Require(profile,enableUdp);
+        if(ChainProfiles.IsChain(profile.Raw))return await ConnectChain25(profile,applyProxy,ct,chainIdentities,localHttpPort,localSocksPort);
         // Reparse untrusted IPC; derived fields such as BlockReason are not an authorization.
         profile = Importer.Single(profile.Raw);
         if (!profile.CanConnect) throw new SafeError(profile.BlockReason);
@@ -38,6 +40,22 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
             second.Start();socksPort=((IPEndPoint)second.LocalEndpoint).Port;
             job = new ProcessJob();
             int helperPort = 0, upstreamPort = 0;
+            string helperUser="",helperPassword="";
+            if(profile.Protocol=="Tor"){helperPort=await StartTor25(profile,ct,chainSocksPort);probeBudget=TimeSpan.FromSeconds(40);}
+            if(profile.Protocol is "AmneziaWG" or "AnyTLS" or "TUIC" or "Mieru"){
+                var reservation=new TcpListener(IPAddress.Loopback,0);reservation.Start();helperPort=((IPEndPoint)reservation.LocalEndpoint).Port;reservation.Stop();
+                var helper=Path.Combine(AppContext.BaseDirectory,"engines",profile.Protocol=="AmneziaWG"?"rovunet-awg.exe":"rovunet-extra.exe");
+                using(var binary=File.OpenRead(helper))if(!Convert.ToHexString(SHA256.HashData(binary)).Equals(profile.Protocol=="AmneziaWG"?AmneziaEngineSha256:EnginePins.Extra,StringComparison.OrdinalIgnoreCase))throw new SafeError("ENGINE_HASH_MISMATCH");
+                helperUser=Convert.ToHexString(RandomNumberGenerator.GetBytes(16));helperPassword=Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+                transport=Process.Start(new ProcessStartInfo(helper){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true})??throw new SafeError("CORE_START_FAILED");
+                job.Assign(transport);_=Drain(transport.StandardError);
+                string adapterConfig=profile.Protocol=="AmneziaWG"?AmneziaConfig.Runtime(profile,helperPort,helperUser,helperPassword):SupplementalLinks.Runtime(profile,helperPort,helperUser,helperPassword);
+                await transport.StandardInput.WriteAsync(adapterConfig.AsMemory(),ct);transport.StandardInput.Close();
+                using var started=CancellationTokenSource.CreateLinkedTokenSource(ct);started.CancelAfter(TimeSpan.FromSeconds(30));
+                if(await ReadStatusLine(transport.StandardOutput,started.Token)!=(profile.Protocol=="AmneziaWG"?"ROVUNET_AWG_READY":"ROVUNET_EXTRA_READY"))throw new SafeError("CORE_START_FAILED");
+                _=Drain(transport.StandardOutput);transport.EnableRaisingEvents=true;transport.Exited+=OnCoreExit;
+                if(transport.HasExited)throw new SafeError("CORE_START_FAILED");
+            }
             if (TransportPlan.UsesSlip(profile.Raw))
             {
                 int interval = TransportPlan.EffectiveSlipInterval(Importer.Fields(profile.Raw), slipInterval);
@@ -49,7 +67,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
                 var reserved = new TcpListener(IPAddress.Loopback, 0); reserved.Start(); upstreamPort = ((IPEndPoint)reserved.LocalEndpoint).Port; reserved.Stop();
                 string naiveExe = Path.Combine(AppContext.BaseDirectory, "engines", "naive.exe");
                 using (var binary = File.OpenRead(naiveExe)) if (!Convert.ToHexString(SHA256.HashData(binary)).Equals(NaiveSha256, StringComparison.OrdinalIgnoreCase)) throw new SafeError("ENGINE_HASH_MISMATCH");
-                ephemeral = new EphemeralConfig(TransportPlan.NaiveConfig(profile, upstreamPort));
+                ephemeral = new EphemeralConfig(TransportPlan.NaiveConfig(profile, upstreamPort,chainHttpPort));
                 naive = Process.Start(new ProcessStartInfo(naiveExe) { UseShellExecute = false, CreateNoWindow = true, ArgumentList = { ephemeral.Path }, RedirectStandardOutput = true, RedirectStandardError = true }) ?? throw new SafeError("CORE_START_FAILED");
                 job.Assign(naive);naiveFailure="NAIVE_START_FAILED";var output=ObserveNaive(naive.StandardOutput);var errors=ObserveNaive(naive.StandardError);
                 using var naiveDeadline = CancellationTokenSource.CreateLinkedTokenSource(ct); naiveDeadline.CancelAfter(TimeSpan.FromSeconds(10));
@@ -67,7 +85,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
                 using (var binary = File.OpenRead(helper)) if (!Convert.ToHexString(SHA256.HashData(binary)).Equals(EnginePins.Transport, StringComparison.OrdinalIgnoreCase)) throw new SafeError("ENGINE_HASH_MISMATCH");
                 transport = Process.Start(new ProcessStartInfo(helper) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true }) ?? throw new SafeError("CORE_START_FAILED");
                 job.Assign(transport); _ = Drain(transport.StandardError);
-                await transport.StandardInput.WriteLineAsync(TransportPlan.Config(profile, helperPort, hostKey, upstreamPort, slipInterval,sshTlsCa).AsMemory(), ct); await transport.StandardInput.FlushAsync(ct);
+                await transport.StandardInput.WriteLineAsync(TransportPlan.Config(profile, helperPort, hostKey, upstreamPort, slipInterval,sshTlsCa,chainSocksPort).AsMemory(), ct); await transport.StandardInput.FlushAsync(ct);
                 using var startTimeout = CancellationTokenSource.CreateLinkedTokenSource(ct); startTimeout.CancelAfter(TimeSpan.FromSeconds(TransportPlan.UsesSlip(profile.Raw) ? 65 : 45));
                 string line = await ReadStatusLine(transport.StandardOutput, startTimeout.Token);
                 using var message = JsonDocument.Parse(line); var root = message.RootElement; string phase = root.GetProperty("state").GetString() ?? "";
@@ -85,7 +103,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
                 if (transport.HasExited) throw new SafeError("TRANSPORT_START_FAILED");
             }
             var statsReservation=new TcpListener(IPAddress.Loopback,0);statsReservation.Start();statsPort=((IPEndPoint)statsReservation.LocalEndpoint).Port;statsReservation.Stop();
-            string config = CoreLinks.Runtime(profile, httpPort, socksPort, helperPort,statsPort);
+            string config = CoreLinks.Runtime(profile, httpPort, socksPort, helperPort,statsPort,helperUser,helperPassword,helperPort>0?0:chainSocksPort,localSocksUdp:enableUdp);
             first.Stop(); second.Stop();
             core = Process.Start(new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, Arguments = "run -c stdin:", RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = Path.GetDirectoryName(exe)! }) ?? throw new SafeError("CORE_START_FAILED");
             core.EnableRaisingEvents = true; core.Exited += OnCoreExit;
@@ -172,6 +190,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
         catch(IOException) { ready.TrySetException(new SafeError("SLIP_HANDSHAKE_FAILED")); }
     }
     public const string NaiveSha256 = "ecf6f56a834a3e945e703ddb766b32c8c474e9767d472bb0b45177c33300aa79";
+    public const string AmneziaEngineSha256 = "60f283a80f00ed004839cf3fb8e9a129163a3bba3d4ba9f8017bc8af3a51a3fa";
     async Task ObserveNaive(StreamReader reader)
     {
         char[] buffer=new char[512];var line=new System.Text.StringBuilder();
@@ -205,12 +224,13 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     }
     public AgentReply Status()
     {
+        if(chainStages.Count>0){if(chainStages.Any(stage=>stage.Status().State!="connected")){Stop();return new(){State="error",Error="CORE_EXITED"};}return new(){State="connected",HttpPort=httpPort,SocksPort=socksPort,Verified=verified};}
         if (core != null && core.HasExited) { Stop(); return new() { State = "error", Error = "CORE_EXITED" }; }
         return new() { State = core == null ? "disconnected" : "connected", HttpPort = httpPort, SocksPort = socksPort, Verified = verified };
     }
     public async Task<AgentReply> Probe(string url, CancellationToken ct, bool live = false,bool fallbacks=false)
     {
-        if(core==null||core.HasExited)throw new SafeError("NOT_CONNECTED");
+        if(Status().State!="connected")throw new SafeError("NOT_CONNECTED");
         var targets=HttpsProbePolicy.Targets(url,fallbacks&&!live);AgentReply reply=new();
         for(int i=0;i<targets.Length;i++){
             ct.ThrowIfCancellationRequested();reply=await ProbeTarget(targets[i],ct,live,i>0);reply.ProbeTargetsTried=i+1;
@@ -222,7 +242,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     }
     async Task<AgentReply> ProbeTarget(string url,CancellationToken ct,bool live,bool alternative)
     {
-        if (core == null || core.HasExited) throw new SafeError("NOT_CONNECTED");
+        if(Status().State!="connected")throw new SafeError("NOT_CONNECTED");
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0 || uri.Fragment.Length > 0) throw new SafeError("HTTPS_REQUIRED");
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(live?TimeSpan.FromSeconds(5):alternative?TimeSpan.FromSeconds(8):probeBudget);
         var clock = Stopwatch.StartNew();
@@ -246,6 +266,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     }
     public async Task<AgentReply> Telemetry(CancellationToken ct)
     {
+        if(chainStages.Count>0){var chainState=Status();if(chainState.State!="connected")return chainState;var sample=await chainStages[^1].Telemetry(ct);sample.Verified=verified;if(sample.TrafficAvailable)lastTraffic=new(sample.UploadedBytes,sample.DownloadedBytes);return sample;}
         var reply=Status();if(reply.State!="connected")return reply;
         try { lastTraffic=await XrayStats.Read(statsClient,statsPort,ct);reply.TrafficAvailable=true;reply.UploadedBytes=lastTraffic.Uploaded;reply.DownloadedBytes=lastTraffic.Downloaded; }
         catch { reply.TelemetryError="STATS_UNAVAILABLE"; }
@@ -254,6 +275,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     public AgentReply Stop()
     {
         if(!probeOnly&&core!=null&&!core.HasExited&&statsPort>0){try{lastTraffic=XrayStats.Read(statsClient,statsPort,CancellationToken.None).GetAwaiter().GetResult();}catch{}}
+        if(chainStages.Count>0){try{var last=chainStages[^1].Telemetry(CancellationToken.None).GetAwaiter().GetResult();if(last.TrafficAvailable)lastTraffic=new(last.UploadedBytes,last.DownloadedBytes);}catch{}}
         slipLogs?.Cancel();
         var clock = Stopwatch.StartNew(); string error = "";
         // Restore first so applications don't point at a listener we've just removed.
@@ -272,6 +294,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
             if (naive != null) { try { if (!naive.HasExited) { naive.Kill(true); naive.WaitForExit(2000); } } catch { } naive.Dispose(); naive = null; }
             if (slip != null) { try { if (!slip.HasExited) { slip.Kill(true); slip.WaitForExit(2000); } } catch { } slip.Dispose(); slip = null; }
             slipLogs?.Dispose(); slipLogs=null; ephemeral?.Dispose(); ephemeral = null;
+            StopChain25();StopTor25();
             job?.Dispose(); job = null; core?.Dispose(); core = null; httpPort = socksPort = 0; verified = false; probeBudget = TimeSpan.FromSeconds(15); }
         if (error.Length > 0) throw new SafeError(error);
         return new() { State = "disconnected", ElapsedMs = clock.ElapsedMilliseconds, TrafficAvailable=lastTraffic!=null, UploadedBytes=lastTraffic?.Uploaded??0, DownloadedBytes=lastTraffic?.Downloaded??0 };

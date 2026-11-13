@@ -1,0 +1,62 @@
+[
+  {
+    "path": "data/geoip",
+    "sha256": "5f0ebc505ad5a5b219f9c053ce6228c837669364349a1a70c236192dd99a1c3d"
+  },
+  {
+    "path": "data/geoip6",
+    "sha256": "d6bc775efb8f970afacbb702ea0c80dbf9e2add32232afcfe3f376a972503b56"
+  },
+  {
+    "path": "data/torrc-defaults",
+    "sha256": "0f5205266ccb37da3d8d6a4f5c52862e42dac9f1dc2650be60cad523fa6ee964"
+  },
+  {
+    "path": "docs/conjure.txt",
+    "sha256": "0522541e3505d6669334f6eb488d4fde9c4af2234daec13170a0cf4d46d99e92"
+  },
+  {
+    "path": "docs/libevent.txt",
+    "sha256": "ff02effc9b331edcdac387d198691bfa3e575e7d244ad10cb826aa51ef085670"
+  },
+  {
+    "path": "docs/lyrebird.txt",
+    "sha256": "93cc0affdffdaed8abca7e19b74fe31c3268d8117ddc45506872a300f77d166b"
+  },
+  {
+    "path": "docs/openssl.txt",
+    "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+  },
+  {
+    "path": "docs/tor.txt",
+    "sha256": "5dc29ea302cc75db6db4a7c88d7b5d4638b4e0f5f1d2e6d21ce71f707470b766"
+  },
+  {
+    "path": "docs/zlib.txt",
+    "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2"
+  },
+  {
+    "path": "tor/pluggable_transports/conjure-client.exe",
+    "sha256": "51221664b9531cc3804a264989c68d4911ac40c11f8f739363ff5efa9e3eee42"
+  },
+  {
+    "path": "tor/pluggable_transports/lyrebird.exe",
+    "sha256": "9339fb4b7a41fab806e6a7961dc15afed29b8931291c4d2b756db74c471438ac"
+  },
+  {
+    "path": "tor/pluggable_transports/pt_config.json",
+    "sha256": "3f11d303c30191b3b1d382b9badd882d87fd87550d061f7d25a1b31226fc9b75"
+  },
+  {
+    "path": "tor/pluggable_transports/README.CONJURE.md",
+    "sha256": "f7e9211dd0e0089c93a0a84329fed41b2ac7b988531475b5eb2c86d38ad64d6c"
+  },
+  {
+    "path": "tor/tor-gencert.exe",
+    "sha256": "b842a0a037c83875e1120f8242cc811038270afa87e26707d994f64a83ab09bf"
+  },
+  {
+    "path": "tor/tor.exe",
+    "sha256": "da22856f95ee24f8ace4ad1ab04acbd818fd6c3042bc3cf8f1d7cc3fa3edcb2b"
+  }
+]

@@ -28,9 +28,17 @@ internal static class SetupExercise
             checks["default_desktop_shortcut_actually_created"]=File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),"Rovunet Installer Test.lnk"));
             App.SaveImage((System.Windows.FrameworkElement)window.Content,Path.Combine(root,"setup-completed-fa-dark.png"));window.InstallButton.RaiseEvent(new System.Windows.RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));checks["finish_closes_installer"]=!window.IsVisible;if(window.IsVisible)window.Close();
             checks["payload_installed_to_space_path"]=File.Exists(Path.Combine(destination,"Rovunet.exe"));checks["test_registration_scope"]=File.ReadAllText(Path.Combine(destination,".install-id"))=="1"&&File.ReadAllText(Path.Combine(destination,".install-scope"))=="0";
-            using(var running=Process.Start(new ProcessStartInfo(Path.Combine(destination,"Rovunet.exe")){UseShellExecute=false,CreateNoWindow=true,ArgumentList={"--ui-upgrade-exit-fixture"}})!){
+            string disconnectedVote=Path.Combine(root,"session-ending-disconnected.json"),connectedVote=Path.Combine(root,"session-ending-connected.json");
+            using(var running=Process.Start(new ProcessStartInfo(Path.Combine(destination,"Rovunet.exe")){UseShellExecute=false,CreateNoWindow=true,ArgumentList={"--ui-upgrade-exit-fixture","--session-report",disconnectedVote}})!){
                 for(int i=0;i<100&&!running.HasExited;i++){running.Refresh();if(running.MainWindowHandle!=IntPtr.Zero)break;await Task.Delay(100);}
                 await ClosePrevious.Run(destination);checks["previous_app_exits_cooperatively_before_upgrade"]=running.HasExited;
+                using var vote=JsonDocument.Parse(File.ReadAllBytes(disconnectedVote));checks["disconnected_session_query_does_not_veto"]=!vote.RootElement.GetProperty("cancel").GetBoolean()&&vote.RootElement.GetProperty("cleanupInvoked").GetBoolean();
+            }
+            using(var running=Process.Start(new ProcessStartInfo(Path.Combine(destination,"Rovunet.exe")){UseShellExecute=false,CreateNoWindow=true,ArgumentList={"--ui-upgrade-exit-fixture","--connected-probe","--session-report",connectedVote}})!){
+                for(int i=0;i<150&&!running.HasExited;i++){running.Refresh();if(running.MainWindowHandle!=IntPtr.Zero)break;await Task.Delay(100);}
+                var elapsed=Stopwatch.StartNew();await ClosePrevious.Run(destination);
+                using var vote=JsonDocument.Parse(File.ReadAllBytes(connectedVote));checks["connected_owned_probe_session_query_does_not_veto"]=!vote.RootElement.GetProperty("cancel").GetBoolean()&&vote.RootElement.GetProperty("cleanupInvoked").GetBoolean()&&vote.RootElement.GetProperty("connectedProbe").GetBoolean();
+                checks["connected_owned_probe_shutdown_is_bounded"]=running.HasExited&&elapsed.Elapsed<TimeSpan.FromSeconds(6);
             }
             using(var hive=RegistryKey.OpenBaseKey(RegistryHive.CurrentUser,RegistryView.Registry64))using(var key=hive.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\RovunetInstallerTest"))checks["stable_registration_survives_legacy_cleanup"]=key?.GetValue("InstallLocation")?.ToString()==destination;
             string keep=Path.Combine(destination,"user-note.txt");File.WriteAllText(keep,"keep-fixture");string dll=Hash(Path.Combine(destination,"Rovunet.dll"));

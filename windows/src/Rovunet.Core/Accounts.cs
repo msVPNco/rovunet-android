@@ -8,6 +8,10 @@ namespace Rovunet.Core;
 public enum Severity { Normal, Warning, Critical, Unknown }
 public sealed class AccountStatus
 {
+    public int BodyVersion {get;init;}=1;
+    public string LimitKind {get;init;}="";
+    public long? PendingBytes {get;init;}
+    public string Measurement {get;init;}="";
     public string ServerId { get; init; } = "";
     public string AccountId { get; init; } = "";
     public string PeriodId { get; init; } = "";
@@ -20,7 +24,7 @@ public sealed class AccountStatus
     public DateTimeOffset? SampledAt { get; init; }
     public DateTimeOffset GeneratedAt { get; init; }
     public long Revision { get; init; }
-    public long? RemainingBytes => LimitBytes is long l && UsedBytes is long u ? Math.Max(0, l - u) : null;
+    public long? RemainingBytes => BodyVersion!=2&&LimitBytes is long l && UsedBytes is long u ? Math.Max(0, l - u) : null;
     public string Identity => ServerId + ":" + AccountId + ":" + PeriodId;
     public override string ToString() => "AccountStatus(redacted)";
     public static AccountStatus Read(string text)
@@ -52,7 +56,7 @@ public sealed class AccountStatus
         }
         catch { throw new SafeError("INVALID_STATUS"); }
     }
-    public bool Accepts(AccountStatus previous) => Revision > previous.Revision || Revision == previous.Revision && Identity == previous.Identity && State == previous.State && Metering == previous.Metering && LimitBytes == previous.LimitBytes && UsedBytes == previous.UsedBytes && ExpiresAt == previous.ExpiresAt;
+    public bool Accepts(AccountStatus previous) => ServerId.Equals(previous.ServerId,StringComparison.OrdinalIgnoreCase)&&AccountId.Equals(previous.AccountId,StringComparison.OrdinalIgnoreCase)&&(Revision > previous.Revision || Revision == previous.Revision && PeriodId.Equals(previous.PeriodId,StringComparison.OrdinalIgnoreCase) && State == previous.State && Metering == previous.Metering && LimitBytes == previous.LimitBytes && UsedBytes == previous.UsedBytes && ExpiresAt == previous.ExpiresAt);
 }
 
 public sealed class StatusSnapshot
@@ -69,23 +73,32 @@ public sealed class StatusSnapshot
         var clockOK = elapsed >= TimeSpan.Zero && Math.Abs(((localNow - ReceivedAt) - elapsed).TotalSeconds) <= 5;
         var now = clockOK && ServerDate.HasValue ? ServerDate.Value + elapsed : (DateTimeOffset?)null;
         bool Within(DateTimeOffset t) => now.HasValue && (now.Value - t).TotalSeconds is >= -5 and <= 900;
+        if(s?.BodyVersion==2){
+            bool fresh2=now.HasValue&&elapsed.TotalMinutes<=15&&Within(s.GeneratedAt)&&Error.Length==0;
+            bool fullyKnown=s.State is "expired" or "limit_reached"||s.State=="active"&&s.LimitKind=="unlimited"&&s.Metering=="not_metered"&&s.Measurement=="none";
+            return new(s,now,fresh2&&fullyKnown,s.State is "expired" or "limit_reached"?Severity.Critical:Severity.Unknown){Fresh=fresh2};
+        }
         bool isStatic = s != null && (s.State != "active" || s.LimitBytes == null && s.ExpiresAt == null);
         bool fresh = s != null && now.HasValue && elapsed.TotalMinutes <= 15 && (isStatic || Within(s.GeneratedAt));
         bool measured = s != null && (s.State != "active" || s.Metering == "not_metered" || s.Metering == "complete" && s.SampledAt.HasValue && Within(s.SampledAt.Value));
-        if (!fresh || !measured || Error.Length > 0 || s == null) return new(s, now, false, Severity.Unknown);
+        if (!fresh || !measured || Error.Length > 0 || s == null) return new(s, now, false, Severity.Unknown){Fresh=fresh&&Error.Length==0};
         var time = s.ExpiresAt - now; double fraction = s.LimitBytes is long l ? (double)s.RemainingBytes!.Value / l : 1;
         var severity = s.State != "active" || time <= TimeSpan.Zero || s.RemainingBytes == 0 || fraction <= .05 || time <= TimeSpan.FromDays(1) ? Severity.Critical : fraction <= .20 || time <= TimeSpan.FromDays(3) ? Severity.Warning : Severity.Normal;
-        return new(s, now, true, severity);
+        return new(s, now, true, severity){Fresh=true};
     }
 }
-public sealed record StatusView(AccountStatus? Status, DateTimeOffset? ServerNow, bool Trustworthy, Severity Severity);
+public sealed record StatusView(AccountStatus? Status, DateTimeOffset? ServerNow, bool Trustworthy, Severity Severity){public bool Fresh{get;init;}}
 
 public sealed class Subscription
 {
+    public string PublicSource {get;set;}="";
     public string Id { get; set; } = "";
     public string Url { get; set; } = "";
     public string Name { get; set; } = "";
     public string StatusBody { get; set; } = "";
+    public int StatusSchemaVersion {get;set;}
+    public Status2Authority? Status2Authority {get;set;}
+    public string StatusOrigin {get;set;}="";
     public SubscriptionUsage20? Usage {get;set;}
     public override string ToString() => "Subscription(redacted)";
 }
@@ -98,6 +111,7 @@ public static class SubscriptionUrls
     }
     public static Uri? Status(Uri uri)
     {
+        if(uri.AbsolutePath.StartsWith("/v2/",StringComparison.Ordinal))return PrivateStatusProtocol.V2Status(uri);
         if (!uri.AbsolutePath.StartsWith("/sub/", StringComparison.Ordinal) || !uri.AbsolutePath.EndsWith(".json", StringComparison.Ordinal) || uri.AbsolutePath.EndsWith(".status.json", StringComparison.Ordinal)) return null;
         var b = new UriBuilder(uri) { Path = uri.AbsolutePath[..^5] + ".status.json" }; return b.Uri;
     }

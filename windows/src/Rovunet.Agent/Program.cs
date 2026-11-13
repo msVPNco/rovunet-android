@@ -19,6 +19,7 @@ try
     if (args.Length == 1 && args[0] == "--recover") { Recovery.Restore(); return 0; }
     if (args.Length == 1 && args[0] == "--keep-current-proxy") { Recovery.KeepCurrent(); return 0; }
     if (args.Length != 4 || (args[0] != "--pipe" && !probeOnly) || args[2] != "--parent" || !int.TryParse(args[3], out var parentId)) return 12;
+    if(!System.Text.RegularExpressions.Regex.IsMatch(args[1],@"\Arovunet\.[0-9A-F]{48}\z",System.Text.RegularExpressions.RegexOptions.CultureInvariant))return 12;
     using var parent = Process.GetProcessById(parentId);
     string parentPath = parent.MainModule?.FileName ?? "";
     if (!string.Equals(Path.GetDirectoryName(parentPath), Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory), StringComparison.OrdinalIgnoreCase)) return 13;
@@ -30,14 +31,22 @@ try
     using var pipe = new NamedPipeServerStream(args[1], PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
     using var runtime = new Runtime(probeOnly);
     runtime.UnexpectedExit += () => lifetime.Cancel();
-    NetworkAddressChangedEventHandler network = (_, _) => lifetime.Cancel();
+    string networkEpoch=NetworkEnvironment30.Read();
+    void NetworkChanged(){
+        try{if(NetworkEnvironment30.Read()!=networkEpoch)lifetime.Cancel();}
+        catch{lifetime.Cancel();} // An unreadable physical network fails closed.
+    }
+    NetworkAddressChangedEventHandler network = (_, _) => NetworkChanged();
+    NetworkAvailabilityChangedEventHandler availability = (_, _) => NetworkChanged();
     NetworkChange.NetworkAddressChanged += network;
+    NetworkChange.NetworkAvailabilityChanged += availability;
     try
     {
         // A probe can be cancelled before its client opens the pipe. Bound that idle
         // server lifetime without shortening the normal connection/recovery path.
         using var wait = CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token); wait.CancelAfter(TimeSpan.FromSeconds(probeOnly ? 3 : 15));
         pipe.WaitForConnectionAsync(wait.Token).GetAwaiter().GetResult();
+        PipePeer28.RequireClient(pipe.SafePipeHandle,parent.Id);
         var commands = Channel.CreateBounded<(AgentCommand Command,CancellationTokenSource? Probe)>(new BoundedChannelOptions(1) { SingleReader = true, SingleWriter = true });
         var probeGate=new object();CancellationTokenSource? probeCancellation=null;
         _ = Task.Run(async () =>
@@ -61,7 +70,7 @@ try
             {
                 reply = cmd.Action switch
                 {
-                    "connect" => runtime.Connect(cmd.Profile ?? throw new SafeError("INVALID_MESSAGE"), cmd.SystemProxy && !probeOnly, lifetime.Token, cmd.HostKey, cmd.SlipCertificate, cmd.SlipInterval,cmd.SshTlsCa,cmd.LocalHttpPort,cmd.LocalSocksPort).GetAwaiter().GetResult(),
+                    "connect" => runtime.Connect(cmd.Profile ?? throw new SafeError("INVALID_MESSAGE"), cmd.SystemProxy && !probeOnly, lifetime.Token, cmd.HostKey, cmd.SlipCertificate, cmd.SlipInterval,cmd.SshTlsCa,cmd.LocalHttpPort,cmd.LocalSocksPort,chainIdentities:cmd.ChainIdentities,enableUdp:cmd.EnableUdp).GetAwaiter().GetResult(),
                     "disconnect" => runtime.Stop(),
                     "probe" => runtime.Probe(cmd.ProbeUrl, pending.Probe!.Token,false,cmd.ProbeFallbacks).GetAwaiter().GetResult(),
                     "status" => runtime.Status(),
@@ -80,7 +89,7 @@ try
             Wire.Write(pipe, reply, lifetime.Token).GetAwaiter().GetResult();
         }
     }
-    finally { lifetime.Cancel(); NetworkChange.NetworkAddressChanged -= network; }
+    finally { lifetime.Cancel(); NetworkChange.NetworkAddressChanged -= network; NetworkChange.NetworkAvailabilityChanged -= availability; }
     return 0;
 }
 catch (SafeError e) { return e.Code == "PROXY_RECOVERY_CONFLICT" ? 21 : 20; }

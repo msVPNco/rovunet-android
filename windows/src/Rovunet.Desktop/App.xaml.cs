@@ -15,6 +15,7 @@ public partial class App : Application
         DispatcherUnhandledException += async (_, args) =>
         {
             args.Handled = true;
+            if(MainWindow is MainWindow ending&&ending.SystemSessionEnding30){Shutdown();return;}
             if(e.Args.Length==2 && e.Args[0].StartsWith("--ui-",StringComparison.Ordinal))
             {
                 if(Path.IsPathFullyQualified(e.Args[1])&&!File.Exists(e.Args[1]))File.WriteAllText(e.Args[1],System.Text.Json.JsonSerializer.Serialize(new{passed=false,error=args.Exception.GetType().Name}));Shutdown(1);return;
@@ -22,14 +23,76 @@ public partial class App : Application
             if (MainWindow is MainWindow main) await main.RecoverUiError();
             else { Notice("UNEXPECTED_ERROR"); Shutdown(1); }
         };
+        if (e.Args is ["--ui-review09",var inputRoot,var outputPath]) {
+            if(!Path.IsPathFullyQualified(inputRoot)||!Path.IsPathFullyQualified(outputPath)||File.Exists(outputPath)){Shutdown(12);return;}
+            var reviewWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);
+            MainWindow=reviewWindow;reviewWindow.Show();bool ok=await reviewWindow.RunReview09(inputRoot,outputPath);reviewWindow.Close();Shutdown(ok?0:1);return;
+        }
+        if(e.Args is ["--ui-accordion26",var accordionReport]) {
+            if(!Path.IsPathFullyQualified(accordionReport)||File.Exists(accordionReport)){Shutdown(12);return;}
+            var accordionWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=accordionWindow;accordionWindow.Show();bool passed=await accordionWindow.RunAccordion26(accordionReport);accordionWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args is ["--ui-selection17",var selectionReport]) {
+            if(!Path.IsPathFullyQualified(selectionReport)||File.Exists(selectionReport)){Shutdown(12);return;}
+            var selectionWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=selectionWindow;selectionWindow.Show();bool passed=await selectionWindow.RunScroll17(selectionReport,true);selectionWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args is ["--ui-status21",var statusReport]) {
+            if(!Path.IsPathFullyQualified(statusReport)||File.Exists(statusReport)){Shutdown(12);return;}
+            var statusWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=statusWindow;statusWindow.Show();bool passed=await statusWindow.RunStatus21(statusReport);statusWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args is ["--ui-scroll17",var scrollReport]) {
+            if(!Path.IsPathFullyQualified(scrollReport)||File.Exists(scrollReport)){Shutdown(12);return;}
+            var scrollWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=scrollWindow;scrollWindow.Show();bool passed=await scrollWindow.RunScroll17(scrollReport);scrollWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args is ["--ui-mac16",var macReport]) {
+            if(!Path.IsPathFullyQualified(macReport)||File.Exists(macReport)){Shutdown(12);return;}
+            var macWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=macWindow;macWindow.Show();bool passed=await macWindow.RunMac16Smoke(macReport);macWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args is ["--ui-research15",var researchReport]) {
+            if(!Path.IsPathFullyQualified(researchReport)||File.Exists(researchReport)){Shutdown(12);return;}
+            var researchWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=researchWindow;researchWindow.Show();bool passed=await researchWindow.RunResearch15Smoke(researchReport);researchWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if (e.Args is ["--ui-subscription-contract", var inputs, var reportPath]) {
+            if (!Path.IsPathFullyQualified(inputs) || !Path.IsPathFullyQualified(reportPath) || File.Exists(reportPath)) { Shutdown(12); return; }
+            var contractWindow=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);
+            MainWindow=contractWindow;contractWindow.Show();bool passed=await contractWindow.ContractSmoke(inputs,reportPath);contractWindow.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-protocols25-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true);MainWindow=fixture;fixture.Show();bool passed=await fixture.RunProtocols25Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-maintenance28-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunMaintenance28Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-updater28-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunUpdater28Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-about-language27-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunAboutLanguage27Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-about-support26-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunAboutSupport26Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
+        }
         AppDomain.CurrentDomain.UnhandledException += (_, _) =>
         {
             if(e.Args.Length==2 && e.Args[0].StartsWith("--ui-",StringComparison.Ordinal))return;
             try { Directory.CreateDirectory(PrivateStore.Root); File.WriteAllText(Path.Combine(PrivateStore.Root, "last-crash.json"), System.Text.Json.JsonSerializer.Serialize(new { code = "UNEXPECTED_ERROR", utc = DateTimeOffset.UtcNow, version = Rovunet.Desktop.MainWindow.Version })); } catch { }
         };
         TaskScheduler.UnobservedTaskException += (_, args) => args.SetObserved();
-        if(e.Args is ["--ui-upgrade-exit-fixture"]){
-            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,Title="Rovunet"};MainWindow=fixture;SessionEnding+=(_,args)=>{args.Cancel=true;_=fixture.ExitApplication();};fixture.Closed+=(_,_)=>Shutdown();fixture.Show();return;
+        if(e.Args is ["--ui-upgrade-exit-fixture"] or ["--ui-upgrade-exit-fixture","--connected-probe"] or ["--ui-upgrade-exit-fixture","--session-report",_] or ["--ui-upgrade-exit-fixture","--connected-probe","--session-report",_]){
+            var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,Title="Rovunet"};MainWindow=fixture;
+            bool connected=e.Args.Contains("--connected-probe");string? report=e.Args.Length>=3?e.Args[^1]:null;
+            if(report!=null&&(!Path.IsPathFullyQualified(report)||File.Exists(report))){Shutdown(12);return;}
+            if(connected)await fixture.ConnectShutdownFixture30();
+            SessionEnding+=(_,args)=>{args.Cancel=false;try{fixture.PrepareSystemShutdown30();}catch{}if(report!=null)File.WriteAllText(report,System.Text.Json.JsonSerializer.Serialize(new{cancel=args.Cancel,cleanupInvoked=fixture.SystemSessionEnding30,connectedProbe=connected}));};fixture.Closed+=(_,_)=>Shutdown();fixture.Show();return;
+        }
+        if(e.Args.Length==2&&e.Args[0]=="--ui-amnezia24-smoke"){
+            if(!Path.IsPathFullyQualified(e.Args[1])||File.Exists(e.Args[1])){Shutdown(12);return;}
+            var fixture=new MainWindow(new(){UseSystemProxy=false,IncludeExperimental=true},true){ShowInTaskbar=false,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunAmnezia24Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
         }
         if(e.Args.Length==2&&e.Args[0]=="--ui-default22-smoke"){
             var fixture=new MainWindow(new(){UseSystemProxy=false},true){ShowInTaskbar=false,ShowActivated=false,Left=-20000,Top=-20000};MainWindow=fixture;fixture.Show();bool passed=await fixture.RunDefault22Smoke(e.Args[1]);fixture.Close();Shutdown(passed?0:1);return;
@@ -203,7 +266,7 @@ public partial class App : Application
         catch { Notice("PRIVATE_STORE_FAILED"); Shutdown(1); return; }
         var window = new MainWindow(data); MainWindow = window; ShutdownMode = ShutdownMode.OnMainWindowClose; window.Show();
         activationWait = ThreadPool.RegisterWaitForSingleObject(activation, (_, _) => Dispatcher.BeginInvoke(() => window.ShowExisting()), null, Timeout.Infinite, false);
-        SessionEnding += (_, args) => { args.Cancel = true; _ = window.ExitApplication(); };
+        SessionEnding += (_, args) => { args.Cancel=false;try{window.PrepareSystemShutdown30();}catch{} };
     }
     static void Notice(string key)
     {

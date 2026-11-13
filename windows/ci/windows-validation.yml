@@ -1,0 +1,35 @@
+# Integration template for the canonical repository owner to place at
+# .github/workflows/windows-validation.yml. This file alone is not an active CI.
+name: Windows validation
+on:
+  pull_request:
+    paths: ['windows/**', '.github/workflows/windows-validation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: windows-2025
+    defaults:
+      run:
+        working-directory: windows
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # reviewed v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # reviewed v4
+        with:
+          dotnet-version: '10.0.403'
+      - run: ./scripts/validate-portable.ps1 -Dotnet (Get-Command dotnet).Source -FreshEvidence artifacts/ci
+      - run: dotnet build experimental/Rovunet.NetworkLab -c Release -m:1
+      - run: dotnet experimental/Rovunet.NetworkBroker/bin/Release/net10.0-windows/Rovunet.NetworkBroker.dll --self-test
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # reviewed v4
+        if: always()
+        with:
+          name: windows-contract-results
+          path: windows/artifacts/ci
+          retention-days: 14
+# A separate restricted runner with verified native pins must execute the local
+# payload/IPC/relay/installer suites. No signing keys, release publication or
+# privileged system-proxy/TUN mutation belongs in an untrusted PR job.

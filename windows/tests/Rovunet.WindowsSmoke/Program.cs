@@ -47,6 +47,7 @@ var target = Task.Run(async () =>
 });
 try
 {
+    foreach(var ipcCheck28 in await Ipc28Smoke.Run())report[ipcCheck28.Key]=ipcCheck28.Value;
     string transient;
     using (var secret = new EphemeralConfig("{\"fixture\":true}"))
     {

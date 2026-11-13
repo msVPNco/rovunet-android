@@ -23,8 +23,9 @@ public sealed partial class MainWindow
         // stays constant, avoiding offset clamping, jumps or oscillation at the bottom.
         heroScrollSpacer19.Height=collapse-forced;
         double expandedRing=compactLayout?112:124;double ring=expandedRing-(expandedRing-64)*fraction;heroRingScale19.Width=heroRingScale19.Height=ring;heroRingColumn19.Width=new(ring+16);
-        heroTitle.FontSize=Typography.Size(24-4*fraction);heroTitle.MaxHeight=58-28*fraction;heroTitle.TextWrapping=TextWrapping.NoWrap;heroTitle.TextTrimming=TextTrimming.None;
-        heroNameLine21.Visibility=fraction>=.95||string.IsNullOrEmpty(heroName21.Text)?Visibility.Collapsed:Visibility.Visible;heroNameLine21.Opacity=1-fraction;
+        heroTitle.FontSize=Typography.Size(24-4*fraction);heroTitle.MaxHeight=double.PositiveInfinity;heroTitle.TextWrapping=TextWrapping.NoWrap;heroTitle.TextTrimming=TextTrimming.None;
+        heroNameLine21.Visibility=fraction>=.6||string.IsNullOrEmpty(heroName21.Text)?Visibility.Collapsed:Visibility.Visible;heroNameLine21.Opacity=1-fraction;
+        heroDetailLine17.Visibility=fraction>=1?Visibility.Collapsed:Visibility.Visible;
         heroDetail.Visibility=fraction>=1?Visibility.Collapsed:Visibility.Visible;heroDetail.MaxHeight=20;heroDetail.Margin=new(0);heroDetail.Opacity=1-fraction;
         heroCard19.ToolTip=heroTitle.Text+" · "+heroName21.Text+"\n"+heroDetail.Text;
     }

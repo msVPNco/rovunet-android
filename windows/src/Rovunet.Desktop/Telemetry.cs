@@ -37,23 +37,23 @@ public sealed partial class MainWindow
     async Task PollTelemetry()
     {
         if (polling || busy || closing || client == null || state.State != "connected") return;
-        polling = true; var current = client;
+        polling = true; var current = client;var routeLease=routeGeneration.Capture();
         try
         {
-            var reply = await current.Send(new() { Action = "telemetry" }); if (current != client || state.State != "connected" || closing) return;
+            var reply = await current.Send(new() { Action = "telemetry" }); if (current != client || state.State != "connected" || closing||!routeGeneration.IsCurrent(routeLease)) return;
             if (reply.TrafficAvailable)
             {
                 lastTraffic = new(reply.UploadedBytes, reply.DownloadedBytes); rates = trafficSampler.Sample(lastTraffic, Stopwatch.GetTimestamp());
                 if (rates.DownloadPerSecond.HasValue && rates.UploadPerSecond.HasValue) { graphSamples.Enqueue(rates.DownloadPerSecond.Value + rates.UploadPerSecond.Value); while (graphSamples.Count > 40) graphSamples.Dequeue(); }
             }
             else { rates = new(null, null); }
-            RefreshTrafficText();
+            RefreshTrafficText();RefreshHero();
             if (data.LiveLatency && (lastLatencyTick == 0 || Stopwatch.GetElapsedTime(lastLatencyTick).TotalSeconds >= 30) && !busy)
             {
                 // Separate, bounded request. This is HTTPS latency, not ICMP ping.
                 // It never gates manual connect or changes the active route.
                 lastLatencyTick = Stopwatch.GetTimestamp(); var latency = await current.Send(new() { Action = "latency", ProbeUrl = data.LatencyUrl });
-                if (current != client || state.State != "connected" || closing) return;
+                if (current != client || state.State != "connected" || closing||!routeGeneration.IsCurrent(routeLease)) return;
                 latencySampled = DateTimeOffset.UtcNow; liveLatency = latency.Verified ? latency.ElapsedMs : null; liveLatencyError = latency.Error; RefreshTrafficText(); RefreshCards();
             }
         }

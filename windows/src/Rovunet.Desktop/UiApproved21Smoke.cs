@@ -56,11 +56,17 @@ public sealed partial class MainWindow
                 L.Language = data.Language = language; data.Theme = theme; Width = width; Height = 900;
                 ApplyTheme(); Build(); SetState(new() { State = "connected", Verified = true }); await Idle();
                 string key = language + "-" + theme + "-" + width;
+                homeSearchAction30.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                checks[key+"_search_open_empty_has_close"]=search.Visibility==Visibility.Visible&&System.Windows.Automation.AutomationProperties.GetItemStatus(homeSearchAction30)=="close";
+                search.Text="NO_MATCH_SEARCH30";homeSearchAction30.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                checks[key+"_search_enter_applies_and_stays_open"]=search.Visibility==Visibility.Visible&&System.Windows.Automation.AutomationProperties.GetItemStatus(homeSearchAction30)=="apply"&&groups.All(g=>g.Card.Visibility==Visibility.Collapsed);
+                search.Clear();homeSearchAction30.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Idle();
+                checks[key+"_search_empty_closes_and_restores"]=search.Visibility==Visibility.Collapsed&&System.Windows.Automation.AutomationProperties.GetItemStatus(homeSearchAction30)=="open"&&groups.Any(g=>g.Card.Visibility==Visibility.Visible);
                 var flags = Bounds(header21.Flags);var contentBounds=Bounds((FrameworkElement)Content);double center=contentBounds.X+contentBounds.Width/2;
                 checks[key + "_flags_center_entire_window"] = Math.Abs(flags.X + flags.Width / 2 - center) < 1;
                 checks[key + "_header_slots_do_not_overlap"] = !Overlap(flags, Bounds(header21.Leading)) && !Overlap(flags, Bounds(header21.Trailing));
                 checks[key + "_sidebar_matches_layout"] = contextHost.IsVisible == (width >= ContextThreshold);
-                checks[key + "_fixed_profile_height"] = rows.Where(r=>r.Tile.IsVisible).All(r => Math.Abs(r.Tile.ActualHeight - 84) < 1);
+                checks[key + "_fixed_profile_height"] = rows.Where(r=>r.Tile.IsVisible).All(r => Math.Abs(r.Tile.ActualHeight - 79) < 1);
                 checks[key + "_subcards_narrower_than_collection"] = rows.Take(3).All(r => r.Tile.ActualWidth < groups[0].Header.ActualWidth - 10);
                 checks[key + "_text_is_single_line"] = Visuals<TextBlock>(rows[0].Tile).All(t => t.TextWrapping == TextWrapping.NoWrap && t.TextTrimming == TextTrimming.None);
                 checks[key + "_power_visible_and_touchable"] = connect.ActualWidth >= 44 && heroRingScale19.ActualWidth >= 64 && Bounds(heroRingScale19).Bottom <= Bounds(connectionStrip).Top;

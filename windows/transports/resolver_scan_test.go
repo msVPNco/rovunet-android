@@ -113,7 +113,10 @@ func TestAdvancedAndIndependentTransports(t *testing.T) {
 				reply.Flags |= 3
 			}
 			if req.Type == 2 {
-				reply.Answer = []wire.RR{{Name: req.Name, Class: 1, Type: 2, Data: []byte{0}}}
+				reply.Answer = []wire.RR{{Name: req.Name, Class: 1, Type: 2, Data: []byte{2, 'n', 's', 7, 'e', 'x', 'a', 'm', 'p', 'l', 'e', 7, 'i', 'n', 'v', 'a', 'l', 'i', 'd', 0}}}
+			}
+			if req.Type == 1 && req.Name.String() == "ns.example.invalid" {
+				reply.Answer = []wire.RR{{Name: req.Name, Class: 1, Type: 1, Data: []byte{127, 0, 0, 1}}}
 			}
 			out, _ := reply.WireFormat()
 			pc.WriteTo(out, addr)

@@ -1,0 +1,62 @@
+{
+  "currentHostToken": "not elevated",
+  "consumerTunEnabled": false,
+  "state": "not_executed_on_SCM_or_network",
+  "vmState": "paused; do not automatically resume",
+  "source": "new pilot18/tools4; keep pilot17/tools3 immutable",
+  "schema": 1,
+  "cases": [
+    {
+      "harness": "Invoke-Tools4ScmMatrix.ps1",
+      "expected": "Active helper refused; owned service and bytes unchanged",
+      "id": "REMOVE-PRECHECK",
+      "executed": false
+    },
+    {
+      "harness": "Invoke-Tools4ScmMatrix.ps1",
+      "expected": "Kill after first durable mutation; external recovery restores exact access/service; remove/reinstall",
+      "id": "REMOVE-KILL-ACL-SCM",
+      "executed": false
+    },
+    {
+      "harness": "existing reviewed after-stop hook adapted to tools4",
+      "expected": "Helper wins before barrier; refuse before SCM deletion; durable rollback",
+      "id": "REMOVE-AFTER-STOP",
+      "executed": false
+    },
+    {
+      "harness": "after-locks hook + exact NativeErrorCode 5",
+      "expected": "Late cached launch rejected while barrier holds",
+      "id": "REMOVE-LATE",
+      "executed": false
+    },
+    {
+      "harness": "hold a read-only SCM handle in a separate owned fixture",
+      "expected": "Do not claim full removal; keep journal/files; restore access; no automatic restart after deletion request",
+      "id": "DELETE-PENDING",
+      "executed": false
+    },
+    {
+      "harness": "explicit isolated boot-arm/reboot + continuous external observer",
+      "expected": "TCP/UDP/DNS payload markers aligned before/through/after boot/BFE/runtime; positive baseline/recovery; no direct payload in declared protected intervals",
+      "id": "BOOT-CAPTURE",
+      "executed": false
+    },
+    {
+      "expected": "Continuous probes/capture across each distinct physical-interface transition and upstream loss",
+      "id": "LINK-ADDRESS-GATEWAY",
+      "executed": false
+    },
+    {
+      "expected": "Actual owner/non-owner/session/token across pipe reads, same/old requests after recovery/service restart, request/crash races, immutable foreign object preservation",
+      "id": "IPC-IDENTITY-REPLAY-RACE",
+      "executed": false
+    },
+    {
+      "harness": "Invoke-DpapiServiceDiagnostic.ps1",
+      "expected": "Unique payload per pair, direct native error/flags, exact process/thread/profile at API; characterize result without changing product crypto",
+      "id": "DPAPI-SERVICE-DIRECT-MANAGED",
+      "executed": false
+    }
+  ]
+}

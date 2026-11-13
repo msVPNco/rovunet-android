@@ -13,6 +13,11 @@ namespace Rovunet.Desktop;
 public sealed partial class MainWindow
 {
     TextBlock heroTitle = null!, heroDetail = null!, heroPing = null!;
+    bool ConnectionInternetVerified()=>state.State=="connected"&&(latencySampled.HasValue
+        ?liveLatency.HasValue&&(DateTimeOffset.UtcNow-latencySampled.Value).TotalSeconds<60
+        :state.Verified);
+    string ConnectionDetailKey()=>ConnectionInternetVerified()?"CONNECTION_INTERNET_VERIFIED"
+        :lastTraffic is {Uploaded:>0} or {Downloaded:>0}?"CONNECTION_DATA_CONFIRMED":"CONNECTION_ESTABLISHED";
 
     FrameworkElement BuildHero() => BuildHero21();
 
@@ -38,11 +43,17 @@ public sealed partial class MainWindow
         long? ping = state.State=="connected"?liveLatency:null;
         bool connected = state.State == "connected";
         heroTitle.Text = L.Text(state.State.ToUpperInvariant());
+        heroTitle.Foreground=ConnectionInk28(state.State);
         heroName21.Text = profile?.Name ?? "";
         heroNameLine21.Visibility = profile == null ? Visibility.Collapsed : Visibility.Visible;
         heroPing.Text = ping.HasValue ? ping.Value.ToString(CultureInfo.InvariantCulture) + " ms" : "";
         heroPing.Visibility = ping.HasValue ? Visibility.Visible : Visibility.Collapsed;
-        heroDetail.Text = state.State switch { "connected" => L.Text(state.Verified ? "HTTPS_VERIFIED" : "PATH_READY_UNVERIFIED"), "connecting" => L.Text("CONNECTING_HINT"), "error" => L.Text(state.Error.Length > 0 ? state.Error : "ERROR_HINT"), _ => L.Text("HOME_CONNECT_HINT") };
+        heroPing.Foreground=latencySampled.HasValue&&(DateTimeOffset.UtcNow-latencySampled.Value).TotalSeconds<60?Green:Muted;
+        heroDetail.Text = state.State switch { "connected" => L.Text(ConnectionDetailKey()), "connecting" => L.Text("CONNECTING_HINT"), "error" => L.Text(state.Error.Length > 0 ? state.Error : "ERROR_HINT"), _ => L.Text("CONNECTION_IDLE") };
+        heroDetail.Foreground=state.State=="error"?MessageInk28(state.Error.Length>0?state.Error:"ERROR_HINT"):connected&&ConnectionInternetVerified()?Green:Muted;
+        if(connectionText!=null){connectionText.Text=L.Text(state.State.ToUpperInvariant());connectionText.Foreground=ConnectionInk28(state.State);}
+        // Telemetry refresh must not resurrect rows hidden by the sticky layout.
+        RefreshHeroCollapse19();
     }
 
     long? PingOf(Profile? profile)

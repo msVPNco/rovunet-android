@@ -1,0 +1,10 @@
+{
+  "fixture_version":1,
+  "native_schema_changed":false,
+  "cases":[
+    {"id":"valid-unlocked-v1","expect":"accepted","feed":{"version":1,"name":"Fixture","items":[{"id":"path-1","link":"socks5://127.0.0.1:9#Fixture"}]}},
+    {"id":"future-envelope","expect":"rejected","feed":{"version":2,"name":"Fixture","items":[]}},
+    {"id":"unknown-optional-key-is-not-compatible","expect":"rejected","feed":{"version":1,"name":"Fixture","min_app_version":"0.1.2","items":[]}},
+    {"id":"unknown-capabilities-key-is-not-compatible","expect":"rejected","feed":{"version":1,"name":"Fixture","capabilities":[],"items":[]}}
+  ]
+}

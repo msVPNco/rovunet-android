@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows7.0": {
+      "rovunet.core": {
+        "type": "Project"
+      },
+      "rovunet.networkbroker": {
+        "type": "Project",
+        "dependencies": {
+          "Rovunet.Platform": "[0.1.2-preview.5, )"
+        }
+      },
+      "rovunet.platform": {
+        "type": "Project",
+        "dependencies": {
+          "Rovunet.Core": "[0.1.2-preview.5, )"
+        }
+      }
+    },
+    "net10.0-windows7.0/win-x64": {}
+  }
+}

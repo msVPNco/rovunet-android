@@ -34,7 +34,7 @@ $commit = $SourceRevision
 $revision = $commit
 $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | Where-Object {
   $relative = [IO.Path]::GetRelativePath($sourceRoot,$_.FullName)
-  $relative -notmatch '(^|\\)(bin|obj|\.git|artifacts)(\\|$)' -and ($relative -notmatch '^engines\\' -or $relative -in @('engines\pins.json','engines\transports-pins.json')) -and $relative -notmatch '\.bak-' -and $relative -ne 'SOURCE-SHA256.json'
+  $relative -notmatch '(^|\\)(bin|obj|\.git|artifacts)(\\|$)' -and ($relative -notmatch '^engines\\' -or $relative -in @('engines\pins.json','engines\transports-pins.json','engines\tor-manifest.json','engines\supplemental-pins.json')) -and $relative -notmatch '\.bak-' -and $relative -ne 'SOURCE-SHA256.json'
 })
 $sourceManifest = @(foreach ($file in $sourceFiles) { @{ path=[IO.Path]::GetRelativePath($sourceRoot,$file.FullName).Replace('\','/'); sha256=(Get-FileHash -LiteralPath $file.FullName).Hash.ToLowerInvariant(); bytes=$file.Length } })
 $sourceManifest | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $outputRoot 'SOURCE-SHA256.json') -Encoding utf8
@@ -59,10 +59,12 @@ try {
     foreach ($ext in @('.exe','.dll','.deps.json','.runtimeconfig.json')) { Copy-Item -LiteralPath (Join-Path $outputRoot "$($entry[0])/$($entry[1])$ext") -Destination $stage }
   }
   $pins = @{
+    'rovunet-extra.exe'='e38d18c63dc5d0b20621911ee1ecc2e9ebc56ac5cad52bbad65ec5b352cd6647'
     'xray.exe'='d5b558191cccb1e92a5772b68b8cab67717b26f634b0f15153215f65ae982a7e'
-    'rovunet-transports.exe'='891a70e6fbb044e4f61070f0583d0d30a1ef445893bf3d9b406afebd9679f7e0'
+    'rovunet-transports.exe'='70059ed5ce15d1754d392d9e948b4001c049058cbdfd1902c48b6bc014c3d97a'
     'naive.exe'='ecf6f56a834a3e945e703ddb766b32c8c474e9767d472bb0b45177c33300aa79'
     'slipstream-client.exe'='206b43eacdae8c035176e458005117b7874d22ad82d896f01524f247bae6f43c'
+    'rovunet-awg.exe'='60f283a80f00ed004839cf3fb8e9a129163a3bba3d4ba9f8017bc8af3a51a3fa'
   }
   New-Item -ItemType Directory -Path (Join-Path $stage 'engines') | Out-Null
   foreach ($name in $pins.Keys) {
@@ -70,6 +72,16 @@ try {
     if ((Get-FileHash -LiteralPath $engine).Hash -ne $pins[$name]) { throw "Engine hash mismatch: $name" }
     Copy-Item -LiteralPath $engine -Destination (Join-Path $stage 'engines')
   }
+  $torManifest=Join-Path $EngineDirectory 'tor-manifest.json'
+  if((Get-FileHash -LiteralPath $torManifest).Hash.ToLowerInvariant() -ne '46ba15e787d7734923a6eb764268d9c4933e173d008e6bb43bfe1d3cb6ffe414'){throw 'Tor manifest mismatch'}
+  $torRoot=Join-Path $EngineDirectory 'tor'
+  foreach($entry in (Get-Content -LiteralPath $torManifest -Raw|ConvertFrom-Json)){
+    $path=[IO.Path]::GetFullPath((Join-Path $torRoot $entry.path));if(!$path.StartsWith([IO.Path]::GetFullPath($torRoot)+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Unsafe Tor entry'}
+    if((Get-FileHash -LiteralPath $path).Hash.ToLowerInvariant() -ne $entry.sha256){throw 'Tor file hash mismatch'}
+  }
+  Copy-Item -LiteralPath $torRoot -Destination (Join-Path $stage 'engines') -Recurse
+  Copy-Item -LiteralPath $torManifest -Destination (Join-Path $stage 'engines')
+  Copy-Item -LiteralPath (Join-Path $EngineDirectory 'supplemental-pins.json') -Destination (Join-Path $stage 'engines')
   foreach ($folder in @('docs','licenses')) { Copy-Item -LiteralPath $folder -Destination $stage -Recurse }
   $bankStage = Join-Path $stage 'data/dns'
   New-Item -ItemType Directory -Path $bankStage -Force | Out-Null
@@ -95,7 +107,7 @@ try {
   Copy-Item -LiteralPath 'LICENSE','NOTICE.md' -Destination $stage
   Set-Content -LiteralPath (Join-Path $stage 'review-install.marker') -Value 'Rovunet-Windows' -NoNewline
   Copy-Item -LiteralPath (Join-Path $outputRoot 'SOURCE-SHA256.json') -Destination $stage
-  $provenance = @{ version=$packageVersion; platform='windows-x64'; source_commit=$commit; source_origin='local-ui-review-git-commit'; source_baseline='windows-v0.1.0-beta'; source_manifest_sha256=(Get-FileHash (Join-Path $outputRoot 'SOURCE-SHA256.json')).Hash.ToLowerInvariant(); signed=$false; published=$false; rebuilt_native_engines=@(); reused_pinned_engines=@('rovunet-transports.exe','xray.exe','naive.exe','slipstream-client.exe'); native_engine_rebuild_stage=20; native_engine_rebuild_review=20; native_go_version='go1.27.3 windows/amd64'; sdk=(& $Dotnet --version); compiler_sha256=(Get-FileHash $MakeNsis).Hash }
+  $provenance = @{ version=$packageVersion; platform='windows-x64'; source_commit=$commit; source_origin='local-maintenance-git-commit'; source_baseline='0.1.2-preview.5'; upstream_release='windows-v0.1.1-beta'; source_manifest_sha256=(Get-FileHash (Join-Path $outputRoot 'SOURCE-SHA256.json')).Hash.ToLowerInvariant(); signed=$false; published=$false; rebuilt_native_engines=@(); mihomo_backport='6780eeeb27c7eda5e79a6310a4f7f91ba7cb725d'; tor_manifest_sha256='46ba15e787d7734923a6eb764268d9c4933e173d008e6bb43bfe1d3cb6ffe414'; amnezia_source_pin='3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8'; reused_pinned_engines=@('rovunet-awg.exe','rovunet-extra.exe','rovunet-transports.exe','xray.exe','naive.exe','slipstream-client.exe'); native_engine_baseline_version='0.1.2-preview.5/review4'; native_engine_baseline_go_version='go1.27.3 windows/amd64'; sdk=(& $Dotnet --version); compiler_sha256=(Get-FileHash $MakeNsis).Hash }
   $provenance | ConvertTo-Json | Set-Content (Join-Path $stage 'BUILD-PROVENANCE.json')
   $manifest = Join-Path $outputRoot 'delete-manifest.nsh'
   $lines = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object { $_.FullName -notin @((Join-Path $stage 'Rovunet.exe'), (Join-Path $stage 'review-install.marker')) } | ForEach-Object {

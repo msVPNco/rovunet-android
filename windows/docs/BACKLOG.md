@@ -1,3 +1,34 @@
+# Current local researched continuation15 — 0.1.2-preview.10
+
+See RESEARCH15-IMPLEMENTATION.md for exact scope, new consumer/pilot18/tools4 changes and gates. Public0.1.1Beta is unchanged.
+Host component checks cover crash/recovery of owned synthetic files, Restart Manager discovery, CurrentUser Win32/.NET diagnosis and actual WPF mock/store/UI. They do not certify SCM/WFP/boot or service-identity root cause.
+All four ACTIONS03 actions remain open at their unexecuted acceptance gates. The owner's VM pause and Panel SQLite ownership remain in force.
+
+Historical notes follow.
+# Preview.6 remaining acceptance and next correction
+
+1. Reconcile exact delivered native evidence before enabling a consumer TUN/kill-switch flow: standard/elevated/foreign identities, connected Agent, IPv4/IPv6 TCP/UDP/DNS, crash/reboot/link/sleep, fresh ownership, journal failures, rollback/uninstall and clear recovery. Report every unavailable case separately.
+2. Pre-BFE boot protection and arbitrary native helper/dynamic-peer policies remain separate design/acceptance work. Explicit UDP needs a compatible selected upstream; do not imply UDP support for TCP-only transports.
+3. Next owner-requested UI correction: compact protocol buttons must show natural complete names without stretched text; unknown/partial quota must hide/reset the previous meter and percentage. Preserve the approved control order/layout. Add complete-to-partial-to-null-to-complete transitions.
+4. Reproduce end-of-list floating-plus overlap before calling it inaccessible. Check menu edges, focus/keyboard paths, scrolling connection access and resolver-result readability.
+5. Actual small-laptop125/150/200%DPI, monitor migration and physical touch checks remain hardware work. WPF render tier and geometry models are not those measurements.
+
+Earlier backlog entries are retained below with their historical scope.
+Current local maintenance: [0.1.2-preview.5](UPDATE-0.1.2-preview.5.md). Red failure text, visible card menus, atomic direct Mahsa refresh, managed-source privacy, in-app download-only Windows updater, DPAPI/IPC hardening and upstream SOCKS backport. Exact final-package checks belong to delivery/VERIFICATION.json. See PROTOCOL-MATRIX-28.md, NETWORK-BROKER-28.md and SIGNING-28.md for real evidence and open gates. Public0.1.1 remains unchanged.
+
+Historical status follows:
+Current local update: [0.1.2-preview.4](UPDATE-0.1.2-preview.4.md). About now follows a language flag change while already open; only the small licence prose stays English. Persian rendering and real flag-click regression verified; final package scope in delivery/VERIFICATION.json. Native engines and published 0.1.1 Beta remain unchanged.
+
+Historical status follows:
+Current local update: [0.1.2-preview.3](UPDATE-0.1.2-preview.3.md). Official Telegram channel, optional USDT/TRC20 support, exact supplied QR and centered About content in four languages/three themes. See the new delivery/VERIFICATION.json for final checks. Native engines are reused unchanged from preview.2; published 0.1.1 Beta stays unchanged.
+
+Historical status follows:
+Current local update: [0.1.2-preview.2](UPDATE-0.1.2-preview.2.md). Shared page/menu styling, Lion and Sun Iran flag, supplemental protocols, Tor/DoH and compatible chains. Read the final delivery/VERIFICATION.json for exact evidence; published 0.1.1 Beta remains unchanged.
+
+Historical status follows:
+Current local update: [0.1.2-preview.1](UPDATE-0.1.2-preview.1.md). AmneziaWG integration and manual-form cleanup; delivered-package verification pending. Published 0.1.1 Beta unchanged.
+
+Historical status follows:
 2026-11-11: Owner authorizes Windows 0.1.1 Beta as PRE-RELEASE, title Rovunet Windows 0.1.1 Beta · x64. Connected group/card promoted visually without mutating saved/manual ordering; fresh active HTTPS latency green and every30s, migrated on once with existing opt-out setting usable thereafter. No publicly trusted code-signing certificate found in Windows personal stores. Signing request discussed; public signing not fabricated, no paid/account enrollment authorized. AmneziaWG remains not integrated; official core feasibility only. Continue testing, package and publish this new release without rewriting old release/tag or Android Latest.
 
 Historical:
@@ -26,4 +57,13 @@ Remaining: physical 13–15-inch laptop and touch testing, mixed DPI/monitor tra
 6. TUN with a narrowly privileged broker, forced per-process routing, kill switch, Tor/bridges, multi-hop, reconnect and signed updates need separate design and verification.
 
 Never manufacture successful latency, interpret missing quota as unlimited, drop protected restrictions, disable TLS/SSH, or make manual connection depend on a test.
+# Preview.11 continuation
 
+Approved Mac-inspired surfaces and bounded marquee regions implemented; retain all earlier native boot/SCM, service DPAPI, live publisher/peer and physical-device gates. This UI update does not close ACTIONS03 macro actions.
+# Preview.14 / Panel Review22 continuation
+
+WIN24-STATUS2-NUMBER-FORMS-01 (P2): support schema-permitted exact integer numeric forms 1.0/1e0 later without float64 or clamping; current emitter uses canonical integers, so this is not a preview.14 release blocker. Panel Review20 reports stable address mapping/tombstones; earlier -ipN limitations below are historical. Windows primary-address/trust and migration Apply still need independent acceptance. UI26.md records the compact single-open accordion. Native/service/peer/updater gates remain separate; owner23/manager24 authorize scoped consumer prerelease without waiting for all ACT03 work.
+
+# Preview.13 continuation boundary
+
+Independent status2 adapter and successful-connection MRU are implemented; see STATUS21.md. The four ACTIONS03 macro actions remain partial. Migration Apply/recovery acceptance, Panel order-dependent -ipN mapping, live v2 deployment, native boot/SCM/WFP/IPC races, service-specific DPAPI, independent AWG/SS2022 peers, cold payload, publisher/live updater, physical touch and mixed-DPI remain separate gates. Do not substitute fixture counts for those observations. The owner's later successful Hy2 report supersedes any interpretation of the old failure note as a current Windows result.
