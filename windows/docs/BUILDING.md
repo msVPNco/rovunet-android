@@ -1,3 +1,10 @@
+# Preview.6 build provenance
+
+Use a fresh output directory and an explicit current Git SourceRevision. The six native engines are reused unchanged from the verified preview.5/review4 payload with their existing pins; they are not newly rebuilt by this packaging run. Source/normal payload/experimental lab must share the same revision and Core/Platform assemblies. Windows code signing and public publication remain separate from local packaging.
+
+The optional scripts/build-network-lab.ps1 creates a separate VM-gated package, verifies the official Wintun signature and requires the matching normal payload. It does not install/elevate or run native networking on the build host. Its build metadata describes implemented capabilities; a separate exact-byte native acceptance report is required. Never include private VM controller files, credentials, keys or disks in corresponding source/installer assets.
+
+Historical build notes follow.
 # Build Rovunet Windows 0.1.1-preview.1 (local UI review)
 
 Use Windows x64, .NET SDK10.0.403/runtime10.0.14, Go1.27.3 and NSIS3.09.
@@ -44,3 +51,5 @@ isolated installation identities; never replace a user's normal installation
 or expose real profile input in command-line arguments or public reports.
 
 The four native engines are unchanged from the 0.1.0 Beta payload. For this UI-only review, reuse those exact pinned files rather than recompiling them. Restore using the exact publish properties before committing the source and obtain a real local Git revision; never label changed source with the old Beta commit. Local review commits need no remote and are not publication. The source archive is generated before publish, then checked for mutations.
+
+Stage25 supplemental engine: native/extra/BUILDING.md. Tor expert bundle files and manifest are required; the package script validates all pins before inclusion. The VayDNS client fork adds an optional TCP chain dialer while retaining TLS validation. Android/macOS references were read-only.

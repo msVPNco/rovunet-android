@@ -12,7 +12,7 @@ public static class TransportPlan
     }
     public static bool IsSlip(string kind) => kind is "ss" or "slipstream" or "slipstream_ssh";
     public static bool UsesSlip(string raw) => Native(raw) && IsSlip(Importer.Fields(raw)[1]);
-    public static bool Supports(string kind) => IsSlip(kind) || kind is "vaydns" or "vaydns_ssh" or "ssh" or "dnstt" or "dnstt_ssh" or "sayedns" or "sayedns_ssh" or "soar" or "soar_ssh" or "naive" or "naive_ssh";
+    public static bool Supports(string kind) => IsSlip(kind) || kind is "doh" or "vaydns" or "vaydns_ssh" or "ssh" or "dnstt" or "dnstt_ssh" or "sayedns" or "sayedns_ssh" or "soar" or "soar_ssh" or "naive" or "naive_ssh";
     public static string[] Normalize(string[] original)
     {
         var f = original.Concat(Enumerable.Repeat("", Math.Max(0, 88-original.Length))).ToArray();
@@ -22,6 +22,8 @@ public static class TransportPlan
     }
     public static string Validate(string[] f)
     {
+        if(f[1]=="doh"){_=SubscriptionUrls.Validate(f[21]);return "";}
+
         f = Normalize(f);
         bool ssh = f[1] == "ssh" || f[1].EndsWith("_ssh", StringComparison.Ordinal);
         if (ssh)
@@ -104,17 +106,17 @@ public static class TransportPlan
         return selected.Value;
     }
     public static bool UsesNaive(string raw) => (raw.StartsWith("rovunet://") || raw.StartsWith("slipnet://")) && Importer.Fields(raw)[1] is "naive" or "naive_ssh";
-    public static string NaiveConfig(Profile p, int port)
+    public static string NaiveConfig(Profile p, int port,int chainHttpPort=0)
     {
         var f = Importer.Fields(p.Raw); string password = Importer.Decode(f[30]);
         string host = f[3].Contains(':') ? "[" + f[3].Trim('[', ']') + "]" : f[3];
-        return JsonSerializer.Serialize(new Dictionary<string,object> { ["listen"] = "socks://127.0.0.1:" + port, ["proxy"] = "https://" + Uri.EscapeDataString(f[29]) + ":" + Uri.EscapeDataString(password) + "@" + host + ":" + Importer.Port(f[28]), ["log"] = "" });
+        return JsonSerializer.Serialize(new Dictionary<string,object> { ["listen"] = "socks://127.0.0.1:" + port, ["proxy"] = (chainHttpPort>0?"http://127.0.0.1:"+Importer.Port(chainHttpPort.ToString())+",":"")+"https://" + Uri.EscapeDataString(f[29]) + ":" + Uri.EscapeDataString(password) + "@" + host + ":" + Importer.Port(f[28]), ["log"] = "" });
     }
-    public static string Config(Profile p, int port, string hostKey, int upstreamPort = 0, int? slipInterval = null,string sshTlsCa="")
+    public static string Config(Profile p, int port, string hostKey, int upstreamPort = 0, int? slipInterval = null,string sshTlsCa="",int chainSocksPort=0)
     {
         var f = Normalize(Importer.Fields(p.Raw)); var error = Validate(f); if (error.Length > 0) throw new SafeError(error);
         if (IsSlip(f[1]) && slipInterval != null) f[6] = EffectiveSlipInterval(f, slipInterval).ToString(System.Globalization.CultureInfo.InvariantCulture);
         string tlsCa=sshTlsCa.Length==0?"":SlipCertificate.ReadPublic(sshTlsCa);
-        return JsonSerializer.Serialize(new { fields = f, port, hostKey, upstreamPort, tlsCa });
+        return JsonSerializer.Serialize(new { fields = f, port, hostKey, upstreamPort, tlsCa, chainSocksPort });
     }
 }

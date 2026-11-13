@@ -1,0 +1,11 @@
+# Windows update button
+
+About retains its existing button/location. Clicking starts an in-app Windows release check. It does not launch a web browser or install software. Select the downloaded installer's destination explicitly; download can be cancelled, retried and closed without altering profiles or the installed application.
+
+Route is explicit: connected uses the active loopback HTTP proxy for both metadata and asset; disconnected uses direct networking with ambient system-proxy discovery disabled. Missing active local HTTP port fails. A connection/profile/port change cancels the operation; an active tunnel error does not silently bypass it. Disconnected alone is not a download error.
+
+Only `windows-v` tags in msVPNco/rovunet-app, non-draft Beta/RC/stable, Windows x64 and an exact corresponding installer name are eligible. The repository's shared Latest/Android releases are ignored. Compare numeric versions, then preview < alpha < beta < rc < stable (numbered stages compare numerically); never offer an older build. Local previews are not public release candidates. The list is bounded to100; a larger future release inventory needs explicit paginated metadata support rather than an unbounded crawl.
+
+Require a SHA256 digest and bounded size from GitHub release asset metadata before enabling download. Restrict HTTPS, origin repository, port, credentials, fragments and redirects to GitHub asset delivery hosts. Stream at most the declared size into a unique owner-only file in the chosen directory, hash while writing, then replace the destination only after complete verification. Failure/cancel preserves any prior destination and removes only the current transient. No account/subscription token or signed redirect URL is logged.
+
+GitHub TLS + asset digest verifies download integrity. It is NOT a signed product manifest or an Authenticode publisher guarantee. This implementation never executes/installs the file. Full automatic installation remains gated on a pinned, publicly trusted publisher/manifest with key rotation/revocation policy and controlled rollback. No self-signed root is installed. Four-language/three-theme fixtures test route selection, strict metadata, corrupt/truncated payload, redirect refusal, cancellation, retry and same-window navigation.

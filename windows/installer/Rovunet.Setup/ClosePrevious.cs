@@ -17,10 +17,10 @@ internal static class ClosePrevious
         foreach(var process in Process.GetProcessesByName("Rovunet"))using(process){
             string executable;try{executable=process.MainModule?.FileName??"";}catch{throw new InstallProblem("appRunning");}
             if(!Path.GetFullPath(executable).Equals(target,StringComparison.OrdinalIgnoreCase))continue;
-            // Query-end-session reaches the old WPF app's existing SessionEnding
-            // handler, which awaits disconnect/recovery before it exits. No Kill.
+            // Query-end-session reaches WPF SessionEnding for cooperative,
+            // bounded owned-Agent recovery and exit. No forced process kill.
             var windows=new List<IntPtr>();EnumWindows((hwnd,_)=>{GetWindowThreadProcessId(hwnd,out uint id);if(id==process.Id)windows.Add(hwnd);return true;},IntPtr.Zero);
-            foreach(var hwnd in windows)SendMessageTimeout(hwnd,0x11,IntPtr.Zero,new IntPtr(1),2,2000,out _);
+            foreach(var hwnd in windows)SendMessageTimeout(hwnd,0x11,IntPtr.Zero,new IntPtr(1),2,4000,out _);
             using var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(60));
             try{await process.WaitForExitAsync(deadline.Token);}catch(OperationCanceledException){throw new InstallProblem("appRunning");}
         }

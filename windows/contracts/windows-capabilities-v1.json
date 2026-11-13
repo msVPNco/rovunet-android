@@ -1,0 +1,30 @@
+{
+  "schema":"rovunet-client-capabilities",
+  "version":1,
+  "client":"windows",
+  "app":"0.1.2-preview.5",
+  "architecture":"x64",
+  "publication":"local-review",
+  "negotiation":"out-of-band; never append these keys to a version1 feed",
+  "feed_versions":[1],
+  "native_field_versions":[22,28,29,30,31,32,33],
+  "limits":{"feed_bytes":2097152,"native_feed_items":1000,"ipc_bytes":2097152},
+  "network":{"local_http":true,"local_socks5_tcp":true,"public_socks5_udp":false,"current_user_wininet":true,"tun":false,"kill_switch":false,"forced_per_app_routing":false},
+  "profiles":[
+    {"family":"VLESS","transports":["ws","xhttp","reality","tcp","grpc","httpupgrade"],"import":true,"edit":true,"runtime":"Xray pinned; supported validated dialects only","udp":"not exposed by local SOCKS"},
+    {"family":"SSH","import":true,"edit":true,"runtime":"scoped host identity required"},
+    {"family":"SOCKS5","import":true,"edit":true,"runtime":"TCP proxy"},
+    {"family":"Trojan/VMess/Shadowsocks","import":true,"edit":true,"runtime":"validated Xray dialects; SS2022 three methods/PSK chains"},
+    {"family":"NaiveProxy","import":true,"edit":true,"runtime":"pinned native helper; TLS required"},
+    {"family":"DNSTT/NoizDNS/VayDNS","import":true,"edit":true,"runtime":"family-specific resolver plan and optional scoped SSH"},
+    {"family":"Soar","import":true,"edit":true,"runtime":"family-specific resolver/session policy"},
+    {"family":"Slipstream","import":true,"edit":true,"runtime":"verified public certificate required"},
+    {"family":"AmneziaWG","import":true,"edit":true,"runtime":"separate authenticated helper; AWG1/2/3.1 tested controlled peer","public_udp":false},
+    {"family":"AnyTLS/TUIC/Mieru","import":true,"edit":true,"runtime":"separate authenticated helper; experimental narrower dialects","public_udp":false},
+    {"family":"DoH","import":true,"edit":true,"runtime":"standalone DNS-forwarding semantics; not a general VPN"},
+    {"family":"Tor","import":true,"edit":true,"runtime":"experimental; external bootstrap previously failed on host network"},
+    {"family":"Chain","import":true,"edit":true,"runtime":"bounded compatible layers; identities scoped per layer"},
+    {"family":"Hysteria2/WireGuard","import":true,"edit":true,"runtime":"known external connection limitations; owner had deferred protocol work; no new success claim"}
+  ],
+  "evidence_policy":"import/config/loopback/real Windows/provider and physical hardware evidence are distinct; see delivery verification and protocol matrix"
+}

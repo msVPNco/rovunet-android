@@ -28,11 +28,12 @@ import (
 var resolverInventory string
 
 type config struct {
-	Fields       []string `json:"fields"`
-	Port         int      `json:"port"`
-	UpstreamPort int      `json:"upstreamPort"`
-	HostKey      string   `json:"hostKey"`
-	TLSCA        string   `json:"tlsCa"`
+	ChainSocksPort int      `json:"chainSocksPort"`
+	Fields         []string `json:"fields"`
+	Port           int      `json:"port"`
+	UpstreamPort   int      `json:"upstreamPort"`
+	HostKey        string   `json:"hostKey"`
+	TLSCA          string   `json:"tlsCa"`
 }
 type status struct {
 	State       string `json:"state"`
@@ -195,6 +196,22 @@ func start(o *owner, c config) (status, error) {
 	var rawDial func(context.Context, string) (net.Conn, error)
 	dialer := &net.Dialer{Timeout: 20 * time.Second, KeepAlive: 30 * time.Second}
 	rawDial = func(ctx context.Context, addr string) (net.Conn, error) { return dialer.DialContext(ctx, "tcp", addr) }
+	if c.ChainSocksPort != 0 {
+		if c.ChainSocksPort < 1 || c.ChainSocksPort > 65535 || t == "ss" || strings.HasPrefix(t, "slipstream") {
+			return status{}, errors.New("invalid chain input")
+		}
+		d, e := proxy.SOCKS5("tcp", endpoint("127.0.0.1", strconv.Itoa(c.ChainSocksPort)), nil, dialer)
+		if e != nil {
+			return status{}, e
+		}
+		cd := d.(proxy.ContextDialer)
+		rawDial = func(ctx context.Context, address string) (net.Conn, error) {
+			return cd.DialContext(ctx, "tcp", address)
+		}
+	}
+	if t == "doh" {
+		return status{}, startDoH(o, c, rawDial)
+	}
 	if t == "dnstt" || t == "dnstt_ssh" || t == "sayedns" || t == "sayedns_ssh" || t == "soar" || t == "soar_ssh" {
 		listenPort, e := freePort()
 		for attempt := 0; e == nil && listenPort == c.Port && attempt < 16; attempt++ {
@@ -223,6 +240,9 @@ func start(o *owner, c config) (status, error) {
 				country = ""
 			}
 			client.SetDiscovery(f[79] == "1", country)
+			if c.ChainSocksPort > 0 {
+				client.SetUpstreamSocks5(endpoint("127.0.0.1", strconv.Itoa(c.ChainSocksPort)), "", "")
+			}
 			if f[22] == "tcp" {
 				client.SetTCPMode("only")
 			} else {
@@ -249,6 +269,9 @@ func start(o *owner, c config) (status, error) {
 				return status{}, e
 			}
 			client.SetAuthoritativeMode(f[27] == "1")
+			if c.ChainSocksPort > 0 {
+				client.SetSOCKS5Proxy(endpoint("127.0.0.1", strconv.Itoa(c.ChainSocksPort)), "", "")
+			}
 			client.SetNoizMode(strings.HasPrefix(t, "sayedns"))
 			client.SetStealthMode(f[38] == "1")
 			client.SetMaxPayload(num(f[39]))
@@ -284,7 +307,7 @@ func start(o *owner, c config) (status, error) {
 		var stream tunnelStream
 		if strings.HasPrefix(t, "vaydns") {
 			var err error
-			stream, err = startVay(o, f)
+			stream, err = startVay(o, f, c.ChainSocksPort)
 			if err != nil {
 				return status{}, err
 			}

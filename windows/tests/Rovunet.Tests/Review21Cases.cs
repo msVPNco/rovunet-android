@@ -16,7 +16,7 @@ static class Review21Cases
         }
         yield return("review21-aes128-oversized-key-rejected",()=>Reject(()=>Importer.Single(Ss("2022-blake3-aes-128-gcm",Convert.ToBase64String(new byte[32]))),"INVALID_IMPORT"));
         yield return("review21-ss2022-invalid-keys-rejected",()=>{foreach(string key in new[]{"not-base64",Convert.ToBase64String(new byte[15]),Convert.ToBase64String(new byte[16])+":"})Reject(()=>Importer.Single(Ss("2022-blake3-aes-128-gcm",key)),"INVALID_IMPORT");});
-        const string unsupported="[Interface]\nPrivateKey=fixture\nJc=4\n[Peer]\nPublicKey=fixture";
+        const string unsupported="[Interface]\nPrivateKey=fixture\nUnknownAwgOption=4\n[Peer]\nPublicKey=fixture";
         yield return("review21-compatible-native-xray-skips-unsupported-inner-only",()=>{var batch=Importer.ReadCompatible("socks5://127.0.0.1:9#Working\n"+Wrap(unsupported));Check(batch.Total==2&&batch.Profiles.Count==1&&batch.Skipped["UNSUPPORTED_FORMAT"]==1);Reject(()=>Importer.Read(Wrap(unsupported)),"UNSUPPORTED_FORMAT");});
         yield return("review21-compatible-native-xray-protected-stays-atomic",()=>Reject(()=>Importer.ReadCompatible("socks5://127.0.0.1:9\n"+Wrap(unsupported,f=>f[31]="1")),"PROTECTED_PROFILE"));
         yield return("review21-compatible-unknown-native-version-stays-atomic",()=>Reject(()=>Importer.ReadCompatible("socks5://127.0.0.1:9\n"+Wrap(unsupported,f=>f[0]="34")),"UNSUPPORTED_FORMAT"));

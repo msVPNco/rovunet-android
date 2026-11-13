@@ -1,0 +1,6 @@
+Iran language flag: Lion and Sun tricolour, requested by owner 2026-11-11.
+Source: https://commons.wikimedia.org/wiki/File:State_flag_of_Iran_(1964–1980).svg
+Original SVG: https://upload.wikimedia.org/wikipedia/commons/f/fd/State_flag_of_Iran_%281964%E2%80%931980%29.svg
+Source attribution: original emblem unknown; vector contributors Sodacan, Pouya, Jooja, ConflictFan (see source history).
+Licence/status on source page: public domain (PD-Iran and public-domain dedication).
+IranLionSun.xaml is a lossless geometry/style/transform conversion of the supplied SVG subset for WPF; no font glyph, bitmap or remote runtime dependency.

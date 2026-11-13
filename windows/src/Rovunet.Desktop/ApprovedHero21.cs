@@ -9,6 +9,7 @@ public sealed partial class MainWindow
 {
     TextBlock heroName21 = null!;
     MarqueeLine heroNameLine21 = null!;
+    MarqueeLine heroDetailLine17 = null!;
     FrameworkElement BuildHero21()
     {
         double ringSize = compactLayout ? 112 : 124;
@@ -28,12 +29,12 @@ public sealed partial class MainWindow
         grid.Children.Add(heroRingScale19);
         var copy = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new(0) };
         heroTitle = Text("", 24); heroTitle.FontWeight = FontWeights.SemiBold; heroTitle.TextWrapping = TextWrapping.NoWrap; heroTitle.Margin = new(0); heroTitle.MaxHeight = 32;
-        copy.Children.Add(heroTitle);
+        var titleViewport=MovingLine21(heroTitle,34,L.Direction);titleViewport.Tag="HERO_TITLE_MARQUEE";copy.Children.Add(titleViewport);
         heroName21 = Text("", 14, Muted); heroNameLine21 = MovingLine21(heroName21, 22, L.Direction); heroNameLine21.Margin = new(0, 3, 0, 0); copy.Children.Add(heroNameLine21);
         var meta = new DockPanel { Margin = new(0, 7, 0, 0) };
         heroPing = Technical(Text("", 12, Muted)); heroPing.Margin = new(8, 0, 0, 0); heroPing.VerticalAlignment = VerticalAlignment.Center;
         DockPanel.SetDock(heroPing, Dock.Right); meta.Children.Add(heroPing);
-        heroDetail = Text("", 12, Green); var detailLine = MovingLine21(heroDetail, 20, L.Direction); meta.Children.Add(detailLine); copy.Children.Add(meta);
+        heroDetail = Text("", 12, Green); heroDetailLine17 = MovingLine21(heroDetail, 20, L.Direction); meta.Children.Add(heroDetailLine17); copy.Children.Add(meta);
         Grid.SetColumn(copy, 1); grid.Children.Add(copy);
         var card = Card(grid); card.Tag = "HERO"; card.Background = HeroSurface(); card.Height = HeroExpanded19;
         card.Padding = new(10); card.CornerRadius = new(22); card.Margin = new(HomeInset21, 0, HomeInset21, 13); CardDepth(card); return card;

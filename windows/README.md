@@ -1,67 +1,15 @@
-<div align="center">
+# Rovunet Windows 0.1.3 Beta — connection-display correction
 
-# Rovunet · Windows
-
-**0.1.2 Beta · Windows x64 · Pre-release**
-
-[Download installer](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [Release and checksums](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.2-beta) · [Exact source](https://github.com/msVPNco/rovunet-app/tree/windows-v0.1.2-beta/windows)
-
-</div>
-
-## Connection title display notice
-
-An owner-reported refresh issue in 0.1.2 Beta can leave the Connected/Disconnected title showing the preceding state until the page is rebuilt, even when the power colour/detail has changed. Changing the language temporarily refreshes it. A correction has been prepared and is being checked in a separate local build; the published 0.1.2 installer is unchanged.
-
-در نسخهٔ 0.1.2 ممکن است عنوان اتصال یا قطع، وضعیت قبلی را نشان دهد؛ تعویض زبان موقتاً آن را تازه می‌کند. اصلاح در ساخت محلی جداگانه در حال بررسی است و فایل منتشرشدهٔ 0.1.2 جایگزین نشده است.
-
-## What changed
-
-- Compact closed collections and fixed 66-DIP profile cards, with 44-DIP action targets and lighter edges/shadows. Long text moves inside its bounds; short text stays still.
-- At most one collection is open. Opening another closes the previous one; closing it allows all closed. Menu/arrow toggles, search, page return, language/theme changes and restart share the same saved state. Save failure rolls back the entire expansion change.
-- One click selects only. Successful connection updates the persistent recent order; selection alone does not move profiles or collections.
-- The independent Panel feed1/status2 adapter preserves identity, period/revision/confirmed high-water and shared aliases. Errors keep previous data labelled stale/unknown; unknown usage is not invented as zero/unlimited. Closed summaries retain cached/pending information. No automatic migration Apply or endpoint trust transfer.
-- Earlier local consumer features, editors, supported resolver families, source handling, themes and bounded native engines are included. Compatibility depends on the protocol/dialect/peer; this is not a claim that every remote endpoint works.
-
-## Install and practical tests
-
-Download **Rovunet-Windows-0.1.2-Beta-x64-Setup.exe** from the release above. Preserve existing profiles and private data; do not uninstall/reset data merely to upgrade. Publication does not automatically replace the owner's installation.
-
-The installer has **no trusted Authenticode signature**. Compare SHA-256 with the attached SHA256SUMS.txt; a checksum does not replace publisher signing.
-
-Installer SHA-256: `21eb870fbb14db2928e726ad3565ffc43440bfa3a6ba8c03359012ec75afac5f`.
-
-[Practical test/recovery guide in Persian](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/QUICK-TEST-FA.txt) · [Four-language release notes](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/RELEASE-NOTES.md) · [Build/source provenance](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/WINDOWS-PROVENANCE.json)
-
-## فارسی
-
-نسخهٔ **0.1.2 Beta** انتشار آزمایشی ویندوز x64 پس از0.1.1 Beta است. کارت‌ها جمع‌وجورتر شده‌اند؛ حداکثر یک مجموعه باز می‌ماند و بستن آن اجازه می‌دهد همه بسته باشند. تک‌کلیک فقط انتخاب می‌کند؛ فقط اتصال موفق ترتیب اخیر را تغییر می‌دهد. نامعلوم، قدیمی، نامحدود و مقدار در انتظار از هم جدا می‌مانند. ارتقا نباید اشتراک‌ها، انتخاب، سنجاق‌ها، ویرایش‌های محلی یا اطلاعات معتبر حساب را پاک کند.
-
-[دانلود مستقیم نصب‌کننده](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [صفحهٔ ریلیز](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.2-beta) · [راهنمای آزمون و نگهداری داده](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/QUICK-TEST-FA.txt)
-
-## Appearance and verification
-
-Actual native-WPF renders with synthetic profiles:
-
-<img src="https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Windows-0.1.2-Beta-compact.png" width="300" alt="Compact Windows view"/>
-<img src="https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Windows-0.1.2-Beta-wide.png" width="640" alt="Expanded Windows view"/>
-
-[Short native-rendered demonstration](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Windows-0.1.2-Beta-demo-synthetic.mp4).
-
-110 focused WPF/private-store checks and 10 connection-order checks passed on the final payload. Four languages, three themes, 480/1120-DIP widths; host DPI120(125%), exported client renders96DPI. These are synthetic/UI/store checks, not live Panel/network, physical-touch or mixed-monitor acceptance. Historical contract results retain their own version/source identity.
-
-## Scope and known limits
-
-This is the **proxy consumer**, not an operational native laboratory/service release. TUN/kill-switch/boot/WFP, native pilot18/tools4, service-specific DPAPI, independent AWG/SS2022 peers/cold payload and trusted-publisher/live-updater acceptance remain separate. Ordinary WireGuard is deferred; later owner-reported Hy2 success is retained without universal connectivity claims. Real migration Apply is absent. Current Panel output uses canonical integers; schema-permitted1.0/1e0 forms remain a nonblocking P2.
-
-The release is **Pre-release**, not repository-wide Latest. Old tags/assets and other platforms remain unchanged. Exact consumer source/tag commit: `50402d653ed6e91934e80a8e4f4cbcdb3081a154`; the Windows subtree matches reviewed local source. The release includes explicit Windows source and pinned-native corresponding-source offers. No private profiles, subscription tokens, DPAPI stores, managerial archives or signing keys are public assets.
-
-AGPL-3.0 · Based on SlipNet 2.5.6 Full by Anonvector; not affiliated. Native components retain their own licences and source offers.
+Fixes retained Connected/Disconnected text without requiring a language change. [Details, evidence and limits](docs/CONNECTION27.md). Prepared for the owner-authorized 0.1.3 Beta prerelease. Published 0.1.2 Beta remains immutable.
 
 ---
 
-<details>
-<summary>Historical 0.1.1 Beta documentation — previous release, not current capability claims</summary>
+# Rovunet Windows 0.1.2 Beta — prerelease
 
+Compact collection cards, one open collection at a time, and preserved connection-only recent ordering: [changes and limits](docs/UI26.md). Includes the independent Panel feed1/status2 adapter described in [STATUS21](docs/STATUS21.md). Current source is a proxy consumer; laboratory TUN/kill-switch/service components are not enabled by this release. Previous releases remain unchanged. Publication identity and asset checksums accompany the release.
+
+---
+Previous release documentation:
 <div align="center">
 
 # Rovunet · Windows
@@ -108,5 +56,3 @@ Rovunet中央仓库中的Windows客户端。[下载0.1.1 Beta](https://github.co
 
 [Architecture](docs/ARCHITECTURE.md) · [Build](docs/BUILDING.md) · [Backlog](docs/BACKLOG.md) · [License](LICENSE) · [Attribution](NOTICE.md)
 
-
-</details>

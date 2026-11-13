@@ -24,12 +24,13 @@ public sealed partial class MainWindow
         home.RowDefinitions.Add(new() { Height = GridLength.Auto }); home.RowDefinitions.Add(new() { Height = GridLength.Auto }); home.RowDefinitions.Add(new()); home.RowDefinitions.Add(new() { Height = GridLength.Auto });
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Direction };
-        void Action(string key, string glyph, System.Action action)
+        Button Action(string key, string glyph, System.Action action)
         {
-            var button = IconButton(key, glyph, action); button.Width = 44; button.Height = 44; button.Margin = new(0); button.Background = Brushes.Transparent; actions.Children.Add(button);
+            var button = IconButton(key, glyph, action); button.Width = 44; button.Height = 44; button.Margin = new(0); button.Background = Brushes.Transparent; actions.Children.Add(button);return button;
         }
-        Action("SEARCH", MenuIcon("SEARCH"), ShowSearch); Action("SETTINGS", MenuIcon("SETTINGS"), SettingsDialog);
-        Action("SECTION_GENERAL", "M12,3 L12,5 M12,11 L12,13 M12,19 L12,21", GeneralPage);
+        homeSearchAction30=Action("SEARCH", MenuIcon("SEARCH"), ()=>{}); Action("SETTINGS", MenuIcon("SETTINGS"), SettingsDialog);
+        var headerMore=Action("SECTION_GENERAL", "M12,3 L12,5 M12,11 L12,13 M12,19 L12,21", GeneralPage);
+        headerMore.Content=FilledMoreIcon28();headerMore.Tag="HEADER_MORE";
         FrameworkElement leading, trailing;
         if (compactLayout) { leading = BrandMark(); trailing = actions; }
         else
@@ -44,6 +45,7 @@ public sealed partial class MainWindow
 
         search = new TextBox { Visibility = Visibility.Collapsed, Margin = new(HomeInset21, 0, HomeInset21, 8), MinHeight = 44, VerticalContentAlignment = VerticalAlignment.Center, ToolTip = L.Text("SEARCH") };
         AutomationProperties.SetName(search, L.Text("SEARCH")); search.TextChanged += (_, _) => RefreshCards(); home.Children.Add(search);
+        BindSearchAction30(search,homeSearchAction30,RefreshCards,"HOME_SEARCH_ACTION");
         heroScrollSpacer19 = new Border { Height = 0, IsHitTestVisible = false };
         cards = new StackPanel { Margin = new(HomeInset21, 0, HomeInset21, 72) };
         mainScroll = new ScrollViewer { Content = cards, PanningMode = PanningMode.VerticalOnly, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -64,7 +66,7 @@ public sealed partial class MainWindow
         DockPanel.SetDock(shield, Dock.Left); statusRow.Children.Add(shield);
         var labels = new StackPanel { Margin = new(7, 0, 0, 0) };
         connectionText = Text("", 14); connectionText.FontWeight = FontWeights.SemiBold; connectionText.Margin = new(0); globalStatus = connectionText;
-        detail = Text("", 12, Muted); labels.Children.Add(connectionText); labels.Children.Add(MovingLine21(detail, 20, L.Direction)); statusRow.Children.Add(labels); status.Children.Add(statusRow);
+        detail = Text("", 12, Muted); var statusTitleViewport=MovingLine21(connectionText,22,L.Direction);statusTitleViewport.Tag="FOOTER_TITLE_MARQUEE";labels.Children.Add(statusTitleViewport); labels.Children.Add(MovingLine21(detail, 20, L.Direction)); statusRow.Children.Add(labels); status.Children.Add(statusRow);
         var traffic = new Grid { Margin = new(0, 7, 0, 0), FlowDirection = FlowDirection.LeftToRight }; traffic.ColumnDefinitions.Add(new()); traffic.ColumnDefinitions.Add(new());
         var ratesRow = new StackPanel { Orientation = Orientation.Horizontal, FlowDirection = FlowDirection.LeftToRight };
         trafficUp = Technical(Text("", 12, Muted)); trafficDown = Technical(Text("", 12, Muted)); trafficUp.Margin = new(0, 0, 8, 0); trafficDown.Margin = new(0);

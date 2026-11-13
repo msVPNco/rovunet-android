@@ -44,7 +44,8 @@ public static class ProfileEditing
     {
         // Authenticated server restrictions are re-parsed before reconciling any local edit.
         var baseline=Importer.Single(baseRaw);_=Importer.Single(incoming.Raw);
-        Profile KeepName(Profile value){if(local.Raw.TrimStart().StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)&&local.Name!=(originalName??baseline.Name))value.Name=local.Name;return value;}
+        SubscriptionEndpoint.RequireSame(baseRaw,incoming);
+        Profile KeepName(Profile value){if(local.Name!=(originalName??baseline.Name))value.Name=local.Name;return value;}
         if(local.Raw==baseRaw || local.Raw==incoming.Raw)return KeepName(incoming);
         if(incoming.Raw==baseRaw)return KeepName(Replace(incoming,local.Raw));
         if(!IsNative(baseline.Raw) || !IsNative(local.Raw) || !IsNative(incoming.Raw))throw new SafeError("OVERRIDE_CONFLICT");

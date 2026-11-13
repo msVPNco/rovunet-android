@@ -34,7 +34,8 @@ public static class CoreProfileEditing
         if(raw.TrimStart().StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)){
             foreach(string key in InterfaceKeys.Concat(PeerKeys))values[key]="";
             foreach(string line in raw.Split('\n')){string text=line.Split('#')[0].Trim();int equal=text.IndexOf('=');if(equal>=0)values[text[..equal].Trim().ToLowerInvariant()]=text[(equal+1)..].Trim();}
-            return new(){Kind="wireguard",Fields=values};
+            if(admitted.Protocol=="AmneziaWG")foreach(string key in AmneziaConfig.Labels.Keys)values.TryAdd(key,"");
+            return new(){Kind=admitted.Protocol=="AmneziaWG"?"amneziawg":"wireguard",Fields=values};
         }
         if(!Uri.TryCreate(raw,UriKind.Absolute,out var uri)||uri.Scheme is not ("vless" or "hysteria2" or "hy2"))return null;
         foreach(string key in LinkKeys)values[key]="";
@@ -57,7 +58,7 @@ public static class CoreProfileEditing
         var changed=fields.Where(x=>x.Value!=form[x.Key]).ToDictionary(StringComparer.Ordinal);
         if(changed.Count==0&&name==original.Name){var same=ProfileEditing.Replace(original,original.Raw);same.Name=original.Name;return new(){Profile=same};}
         bool copy=CreatesCopy(original,fields);string inner=Inner(original),raw;
-        if(form.Kind=="wireguard")raw=changed.Count==0?inner:PatchWireGuard(inner,changed);
+        if(form.Kind is "wireguard" or "amneziawg")raw=changed.Count==0?inner:PatchWireGuard(inner,changed);
         else{
             string host=fields["server"].Trim().Trim('[',']');if(Uri.CheckHostName(host)==UriHostNameType.Unknown)throw new SafeError("CORE_HOST_INVALID");
             if(!int.TryParse(fields["port"],out int port)||port is <1 or >65535)throw new SafeError("CORE_PORT_INVALID");
@@ -106,7 +107,7 @@ public static class CoreProfileEditing
         string ending=raw.Contains("\r\n",StringComparison.Ordinal)?"\r\n":"\n";var lines=raw.Replace("\r\n","\n",StringComparison.Ordinal).Split('\n').ToList();var written=new HashSet<string>();
         for(int i=0;i<lines.Count;i++){string text=lines[i];int equal=text.IndexOf('=');if(equal<0||text.TrimStart().StartsWith('#'))continue;string key=text[..equal].Trim().ToLowerInvariant();if(!changes.TryGetValue(key,out var value))continue;written.Add(key);int comment=text.IndexOf('#',equal);string suffix=comment>=0?" "+text[comment..]:"";lines[i]=value.Trim().Length==0?suffix.Trim():text[..(equal+1)]+" "+value.Trim()+suffix;}
         foreach(var (key,value) in changes.Where(x=>!written.Contains(x.Key)&&x.Value.Trim().Length>0)){
-            bool iface=InterfaceKeys.Contains(key);int peer=lines.FindIndex(s=>s.Split('#')[0].Trim().Equals("[Peer]",StringComparison.OrdinalIgnoreCase));string label=key switch{"privatekey"=>"PrivateKey","publickey"=>"PublicKey","presharedkey"=>"PresharedKey","allowedips"=>"AllowedIPs","persistentkeepalive"=>"PersistentKeepalive","mtu"=>"MTU","dns"=>"DNS",_=>char.ToUpperInvariant(key[0])+key[1..]};lines.Insert(iface?peer:lines.Count,label+" = "+value.Trim());
+            bool iface=InterfaceKeys.Contains(key)||AmneziaConfig.Labels.ContainsKey(key);int peer=lines.FindIndex(s=>s.Split('#')[0].Trim().Equals("[Peer]",StringComparison.OrdinalIgnoreCase));string label=AmneziaConfig.Labels.GetValueOrDefault(key)??(key switch{"privatekey"=>"PrivateKey","publickey"=>"PublicKey","presharedkey"=>"PresharedKey","allowedips"=>"AllowedIPs","persistentkeepalive"=>"PersistentKeepalive","mtu"=>"MTU","dns"=>"DNS",_=>char.ToUpperInvariant(key[0])+key[1..]});lines.Insert(iface?peer:lines.Count,label+" = "+value.Trim());
         }
         return string.Join(ending,lines);
     }

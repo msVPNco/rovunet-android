@@ -15,9 +15,9 @@ public sealed partial class MainWindow
     DialogWindow BuildCoreProfileEditor(Profile profile,Action<Profile>? install=null)
     {
         var form=CoreProfileEditing.Read(profile)??throw new SafeError("UNSUPPORTED_FORMAT");var fields=form.Fields.ToDictionary(StringComparer.Ordinal);
-        if(install!=null){fields["server"]="";fields["auth"]="";}
+        if(install!=null){if(form.Kind is "wireguard" or "amneziawg"){fields["privatekey"]="";fields["publickey"]="";fields["endpoint"]="";}else{fields["server"]="";fields["auth"]="";}}
         var d=Dialog(install==null?"EDIT_PROFILE":"ADD",500,800);d.UsePageChrome();var panel=new StackPanel{Margin=new(18,8,18,20)};
-        panel.Children.Add(Text(form.Kind=="wireguard"?"WireGuard":form.Kind=="hysteria2"?"Hysteria2":"VLESS",22));panel.Children.Add(Text(L.Text("CORE_SERVER_MATCH"),12,Muted));
+        panel.Children.Add(Text(form.Kind=="amneziawg"?"AmneziaWG":form.Kind=="wireguard"?"WireGuard":form.Kind=="hysteria2"?"Hysteria2":"VLESS",22));panel.Children.Add(Text(L.Text("CORE_SERVER_MATCH"),12,Muted));
         if(profile.SourceId.Length>0)panel.Children.Add(Text(L.Text("LOCAL_OVERRIDE_HINT"),12,Muted));
         var copy=Text(L.Text("CORE_COPY_HINT"),12,Accent);copy.Tag="CORE_COPY_HINT";panel.Children.Add(copy);
         var name=new TextBox{Text=profile.Name,Tag="PROFILE_NAME",FlowDirection=L.Direction};panel.Children.Add(OutlinedField("PROFILE_NAME",name));
@@ -38,9 +38,15 @@ public sealed partial class MainWindow
             var box=new ComboBox{Tag="core:"+key,DisplayMemberPath="Label",SelectedValuePath="Value",ItemsSource=values.Select(v=>new{Value=v,Label=v is "" or "none"?L.Text("CORE_NONE"):v=="auto"?L.Text("CORE_AUTO"):v.ToUpperInvariant()}).ToArray(),Visibility=Visibility.Collapsed};box.SelectedValue=fields[key];
             var body=new StackPanel();body.Children.Add(Text(L.Text(label),14));body.Children.Add(box);body.Children.Add(ChoiceChips(box));frames[key]=body;panel.Children.Add(body);box.SelectionChanged+=(_,_)=>{fields[key]=box.SelectedValue?.ToString()??"";error.Text="";Refresh();};
         }
-        if(form.Kind=="wireguard"){
+        if(form.Kind is "wireguard" or "amneziawg"){
             panel.Children.Add(Text(L.Text("CORE_INTERFACE"),18));Field("privatekey","CORE_PRIVATE_KEY",true);Field("address","CORE_ADDRESSES");Field("dns","CORE_DNS");Field("mtu","CORE_MTU");
             panel.Children.Add(Text(L.Text("CORE_PEER"),18));Field("publickey","CORE_PUBLIC_KEY");Field("presharedkey","CORE_PRESHARED_KEY",true);Field("endpoint","CORE_ENDPOINT");Field("allowedips","CORE_ALLOWED_IPS");Field("persistentkeepalive","CORE_KEEPALIVE");
+            if(form.Kind=="amneziawg"){
+                var advanced=new StackPanel();int firstAdvanced=panel.Children.Count;
+                foreach(var option in AmneziaConfig.Labels)Field(option.Key,option.Value,option.Key=="headerprotectionkey");
+                while(panel.Children.Count>firstAdvanced){var child=panel.Children[firstAdvanced];panel.Children.RemoveAt(firstAdvanced);advanced.Children.Add(child);}
+                panel.Children.Add(new Expander{Header=L.Text("ADVANCED_SETTINGS"),Content=advanced,Margin=new(0,12,0,12)});
+            }
         }else{
             Field("server","SERVER_HOST");Field("port","SERVER_PORT");Field("auth",form.Kind=="vless"?"CORE_UUID":"CORE_AUTH",true);
             if(form.Kind=="vless"){Field("encryption","CORE_VLESS_ENCRYPTION",true);panel.Children.Add(Text(L.Text("CORE_VLESS_ENCRYPTION_HINT"),12,Muted));}
@@ -59,7 +65,7 @@ public sealed partial class MainWindow
         void SaveDraft(){try{var draft=Draft();if(install!=null)install(draft.Profile);else SaveCoreProfile(profile,draft);d.DialogResult=true;}catch(Exception ex){error.Text=L.Text(ex is SafeError safe?safe.Code:"INVALID_IMPORT");error.BringIntoView();}}
         panel.Children.Add(error);var save=Button("SAVE",SaveDraft,true);save.IsDefault=true;d.SetPageAction(save);panel.Children.Add(Button("CORE_SAVE_PROFILE",SaveDraft,true));
         if(data.LocalOverrideSources.ContainsKey(profile.Id))panel.Children.Add(SettingsAction("RESET_LOCAL_EDIT",()=>ResetLocalOverride(profile,d)));
-        panel.Children.Add(SettingsAction("ADVANCED_RAW",()=>{try{var draft=Draft();var advanced=BuildRawEditor(profile,draft.Profile.Raw,raw=>{var next=ProfileEditing.Replace(profile,raw);var editedForm=CoreProfileEditing.Read(next);if(editedForm?.Kind=="wireguard")next.Name=name.Text.Trim();bool clone=draft.CreatesCopy||form.Kind=="vless"&&form["type"]=="ws"&&(editedForm?.Kind!="vless"||editedForm["type"]!="ws");if(clone){next.Id=Guid.NewGuid().ToString("N");next.CollectionId=profile.SourceId.Length>0?"sub:"+profile.SourceId:profile.CollectionId;next.SourceId="";next.ItemId="";}if(install!=null)install(next);else SaveCoreProfile(profile,new(){Profile=next,CreatesCopy=clone});});advanced.Owner=d;if(advanced.ShowDialog()==true)d.DialogResult=true;}catch(Exception ex){error.Text=L.Text(ex is SafeError safe?safe.Code:"INVALID_IMPORT");}}));
+        panel.Children.Add(SettingsAction("ADVANCED_RAW",()=>{try{var draft=Draft();var advanced=BuildRawEditor(profile,draft.Profile.Raw,raw=>{var next=ProfileEditing.Replace(profile,raw);var editedForm=CoreProfileEditing.Read(next);if(editedForm?.Kind is "wireguard" or "amneziawg")next.Name=name.Text.Trim();bool clone=draft.CreatesCopy||form.Kind=="vless"&&form["type"]=="ws"&&(editedForm?.Kind!="vless"||editedForm["type"]!="ws");if(clone){next.Id=Guid.NewGuid().ToString("N");next.CollectionId=profile.SourceId.Length>0?"sub:"+profile.SourceId:profile.CollectionId;next.SourceId="";next.ItemId="";}if(install!=null)install(next);else SaveCoreProfile(profile,new(){Profile=next,CreatesCopy=clone});});advanced.Owner=d;if(advanced.ShowDialog()==true)d.DialogResult=true;}catch(Exception ex){error.Text=L.Text(ex is SafeError safe?safe.Code:"INVALID_IMPORT");}}));
         Refresh();d.Content=panel;return d;
     }
 }

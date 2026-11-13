@@ -22,8 +22,11 @@ internal sealed class MarqueeLine : Grid
     readonly TranslateTransform translation = new();
     readonly Func<bool> motion;
     readonly FlowDirection readingDirection;
+    readonly List<DependencyPropertyDescriptor> textProperties = [];
     AnimationClock? clock;
     ScrollViewer? viewport;
+    Window? hostWindow;
+    double? frozenOffset;
     double naturalWidth, lastWidth = -1, lastNatural = -1;
     bool attached, queued, hovering, lastMotion;
     Point? touchStart;
@@ -32,6 +35,7 @@ internal sealed class MarqueeLine : Grid
 
     internal bool Overflowing => naturalWidth > ActualWidth + 1;
     internal bool Moving => clock?.CurrentState == ClockState.Active && !clock.IsPaused;
+    internal bool HasAnimationClock=>clock!=null;
     internal double Translation => translation.X;
     internal double NaturalWidth => naturalWidth;
     internal bool? MotionOverride { get; set; }
@@ -120,15 +124,40 @@ internal sealed class MarqueeLine : Grid
     void Attach(object sender, RoutedEventArgs e)
     {
         if (attached) return; attached = true;
+        if (source is TextBlock)
+        {
+            foreach (var property in new[] { TextBlock.TextProperty, TextBlock.FontFamilyProperty, TextBlock.FontSizeProperty, TextBlock.FontWeightProperty, TextBlock.FontStyleProperty, TextBlock.FontStretchProperty, TextBlock.LineHeightProperty, FrameworkElement.FlowDirectionProperty, FrameworkElement.LanguageProperty })
+            {
+                var descriptor = DependencyPropertyDescriptor.FromProperty(property, typeof(TextBlock));
+                if (descriptor == null) continue;
+                descriptor.AddValueChanged(source, TextChanged); textProperties.Add(descriptor);
+            }
+        }
         for (DependencyObject? parent = VisualTreeHelper.GetParent(this); parent != null; parent = VisualTreeHelper.GetParent(parent))
             if (parent is ScrollViewer scroll) { viewport = scroll; viewport.ScrollChanged += Scrolled; break; }
         SystemParameters.StaticPropertyChanged += PreferenceChanged;
-        lastWidth = -1; QueueRefresh();
+        hostWindow=Window.GetWindow(this);
+        if(hostWindow!=null){hostWindow.Activated+=WindowActivityChanged;hostWindow.Deactivated+=WindowActivityChanged;hostWindow.StateChanged+=WindowActivityChanged;}
+        // Text can also change while this view is detached (another page).
+        InvalidateMeasure(); InvalidateArrange(); lastWidth = -1; QueueRefresh();
     }
     void Detach(object sender, RoutedEventArgs e)
     {
+        foreach (var descriptor in textProperties) descriptor.RemoveValueChanged(source, TextChanged);
+        textProperties.Clear();
         attached = false; if (viewport != null) viewport.ScrollChanged -= Scrolled;
-        viewport = null; SystemParameters.StaticPropertyChanged -= PreferenceChanged; Stop();
+        viewport = null; SystemParameters.StaticPropertyChanged -= PreferenceChanged;
+        if(hostWindow!=null){hostWindow.Activated-=WindowActivityChanged;hostWindow.Deactivated-=WindowActivityChanged;hostWindow.StateChanged-=WindowActivityChanged;hostWindow=null;}
+        frozenOffset=null;Stop();
+    }
+    void TextChanged(object? sender, EventArgs e)
+    {
+        // Canvas does not propagate a child's new desired size to this viewport.
+        // Re-measure the current text immediately instead of waiting for a full
+        // page rebuild (for example a language change). Restart at its origin.
+        frozenOffset = null; lastNatural = -1; Stop();
+        source.InvalidateMeasure(); InvalidateMeasure(); InvalidateArrange();
+        QueueRefresh();
     }
     void Scrolled(object sender, ScrollChangedEventArgs e) => QueueRefresh();
     void PreferenceChanged(object? sender, PropertyChangedEventArgs e) => QueueRefresh();
@@ -145,9 +174,20 @@ internal sealed class MarqueeLine : Grid
         try { return TransformToAncestor(viewport).TransformBounds(new Rect(RenderSize)).IntersectsWith(new Rect(viewport.RenderSize)); }
         catch (InvalidOperationException) { return false; }
     }
-    bool CanMove() => (MotionOverride ?? motion()) && !SystemParameters.HighContrast && Overflowing && OnScreen() && !dragging;
+    bool WindowActive=>hostWindow?.IsActive==true&&hostWindow.WindowState!=WindowState.Minimized;
+    void WindowActivityChanged(object? sender,EventArgs e)
+    {
+        if(!WindowActive){if(clock!=null){frozenOffset=translation.X;Stop(false);}return;}
+        lastWidth=-1;QueueRefresh();
+    }
+    bool CanMove() => WindowActive&&(MotionOverride ?? motion()) && !SystemParameters.HighContrast && Overflowing && OnScreen() && !dragging;
     void Refresh()
     {
+        if(!WindowActive){
+            if(clock!=null){frozenOffset=translation.X;Stop(false);}
+            if(lastWidth!=ActualWidth||lastNatural!=naturalWidth){Stop();frozenOffset=null;repeat.Visibility=Visibility.Collapsed;}
+            lastWidth=ActualWidth;lastNatural=naturalWidth;lastMotion=false;return;
+        }
         bool run = CanMove();
         repeat.Visibility = run ? Visibility.Visible : Visibility.Collapsed;
         if (lastWidth == ActualWidth && lastNatural == naturalWidth && lastMotion == run) return;
@@ -162,6 +202,7 @@ internal sealed class MarqueeLine : Grid
         animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(end, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(travel + 2.6))));
         Timeline.SetDesiredFrameRate(animation, 30);
         clock = (AnimationClock)animation.CreateClock(true); translation.ApplyAnimationClock(TranslateTransform.XProperty, clock);
+        if(frozenOffset is {} offset){clock.Controller?.SeekAlignedToLastTick(TimeSpan.FromSeconds(1.3+Math.Clamp(Math.Abs(offset),0,distance)/PixelsPerSecond),TimeSeekOrigin.BeginTime);frozenOffset=null;}
         if (hovering) clock.Controller?.Pause();
     }
     void Stop(bool reset = true)

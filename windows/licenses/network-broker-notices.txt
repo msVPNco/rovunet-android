@@ -1,0 +1,12 @@
+Experimental network broker notices
+
+Native WFP layouts/constants and design references:
+Xray-core source a4a3dff5b20c2faae567b742c172c7b95e75c083,
+proxy/tun/tun_windows_wfp.go and related Windows TUN code, MPL-2.0.
+The original corresponding Xray source archive and MPL licence are distributed
+with this review. Native Windows SDK interfaces are used by a separate broker.
+
+Wintun 0.14.1 binary is unmodified and is used only via its permitted API.
+Its full Prebuilt Binaries License is supplied with the experimental lab.
+WireGuard/Wintun names identify third-party components and do not imply
+endorsement of Rovunet. No third-party binary was re-signed as Rovunet.

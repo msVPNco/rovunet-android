@@ -1,0 +1,5 @@
+Provided by the project owner on2026-11-12 for the About / voluntary support section.
+Requested wallet: TG3Mhou3pdq9KaFgJSHjDiDx2ahhJuHvbJ
+Requested asset/network label: USDT — Tron (TRC20) only.
+Official channel URL supplied by owner: https://t.me/RovunetVPN
+The included PNG is the original supplied QR image; no AI generation or image modification. A white UI border supplies the scanning margin. The decoded payload must match the supplied wallet before delivery.

@@ -1,0 +1,17 @@
+{
+  "stage": 28,
+  "version": "0.1.2-preview.5",
+  "mihomo_source": "3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8",
+  "go": "go1.27.3 windows/amd64",
+  "cgo": 0,
+  "extra_sha256": "e38d18c63dc5d0b20621911ee1ecc2e9ebc56ac5cad52bbad65ec5b352cd6647",
+  "transports_sha256": "70059ed5ce15d1754d392d9e948b4001c049058cbdfd1902c48b6bc014c3d97a",
+  "tor_bundle": "16.0.1",
+  "tor_official_sha256": "9eed3c3ff1fe43df034ce360196c9ec95472560d77ff55614d0cd5120edea27b",
+  "tor_manifest_sha256": "46ba15e787d7734923a6eb764268d9c4933e173d008e6bb43bfe1d3cb6ffe414",
+  "tor_download": "https://tor.eff.org/dist/torbrowser/16.0.1/tor-expert-bundle-windows-x86_64-16.0.1.tar.gz",
+  "tor_hash_source": "https://dist.torproject.org/torbrowser/16.0.1/sha256sums-signed-build.txt",
+  "openpgp_verified": false,
+  "mihomo_backport": "6780eeeb27c7eda5e79a6310a4f7f91ba7cb725d",
+  "patch_sha256": "24fd77738b4d7d3bfdb656b4e817b977114fef4f4328018c66ad0cae35112c31"
+}

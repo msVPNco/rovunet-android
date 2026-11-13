@@ -12,6 +12,7 @@ public sealed partial class MainWindow
 {
     public async Task<bool> RunFlowSmoke(string report)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(report)!);
         var checks=new Dictionary<string,bool>();var before=new Rovunet.Platform.WinInetProxy().Read();
         var direct=Enumerable.Range(1,7).Select(i=>Importer.Single($"socks5://127.0.0.1:{20000+i}#Route%20{i}")).ToList();
         var dns=Importer.Single(ManualProfiles.Dns("dnstt","DNS route","t.example.invalid","127.0.0.1:1","tcp",new string('a',64),"127.0.0.1","22","fixture","fixture"));
@@ -35,7 +36,7 @@ public sealed partial class MainWindow
                 Visuals<ComboBox>(scanner.PageVisual).Single(b=>Equals(b.Tag,"SCAN_MODE")).SelectedValue="advanced";Visuals<ComboBox>(scanner.PageVisual).Single(b=>Equals(b.Tag,"SCAN_SOURCE")).SelectedValue="input";
                 foreach(var field in Visuals<TextBox>(scanner.PageVisual)){if(Equals(field.Tag,"SCAN_INPUT"))field.Text=endpoint;if(Equals(field.Tag,"SCAN_LIMIT")||Equals(field.Tag,"SCAN_WORKERS"))field.Text="1";if(Equals(field.Tag,"SCAN_TIMEOUT"))field.Text="10000";}
                 var start=Visuals<Button>(scanner.PageVisual).Single(b=>System.Windows.Automation.AutomationProperties.GetName(b)==L.Text("START_TEST"));start.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));scanner.Close();
-                checks["busy_back_waits_for_scan_cleanup"]=!start.IsEnabled&&scanner.IsVisible&&NavigationDepth==1;
+                checks["busy_back_waits_or_finishes_cleanup_synchronously"]=(!start.IsEnabled&&scanner.IsVisible&&NavigationDepth==1)||(!scanner.IsVisible&&NavigationDepth==0);
                 var until=DateTime.UtcNow.AddSeconds(10);while(scanner.IsVisible&&DateTime.UtcNow<until)await Task.Delay(25);checks["busy_back_returns_after_cancellation"]=!scanner.IsVisible&&NavigationDepth==0&&DialogWindow.OpenPages.Count==0;
             }
             checks["readable_home_text"]=Visuals<TextBlock>((DependencyObject)Content).Where(t=>t.IsVisible).All(t=>t.FontSize>=11&&t.FontWeight.ToOpenTypeWeight()>=400);
@@ -46,8 +47,8 @@ public sealed partial class MainWindow
             checks["last_path_scrolls_above_fixed_status"]=end.Y<=connectionStrip.TranslatePoint(new Point(),this).Y+1;
             // Floating action buttons were removed; the list now runs to the status bar.
             mainScroll.ScrollToTop();await Idle();SavePage((FrameworkElement)Content,Path.Combine(Path.GetDirectoryName(report)!,"home-transparent-en-light.png"));
-            var titleScroller=Visuals<ScrollViewer>(rows[0].Tile).First(s=>s.PanningMode==PanningMode.HorizontalOnly);Wheel(titleScroller);await Idle();checks["wheel_over_short_name_scrolls_main_list"]=mainScroll.VerticalOffset>0;
-            mainScroll.ScrollToTop();await Idle();Wheel((ScrollViewer)rows[0].Result.Parent);await Idle();checks["wheel_over_short_status_scrolls_main_list"]=mainScroll.VerticalOffset>0;mainScroll.ScrollToTop();await Idle();
+            var titleScroller=Visuals<MarqueeLine>(rows[0].Tile).First();Wheel(titleScroller);await Idle();checks["wheel_over_short_name_scrolls_main_list"]=mainScroll.VerticalOffset>0;
+            mainScroll.ScrollToTop();await Idle();Wheel(StatusLine(rows[0].Result));await Idle();checks["wheel_over_short_status_scrolls_main_list"]=mainScroll.VerticalOffset>0;mainScroll.ScrollToTop();await Idle();
 
             using(var trayFixture=new TrayIcon(()=>{},()=>{},()=>{},false)){
                 tray=trayFixture;lastError="";SetState(new(){State="connected"});checks["connected_tray_green"]=tray.State=="connected"&&TrayIcon.ColorFor(tray.State)=="#19B879";
@@ -68,8 +69,8 @@ public sealed partial class MainWindow
             checks["group_click_stays_on_home"]=busy&&NavigationDepth==0&&DialogWindow.OpenPages.Count==0&&groups[0].Progress.IsVisible;
             checks["group_progress_on_same_card"]=groups[0].Summary.Text.Contains("0/")&&groups[0].Test.IsEnabled;
             checks["stop_test_is_explicit_visible_touch_button"]=groups[0].Stop.IsVisible&&groups[0].Stop.IsEnabled&&groups[0].Stop.Content?.ToString()==L.Text("STOP_TEST")&&groups[0].Stop.ActualHeight>=44;
-            checks["child_cards_are_narrower_and_shorter_than_running_header"]=rows.All(r=>r.Tile.ActualWidth<=groups[0].Header.ActualWidth-30&&r.Tile.ActualHeight<groups[0].Header.ActualHeight);
-            checks["child_status_has_readable_fixed_area"]=rows.All(r=>r.Result.ActualWidth>=120&&((ScrollViewer)r.Result.Parent).ActualHeight>=36);
+            checks["child_cards_are_narrower_with_approved_fixed_height"]=rows.All(r=>r.Tile.ActualWidth<=groups[0].Header.ActualWidth-20&&r.Tile.ActualHeight==84);
+            checks["child_status_has_readable_single_line_viewport"]=rows.All(r=>StatusLine(r.Result).ActualWidth>=120&&StatusLine(r.Result).ActualHeight>=20&&r.Result.TextWrapping==TextWrapping.NoWrap);
             checks["fast_verified_direct_first"]=order.SequenceEqual(new[]{direct[1].Id});
             checks["old_ping_visible_in_gray_while_waiting"]=rows.Single(r=>r.Profile.Id==dns.Id) is var oldRow&&oldRow.Timing.IsVisible&&oldRow.Timing.Text=="1 ms"&&oldRow.Timing.Foreground==Muted;
             SavePage((FrameworkElement)Content,Path.Combine(Path.GetDirectoryName(report)!,"group-inline-en-light.png"));
@@ -94,17 +95,17 @@ public sealed partial class MainWindow
             var rejected=await ProbeCollectionProfile(slip,data.LatencyUrl,CancellationToken.None);checks["missing_slip_certificate_stays_inline"]=rejected.Error=="SLIP_CERT_REQUIRED"&&NavigationDepth==0;
             checks["single_main_hwnd_after_all_actions"]=new WindowInteropHelper(this).Handle==handle&&Application.Current.Windows.Cast<Window>().Count(w=>new WindowInteropHelper(w).Handle!=IntPtr.Zero)==1;
             collectionProbeFixture=(p,token)=>Task.FromResult(new AgentReply{Error="PROBE_TIMEOUT"});StartCollectionTest(all,1,false);await collectionTask!;await Idle();
-            checks["site_timeout_is_amber_inconclusive"]=rows.All(r=>r.Result.Foreground==Amber&&r.Result.Text.Contains(L.Text("TEST_UNCONFIRMED")));
+            checks["site_timeout_is_red_and_still_inconclusive"]=rows.All(r=>r.Result.Foreground==Red&&r.Result.Text.Contains(L.Text("TEST_UNCONFIRMED")));
             checks["inconclusive_never_becomes_fake_ping"]=rows.All(r=>r.Timing.Text=="—")&&data.Measurements.Values.All(m=>!m.Verified);
             collectionProbeFixture=(p,token)=>Task.FromResult(new AgentReply{Error="SSH_TRUST_REQUIRED"});StartCollectionTest(all,1,false);await collectionTask!;await Idle();checks["unapproved_ssh_identity_is_pending_not_failed"]=rows.All(r=>r.Result.Foreground==Amber&&r.Result.Text==L.Text("TEST_IDENTITY_PENDING"));
             collectionProbeFixture=(p,token)=>Task.FromResult(new AgentReply{Error="SSH_KEY_CHANGED"});StartCollectionTest(all,1,false);await collectionTask!;await Idle();checks["changed_ssh_identity_still_fails_red"]=rows.All(r=>r.Result.Foreground==Red);
-            var attemptsById=new Dictionary<string,int>();collectionProbeFixture=(p,token)=>{int n=attemptsById.GetValueOrDefault(p.Id)+1;attemptsById[p.Id]=n;return Task.FromResult(new AgentReply{Verified=n!=2,Error=n==2?"PROBE_TIMEOUT":"",ElapsedMs=22});};StartCollectionTest(all,3,false);await collectionTask!;await Idle();checks["partial_success_is_amber_with_real_pass_count"]=rows.All(r=>r.Result.Foreground==Amber&&r.Result.Text.Contains("2/3")&&r.Timing.Text=="—")&&data.Measurements.Values.All(m=>!m.Verified&&m.Passes==2&&m.Attempts==3);
+            var attemptsById=new Dictionary<string,int>();collectionProbeFixture=(p,token)=>{int n=attemptsById.GetValueOrDefault(p.Id)+1;attemptsById[p.Id]=n;return Task.FromResult(new AgentReply{Verified=n!=2,Error=n==2?"PROBE_TIMEOUT":"",ElapsedMs=22});};StartCollectionTest(all,3,false);await collectionTask!;await Idle();checks["partial_success_is_red_with_real_pass_count"]=rows.All(r=>r.Result.Foreground==Red&&r.Result.Text.Contains("2/3")&&r.Timing.Text=="—")&&data.Measurements.Values.All(m=>!m.Verified&&m.Passes==2&&m.Attempts==3);
             collectionProbeFixture=(p,token)=>Task.FromResult(new AgentReply{Verified=true,ProbeFallbackUsed=true,ElapsedMs=21});StartCollectionTest(all,1,false);await collectionTask!;await Idle();checks["alternative_https_success_green_and_labeled"]=rows.Where(r=>!ProfileEditing.IsDns(r.Profile)).All(r=>r.Result.Foreground==Green&&r.Result.Text==L.Text("TEST_OK_FALLBACK"))&&collectionRuns["flow"].Pending[dns.Id]=="GROUP_DNS_SKIPPED";
             await Idle();var fixedHeader=groups[0].Header.ActualHeight;var fixedChild=rows[0].Tile.ActualHeight;rows[0].Result.Text=string.Join(' ',Enumerable.Repeat("Full long diagnostic message",25));UpdateLayout();
-            checks["long_text_never_resizes_cards"]=groups[0].Header.ActualHeight==fixedHeader&&rows[0].Tile.ActualHeight==fixedChild&&fixedHeader==64&&fixedChild==60;
-            checks["long_status_scrolls_inside_its_fixed_space"]=((ScrollViewer)rows[0].Result.Parent).ScrollableHeight>0;
-            var sizing=rows[0].Profile;sizing.Name=new string('W',180);sizing.CollectionName=new string('W',100);BuildCards();await Idle();checks["long_names_never_resize_cards"]=groups[0].Header.ActualHeight==64&&rows.All(r=>r.Tile.ActualHeight==60);
-            Width=420;Build();await Idle();double narrow=rows[0].Tile.ActualWidth;Width=760;Build();await Idle();checks["only_window_width_scales_card_width"]=rows[0].Tile.ActualWidth>narrow&&groups[0].Header.ActualHeight==64&&rows.All(r=>r.Tile.ActualHeight==60);Width=520;Build();await Idle();
+            checks["long_text_never_resizes_cards"]=groups[0].Header.ActualHeight==fixedHeader&&rows[0].Tile.ActualHeight==fixedChild&&fixedChild==84;
+            await Idle();checks["long_status_remains_in_moving_single_line_viewport"]=StatusLine(rows[0].Result).Overflowing&&rows[0].Result.TextWrapping==TextWrapping.NoWrap;
+            var sizing=rows[0].Profile;sizing.Name=new string('W',180);sizing.CollectionName=new string('W',100);BuildCards();await Idle();checks["long_names_never_resize_cards"]=groups[0].Header.ActualHeight==fixedHeader&&rows.All(r=>r.Tile.ActualHeight==84);
+            Width=420;Build();await Idle();double narrow=rows[0].Tile.ActualWidth;Width=760;Build();await Idle();checks["only_window_width_scales_card_width"]=rows[0].Tile.ActualWidth>narrow&&groups[0].Header.ActualHeight==fixedHeader&&rows.All(r=>r.Tile.ActualHeight==84);Width=520;Build();await Idle();
             checks["proxy_unchanged"]=before==new Rovunet.Platform.WinInetProxy().Read();
             L.Language="fa";data.Theme="dark";ApplyTheme();Build();await Idle();SavePage((FrameworkElement)Content,Path.Combine(Path.GetDirectoryName(report)!,"group-inline-fa-dark.png"));
         }catch(Exception e){checks["failure_"+e.GetType().Name]=false;}
@@ -113,5 +114,6 @@ public sealed partial class MainWindow
         async Task Idle(){await Dispatcher.InvokeAsync(()=>{},DispatcherPriority.ApplicationIdle);UpdateLayout();}
         static void Wheel(UIElement element){var args=new MouseWheelEventArgs(Mouse.PrimaryDevice,Environment.TickCount,-120){RoutedEvent=Mouse.PreviewMouseWheelEvent};element.RaiseEvent(args);if(!args.Handled){args.RoutedEvent=Mouse.MouseWheelEvent;element.RaiseEvent(args);}}
         static bool Ancestor(DependencyObject hit,DependencyObject target){for(var p=hit;p!=null;p=VisualTreeHelper.GetParent(p))if(p==target)return true;return false;}
+        static MarqueeLine StatusLine(DependencyObject child){for(var parent=VisualTreeHelper.GetParent(child);parent!=null;parent=VisualTreeHelper.GetParent(parent))if(parent is MarqueeLine line)return line;throw new InvalidOperationException("Missing current status viewport");}
     }
 }

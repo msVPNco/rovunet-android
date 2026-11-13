@@ -85,3 +85,5 @@ Rovunet Android v0.3.0-alpha17 CoreForm.kt, CoreLink.kt and CoreProfileEditor.kt
 Windows form hosting, loss-preserving native/URI editing, metadata persistence,
 fixed card layout, measurement generations and cancellable Agent coordination
 are Windows implementations. Existing Android/SlipNet notices remain in place.
+
+AmneziaWG: separate GPL-3.0 Mihomo-based engine, source pin 3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8. Windows adapter source and build script are included; see licenses/AmneziaWG/SOURCE.txt and dependency notices.

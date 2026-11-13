@@ -1,0 +1,8 @@
+AmneziaWG is run as a separate, constrained stdin-only engine.
+Mihomo source commit: 3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8
+Source: https://github.com/MetaCubeX/mihomo/tree/3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8
+License: GPL-3.0; see Mihomo-GPL-3.0.txt and dependency notices.
+Windows adapter source: native/awg in the accompanying Windows source archive.
+Rebuild procedure: scripts/build-amnezia.ps1, pinned Go 1.27.3 windows/amd64, CGO_ENABLED=0.
+The local delivery includes Mihomo-AmneziaWG-source.zip containing the pinned upstream source and this adapter; go.mod/go.sum identify exact dependency source versions.
+No macOS runtime or Android binary is reused in the Windows package.
