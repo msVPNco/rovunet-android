@@ -197,6 +197,7 @@ fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScreenContent(
     onNavigateToAddProfile: (tunnelType: String) -> Unit,
