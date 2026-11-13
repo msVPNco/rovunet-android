@@ -1,0 +1,118 @@
+{
+  "release_url": "https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21",
+  "apk_url": "https://github.com/msVPNco/rovunet-app/releases/download/v0.3.0-alpha21/Rovunet-v0.3.0-alpha21-Full.apk",
+  "tag": "v0.3.0-alpha21",
+  "published_at_utc": "2026-11-13T22:18:14Z",
+  "checked_at_utc": "2026-11-13T22:20:01.675431+00:00",
+  "prerelease": false,
+  "draft": false,
+  "release_id": 444795814,
+  "apk_asset_id": 745384889,
+  "sha256_from_release_redownload": "04ba1d0569ca6c994f11b17bfa79eb26ae70d48f2535f944c8ad3feed5635428",
+  "bytes": 158821929,
+  "package": "app.veyra.client",
+  "versionName": "0.3.0-alpha21",
+  "versionCode": 46,
+  "certificate_sha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+  "signature_schemes": [
+    "v2",
+    "v3"
+  ],
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86_64"
+  ],
+  "minSdk": 24,
+  "targetSdk": 35,
+  "application_source": "36e5f13e6aa1aa78ba7ea164d95f9f426445930f",
+  "application_tree": "f7a07c83f1712822cea9c8e74013ad4b01d4e1a8",
+  "publication_commit": "b79270814cad51e0ad3527fb66ff71414f14ddc8",
+  "pr_merge_commit": "50852bc32dcd3ff43f1cffb577f5e6fae80e1fb8",
+  "publication_correction_merge": "702806501558edfe299cb41880c0727d1a82c75e",
+  "publication_workflow": "https://github.com/msVPNco/rovunet-app/actions/runs/43517996257",
+  "ci": {
+    "jvm": 174,
+    "room_methods": 7,
+    "apk_run": 43504139712,
+    "room_run": 43504141963,
+    "room_result_json_sha256": "fb13b7ec2926122fb7aea2be58b68adff4709475e4d0dfb2190311d9e0e228b7",
+    "instrumentation_log_sha256": "75d1fb181a38d7905857f803e54274ffd59606627465320ab70a8310dd769344",
+    "room_method_results": [
+      {
+        "method": "app.slipnet.data.subscription.AccountStatusDeviceTest#metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.data.subscription.AccountStatusDeviceTest#suppliedPanelStatusFixturesPersistPeriodsForBothSubscriptionAliases",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.data.subscription.StatusCacheMigrationTest#actualSchema50MigratesPrivateBindingAndAdvisorySeparatelyWithoutDeletingRows",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#concurrentResponsesIdentityChangesAndLateUrlResponsesCannotReplaceCommittedState",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#privateHighWaterSurvivesHealthyInvalidMissingHeadersAndReopen",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#twoSourcesRetainIndependentAccountBindingsAndHighWaters",
+        "status": "passed"
+      },
+      {
+        "method": "app.slipnet.service.SubscriptionDeviceTest#panelFixturesRefreshPersistentlyForBothSavedUrls",
+        "status": "passed"
+      }
+    ],
+    "room_metadata_correction": "Workflow uses GITHUB_SHA (PR merge ref) despite explicit checkout of PR head; checkout log proves actual head."
+  },
+  "server_asset_digests": {
+    "APK-SHA256.txt": "sha256:868823331af20bbfb7b7c30fd55c6326f1947c4bca0be9030147ccf075bff79f",
+    "APK-SIGNATURE-VERIFICATION.txt": "sha256:1cd64872f11ff6831a9e2dbeab4e93a8be2fb6f0222128c1aaeec1350ef340a0",
+    "NATIVE-INVENTORY.json": "sha256:0496b94122c73e7e3cd150a1bf505cd62103846d2abce4533dfad433326d0306",
+    "Rovunet-0.3.0-alpha21-Guide-FA.txt": "sha256:30a939bc32f53f185191e0cab472bff64e44bf3b42748a9e0d26d3d5cdfc0636",
+    "Rovunet-0.3.0-alpha21-source-light.zip": "sha256:54271ed4696c5666f9c4c110c93502846f444231e16fe2a7733691065b569656",
+    "Rovunet-0.3.0-alpha21-source.zip": "sha256:b357ea601d047da9456605c7814563529d9c689809f95b704614354a42af0aba",
+    "Rovunet-alpha21-CI-evidence.json": "sha256:7157efdfb170d73af5958d9e5344ab0624aae6c15e678b9882a01a8d45c9d31e",
+    "Rovunet-alpha21-CI-logs.zip": "sha256:a4611881a9856a69f2017f45c8fbd1a4cd1307cf637b06f41aa51dd0199cb0ec",
+    "Rovunet-alpha21-public-r8-mapping.zip": "sha256:3c64fabd73a28a2a3a22fec40cd3fa0eaa0e3b7fc57bb6d3b76ad1ff3a8a20b3",
+    "Rovunet-alpha21-Room-evidence.zip": "sha256:de7e68e43e37879e31da0a0b6d1692c194557abdff9660bfeee15cfb5022d8ea",
+    "Rovunet-production-certificate.pem": "sha256:a5920953e12ad14ff31ee7785e594f14950aa7eb1179c72b19a4d927cc2b24de",
+    "Rovunet-v0.3.0-alpha21-Full.apk": "sha256:04ba1d0569ca6c994f11b17bfa79eb26ae70d48f2535f944c8ad3feed5635428",
+    "SHA256SUMS.txt": "sha256:84d95b4b8d372ae7d00420bf2e5e499db9a5f8061ab47d1d0d0ce0bdebe67e17",
+    "SIGNER-SHA256.txt": "sha256:d0b9bd9b40cbdf1bc2df9cab3c61b900d890d9b74c6f18dcbbe3a4d945ffc5a2",
+    "SOURCE-MANIFEST.json": "sha256:e9577c1fc5f544c2e10d61786e4869c560af9b5c54ced3aaea1f565059fc1e42",
+    "VERIFICATION.json": "sha256:218371128c0b1d9f312253e886528789eee2d24669c78773c947e5db1786cce9"
+  },
+  "global_latest": {
+    "tag": "v0.3.0-alpha20",
+    "id": 443911947
+  },
+  "native_count": 39,
+  "native_inventory_matches": true,
+  "production_upgrade_keystore_accepted": false,
+  "publication_workflow_outcome": {
+    "conclusion": "failure",
+    "failed_phase": "Post-publication APK URL redownload returned HTTP404 on runner",
+    "assets_published_before_failure": true,
+    "independent_release_redownload_verified": true,
+    "workflow_is_not_reported_as_success": true
+  },
+  "unrun_acceptance": [
+    "production main-package in-place upgrade",
+    "physical-device Keystore migration/recovery",
+    "physical network/all-ABI runtime",
+    "Doze/screen-off battery/data measurements"
+  ],
+  "act03_android": "01–04 remain partial;119 baseline rows and16 actions preserved",
+  "next_version": [
+    "independent private status2 model/parser/store",
+    "at most one expanded collection",
+    "native/Brotli applicability and license/runtime audit",
+    "physical upgrade/network/energy acceptance"
+  ]
+}
