@@ -5,18 +5,18 @@ public sealed partial class MainWindow
     void NormalizeCollections26()
     {
         var valid=data.Profiles.Select(CollectionKey).ToHashSet();
-        string open=data.OpenCollectionId??data.ExpandedCollections.Where(p=>p.Value&&valid.Contains(p.Key)).Select(p=>p.Key).Order(StringComparer.Ordinal).FirstOrDefault()??"";
-        if(!valid.Contains(open))open="";
-        data.OpenCollectionId=open;
-        data.ExpandedCollections=data.ExpandedCollections.Keys.ToDictionary(k=>k,k=>k==open);
-        if(open.Length>0)data.ExpandedCollections[open]=true;
+        string? open=data.CollectionExpansionRevision<1?data.ExpandedCollections.Where(p=>p.Value&&valid.Contains(p.Key)).Select(p=>p.Key).Order(StringComparer.Ordinal).FirstOrDefault():data.OpenCollectionId;
+        if(open!=null&&!valid.Contains(open))open=null;
+        data.OpenCollectionId=open;data.CollectionExpansionRevision=1;
+        data.ExpandedCollections=data.ExpandedCollections.Keys.ToDictionary(k=>k,k=>open!=null&&k==open);
+        if(open!=null)data.ExpandedCollections[open]=true;
     }
     void ToggleCollection26(string key)
     {
-        string? before=data.OpenCollectionId;var old=data.ExpandedCollections;
-        data.OpenCollectionId=before==key?"":key;
+        string? before=data.OpenCollectionId;var old=data.ExpandedCollections;int oldRevision=data.CollectionExpansionRevision;
+        data.OpenCollectionId=before==key?null:key;
         data.ExpandedCollections=new(old);NormalizeCollections26();
-        try{Save();}catch{data.OpenCollectionId=before;data.ExpandedCollections=old;throw;}
+        try{Save();}catch{data.OpenCollectionId=before;data.ExpandedCollections=old;data.CollectionExpansionRevision=oldRevision;throw;}
         RefreshCards();
     }
     void RefreshCollectionLayout26(GroupView group,bool open)

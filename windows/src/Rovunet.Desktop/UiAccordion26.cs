@@ -14,7 +14,7 @@ public sealed partial class MainWindow
         var start=DateTimeOffset.UtcNow;var checks=new Dictionary<string,bool>();string dir=Path.GetDirectoryName(report)!;Directory.CreateDirectory(dir);string store=Path.Combine(dir,"private-fixture");
         int Count()=>groups.Count(g=>g.Paths.Visibility==Visibility.Visible);
         try{
-            data.Profiles=[];data.Subscriptions=[];data.ExpandedCollections=[];data.OpenCollectionId=null;statuses.Clear();
+            data.Profiles=[];data.Subscriptions=[];data.ExpandedCollections=[];data.OpenCollectionId=null;data.CollectionExpansionRevision=0;statuses.Clear();
             var now=DateTimeOffset.UtcNow;
             for(int g=0;g<4;g++){
                 string source=Importer.Fingerprint("accordion26-"+g);
@@ -30,7 +30,7 @@ public sealed partial class MainWindow
             var a=groups[0];var b=groups[1];
             if(data.OpenCollectionId==a.Key)ToggleCollection26(a.Key);a.Toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Idle18();checks["arrow_opens_A"]=Count()==1&&data.OpenCollectionId==a.Key;
             ToggleCollection(b.Members);await Idle18();checks["menu_B_closes_A"]=Count()==1&&data.OpenCollectionId==b.Key&&a.Paths.Visibility==Visibility.Collapsed;
-            b.Toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Idle18();checks["close_B_allows_all_closed"]=Count()==0&&data.OpenCollectionId=="";
+            b.Toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));await Idle18();checks["close_B_allows_all_closed"]=Count()==0&&data.OpenCollectionId==null;
             ToggleCollection(a.Members);string old=data.OpenCollectionId!;var oldDictionary=JsonSerializer.Serialize(data.ExpandedCollections);
             storeSaveFixture28=()=>throw new IOException("synthetic expansion save failure");bool failed=false;try{ToggleCollection(b.Members);}catch(IOException){failed=true;}
             checks["save_failure_rolls_back_entire_expansion_transaction"]=failed&&old==data.OpenCollectionId&&oldDictionary==JsonSerializer.Serialize(data.ExpandedCollections)&&Count()==1;
@@ -41,11 +41,11 @@ public sealed partial class MainWindow
             var saved=PrivateStore.LoadFrom<UserData>(store,"profiles.dpapi")!;var restarted=new MainWindow(saved,true);try{checks["restart_preserves_one_stable_id"]=restarted.CountOpen26()==1&&saved.OpenCollectionId==a.Key;}finally{restarted.Close();}
             checks["toggle_does_not_change_selection_pin_override_or_membership"]=Preserved()==baseline;
             var originalSnapshot=statuses[a.Members[0].SourceId];statuses[a.Members[0].SourceId]=new(){Status=originalSnapshot.Status,Error="ACCOUNT_STALE"};
-            if(data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);RefreshCards();
+            if(data.OpenCollectionId!=null)ToggleCollection26(data.OpenCollectionId);RefreshCards();
             checks["closed_cached_status_keeps_explicit_stale_label"]=a.ClosedStatus26!.Text.Contains(L.Text("QUOTA_CACHED"));
             statuses[a.Members[0].SourceId]=originalSnapshot;RefreshCards();
             foreach(string language in new[]{"fa","en","ru","zh-CN"})foreach(string theme in new[]{"light","dark","amoled"})foreach(double width in new[]{480d,1120d}){
-                L.Language=data.Language=language;data.Theme=theme;Width=width;ApplyTheme();Build();await Idle18();if(data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);await Idle18();
+                L.Language=data.Language=language;data.Theme=theme;Width=width;ApplyTheme();Build();await Idle18();if(data.OpenCollectionId!=null)ToggleCollection26(data.OpenCollectionId);await Idle18();
                 string tag=language+"_"+theme+"_"+width;checks[tag+"_closed_headers_72_to_88"]=groups.All(g=>g.Header.ActualHeight>=72&&g.Header.ActualHeight<=88)&&Count()==0;
                 checks[tag+"_no_hidden_quota_blank_panel"]=groups.All(g=>g.Details26!.Visibility==Visibility.Collapsed);
                 checks[tag+"_unknown_does_not_claim_no_expiry_or_unlimited"]=groups.Single(g=>g.Members[0].SourceId==Importer.Fingerprint("accordion26-2")).ClosedStatus26!.Text==L.Text("ACCOUNT_UNKNOWN");
@@ -54,16 +54,18 @@ public sealed partial class MainWindow
                 checks[tag+"_one_open_and_66_dip_children"]=Count()==1&&rows.All(r=>Math.Abs(r.Tile.Height-66)<1)&&groups[0].Paths.Children.Cast<Border>().All(t=>Math.Abs(t.ActualHeight-66)<1)&&groups[0].Toggle.Width>=44&&groups[0].Toggle.ActualHeight>=44;
                 if(language=="fa")SavePage((FrameworkElement)Content,Path.Combine(dir,"open_"+theme+"_"+width+".png"));
             }
-            L.Language=data.Language="fa";data.Theme="dark";Width=480;ApplyTheme();Build();await Idle18();if(data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);mainScroll.ScrollToTop();await Idle18();
+            L.Language=data.Language="fa";data.Theme="dark";Width=480;ApplyTheme();Build();await Idle18();if(data.OpenCollectionId!=null)ToggleCollection26(data.OpenCollectionId);mainScroll.ScrollToTop();await Idle18();
             string frames=Path.Combine(dir,"frames");Directory.CreateDirectory(frames);
             for(int frame=0;frame<64;frame++){
                 if(frame==12||frame==48)groups[0].Toggle.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
                 if(frame==32)ToggleCollection(groups[1].Members);
-                if(frame==60&&data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);
+                if(frame==60&&data.OpenCollectionId!=null)ToggleCollection26(data.OpenCollectionId);
                 await Task.Delay(125);await Idle18();SavePage((FrameworkElement)Content,Path.Combine(frames,"frame"+frame.ToString("000")+".png"));
                 if(Count()>1)throw new InvalidOperationException("Accordion expanded more than one collection");
             }
             checks["recorded_real_wpf_sequence_always_zero_or_one"]=true;
+            var manualData=new UserData{Profiles=[Importer.Single("socks5://127.0.0.1:19999#Legacy-manual")],ExpandedCollections=new(){[""]=true},UseSystemProxy=false};var manualWindow=new MainWindow(manualData,true);manualWindow.storeSaveFixture28=()=>{};
+            try{checks["legacy_empty_manual_id_opens_without_data_rewrite"]=manualWindow.CountOpen26()==1&&manualData.OpenCollectionId==""&&manualData.Profiles.Single().CollectionId=="";manualWindow.ToggleCollection26("");checks["empty_manual_id_can_close_all_and_reopen"]=manualWindow.CountOpen26()==0&&manualData.OpenCollectionId==null;manualWindow.ToggleCollection26("");checks["empty_manual_id_can_close_all_and_reopen"]&=manualWindow.CountOpen26()==1;}finally{manualWindow.Close();}
         }catch(Exception e){checks["exception_"+e.GetType().Name]=false;File.WriteAllText(report+".error",e.ToString());}
         finally{storeSaveFixture28=null;}
         var loaded=new[]{typeof(MainWindow).Assembly,typeof(UserData).Assembly}.Select(a=>new{path=a.Location,sha256=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(a.Location)))});
@@ -71,6 +73,7 @@ public sealed partial class MainWindow
     }
     int CountOpen26()=>groups.Count(g=>g.Paths.Visibility==Visibility.Visible);
 }
+
 
 
 

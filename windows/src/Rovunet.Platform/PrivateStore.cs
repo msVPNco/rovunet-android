@@ -110,6 +110,7 @@ public sealed class UserData
     public Dictionary<string,string> LocalOverrideNames { get; set; } = [];
     public Dictionary<string, bool> ExpandedCollections { get; set; } = [];
     public string? OpenCollectionId { get; set; }
+    public int CollectionExpansionRevision { get; set; }
     public Dictionary<string, DateTimeOffset> SubscriptionUpdated { get; set; } = [];
     public Dictionary<string, PathMeasurement> Measurements { get; set; } = [];
     public Dictionary<string, DateTimeOffset> CollectionTestStarted { get; set; } = [];
