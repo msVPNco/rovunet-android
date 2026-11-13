@@ -77,6 +77,7 @@ android {
     namespace = "app.slipnet"
     compileSdk = 36
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = javaVersion
         targetCompatibility = javaVersion
     }
@@ -389,6 +390,8 @@ tasks.named("clean") {
 }
 
 dependencies {
+    // Backport java.time without raising the supported Android7/API24 floor.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // Go libraries — flavor-specific AARs built via: cd gomobile-build && make build
     // Full: DNSTT + Snowflake, Lite: DNSTT only (smaller binary)
     "fullImplementation"(files("libs/golibs-full.aar"))
