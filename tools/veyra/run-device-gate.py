@@ -191,7 +191,8 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
+    for filename in ("startup-code43-light.png", "startup-code43-dark.png", "startup-code43-amoled.png",
+                     "scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
                      "home-alpha18-en-dark.png", "home-alpha18-fa-dark.png", "home-alpha18-fa-amoled.png", "home-alpha18-en-light.png"):
         with (previews / filename).open("wb") as image:
             subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,

@@ -1,6 +1,9 @@
 package app.slipnet.presentation
 
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import java.io.File
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
@@ -42,6 +45,12 @@ class StartupCoverDeviceTest {
             compose.onNodeWithTag("startup-brand").assertTextEquals("Rovunet")
             compose.onNodeWithTag("startup-message").assertIsDisplayed()
             compose.onNodeWithText("Synthetic content ready").assertDoesNotExist()
+            if (lang == "en") {
+                val image=compose.onRoot().captureToImage().asAndroidBitmap()
+                File(base.filesDir,"startup-code43-${mode.name.lowercase()}.png").outputStream().use {
+                    assertTrue(image.compress(Bitmap.CompressFormat.PNG,100,it))
+                }
+            }
         }
         compose.runOnIdle { assertEquals(0,contentCompositions) }
         compose.mainClock.autoAdvance=false
