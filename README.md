@@ -28,7 +28,7 @@
 | **Android** | Public release: **0.3.0-alpha20 Full, code 43** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [Android page](docs/android/README.md) |
 | **Windows** | **0.1.1 Beta · x64 · Pre-release** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Windows page](windows/README.md) |
 | **Linux** | Planned | No release yet |
-| **macOS** | **0.1.6 Beta · Apple Silicon / Intel · Pre-release** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) · [Mac page](docs/macos/README.md) · Intel: limited testing |
+| **macOS** | **0.1.7-beta · Local Preview · Apple Silicon / Intel · Pre-release** | [Download](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.7-beta) · [Mac page](docs/macos/README.md) · Intel: **not tested on physical Intel hardware** |
 
 Each platform has its own tags, files, checksums and signing. The repository-wide “Latest” badge on GitHub is not a per-platform feed, so always download from the release that names your platform. Rules for tags and updates: [Platforms and release channels](docs/PLATFORMS.md). Nothing in this table is a claim of desktop protocol support or installer testing until a release says so.
 

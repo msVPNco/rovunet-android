@@ -28,7 +28,7 @@
 | **Android** | Публичный выпуск: **0.3.0-alpha20 Full, код 43** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [Страница Android](docs/android/README.ru.md) |
 | **Windows** | **0.1.1 Beta · x64 · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Страница Windows](windows/README.md) |
 | **Linux** | Планируется | Выпусков пока нет |
-| **macOS** | **0.1.6 Beta · Apple Silicon / Intel · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) · [Страница Mac](docs/macos/README.ru.md) · Intel: ограниченное тестирование |
+| **macOS** | **0.1.7-beta · Local Preview · Apple Silicon / Intel · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.7-beta) · [Страница Mac](docs/macos/README.ru.md) · Intel: **не проверено на физическом Intel Mac** |
 
 У каждой платформы свои теги, файлы, контрольные суммы и подпись. «Latest» на GitHub относится ко всему репозиторию и не является каналом конкретной платформы, поэтому скачивайте из выпуска, в названии которого указана ваша платформа. Правила тегов и обновлений: [Платформы и каналы выпусков](docs/PLATFORMS.md). Пока выпуск прямо не сообщает об обратном, ничто в этой таблице не означает поддержку протоколов или проверенную установку на десктопе.
 
