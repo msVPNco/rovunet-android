@@ -31,7 +31,37 @@ prefs.FailCommit=true;try{new SystemProxyLease(prefs,journal).Start(18083,10811)
 string root=Path.Combine(Path.GetFullPath(args.FirstOrDefault()??"artifacts"),"proxy-private-"+Guid.NewGuid().ToString("N"));using(var ownership=new PrivateProxyJournal(root,new Vault())){Reject(()=>{using var duplicate=new PrivateProxyJournal(root,new Vault());},"second-instance-cannot-own-same-proxy-journal");}
 SafeDiagnostics.Record("import-review","MAC_OPTION_NOT_READY","mport");SafeDiagnostics.Record("import-review","UNEXPECTED_ERROR","vless://private-secret@server.example.invalid");string report=SafeDiagnostics.Json("fixture","error",false,true,false);Check(report.Contains("mport")&&!report.Contains("private-secret")&&!report.Contains("server.example.invalid"),"diagnostics-redact-sensitive-argument");
 SafeDiagnostics.Error("HOME","UNEXPECTED_ERROR",new InvalidOperationException("private-secret server.example.invalid"));report=SafeDiagnostics.Json("fixture","error",false,true,false);Check(report.Contains("InvalidOperationException")&&!report.Contains("private-secret")&&!report.Contains("server.example.invalid"),"exception-type-recorded-without-exception-message");
-Directory.CreateDirectory(Path.GetFullPath(args.FirstOrDefault()??"artifacts"));File.WriteAllText(Path.Combine(Path.GetFullPath(args.FirstOrDefault()??"artifacts"),"proxy-tests.json"),JsonSerializer.Serialize(new{host="Windows x64 / transactional fake preferences; no native Mac execution",nativeMacValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"Proxy: {checks} checks, {failures} failures");return failures==0?0:1;
+if(OperatingSystem.IsMacOS()){
+    await NativePreferencesFixture.Run(Check);
+    NativeTestApplication.Initialize();
+    using var authorization=new MacProxyAuthorization();
+    byte[] firstForm=authorization.Export();
+    try{
+        for(int cycle=0;cycle<3;cycle++){
+            byte[] form=authorization.Export();
+            try{
+                Check(form.AsSpan().SequenceEqual(firstForm),"mac-authorization-session-reused-"+cycle);
+                using var reader=new MacProxyPreferences(form);
+                Check(reader.Services().All(id=>Guid.TryParse(id,out _)),"mac-authorized-preferences-read-only-import-"+cycle);
+            }finally{CryptographicOperations.ZeroMemory(form);}
+        }
+        using var wire=new MemoryStream();
+        await Wire.Write(wire,new AgentCommand{Action="connect",ProxyAuthorization=firstForm},CancellationToken.None);
+        wire.Position=0;var received=await Wire.Read<AgentCommand>(wire,CancellationToken.None);
+        Check(received.ProxyAuthorization.AsSpan().SequenceEqual(firstForm)&&received.ToString()=="AgentCommand(redacted)","authorization-pipe-roundtrip-redacted");
+        CryptographicOperations.ZeroMemory(received.ProxyAuthorization);
+        Reject(()=>new MacProxyPreferences(new byte[1]),"invalid-external-authorization-rejected");
+    }finally{CryptographicOperations.ZeroMemory(firstForm);}
+    authorization.Dispose();
+    try{_=authorization.Export();Check(false,"closed-authorization-session-rejected");}catch(ObjectDisposedException){Check(true,"closed-authorization-session-rejected");}
+}
+Directory.CreateDirectory(Path.GetFullPath(args.FirstOrDefault()??"artifacts"));File.WriteAllText(Path.Combine(Path.GetFullPath(args.FirstOrDefault()??"artifacts"),"proxy-tests.json"),JsonSerializer.Serialize(new{host=System.Runtime.InteropServices.RuntimeInformation.OSDescription+" / "+System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture+" / transactional mock, Darwin isolated SCPreferences file commits and CAS, read-only system authorization transfer; host networking unmodified",nativeMacValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"Proxy: {checks} checks, {failures} failures");return failures==0?0:1;
 sealed class MemoryJournal(List<string> order):IProxyJournal{ProxyLeaseJournal journal=new();public ProxyLeaseJournal Load()=>JsonSerializer.Deserialize<ProxyLeaseJournal>(JsonSerializer.Serialize(journal))!;public void Save(ProxyLeaseJournal value){order.Add("save");journal=JsonSerializer.Deserialize<ProxyLeaseJournal>(JsonSerializer.Serialize(value))!;}}
 sealed class MemoryPreferences(List<string> order):IProxyPreferences{public Dictionary<string,ProxyMap?> Values=[];public List<string> Eligible=[];public bool FailCommit;public int Locks;public IDisposable Begin(){Locks++;return new Noop();}public IReadOnlyList<string> Services()=>Eligible;public ProxyMap? Read(string id)=>Values.GetValueOrDefault(id)?.Copy();public void Write(string id,ProxyMap? value){order.Add("write");Values[id]=value?.Copy();}public void Commit(){order.Add("commit");if(FailCommit)throw new SafeError("MAC_PROXY_APPLY_FAILED");}public void Dispose(){}sealed class Noop:IDisposable{public void Dispose(){}}}
 sealed class Vault:ISecretVault{readonly byte[] key=RandomNumberGenerator.GetBytes(32);public byte[] GetOrCreateKey()=>key.ToArray();}
+
+static class NativeTestApplication {
+    [System.Runtime.InteropServices.DllImport("/System/Library/Frameworks/AppKit.framework/AppKit",EntryPoint="NSApplicationLoad")]
+    [return:System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.I1)]
+    public static extern bool Initialize();
+}

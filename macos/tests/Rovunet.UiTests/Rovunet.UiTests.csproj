@@ -4,4 +4,5 @@
     <ProjectReference Include="../../src/Rovunet.Desktop/Rovunet.Desktop.csproj" />
     <PackageReference Include="Avalonia.Headless" Version="$(AvaloniaVersion)" />
   </ItemGroup>
+  <ItemGroup><Content Include="Fixtures/**/*.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

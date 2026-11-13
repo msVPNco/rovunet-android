@@ -10,10 +10,18 @@ public sealed class MacProxyPreferences : IProxyPreferences
 {
     const string CF="/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",SC="/System/Library/Frameworks/SystemConfiguration.framework/SystemConfiguration",SEC="/System/Library/Frameworks/Security.framework/Security";
     nint authorization,preferences;
-    public MacProxyPreferences()
+    readonly bool isolated;
+    // This managed preferences object never accepts paths from a service RPC.
+    // The native test fixture supplies only its own temporary preferences file.
+    internal MacProxyPreferences(nint isolatedPreferences)
+    {
+        if(isolatedPreferences==0)throw new SafeError("MAC_PROXY_SETTINGS_INVALID");
+        preferences=isolatedPreferences;isolated=true;
+    }
+    public MacProxyPreferences(byte[]? externalAuthorization=null)
     {
         if(!OperatingSystem.IsMacOS())throw new SafeError("MACOS_REQUIRED");
-        if(AuthorizationCreate(0,0,0,out authorization)!=0)throw new SafeError("MAC_PROXY_AUTH_DENIED");
+        authorization=MacProxyAuthorization.Import(externalAuthorization??[]);
         nint name=String("Rovunet system proxy");try{preferences=SCPreferencesCreateWithAuthorization(0,name,0,authorization);if(preferences==0)throw new SafeError("MAC_PROXY_AUTH_DENIED");}catch{Dispose();throw;}finally{CFRelease(name);}
     }
     public void RefreshSnapshot()=>SCPreferencesSynchronize(preferences);
@@ -50,13 +58,11 @@ public sealed class MacProxyPreferences : IProxyPreferences
             try{nint plist=CFPropertyListCreateWithData(0,data,0,0,out nint error);if(error!=0)CFRelease(error);if(plist==0)throw new SafeError("MAC_PROXY_SETTINGS_INVALID");try{if(!SCPreferencesPathSetValue(preferences,path,plist))throw Error();}finally{CFRelease(plist);}}finally{CFRelease(data);}
         }finally{CFRelease(path);}
     }
-    public void Commit(){if(!SCPreferencesCommitChanges(preferences)||!SCPreferencesApplyChanges(preferences))throw Error();}
+    public void Commit(){if(!SCPreferencesCommitChanges(preferences)||!isolated&&!SCPreferencesApplyChanges(preferences))throw Error();}
     static SafeError Error()=>new(SCError() switch{1003=>"MAC_PROXY_AUTH_DENIED",1006 or 3002=>"MAC_PROXY_BUSY",_=>"MAC_PROXY_APPLY_FAILED"});
-    public void Dispose(){if(preferences!=0){CFRelease(preferences);preferences=0;}if(authorization!=0){AuthorizationFree(authorization,0);authorization=0;}}
+    public void Dispose(){if(preferences!=0){CFRelease(preferences);preferences=0;}if(authorization!=0){MacProxyAuthorization.Release(authorization);authorization=0;}}
     static nint String(string text)=>CFStringCreateWithCString(0,text,0x08000100);
     static string Text(nint value){if(value==0)return "";int size=checked((int)(CFStringGetLength(value)*4+1));byte[] bytes=new byte[size];if(!CFStringGetCString(value,bytes,size,0x08000100))throw new SafeError("MAC_PROXY_SETTINGS_INVALID");return Encoding.UTF8.GetString(bytes,0,Array.IndexOf(bytes,(byte)0));}
-    [DllImport(SEC)] static extern int AuthorizationCreate(nint rights,nint environment,uint flags,out nint authorization);
-    [DllImport(SEC)] static extern int AuthorizationFree(nint authorization,uint flags);
     [DllImport(SC)] static extern nint SCPreferencesCreateWithAuthorization(nint allocator,nint name,nint prefsId,nint authorization);
     [DllImport(SC)] static extern void SCPreferencesSynchronize(nint prefs);
     [DllImport(SC)][return:MarshalAs(UnmanagedType.I1)] static extern bool SCPreferencesLock(nint prefs,[MarshalAs(UnmanagedType.I1)]bool wait);

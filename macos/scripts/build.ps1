@@ -77,6 +77,8 @@ if(Test-Path -LiteralPath $app){
     Remove-Item -LiteralPath $resolvedBundle -Recurse -Force
 }
 $appMac=Join-Path $app 'Contents/MacOS'
+$macSourceCommit=(& git -C $repoRoot rev-parse HEAD).Trim()
+if($LASTEXITCODE -ne 0 -or $macSourceCommit -notmatch '^[0-9a-f]{40}$'){throw 'Cannot record source commit'}
 $resources=Join-Path $app 'Contents/Resources'
 New-Item -ItemType Directory -Path $appMac,$resources -Force|Out-Null
 Get-ChildItem -LiteralPath (Join-Path $artifacts "publish/$Rid/Rovunet.Desktop") -Force|ForEach-Object{Copy-Item -LiteralPath $_.FullName -Destination $appMac -Recurse -Force}
@@ -88,7 +90,7 @@ New-Item -ItemType Directory -Path $bundledEngines -Force|Out-Null
 Get-ChildItem -LiteralPath $engineRoot -Force|ForEach-Object{Copy-Item -LiteralPath $_.FullName -Destination $bundledEngines -Recurse -Force}
 Copy-Item -LiteralPath (Join-Path $macRoot 'packaging/Info.plist') -Destination (Join-Path $app 'Contents/Info.plist') -Force
 Copy-Item -LiteralPath (Join-Path $macRoot 'packaging/Rovunet.entitlements') -Destination $resources -Force
-@{version='0.1.6-beta';rid=$Rid;windowsSource='562a3d71670ceb7de909146bf68116d5cc614496';androidBinarySource='e6359aae2e2e19164ad7e9ec87267f09a0c1152d';androidSupplementalSource='5e66f167c85aecac26008d930a7a24df6f2a31f2';minimumMacOS='15.0';macRuntimeValidated=$false;appleSiliconFunctionalBaseAcceptedByOwner=$true;acceptedFunctionalBase='0.1.0-dev.6';releaseChange='Version and packaging metadata only';intelTesting='limited; host checks only';developerIdSigned=$false;notarized=$false;networkMode='system-proxy-optional; system-tun-opt-in; local per-app proxy';nativeEngineBuild='All eleven native engines reused byte-for-byte from the same-architecture dev.6 package';tunServiceVersion='0.1.0-dev.3';tunServiceCompatibility='Exact native client and policy retained for installed dev.3 service';ownerReportedDev1Launch=$true;ownerReportedDev1OwnProfileConnect=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $resources 'BUILD-INFO.json') -Encoding utf8
+@{version='0.1.7-beta.1';rid=$Rid;macSourceCommit=$macSourceCommit;windowsSource='562a3d71670ceb7de909146bf68116d5cc614496';androidBinarySource='e6359aae2e2e19164ad7e9ec87267f09a0c1152d';androidSupplementalSource='5e66f167c85aecac26008d930a7a24df6f2a31f2';minimumMacOS='15.0';macRuntimeValidated=$false;appleSiliconFunctionalBaseAcceptedByOwner=$true;acceptedFunctionalBase='0.1.0-dev.6';releaseChange='Updater, About, direct public feeds, status colors and encrypted-store concurrency hardening; native engines unchanged';intelTesting='limited; host checks only';developerIdSigned=$false;notarized=$false;networkMode='system-proxy-optional; system-tun-opt-in; local per-app proxy';nativeEngineBuild='All eleven native engines reused byte-for-byte from the same-architecture dev.6 package';tunServiceVersion='0.1.0-dev.3';tunServiceCompatibility='Exact native client and policy retained for installed dev.3 service';ownerReportedDev1Launch=$true;ownerReportedDev1OwnProfileConnect=$true}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $resources 'BUILD-INFO.json') -Encoding utf8
 Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE'),(Join-Path $repoRoot 'NOTICE.md') -Destination $resources -Force
 $licenses=Join-Path $resources 'licenses'
 New-Item -ItemType Directory -Path $licenses -Force|Out-Null

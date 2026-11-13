@@ -111,7 +111,7 @@ var meteredState=SubscriptionMerge.Apply(new(),uri,[p],"Metered fixture",metered
 Check(meteredState.Subscriptions.Single().Usage is {Upload:1024,Download:2048,Total:8192,Expire:1800000000},"metered-and-timed-subscription-fields-survive-merge-and-persistence");
 Check(SubscriptionUsage20.Parse("expire=1800000000","",null) is {Total:null,Upload:null,Download:null,Expire:1800000000},"time-only-subscription-does-not-invent-volume-fields");
 Check(SubscriptionUsage20.Parse("total=1;total=2","",null)==null&&SubscriptionUsage20.Parse("upload=9223372036854775807;download=1","",null)==null,"invalid-or-overflowing-quota-never-becomes-unlimited");
-Directory.CreateDirectory(Path.GetFullPath(args.FirstOrDefault()??"artifacts"));File.WriteAllText(Path.Combine(Path.GetFullPath(args.FirstOrDefault()??"artifacts"),"mac-domain-tests.json"),JsonSerializer.Serialize(new{host="Windows x64",macRuntimeValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));
+Directory.CreateDirectory(Path.GetFullPath(args.FirstOrDefault()??"artifacts"));File.WriteAllText(Path.Combine(Path.GetFullPath(args.FirstOrDefault()??"artifacts"),"mac-domain-tests.json"),JsonSerializer.Serialize(new{host=System.Runtime.InteropServices.RuntimeInformation.OSDescription+" / "+System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture+"",macRuntimeValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));
 Console.WriteLine($"Mac domain: {checks} checks, {failures} failures");return failures==0?0:1;
 
 sealed class MemoryVault : ISecretVault {readonly byte[] key=RandomNumberGenerator.GetBytes(32);public byte[] GetOrCreateKey()=>key.ToArray();}

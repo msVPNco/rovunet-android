@@ -23,5 +23,6 @@ public static class L
     public static string Language {get;set;}="fa";
     public static string Text(string key)=>all.GetValueOrDefault(Language,all["en"]).GetValueOrDefault(key,all["en"].GetValueOrDefault(key,key));
     public static FlowDirection Direction=>Language=="fa"?FlowDirection.RightToLeft:FlowDirection.LeftToRight;
-    public static FontFamily Font=>Language=="fa"?new("avares://Rovunet/Assets#Vazirmatn"):new(Language=="zh-CN"?"PingFang SC, Microsoft YaHei UI":"Segoe UI, Helvetica Neue");
+    public static FontFamily TechnicalFont=>new(OperatingSystem.IsMacOS()?"Menlo":"Consolas, monospace");
+    public static FontFamily Font=>OperatingSystem.IsMacOS()?FontFamily.Default:Language=="fa"?new("avares://Rovunet/Assets#Vazirmatn"):new(Language=="zh-CN"?"PingFang SC, Microsoft YaHei UI":"Segoe UI, Helvetica Neue");
 }

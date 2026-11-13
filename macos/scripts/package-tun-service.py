@@ -51,7 +51,7 @@ def main():
     helper=args.client.read_bytes();policy=json.dumps({'Version':1,'ClientCDHashes':cdhashes(helper)},indent=2).encode();packaging=pathlib.Path(__file__).resolve().parent.parent/'packaging'
     files=[('rovunet-tun',helper,0o100755),('policy.json',policy,0o100644),('org.rovunet.tun.helper.plist',(packaging/'org.rovunet.tun.helper.plist').read_bytes(),0o100644)]
     sums=''.join(hashlib.sha256(data).hexdigest()+'  '+name+'\n' for name,data,_ in files).encode();files.extend([('SHA256SUMS',sums,0o100644),('postinstall',(packaging/'tun-postinstall.sh').read_bytes().replace(b'\r\n',b'\n'),0o100755)])
-    info=b'<?xml version="1.0" encoding="UTF-8"?><pkg-info format-version="2" identifier="org.rovunet.tun.helper.pkg" version="0.1.0.3" install-location="/" auth="root"><payload installKBytes="0" numberOfFiles="0"/><scripts><postinstall file="./postinstall"/></scripts></pkg-info>'
+    info=b'<?xml version="1.0" encoding="UTF-8"?><pkg-info format-version="2" identifier="org.rovunet.tun.helper.pkg" version="0.1.0.4" install-location="/" auth="root"><payload installKBytes="0" numberOfFiles="0"/><scripts><postinstall file="./postinstall"/></scripts></pkg-info>'
     args.output.parent.mkdir(parents=True,exist_ok=True);args.output.write_bytes(xar([('Scripts',gzip.compress(cpio(files),mtime=0)),('PackageInfo',info)]))
     print(json.dumps({'file':args.output.name,'helperSHA256':hashlib.sha256(helper).hexdigest(),'clientCDHashes':cdhashes(helper),'appleInstallerValidated':False}))
 if __name__=='__main__':main()

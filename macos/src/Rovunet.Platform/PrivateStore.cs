@@ -12,6 +12,16 @@ public sealed class PrivateStore(string root, ISecretVault vault)
     // A scan checkpoint is a document containing many results, not one import.
     // Individual profile/subscription input retains Importer.MaxBytes limits.
     const int MaximumDocumentBytes=16*1024*1024;
+    byte[]? loadedDigest;
+    bool loadFailed;
+    static byte[] ReadDocument(string path)
+    {
+        if((File.GetAttributes(path)&FileAttributes.ReparsePoint)!=0)throw new SafeError("PRIVATE_STORE_FAILED");
+        using var stream=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete);
+        if(stream.Length is <29 or >MaximumDocumentBytes+28)throw new SafeError("PRIVATE_STORE_FAILED");
+        byte[] bytes=new byte[(int)stream.Length];stream.ReadExactly(bytes);
+        if(stream.ReadByte()!=-1)throw new SafeError("PRIVATE_STORE_FAILED");return bytes;
+    }
     public static bool MayInitializeKey(string root) =>
         !File.Exists(Path.Combine(root,"profiles.enc"))&&!File.Exists(Path.Combine(root,"system-proxy","profiles.enc"));
     public byte[] AcquireSessionKey()=>vault.GetOrCreateKey();
@@ -21,15 +31,16 @@ public sealed class PrivateStore(string root, ISecretVault vault)
     public T Load<T>() where T : new()
     {
         var path = Path.Combine(root, "profiles.enc");
-        if (!File.Exists(path)) return new();
-        byte[] bytes = File.ReadAllBytes(path);
-        if (bytes.Length is < 29 or > MaximumDocumentBytes + 29) throw new SafeError("PRIVATE_STORE_FAILED");
+        if (!File.Exists(path)) { loadedDigest=[];loadFailed=false;return new(); }
+        loadFailed=true;
+        byte[] bytes = ReadDocument(path);
         byte[] key = vault.GetOrCreateKey();
         byte[] plain = new byte[bytes.Length - 28];
         try {
             using var aes = new AesGcm(key, 16);
             aes.Decrypt(bytes.AsSpan(0,12), bytes.AsSpan(28), bytes.AsSpan(12,16), plain, "Rovunet-macOS-v1"u8);
-            return JsonSerializer.Deserialize<T>(plain) ?? throw new SafeError("PRIVATE_STORE_FAILED");
+            var value=JsonSerializer.Deserialize<T>(plain) ?? throw new SafeError("PRIVATE_STORE_FAILED");
+            loadedDigest=SHA256.HashData(bytes);loadFailed=false;return value;
         } catch { throw new SafeError("PRIVATE_STORE_FAILED"); }
         finally { CryptographicOperations.ZeroMemory(key); CryptographicOperations.ZeroMemory(plain); }
     }
@@ -38,9 +49,17 @@ public sealed class PrivateStore(string root, ISecretVault vault)
         Directory.CreateDirectory(root);
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0) throw new SafeError("PRIVATE_STORE_FAILED");
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(root, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        if(loadFailed)throw new SafeError("PRIVATE_STORE_FAILED");
         byte[] plain = JsonSerializer.SerializeToUtf8Bytes(value); byte[]? key=null;
         string temp = Path.Combine(root, ".profiles-" + Guid.NewGuid().ToString("N"));
         try {
+            string lockPath=Path.Combine(root,".profiles-write-lock"),path=Path.Combine(root,"profiles.enc");
+            if(File.Exists(lockPath)&&(File.GetAttributes(lockPath)&FileAttributes.ReparsePoint)!=0)throw new SafeError("PRIVATE_STORE_FAILED");
+            var lockOptions=new FileStreamOptions{Mode=FileMode.OpenOrCreate,Access=FileAccess.ReadWrite,Share=FileShare.None};
+            if(!OperatingSystem.IsWindows())lockOptions.UnixCreateMode=UnixFileMode.UserRead|UnixFileMode.UserWrite;
+            using var writeLock=new FileStream(lockPath,lockOptions);
+            byte[] current=File.Exists(path)?SHA256.HashData(ReadDocument(path)):[];
+            if(loadedDigest==null?current.Length>0:!current.AsSpan().SequenceEqual(loadedDigest))throw new SafeError("MAC_STORE_CHANGED");
             key=vault.GetOrCreateKey();
             if (plain.Length > MaximumDocumentBytes) throw new SafeError("IMPORT_TOO_LARGE");
             byte[] bytes = new byte[plain.Length + 28]; RandomNumberGenerator.Fill(bytes.AsSpan(0,12));
@@ -50,6 +69,7 @@ public sealed class PrivateStore(string root, ISecretVault vault)
             if (!OperatingSystem.IsWindows()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             using (var stream = new FileStream(temp, options)) { stream.Write(bytes); stream.Flush(true); }
             File.Move(temp, Path.Combine(root,"profiles.enc"),true);
+            loadedDigest=SHA256.HashData(bytes);
         } catch(SafeError) { throw; } catch { throw new SafeError("PRIVATE_STORE_FAILED"); }
         finally { if(key!=null)CryptographicOperations.ZeroMemory(key); CryptographicOperations.ZeroMemory(plain); if(File.Exists(temp))File.Delete(temp); }
     }

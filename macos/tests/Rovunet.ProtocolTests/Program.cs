@@ -63,6 +63,26 @@ foreach(string invalid in new[]{
  "mierus://user:fixture@server.example.invalid?profile=M&port=443&protocol=HTTP", "mierus://user:fixture@server.example.invalid:443?profile=M&port=443&protocol=TCP",
  "mierus://user:fixture@server.example.invalid?port=443&protocol=TCP", "mierus://user:fixture@server.example.invalid?profile=M&port=443&protocol=TCP&port=8443",
  "mierus://user:fixture@server.example.invalid?profile=M&port=443&protocol=TCP&traffic-pattern=!!!"})Reject(()=>MacImport.Read(invalid),"supplemental-invalid-case-"+(checks+1));
+{
+ string raw="vless://00000000-0000-4000-8000-000000000001@server.example.invalid:443?security=tls&allowInsecure=true#TLS";
+ var strict=ImportReview.Read(raw);Check(strict.Profiles.Count==0&&strict.Issues.Single().Code=="TLS_UNVERIFIED","tls-strict-import-remains-strict");
+ var review=ImportReview.Read(raw,reviewTlsRequests:true);var p=review.Profiles.Single();
+ Check(review.TlsAdjustedCount==1&&review.RequiresConsent&&p.Raw.Contains("allowInsecure=false"),"tls-review-normalizes-request-to-verification-on");
+ var state=new AppState{Profiles=[p]};Check(!MacTlsPolicy.Approved(state,p),"tls-import-does-not-authorize-exception");state.TlsExceptions[p.Id]=new(Importer.Fingerprint(p.Raw),new string('a',64));
+ Check(MacTlsPolicy.Approved(state,p),"tls-exact-profile-approval-recognized");var copy=MacProtocols.Single(p.Raw);Check(!MacTlsPolicy.Approved(state,copy),"tls-approval-never-transfers-to-another-profile");
+ string original=p.Raw;p.Raw=original.Replace(":443",":8443");Check(!MacTlsPolicy.Approved(state,p),"tls-changed-config-invalidates-prior-approval");p.Raw=original;
+ Check(MacTlsPolicy.Approved(state.Copy(),p),"tls-approval-survives-encrypted-state-serialization");
+ string secure=MacProtocols.Runtime(p,18080,10808),exception=MacProtocols.Runtime(p,18080,10808,tlsCertificatePin:new string('a',64));
+ Check(!secure.Contains("pinnedPeerCertSha256")&&exception.Contains("pinnedPeerCertSha256"),"tls-runtime-exception-is-explicit-and-default-stays-verified");
+ Check(!MacProtocols.Runtime(p,18080,10808).Contains("pinnedPeerCertSha256"),"tls-runtime-exception-does-not-leak-to-next-session");
+ foreach(string link in new[]{"anytls://fixture@server.example.invalid:443?insecure=1","tuic://00000000-0000-4000-8000-000000000001:fixture@server.example.invalid:443?allowInsecure=true","hy2://fixture@server.example.invalid:443?insecure=1","trojan://fixture@server.example.invalid:443?allowInsecure=true"}){
+  var normalized=ImportReview.Read(link,reviewTlsRequests:true);Check(normalized.Profiles.Count==1&&normalized.TlsAdjustedCount==1,"tls-normalization-supported-family-"+link.Split(':')[0]);
+  if(link.StartsWith("anytls")||link.StartsWith("tuic"))Check(!MacTlsPolicy.Supports(normalized.Profiles.Single().Raw)&&!MacSupplemental.Runtime(normalized.Profiles.Single(),18999).Contains("\"skip-cert-verify\":true"),"supplemental-unsupported-pin-cannot-disable-validation-"+link.Split(':')[0]);
+ }
+ string tlsBundle=JsonSerializer.Serialize(new{version=1,items=new[]{new{id="tls",link=raw}}});Check(ImportReview.Read(tlsBundle,reviewTlsRequests:true).TlsAdjustedCount==1,"tls-export-json-review-normalizes-per-item");
+ string tlsExternal="{\"outbounds\":[{\"protocol\":\"trojan\",\"settings\":{\"servers\":[{\"address\":\"server.example.invalid\",\"port\":443,\"password\":\"fixture\"}]},\"streamSettings\":{\"network\":\"tcp\",\"security\":\"tls\",\"tlsSettings\":{\"allowInsecure\":true}}}]}";
+ Check(ImportReview.Read(tlsExternal,reviewTlsRequests:true).TlsAdjustedCount==1,"tls-external-json-review-normalizes-certificate-request");
+}
 if(args.Length>1){
  EnginePaths.Root=Path.GetFullPath(args[1]);
  async Task Validate(string exe,string text,string name,params string[] command){
@@ -72,4 +92,4 @@ if(args.Length>1){
  foreach(var p in supplemental)await Validate(EnginePaths.Require("rovunet-extra"),MacSupplemental.Runtime(p,18999),"real-mihomo-config-accepts-"+p.Protocol,"--check");
  string privateDir=Path.Combine(Path.GetFullPath(args[0]),"tor-config-check");Directory.CreateDirectory(privateDir);await Validate(EnginePaths.Require("tor"),TorRuntime.Config(tor.Raw,10809,privateDir),"real-tor-verifies-default-snowflake-config","--verify-config","-f","-");
 }
-string resultPath=Path.GetFullPath(args.FirstOrDefault()??"artifacts");Directory.CreateDirectory(resultPath);File.WriteAllText(Path.Combine(resultPath,"protocol-tests.json"),JsonSerializer.Serialize(new{host="Windows x64; parser/configuration only",macRuntimeValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"Protocols: {checks} checks, {failures} failures");return failures==0?0:1;
+string resultPath=Path.GetFullPath(args.FirstOrDefault()??"artifacts");Directory.CreateDirectory(resultPath);File.WriteAllText(Path.Combine(resultPath,"protocol-tests.json"),JsonSerializer.Serialize(new{host=System.Runtime.InteropServices.RuntimeInformation.OSDescription+" / "+System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture+"; parser/configuration only",macRuntimeValidated=false,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"Protocols: {checks} checks, {failures} failures");return failures==0?0:1;

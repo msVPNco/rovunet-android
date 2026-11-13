@@ -52,7 +52,7 @@ func runClient() error {
 		}
 	}
 }
-func runWorker(ctx context.Context) error {
+func runWorker(ctx context.Context) (result error) {
 	if os.Geteuid() != 0 {
 		return errors.New("MAC_TUN_PERMISSION_REQUIRED")
 	}
@@ -70,7 +70,11 @@ func runWorker(ctx context.Context) error {
 	if e != nil {
 		return e
 	}
-	defer plane.Close()
+	defer func() {
+		if err := plane.Close(); err != nil && result == nil {
+			result = errors.New("MAC_TUN_RESTORE_PENDING")
+		}
+	}()
 	if e = writeFrame(os.Stdout, ready); e != nil {
 		return e
 	}
@@ -155,11 +159,7 @@ func main() {
 		}
 	}
 	if e != nil {
-		code := "MAC_TUN_FAILED"
-		if e.Error() == "MAC_TUN_HELPER_REQUIRED" {
-			code = e.Error()
-		}
-		_ = writeFrame(os.Stdout, reply{State: "error", Error: code})
+		_ = writeFrame(os.Stdout, reply{State: "error", Error: workerError(e)})
 		os.Exit(1)
 	}
 }

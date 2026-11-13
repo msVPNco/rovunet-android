@@ -98,12 +98,13 @@ public static class MacProtocols
         var parsed=CoreLinks.Parse("vmess://"+Convert.ToBase64String(Encoding.UTF8.GetBytes(json.ToJsonString())));if(options.Remove("grpc-mode",out var mode)){if(mode is not("" or "gun" or "multi"))throw new SafeError("UNSUPPORTED_FORMAT");parsed.Outbound["streamSettings"]!["grpcSettings"]!["multiMode"]=mode=="multi";}
         if(options.Count>0)Apply(parsed.Outbound,options);return parsed;
     }
-    public static string Runtime(Profile profile,int http,int socks,int helper=0,int stats=0,string tunUser="",string tunPassword="")
+    public static string Runtime(Profile profile,int http,int socks,int helper=0,int stats=0,string tunUser="",string tunPassword="",string tlsCertificatePin="")
     {
-        var parsed=Extended(profile.Raw);if(parsed==null)return TunInbound(CoreLinks.Runtime(profile,http,socks,helper,stats),tunUser,tunPassword);
+        if(tlsCertificatePin.Length>0&&!MacTlsPolicy.Supports(profile.Raw))throw new SafeError("MAC_TLS_EXCEPTION_INVALID");
+        var parsed=Extended(profile.Raw);if(parsed==null)return TunInbound(MacTlsPolicy.XrayRuntime(CoreLinks.Runtime(profile,http,socks,helper,stats),tlsCertificatePin),tunUser,tunPassword);
         var seed=Importer.Single(Seed);var root=JsonNode.Parse(CoreLinks.Runtime(seed,http,socks,0,stats))!.AsObject();
         if(parsed.Protocol=="DoH · DNS only")root["dns"]=new JsonObject{["queryStrategy"]="UseIP",["servers"]=new JsonArray(new JsonObject{["address"]=Importer.Fields(profile.Raw)[21],["skipFallback"]=true})};
-        var outbound=helper>0?CoreLinks.Socks(profile.Name,"127.0.0.1",helper,"","").Outbound:parsed.Outbound.DeepClone().AsObject();outbound["tag"]="proxy";root["outbounds"]=new JsonArray(outbound);return TunInbound(root.ToJsonString(),tunUser,tunPassword);
+        var outbound=helper>0?CoreLinks.Socks(profile.Name,"127.0.0.1",helper,"","").Outbound:parsed.Outbound.DeepClone().AsObject();outbound["tag"]="proxy";root["outbounds"]=new JsonArray(outbound);return TunInbound(MacTlsPolicy.XrayRuntime(root.ToJsonString(),tlsCertificatePin),tunUser,tunPassword);
     }
     static string TunInbound(string config,string user,string password)
     {

@@ -26,3 +26,9 @@ source addresses for Linux process lookup. They do not validate macOS process
 lookup, temporary DNS, Security.framework, Installer or signing trust.
 UDP still requires support from the selected remote protocol. There is no
 persistent kill switch. A DNS-only direct DoH profile is refused in VPN mode.
+
+## Darwin development helper 0.1.0-dev.4
+
+Before creating a TUN, the worker verifies its per-lease loopback SOCKS credentials. The service validates the native client's code identity using its kernel socket audit token. The engine's exact process path takes precedence over ordinary port 53 traffic. Regular DNS goes through the selected SOCKS relay. Recognized engines include rovunet-extra. The parent preserves bounded startup or restore errors from the worker.
+
+Darwin packet tests use a datagram socket pair and the production gVisor and sing-tun backend. They install no routes or DNS settings. Build the Go tests in the pinned Mihomo tree with its vendor dependencies, CGO_ENABLED=0, with_gvisor and -ldflags=-checklinkname=0. Set ROVUNET_PACKET_TEST_XRAY to the packaged Xray executable. Build tests/Rovunet.TunFixture in Release and set ROVUNET_PACKET_CONFIG_DRIVER to its apphost (DOTNET_ROOT must identify the matching runtime). ROVUNET_PACKET_TRANSPORT accepts ws, xhttp, trojan or hy2 for the synthetic tests. TestOperationalDarwinPacketPath is an explicit opt-in for an owner-supplied profile on stdin and does not log or store the link. Its target is example.com over standard TLS. A full Darwin route/SCPreferences recovery test is a separate acceptance gate.

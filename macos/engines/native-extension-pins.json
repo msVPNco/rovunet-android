@@ -80,12 +80,13 @@
     },
     {
       "rid": "osx-x64",
-      "opensslArchive": "openssl-3.5.9-sequoia-x64.tar.gz",
+      "opensslArchive": "openssl-3.5.8-sequoia-x64.tar.gz",
       "opensslArchiveSHA256": "11af4da9ac7469aabf418a30ae480378aa5a882a80424ca24fd9e08b81bb3b98",
-      "opensslVersion": "3.5.9",
+      "opensslVersion": "3.5.8",
       "loadCommandRelocation": "@loader_path; signatures must be refreshed before delivery",
       "url": "https://ghcr.io/v2/homebrew/core/openssl/3.5/blobs/sha256:11af4da9ac7469aabf418a30ae480378aa5a882a80424ca24fd9e08b81bb3b98",
-      "repository": "homebrew/core/openssl/3.5"
+      "repository": "homebrew/core/openssl/3.5",
+      "provenanceCorrection": "Verified archive member paths and embedded libcrypto version; old archive cache filename incorrectly said 3.5.9."
     }
   ]
 }

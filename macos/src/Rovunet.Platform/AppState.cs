@@ -3,12 +3,16 @@ using System.Text.Json;
 
 namespace Rovunet.Platform;
 
+public sealed record StatusReceipt(DateTimeOffset Received,DateTimeOffset? ServerDate,string Session="",long Tick=0);
+
 public sealed class AppState
 {
     public List<Profile> Profiles {get;set;}=[];
+    public Dictionary<string,StatusReceipt> StatusReceipts {get;set;}=[];
     public List<Subscription> Subscriptions {get;set;}=[];
     public Dictionary<string,string> OverrideSources {get;set;}=[];
     public Dictionary<string,string> OverrideNames {get;set;}=[];
+    public Dictionary<string,TlsCertificateApproval> TlsExceptions {get;set;}=[];
     public Dictionary<string,string> SshKeys {get;set;}=[];
     public Dictionary<string,string> SlipCertificates {get;set;}=[];
     public Dictionary<string,bool> Expanded {get;set;}=[];
@@ -80,19 +84,29 @@ public static class SubscriptionMerge
             p.SourceId=source;p.CollectionId="sub:"+source;p.CollectionName=name;
             if(p.ItemId.Length==0)p.ItemId=Importer.Fingerprint(p.Raw);
             if(old.TryGetValue(p.ItemId,out var prior)){
-                p.Id=prior.Id;
-                if(next.OverrideSources.TryGetValue(prior.Id,out var baseline)){
+                bool edited=next.OverrideSources.TryGetValue(prior.Id,out var baseline);
+                if(!MacProfileEditing.SameFeedEndpoint(baseline??prior.Raw,p)){
+                    if(edited)throw new SafeError("OVERRIDE_CONFLICT");
+                    p.Id=Guid.NewGuid().ToString("N");
+                }else p.Id=prior.Id;
+                if(edited){
                     string incoming=p.Raw, incomingName=p.Name;
-                    p=MacProfileEditing.MergeSubscription(baseline,prior,p,next.OverrideNames.GetValueOrDefault(prior.Id));
+                    p=MacProfileEditing.MergeSubscription(baseline!,prior,p,next.OverrideNames.GetValueOrDefault(prior.Id));
                     next.OverrideSources[prior.Id]=incoming;next.OverrideNames[prior.Id]=incomingName;
                 }
             }
+            // A clone, a different feed or a reappearing item must not inherit another row's local identity.
+            if(!old.ContainsKey(p.ItemId))p.Id=Guid.NewGuid().ToString("N");
             fresh.Add(p);
         }
         next.Profiles.RemoveAll(p=>p.SourceId==source);next.Profiles.AddRange(fresh);
         next.Subscriptions.RemoveAll(s=>s.Id==source);next.Subscriptions.Add(new(){Id=source,Url=uri.AbsoluteUri,Name=name,Usage=usage??subscription?.Usage,StatusBody=subscription?.StatusBody??""});
         var ids=next.Profiles.Select(p=>p.Id).ToHashSet();
         foreach(string id in next.OverrideSources.Keys.Where(k=>!ids.Contains(k)).ToArray()){next.OverrideSources.Remove(id);next.OverrideNames.Remove(id);}
+        foreach(var retired in old.Values.Where(row=>!ids.Contains(row.Id))){
+            next.Pinned.Remove(retired.Id);next.SlipCertificates.Remove(retired.Id);next.TlsExceptions.Remove(retired.Id);next.Measurements.Remove(retired.Id);next.LastConnected.Remove(retired.Id);
+            foreach(var key in next.PreferredPaths.Where(pair=>pair.Value==retired.Id).Select(pair=>pair.Key).ToArray())next.PreferredPaths.Remove(key);
+        }
         if(next.SelectedId.Length>0&&!ids.Contains(next.SelectedId))next.SelectedId="";
         return next;
     }

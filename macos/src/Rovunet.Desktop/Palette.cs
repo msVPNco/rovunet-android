@@ -26,9 +26,12 @@ public sealed class Palette
         "StaleMetric"=>Dark?"#ADB5C8":"#8891A6",
         "Accent"=>Dark?"#CEBBFF":"#6345AC",
         "OnAccent"=>Dark?ColorOf("Bg"):"#FFFFFF",
+        "ControlOutline"=>Black?"#7E8397":Dark?"#8992AC":"#858AA3",
         "Outline"=>Dark?"#726B91":"#BAC2D5",
         "Green"=>Dark?"#9AE5BF":"#087849",
         "PowerSurface"=>"#A6EAC4",
+        "PendingSurface"=>"#F7DA8A",
+        "Pending"=>Dark?"#F7DA8A":"#8B6100",
         "AddSurface"=>"#DCD8F1",
         "Red"=>Dark?"#FF9BAB":"#AD2645",
         _=>Dark?"#F1F3FC":"#19233A"

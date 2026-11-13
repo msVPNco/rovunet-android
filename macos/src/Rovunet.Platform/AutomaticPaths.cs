@@ -8,10 +8,10 @@ public static class AutomaticPathPolicy
 {
     // Android SmartPathPolicy at 5e66f167c85aecac26008d930a7a24df6f2a31f2.
     public const int MaxCandidates=5;
-    public const long SlowMs=2000,MinimumStayMs=120000,CycleMs=30000;
+    public const long MinimumStayMs=120000,CycleMs=30000;
     public static string Collection(Profile p)=>p.SourceId.Length>0?"sub:"+p.SourceId:p.CollectionId;
     public static bool Better(long current,long candidate,long stayed)=>
-        current>=SlowMs&&candidate>0&&candidate<=current/2&&stayed>=MinimumStayMs;
+        current>0&&candidate>0&&candidate<=current/2&&stayed>=MinimumStayMs;
     public static long? Median(IEnumerable<long?> samples)
     {
         var values=samples.ToArray();
@@ -130,23 +130,12 @@ public sealed class AutomaticPathController(IAutomaticPathHost host)
                     switchedAt=host.NowMs;continue;
                 }
                 if(mode!=PathSelectionMode.Smart||sample.Median is not {} current||
-                    current<AutomaticPathPolicy.SlowMs||host.NowMs-switchedAt<AutomaticPathPolicy.MinimumStayMs)continue;
+                    host.NowMs-switchedAt<AutomaticPathPolicy.MinimumStayMs)continue;
                 foreach(var candidate in Candidates(key,active.Id)){
                     cancellation.ThrowIfCancellationRequested();
                     if(!owned.IsCurrent||stamp!=host.NetworkStamp){host.Notify("MAC_NETWORK_CHANGED");break;}
-                    if(!host.CanProbeSeparately(active,candidate)){
-                        // TUN and shared WG peers cannot prove an independent physical path.
-                        // A bounded serial trial can be restored to the previous working path.
-                        host.Notify("MAC_AUTO_SWITCHING");await CloseOwned();
-                        bool ready=await Establish(candidate);
-                        long? measured=ready?lastEstablished:null;
-                        if(ready&&stamp==host.NetworkStamp&&measured is {} ms&&AutomaticPathPolicy.Better(current,ms,host.NowMs-switchedAt)){
-                            host.Record(candidate,ms);switchedAt=host.NowMs;break;
-                        }
-                        await CloseOwned();
-                        if(!await Establish(active)){host.Notify("MAC_AUTO_EXHAUSTED");return;}
-                        switchedAt=host.NowMs;break; // One disruptive trial per minimum-stay interval.
-                    }
+                    // A working connection is only replaced after an independent measurement.
+                    if(!host.CanProbeSeparately(active,candidate))continue;
                     host.Notify("MAC_AUTO_TESTING");
                     long? latency;
                     try{latency=await host.ProbeCandidate(candidate,cancellation);}

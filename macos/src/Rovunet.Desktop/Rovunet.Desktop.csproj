@@ -12,6 +12,5 @@
     <AvaloniaResource Include="../../../windows/src/Rovunet.Desktop/Assets/*.ttf" Link="Assets/%(Filename)%(Extension)" />
     <Compile Include="../../../windows/src/Rovunet.Desktop/ResolverCatalog.cs" Link="Shared/ResolverCatalog.cs" />
     <EmbeddedResource Include="../../../windows/transports/resolverdata/*" LogicalName="Rovunet.ResolverData.%(Filename)%(Extension)" />
-    <Compile Include="../../../windows/src/Rovunet.Desktop/PublicFeed.cs" Link="Shared/PublicFeed.cs" />
   </ItemGroup>
 </Project>

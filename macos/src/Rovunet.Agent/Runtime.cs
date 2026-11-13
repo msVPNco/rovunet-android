@@ -15,7 +15,6 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     int statsPort;TrafficSnapshot? lastTraffic;
     CancellationTokenSource? slipLogs;
     ProxyGuardian? systemProxy;
-    byte[] proxyKey=[];
     SystemTunLease? tun;
     string naiveFailure="NAIVE_START_FAILED";
     string? torDirectory;
@@ -23,18 +22,20 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
     public event Action? UnexpectedExit;
     public event Action<AgentReply>? StageChanged;
     void OnCoreExit(object? sender, EventArgs args) => UnexpectedExit?.Invoke();
-    public async Task<AgentReply> Connect(Profile profile, bool applyProxy, CancellationToken ct, string hostKey = "", string slipCertificate = "", int? slipInterval = null,string sshTlsCa="",int localHttpPort=0,int localSocksPort=0,byte[]? proxyStoreKey=null,bool systemTun=false)
+    public async Task<AgentReply> Connect(Profile profile, bool applyProxy, CancellationToken ct, string hostKey = "", string slipCertificate = "", int? slipInterval = null,string sshTlsCa="",int localHttpPort=0,int localSocksPort=0,byte[]? proxyStoreKey=null,bool systemTun=false,string tlsCertificatePin="",byte[]? proxyAuthorization=null)
     {
         if (core != null || transport != null) throw new SafeError("ALREADY_CONNECTED");
         // Reparse untrusted IPC; derived fields such as BlockReason are not an authorization.
         profile = MacProtocols.Single(profile.Raw);
+        if(tlsCertificatePin.Length>0&&!MacTlsPolicy.Supports(profile.Raw))throw new SafeError("MAC_TLS_EXCEPTION_INVALID");
         if (!profile.CanConnect) throw new SafeError(profile.BlockReason);
         if(systemTun&&MacProtocols.Extended(profile.Raw)?.Protocol=="DoH · DNS only")throw new SafeError("DNS_ONLY_NOT_VPN");
         if(TransportPlan.UsesNaive(profile.Raw)||SshHostKey.Required(profile))probeBudget=TimeSpan.FromSeconds(25);
         string exe = EnginePaths.Require("xray");
         if(applyProxy&&!OperatingSystem.IsMacOS())throw new SafeError("MACOS_REQUIRED");
         if(systemTun&&(!OperatingSystem.IsMacOS()||applyProxy))throw new SafeError("MAC_TUN_INVALID_REQUEST");
-        if(applyProxy){if(proxyStoreKey?.Length!=32)throw new SafeError("INVALID_MESSAGE");proxyKey=proxyStoreKey.ToArray();}
+        if(applyProxy&&proxyAuthorization is {Length: not(0 or 32)})throw new SafeError("INVALID_MESSAGE");
+        if(applyProxy&&proxyStoreKey?.Length!=32)throw new SafeError("INVALID_MESSAGE");
         if(localHttpPort is <0 or >65535||localSocksPort is <0 or >65535||localHttpPort!=0&&localHttpPort==localSocksPort)throw new SafeError("LOCAL_PROXY_PORT_INVALID");
         var first = new TcpListener(IPAddress.Loopback, localHttpPort);
         var second = new TcpListener(IPAddress.Loopback, localSocksPort);
@@ -118,7 +119,8 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
             }
             var statsReservation=new TcpListener(IPAddress.Loopback,0);statsReservation.Start();statsPort=((IPEndPoint)statsReservation.LocalEndpoint).Port;statsReservation.Stop();
             string tunUser=systemTun?Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant():"",tunPassword=systemTun?Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant():"";
-            string config = MacProtocols.Runtime(profile, httpPort, socksPort, helperPort,statsPort,tunUser,tunPassword);
+            string config = MacProtocols.Runtime(profile, httpPort, socksPort, helperPort,statsPort,tunUser,tunPassword,tlsCertificatePin);
+            if(systemTun) config=await MacTunBootstrap.Prepare(config,ct);
             first.Stop(); second.Stop();
             core = EngineProcess.Start(new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, Arguments = "run -c stdin:", RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = Path.GetDirectoryName(exe)! }) ?? throw new SafeError("CORE_START_FAILED");
             StageChanged?.Invoke(new AgentReply { State="engine-started" });
@@ -128,11 +130,11 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
             await core.StandardInput.WriteAsync(config.AsMemory(), ct); core.StandardInput.Close();
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(TimeSpan.FromSeconds(10));
             await WaitListener(httpPort, core, deadline.Token); await WaitListener(socksPort, core, deadline.Token);
-            if(applyProxy)systemProxy=await ProxyGuardian.Start(httpPort,socksPort,core,proxyStoreKey??[],ct);
+            if(applyProxy)systemProxy=await ProxyGuardian.Start(httpPort,socksPort,core,proxyStoreKey??[],ct,proxyAuthorization);
             if(systemTun)tun=await SystemTunLease.Start(socksPort,tunUser,tunPassword,ct);
             // DNS helpers report ready only after their authenticated remote handshake.
             // This is distinct from HTTPS verification and from a local listener starting.
-            return new() { State = "connected", HttpPort = httpPort, SocksPort = socksPort, TunActive=tun?.IsAlive==true,ElapsedMs = clock.ElapsedMilliseconds,HandshakeMs=serverReadyMs,TunnelEstablished=authenticatedDns,SshEstablished=authenticatedSsh,ProbeStage=tun!=null?"system-tun":systemProxy!=null?"system-proxy":"local-proxy" };
+            return new() { State = "connected", HttpPort = httpPort, SocksPort = socksPort, TunInterface=tun?.InterfaceName??"",TunActive=tun?.IsAlive==true,ElapsedMs = clock.ElapsedMilliseconds,HandshakeMs=serverReadyMs,TunnelEstablished=authenticatedDns,SshEstablished=authenticatedSsh,ProbeStage=tun!=null?"system-tun":systemProxy!=null?"system-proxy":"local-proxy" };
         }
         catch(SocketException error)when(error.SocketErrorCode==SocketError.AddressAlreadyInUse){Stop();throw new SafeError("LOCAL_PROXY_PORT_BUSY");}
         catch { Stop(); throw; }
@@ -239,7 +241,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
         if(tun!=null&&!tun.IsAlive){string error=tun.Error;Stop();return new(){State="error",Error=error};}
         if(systemProxy!=null&&!systemProxy.IsAlive){Stop();return new(){State="error",Error="MAC_PROXY_RESTORE_PENDING"};}
         if (core != null && core.HasExited) { Stop(); return new() { State = "error", Error = "CORE_EXITED" }; }
-        return new() { State = core == null ? "disconnected" : "connected", HttpPort = httpPort, SocksPort = socksPort, Verified = verified,TunActive=tun?.IsAlive==true };
+        return new() { State = core == null ? "disconnected" : "connected", HttpPort = httpPort, SocksPort = socksPort, Verified = verified,TunInterface=tun?.InterfaceName??"",TunActive=tun?.IsAlive==true };
     }
     public async Task<AgentReply> Probe(string url, CancellationToken ct, bool live = false,bool fallbacks=false)
     {
@@ -261,22 +263,31 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
         var clock = Stopwatch.StartNew();
         try
         {
-            using var handler = new SocketsHttpHandler { Proxy = new WebProxy($"http://127.0.0.1:{httpPort}"), UseProxy = true, AllowAutoRedirect = false, ConnectTimeout = probeBudget };
+            using var handler = MacTunHttp.Handler(httpPort, tun != null, tun?.InterfaceName, probeBudget);
             // Default platform TLS validation stays enabled; there is no direct retry.
             using var client = new HttpClient(handler);
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
-            // A valid TLS session and a 2xx HTTP response are sufficient for
-            // this latency check; waiting for a slow body adds false timeouts.
-            bool success = (int)response.StatusCode is >= 200 and < 300;
-            return new() { State = "connected", HttpPort = httpPort, SocksPort = socksPort,TunActive=tun?.IsAlive==true, Verified = success, ProbeStage = "https", Error = success ? "" : "HTTPS_STATUS_FAILED", ElapsedMs = clock.ElapsedMilliseconds };
+            bool success = response.IsSuccessStatusCode;
+            string stage = tun != null ? "tun-https" : "https", error = success ? "" : "HTTPS_STATUS_FAILED";
+            if (success && !live && response.StatusCode != HttpStatusCode.NoContent &&
+                response.StatusCode != HttpStatusCode.ResetContent && response.Content.Headers.ContentLength != 0)
+            {
+                stage = tun != null ? "tun-https-payload" : "https-payload";
+                success = await CheckPayload(response.Content, deadline.Token);
+                if (!success) error = "HTTPS_TEST_FAILED";
+            }
+            return new() { State = "connected", HttpPort = httpPort, SocksPort = socksPort,TunInterface=tun?.InterfaceName??"",TunActive=tun?.IsAlive==true, Verified = success, ProbeStage = stage, Error = error, ElapsedMs = clock.ElapsedMilliseconds };
         }
         catch(Exception e)
         {
             string error=e is OperationCanceledException?ct.IsCancellationRequested?"CANCELLED":"PROBE_TIMEOUT":e is HttpRequestException http?http.HttpRequestError switch {HttpRequestError.SecureConnectionError=>"PROBE_TLS_FAILED",HttpRequestError.ProxyTunnelError=>"PROBE_PROXY_FAILED",HttpRequestError.NameResolutionError=>"PROBE_DNS_FAILED",_=>"HTTPS_TEST_FAILED"}:"HTTPS_TEST_FAILED";
-            return new(){State="connected",HttpPort=httpPort,SocksPort=socksPort,TunActive=tun?.IsAlive==true,Error=error,ProbeStage=error=="PROBE_TLS_FAILED"?"tls":error=="PROBE_TIMEOUT"?"timeout":"proxy",ElapsedMs=clock.ElapsedMilliseconds};
+            return new(){State="connected",HttpPort=httpPort,SocksPort=socksPort,TunInterface=tun?.InterfaceName??"",TunActive=tun?.IsAlive==true,Error=error,ProbeStage=error=="PROBE_TLS_FAILED"?"tls":error=="PROBE_TIMEOUT"?"timeout":"proxy",ElapsedMs=clock.ElapsedMilliseconds};
         }
     }
+    internal static Task<bool> CheckPayload(HttpContent content,CancellationToken cancellation)=>
+        HttpsProbeBody.Check(content,cancellation);
+
     public async Task<AgentReply> Telemetry(CancellationToken ct)
     {
         var reply=Status();if(reply.State!="connected")return reply;
@@ -291,8 +302,7 @@ public sealed class Runtime(bool probeOnly = false) : IDisposable
         var clock = Stopwatch.StartNew(); string error = "";
         // Restore first so applications don't point at a listener we've just removed.
         if(tun!=null){try{tun.Stop();}catch(SafeError e){error=e.Code;}finally{tun.Dispose();tun=null;}}
-        if(systemProxy!=null){try{systemProxy.Stop();}catch(SafeError e){error=e.Code;if(systemProxy.HasExited){try{ProxyGuardian.RecoverAbandoned(proxyKey);error="";}catch{error="MAC_PROXY_RESTORE_PENDING";}}}finally{systemProxy.Dispose();systemProxy=null;}}
-        CryptographicOperations.ZeroMemory(proxyKey);proxyKey=[];
+        if(systemProxy!=null){try{systemProxy.Stop();}catch(SafeError e){error=e.Code;}finally{systemProxy.Dispose();systemProxy=null;}}
         if (core != null) core.Exited -= OnCoreExit;
         if (transport != null) transport.Exited -= OnCoreExit;
         if (naive != null) naive.Exited -= OnCoreExit;

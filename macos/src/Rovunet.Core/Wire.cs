@@ -6,10 +6,12 @@ using System.Text.Json;
 namespace Rovunet.Core;
 public sealed class AgentCommand
 {
+    public string TlsCertificatePin {get;set;}="";
     public string Action {get;set;}="";
     public Profile? Profile {get;set;}
     public bool SystemProxy {get;set;}
     public bool SystemTun {get;set;}
+    public byte[] ProxyAuthorization {get;set;}=[];
     public byte[] ProxyStoreKey {get;set;}=[];
     public int LocalHttpPort {get;set;}
     public int LocalSocksPort {get;set;}
@@ -29,6 +31,7 @@ public sealed class AgentReply
     public int SocksPort {get;set;}
     public bool Verified {get;set;}
     public bool TunActive {get;set;}
+    public string TunInterface {get;set;}="";
     public bool TunnelEstablished {get;set;}
     public bool SshEstablished {get;set;}
     public string HostKey {get;set;}="";

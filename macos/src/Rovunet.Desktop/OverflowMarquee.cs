@@ -4,7 +4,6 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Media;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 
 namespace Rovunet.Desktop;
 
@@ -15,17 +14,19 @@ public sealed class OverflowMarquee : Border
     const double Gap=32,PixelsPerSecond=26;
     static readonly HashSet<OverflowMarquee> active=[];
     static readonly Stopwatch clock=Stopwatch.StartNew();
-    static readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(33)};
+    static readonly DispatcherTimer timer=new(){Interval=TimeSpan.FromMilliseconds(50)};
     readonly TextBlock label,copy;
     readonly Canvas rail=new(){FlowDirection=FlowDirection.LeftToRight};
     readonly TranslateTransform shift=new();
     readonly double lineHeight;
     double width,position,wait=1.25,lastTick;
     bool queued,reflowing,rtl,attached;
+    Rect viewport;
+    Window? hostWindow;
     public bool IsOverflowing {get;private set;}
     public double MotionOffset=>shift.X;
     public string Text=>label.Text??"";
-    static OverflowMarquee(){timer.Tick+=(_,_)=>{double now=clock.Elapsed.TotalSeconds;foreach(var item in active.ToArray()){double delta=Math.Clamp(now-item.lastTick,0,.15);item.lastTick=now;if(item.InViewport())item.Advance(delta);}};}
+    static OverflowMarquee(){timer.Tick+=(_,_)=>{double now=clock.Elapsed.TotalSeconds;foreach(var item in active){double delta=Math.Clamp(now-item.lastTick,0,.15);item.lastTick=now;item.Advance(delta);}};}
     public OverflowMarquee(TextBlock text,double height)
     {
         label=text;lineHeight=height;Height=height;ClipToBounds=true;FlowDirection=FlowDirection.LeftToRight;
@@ -42,10 +43,21 @@ public sealed class OverflowMarquee : Border
         rail.Children.Add(label);rail.Children.Add(copy);rail.RenderTransform=shift;Child=rail;
         Avalonia.Automation.AutomationProperties.SetName(this,Text);
         label.PropertyChanged+=(_,e)=>{if(e.Property==TextBlock.TextProperty||e.Property==TextBlock.FontFamilyProperty||e.Property==TextBlock.FontSizeProperty||e.Property==TextBlock.FontWeightProperty||e.Property==TextBlock.FlowDirectionProperty)QueueReflow();};
+        EffectiveViewportChanged+=(_,e)=>{viewport=e.EffectiveViewport;UpdateMembership();};
+        PropertyChanged+=(_,e)=>{if(e.Property==IsVisibleProperty||e.Property==IsPointerOverProperty||e.Property==IsKeyboardFocusWithinProperty)UpdateMembership();};
         SizeChanged+=(_,_)=>QueueReflow();
-        AttachedToVisualTree+=(_,_)=>{attached=true;QueueReflow();};
-        DetachedFromVisualTree+=(_,_)=>{attached=false;active.Remove(this);if(active.Count==0)timer.Stop();};
+        AttachedToVisualTree+=(_,_)=>{attached=true;hostWindow=TopLevel.GetTopLevel(this) as Window;if(hostWindow!=null)hostWindow.PropertyChanged+=HostWindowChanged;QueueReflow();};
+        DetachedFromVisualTree+=(_,_)=>{attached=false;if(hostWindow!=null)hostWindow.PropertyChanged-=HostWindowChanged;hostWindow=null;active.Remove(this);UpdateClock();};
     }
+    bool HasActiveWindow()=>hostWindow is {IsActive:true,IsVisible:true} window&&window.WindowState!=WindowState.Minimized;
+    void HostWindowChanged(object? sender,AvaloniaPropertyChangedEventArgs e)
+    {
+        if(e.Property!=Window.IsActiveProperty&&e.Property!=Window.WindowStateProperty&&e.Property!=IsVisibleProperty)return;
+        // Preserve the current reading position, without catching up for the
+        // time spent in another app or in a minimized/hidden window.
+        lastTick=clock.Elapsed.TotalSeconds;UpdateMembership();
+    }
+    static void UpdateClock(){if(active.Count>0){if(!timer.IsEnabled)timer.Start();}else timer.Stop();}
     void QueueReflow(){if(queued||reflowing)return;queued=true;Dispatcher.UIThread.Post(()=>{queued=false;Reflow();},DispatcherPriority.Background);}
     void Reflow()
     {
@@ -57,17 +69,17 @@ public sealed class OverflowMarquee : Border
             Canvas.SetLeft(label,rtl?origin:0);Canvas.SetLeft(copy,origin+(rtl?-(width+Gap):width+Gap));copy.IsVisible=IsOverflowing;
             position=0;shift.X=0;wait=1.25;lastTick=clock.Elapsed.TotalSeconds;
             ToolTip.SetTip(this,Text);Avalonia.Automation.AutomationProperties.SetName(this,Text);
-            if(attached&&IsOverflowing){active.Add(this);timer.Start();}else{active.Remove(this);if(active.Count==0)timer.Stop();}
+            UpdateMembership();
         }finally{reflowing=false;}
     }
-    bool InViewport()
+    bool InViewport()=>attached&&IsOverflowing&&IsEffectivelyVisible&&HasActiveWindow()&&
+        viewport.Intersects(new Rect(Bounds.Size));
+    void UpdateMembership()
     {
-        if(!IsOverflowing||!IsEffectivelyVisible)return false;
-        var top=TopLevel.GetTopLevel(this);if(top==null||!top.IsVisible)return false;
-        var origin=this.TranslatePoint(default,top);if(origin==null)return false;var rect=new Rect(origin.Value,Bounds.Size);
-        if(!rect.Intersects(new Rect(top.Bounds.Size)))return false;
-        foreach(var scroll in this.GetVisualAncestors().OfType<ScrollViewer>()){var start=scroll.TranslatePoint(default,top);if(start!=null&&!rect.Intersects(new Rect(start.Value,scroll.Bounds.Size)))return false;}
-        return true;
+        if(InViewport()&&!IsPointerOver&&!IsKeyboardFocusWithin){
+            if(active.Add(this))lastTick=clock.Elapsed.TotalSeconds;
+        }else active.Remove(this);
+        UpdateClock();
     }
     void Advance(double elapsed)
     {

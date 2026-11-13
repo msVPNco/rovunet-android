@@ -87,7 +87,7 @@ public sealed partial class MainWindow
             tools.Children.Add(ActionButton("MAC_SLIP_REVIEW",()=>_=ReviewSlipIdentity(Draft(true))));
             advanced.Children.Add(ActionButton("MAC_SLIP_IMPORT",()=>_=ChooseCertificate(Draft(true))));
         }
-        page.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var next=Draft();if(isNew){next.Id=original.Id;Commit(d=>d.Profiles.Add(next));}else SaveEdited(original,next);GoHome();},true));
+        page.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var next=Draft();if(isNew){next.Id=original.Id;Commit(d=>d.Profiles.Add(next));}else SaveEdited(original,next);if(isNew)GoHome();else Back();},true));
         page.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(Draft(),isNew)));Navigate(isNew?"ADD_MANUAL":"EDIT_PROFILE",page);
     }
 }

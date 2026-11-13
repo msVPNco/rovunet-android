@@ -27,9 +27,9 @@ internal static class Program
                 operation=new CancellationTokenSource();using var linked=CancellationTokenSource.CreateLinkedTokenSource(lifetime.Token,operation.Token);
                 try {
                     AgentReply reply=command.Action switch {
-                        "connect" when command.Profile!=null=>await runtime.Connect(command.Profile,command.SystemProxy,linked.Token,command.HostKey,command.SlipCertificate,command.SlipInterval,command.SshTlsCa,command.LocalHttpPort,command.LocalSocksPort,command.ProxyStoreKey,command.SystemTun),
+                        "connect" when command.Profile!=null=>await runtime.Connect(command.Profile,command.SystemProxy,linked.Token,command.HostKey,command.SlipCertificate,command.SlipInterval,command.SshTlsCa,command.LocalHttpPort,command.LocalSocksPort,command.ProxyStoreKey,command.SystemTun,command.TlsCertificatePin,command.ProxyAuthorization),
                         "stop" or "cancel"=>runtime.Stop(),
-                        "proxy-recover"=>RecoverProxy(command.ProxyStoreKey),
+                        "proxy-recover"=>RecoverProxy(command.ProxyStoreKey,command.ProxyAuthorization),
                         "status"=>runtime.Status(),
                         "telemetry"=>await runtime.Telemetry(linked.Token),
                         "probe"=>await runtime.Probe(command.ProbeUrl,linked.Token,fallbacks:command.ProbeFallbacks),
@@ -39,10 +39,10 @@ internal static class Program
                 } catch(OperationCanceledException){runtime.Stop();Send(new(){Error="CANCELLED"});}
                 catch(SafeError e){Send(new(){State="error",Error=e.Code});}
                 catch{runtime.Stop();Send(new(){State="error",Error="CORE_START_FAILED"});}
-                finally{CryptographicOperations.ZeroMemory(command.ProxyStoreKey);operation.Dispose();operation=null;}
+                finally{CryptographicOperations.ZeroMemory(command.ProxyStoreKey);CryptographicOperations.ZeroMemory(command.ProxyAuthorization);operation.Dispose();operation=null;}
             }
         } catch(OperationCanceledException){} finally{lifetime.Cancel();runtime.Stop();}
         _=reader; // EOF or process exit owns shutdown; no raw engine output is logged.
     }
-    static AgentReply RecoverProxy(byte[] key){ProxyGuardian.RecoverAbandoned(key);return new(){State="disconnected"};}
+    static AgentReply RecoverProxy(byte[] key,byte[] authorization){ProxyGuardian.RecoverAbandoned(key,authorization);return new(){State="disconnected"};}
 }

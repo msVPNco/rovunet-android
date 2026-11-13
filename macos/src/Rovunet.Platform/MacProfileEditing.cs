@@ -21,13 +21,54 @@ public static class MacProfileEditing
         if(ProfileEditing.IsNative(previous.Raw)&&Importer.Fields(previous.Raw)[34]=="0"&&(!ProfileEditing.IsNative(next.Raw)||Importer.Fields(next.Raw)[34]!="0"))throw new SafeError("SHARING_DISABLED");
         next.Id=previous.Id;next.SourceId=previous.SourceId;next.ItemId=previous.ItemId;next.CollectionId=previous.CollectionId;next.CollectionName=previous.CollectionName;return next;
     }
+    public static bool SameFeedEndpoint(string baseline,Profile incoming)
+    {
+        if(baseline==incoming.Raw)return true;
+        static string? Identity(Profile profile)
+        {
+            var raw=Inner(profile);
+            if(ProfileEditing.IsNative(raw)){
+                var f=TransportPlan.Normalize(Importer.Fields(raw));
+                // The envelope can contain several chained peers. A rename or credential
+                // rotation is not a new peer. Unknown chained formats require review.
+                var endpoint=EndpointEditing.Read(profile);
+                if(endpoint!=null && f[1] is "vless" or "socks5" or "ssh" or "naive")
+                    return f[1]+"|"+endpoint.Host.ToLowerInvariant()+"|"+endpoint.Port;
+                if(f[1]=="doh")return "doh|"+f[21];
+                if(f[1]=="snowflake")return "snowflake|"+f[26];
+                return null;
+            }
+            var outbound=(MacProtocols.Extended(raw)??CoreLinks.Parse(raw)).Outbound;
+            var settings=outbound["settings"];
+            if(settings?["peers"] is JsonArray peers)
+                return "wg|"+string.Join(",",peers.Select(p=>p?["endpoint"]?.ToString()?.ToLowerInvariant()+"|"+p?["publicKey"]?.ToString()));
+            var server=settings?["vnext"]?[0]??settings?["servers"]?[0]??settings;
+            var address=(server?["address"]??server?["server"])?.ToString();
+            return !string.IsNullOrWhiteSpace(address)&&server?["port"] is {} port
+                ?outbound["protocol"]+"|"+address.Trim('[',']').ToLowerInvariant()+"|"+port:null;
+        }
+        try{var before=Identity(MacProtocols.Single(baseline));return before!=null&&before==Identity(incoming);}
+        catch(SafeError){return false;}
+    }
     public static Profile MergeSubscription(string baseRaw,Profile local,Profile incoming,string? originalName)
     {
         var baseline=MacProtocols.Single(baseRaw);_=MacProtocols.Single(incoming.Raw);
         Profile KeepName(Profile p){if(Inner(local).TrimStart().StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)&&local.Name!=(originalName??baseline.Name))p.Name=local.Name;return p;}
+        bool separateName=Inner(local).TrimStart().StartsWith("[Interface]",StringComparison.OrdinalIgnoreCase)&&local.Name!=(originalName??baseline.Name);
+        if(separateName&&incoming.Raw!=baseRaw&&incoming.Raw!=local.Raw){
+            // A document-only display override has no stable peer identity when the provider changes its contents.
+            throw new SafeError("OVERRIDE_CONFLICT");
+        }
         if(local.Raw==baseRaw||local.Raw==incoming.Raw)return KeepName(incoming);
         if(incoming.Raw==baseRaw)return KeepName(Replace(incoming,local.Raw));
         if(!ProfileEditing.IsNative(baseRaw)||!ProfileEditing.IsNative(local.Raw)||!ProfileEditing.IsNative(incoming.Raw))throw new SafeError("OVERRIDE_CONFLICT");
+        // A positional feed ID may now refer to a different server.
+        // Only attempt a three-way merge when both upstream endpoints are known and equal.
+        var before=EndpointEditing.Read(baseline);
+        var after=EndpointEditing.Read(incoming);
+        if(before==null||after==null||before.Port!=after.Port||
+            !string.Equals(before.Host,after.Host,StringComparison.OrdinalIgnoreCase))
+            throw new SafeError("OVERRIDE_CONFLICT");
         var prior=Wire(baseRaw);var edited=Wire(local.Raw);var remote=Wire(incoming.Raw);
         if(prior.Length!=edited.Length||edited.Length!=remote.Length||prior[0]!=remote[0]||prior[1]!=remote[1]||prior[1]!=edited[1])throw new SafeError("OVERRIDE_CONFLICT");
         for(int i=2;i<prior.Length;i++){if(prior[i]==edited[i]||remote[i]==edited[i])continue;if(i is >=31 and <=37||i is 85 or 86||prior[i]!=remote[i])throw new SafeError("OVERRIDE_CONFLICT");remote[i]=edited[i];}

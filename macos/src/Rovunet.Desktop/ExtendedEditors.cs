@@ -26,6 +26,6 @@ public sealed partial class MainWindow
             }else{var field=Field(target,LabelKey(key),inputValue,key is "fm" or "bridges",secret);values[key]=()=>field.Text??"";}
         }
         if(advanced.Children.Count>0)panel.Children.Add(new Expander{Header=L.Text("SCAN_ADVANCED"),Content=advanced,IsExpanded=false,HorizontalContentAlignment=Avalonia.Layout.HorizontalAlignment.Stretch});
-        panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var changed=MacProfileEditing.Apply(original,name.Text??"",values.ToDictionary(p=>p.Key,p=>p.Value()));if(isNew){changed.Id=Guid.NewGuid().ToString("N");Commit(d=>d.Profiles.Add(changed));}else SaveEdited(original,changed);GoHome();},true));panel.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(original,isNew)));Navigate(isNew?"ADD_MANUAL":"EDIT_PROFILE",panel);
+        panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var changed=MacProfileEditing.Apply(original,name.Text??"",values.ToDictionary(p=>p.Key,p=>p.Value()));if(isNew){changed.Id=Guid.NewGuid().ToString("N");Commit(d=>d.Profiles.Add(changed));}else SaveEdited(original,changed);if(isNew)GoHome();else Back();},true));panel.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(original,isNew)));Navigate(isNew?"ADD_MANUAL":"EDIT_PROFILE",panel);
     }
 }

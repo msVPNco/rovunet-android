@@ -3,8 +3,8 @@ set -euo pipefail
 root=${1:?Engine directory required}
 rid=${2:?Runtime ID required}
 [[ "$rid" == osx-arm64 || "$rid" == osx-x64 ]] || exit 2
-names=(xray naive rovunet-transports rovunet-supervisor slipstream-client rovunet-awg tor lyrebird)
-paths=(xray naive rovunet-transports rovunet-supervisor slipstream-client rovunet-awg tor/tor tor/pluggable_transports/lyrebird)
+names=(xray naive rovunet-transports rovunet-supervisor slipstream-client rovunet-awg rovunet-tun rovunet-extra rovunet-slip-trust tor lyrebird)
+paths=(xray naive rovunet-transports rovunet-supervisor slipstream-client rovunet-awg rovunet-tun rovunet-extra rovunet-slip-trust tor/tor tor/pluggable_transports/lyrebird)
 deps=(lib/libssl.3.dylib lib/libcrypto.3.dylib tor/libevent-2.1.7.dylib data/geoip data/geoip6 data/pt_config.json)
 temporary=$(mktemp "$root/engine-manifest.XXXXXX")
 trap 'rm -f "$temporary"' EXIT

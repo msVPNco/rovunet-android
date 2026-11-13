@@ -80,7 +80,7 @@ public sealed partial class MainWindow
                 httpPort is <1 or >65535||socksPort is <1 or >65535||httpPort==socksPort)
                 throw new SafeError("LOCAL_PROXY_PORT_INVALID");
             Commit(next=>{next.LocalHttpPort=httpPort;next.LocalSocksPort=socksPort;next.SystemProxy=false;next.SystemTun=false;});
-            message="";GoHome();
+            message=L.Text("SETTINGS_SAVED");Back();if(route=="SETTINGS"){Back();ShowSettings();}
         },true);save.Name="AppProxySave";page.Children.Add(save);
 
         void Refresh()

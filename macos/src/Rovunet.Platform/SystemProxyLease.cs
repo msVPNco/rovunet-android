@@ -57,11 +57,12 @@ public sealed class SystemProxyLease(IProxyPreferences preferences,IProxyJournal
     ProxyLeaseJournal journal=new();
     int httpPort,socksPort;
     public bool Active {get;private set;}
+    public bool RestoreAttempted {get;private set;}
     public int ServiceCount=>journal.Services.Count;
     public void Start(int http,int socks)
     {
         if(http is <1 or >65535||socks is <1 or >65535||http==socks)throw new SafeError("LOCAL_PROXY_PORT_INVALID");
-        Recover();httpPort=http;socksPort=socks;Refresh();
+        Recover();RestoreAttempted=false;httpPort=http;socksPort=socks;Refresh();
         if(ServiceCount==0)throw new SafeError("MAC_PROXY_NO_SERVICE");Active=true;
     }
     public void Refresh()
@@ -80,6 +81,7 @@ public sealed class SystemProxyLease(IProxyPreferences preferences,IProxyJournal
     }
     public void Recover()
     {
+        RestoreAttempted=true;
         journal=storage.Load();if(journal.Version!=1||journal.Services.Count>256||journal.Services.Keys.Any(id=>!Guid.TryParse(id,out _)))throw new SafeError("MAC_PROXY_JOURNAL_INVALID");
         Active=false;if(journal.Services.Count==0)return;
         using var transaction=preferences.Begin();bool changed=false;

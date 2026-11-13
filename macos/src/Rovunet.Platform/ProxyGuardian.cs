@@ -13,6 +13,7 @@ public sealed class ProxyGuardRequest
     public long EngineStarted {get;set;}
     public int HttpPort {get;set;}
     public int SocksPort {get;set;}
+    public byte[] Authorization {get;set;}=[];
     public byte[] StoreKey {get;set;}=[];
     public override string ToString()=>"ProxyGuardRequest(redacted)";
 }
@@ -31,7 +32,7 @@ public sealed class ProxyGuardian : IDisposable
     public bool HasExited=>process.HasExited;
     public int Services {get;private set;}
     ProxyGuardian(Process child){process=child;_=process.StandardError.BaseStream.CopyToAsync(Stream.Null);}
-    public static async Task<ProxyGuardian> Start(int http,int socks,Process engine,byte[] storeKey,CancellationToken ct)
+    public static async Task<ProxyGuardian> Start(int http,int socks,Process engine,byte[] storeKey,CancellationToken ct,byte[]? authorization=null)
     {
         if(!OperatingSystem.IsMacOS())throw new SafeError("MACOS_REQUIRED");
         if(storeKey.Length!=32)throw new SafeError("INVALID_MESSAGE");
@@ -40,7 +41,7 @@ public sealed class ProxyGuardian : IDisposable
         var guardian=new ProxyGuardian(child);
         try{
             using var owner=Process.GetCurrentProcess();
-            await Wire.Write(child.StandardInput.BaseStream,new ProxyGuardRequest{OwnerPid=owner.Id,OwnerStarted=owner.StartTime.ToUniversalTime().Ticks,EnginePid=engine.Id,EngineStarted=engine.StartTime.ToUniversalTime().Ticks,HttpPort=http,SocksPort=socks,StoreKey=storeKey},ct);
+            await Wire.Write(child.StandardInput.BaseStream,new ProxyGuardRequest{OwnerPid=owner.Id,OwnerStarted=owner.StartTime.ToUniversalTime().Ticks,EnginePid=engine.Id,EngineStarted=engine.StartTime.ToUniversalTime().Ticks,HttpPort=http,SocksPort=socks,StoreKey=storeKey,Authorization=authorization??[]},ct);
             // The authorization dialog is owned by macOS. Cancellation closes the
             // channel; the independent guardian restores any acquired lease.
             using var deadline=CancellationTokenSource.CreateLinkedTokenSource(ct);deadline.CancelAfter(TimeSpan.FromMinutes(3));
@@ -62,14 +63,14 @@ public sealed class ProxyGuardian : IDisposable
     public static bool Alive(int pid,long stamp){try{using var p=Process.GetProcessById(pid);return !p.HasExited&&p.StartTime.ToUniversalTime().Ticks==stamp;}catch{return false;}}
     public static async Task<int> Serve(Stream input,Stream output)
     {
-        SystemProxyLease? lease=null;
+        SystemProxyLease? lease=null;ProxyGuardRequest? request=null;
         try{
-            using var wait=new CancellationTokenSource(TimeSpan.FromSeconds(15));var request=await Wire.Read<ProxyGuardRequest>(input,wait.Token);
+            using var wait=new CancellationTokenSource(TimeSpan.FromSeconds(15));request=await Wire.Read<ProxyGuardRequest>(input,wait.Token);
             if(request.Action!="start"||!Alive(request.OwnerPid,request.OwnerStarted)||!Alive(request.EnginePid,request.EngineStarted))throw new SafeError("INVALID_MESSAGE");
             var eof=Task.Run(async()=>{try{await Wire.Read<ProxyGuardRequest>(input,CancellationToken.None);}catch{};});
             using var vault=new PipeSecretVault(request.StoreKey);CryptographicOperations.ZeroMemory(request.StoreKey);
             using var journal=new PrivateProxyJournal(Path.Combine(PrivateStore.Root,"system-proxy"),vault);
-            using var backend=new MacProxyPreferences();lease=new SystemProxyLease(backend,journal,()=>!eof.IsCompleted&&Alive(request.OwnerPid,request.OwnerStarted)&&Alive(request.EnginePid,request.EngineStarted));
+            using var backend=new MacProxyPreferences(request.Authorization);CryptographicOperations.ZeroMemory(request.Authorization);lease=new SystemProxyLease(backend,journal,()=>!eof.IsCompleted&&Alive(request.OwnerPid,request.OwnerStarted)&&Alive(request.EnginePid,request.EngineStarted));
             try{
                 lease.Start(request.HttpPort,request.SocksPort);
                 await Wire.Write(output,new ProxyGuardReply{State="active",Services=lease.ServiceCount},CancellationToken.None);
@@ -78,15 +79,19 @@ public sealed class ProxyGuardian : IDisposable
                 while(!eof.IsCompleted&&Alive(request.OwnerPid,request.OwnerStarted)&&Alive(request.EnginePid,request.EngineStarted)){
                     if(await Task.WhenAny(eof,Task.Delay(1500))==eof)break;lease.Refresh();
                 }
-                lease.Stop();return 0;
-            }catch{try{lease.Stop();}catch{throw new SafeError("MAC_PROXY_RESTORE_PENDING");}throw;}
+            }finally{
+                // Attempt restoration once. A failed restore keeps its journal for explicit recovery.
+                if(!lease.RestoreAttempted){try{lease.Stop();}catch{throw new SafeError("MAC_PROXY_RESTORE_PENDING");}}
+            }
+            return 0;
         }catch(Exception error){try{await Wire.Write(output,new ProxyGuardReply{State="error",Error=error is SafeError safe?safe.Code:"MAC_PROXY_APPLY_FAILED"},CancellationToken.None);}catch{}return 1;}
+        finally{if(request!=null){CryptographicOperations.ZeroMemory(request.StoreKey);CryptographicOperations.ZeroMemory(request.Authorization);}}
     }
-    public static void RecoverAbandoned(byte[] storeKey)
+    public static void RecoverAbandoned(byte[] storeKey,byte[]? authorization=null)
     {
         string root=Path.Combine(PrivateStore.Root,"system-proxy");if(!File.Exists(Path.Combine(root,"profiles.enc")))return;
         using var vault=new PipeSecretVault(storeKey);
         using var journal=new PrivateProxyJournal(root,vault);var saved=journal.Load();if(saved.Services.Count==0)return;
-        using var backend=new MacProxyPreferences();new SystemProxyLease(backend,journal).Recover();
+        using var backend=new MacProxyPreferences(authorization);new SystemProxyLease(backend,journal).Recover();
     }
 }

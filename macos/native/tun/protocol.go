@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const version = "0.1.0-dev.3"
+const version = "0.1.0-dev.4"
 const socketPath = "/var/run/rovunet-tun/control.sock"
 const policyPath = "/Library/PrivilegedHelperTools/org.rovunet.tun.policy.json"
 const maxFrame = 16384
@@ -119,7 +119,7 @@ func appBase(clientPath string) (string, error) {
 	return filepath.Dir(filepath.Dir(clean)), nil
 }
 func enginePaths(base string) []string {
-	names := []string{"xray", "naive", "rovunet-transports", "rovunet-awg", "slipstream-client", "tor/tor", "tor/pluggable_transports/lyrebird"}
+	names := []string{"xray", "naive", "rovunet-transports", "rovunet-extra", "rovunet-awg", "slipstream-client", "tor/tor", "tor/pluggable_transports/lyrebird"}
 	out := []string{}
 	for _, name := range names {
 		out = append(out, filepath.ToSlash(filepath.Join(base, "engines", name)))

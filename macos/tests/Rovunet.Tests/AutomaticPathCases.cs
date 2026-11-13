@@ -5,8 +5,8 @@ static class AutomaticPathCases
 {
     public static async Task Run(Action<bool,string> check)
     {
-        check(!AutomaticPathPolicy.Better(1999,500,120000)&&!AutomaticPathPolicy.Better(3000,1501,120000)&&
-            !AutomaticPathPolicy.Better(3000,500,119999)&&AutomaticPathPolicy.Better(3000,1500,120000),"smart-policy-slow-half-and-minimum-stay-boundaries");
+        check(AutomaticPathPolicy.Better(200,100,120000)&&!AutomaticPathPolicy.Better(200,101,120000)&&!AutomaticPathPolicy.Better(3000,1501,120000)&&
+            !AutomaticPathPolicy.Better(3000,500,119999)&&AutomaticPathPolicy.Better(3000,1500,120000),"smart-policy-relative-half-and-minimum-stay-boundaries");
         check(AutomaticPathPolicy.Median([900,100,500])==500&&AutomaticPathPolicy.Median([100,null,300])==null&&
             AutomaticPathPolicy.Median([100,200])==null,"smart-policy-three-positive-samples-required");
         var wg=new Profile{Protocol="WireGuard"};var awg=new Profile{Protocol="AmneziaWG"};
@@ -43,16 +43,16 @@ static class AutomaticPathCases
         check(slowFailover.Connected.SequenceEqual(["A"])&&slowFailover.CandidateProbes==0,"failover-does-not-switch-a-slow-working-path");
         var early=new FakeHost("early"){Latency=(_,_)=>3000};await Execute(early);
         check(early.CandidateProbes==0,"smart-honors-two-minute-minimum-stay");
-        var smart=new FakeHost("smart"){StopAtCycle=6,Latency=(_,p)=>p.Id=="A"?3000:600};await Execute(smart);
+        var smart=new FakeHost("smart"){StopAtCycle=6,CandidateLatency=100,Latency=(_,p)=>p.Id=="A"?200:100};await Execute(smart);
         check(smart.Connected.SequenceEqual(["A","B"])&&smart.Current?.Profile.Id=="B","smart-confirms-at-least-two-times-improvement-before-switch");
         var tooSmall=new FakeHost("small"){StopAtCycle=6,Latency=(_,_)=>3000,CandidateLatency=2000};await Execute(tooSmall);
         check(tooSmall.Connected.SequenceEqual(["A"])&&tooSmall.CandidateProbes>0,"smart-rejects-small-latency-improvement");
         var regression=new FakeHost("regression"){StopAtCycle=6,Latency=(_,p)=>p.Id=="A"?3000:4000};await Execute(regression);
         check(regression.Connected.SequenceEqual(["A","B","A"])&&regression.Current?.Profile.Id=="A","smart-restores-old-path-if-live-confirmation-is-worse");
         var serial=new FakeHost("serial"){Separate=false,StopAtCycle=6,Latency=(_,_)=>3000};await Execute(serial);
-        check(serial.Connected.SequenceEqual(["A","B","A"])&&serial.CandidateProbes==0&&serial.Current?.Profile.Id=="A","tun-safe-serial-trial-restores-old-path-without-fake-independent-proof");
+        check(serial.Connected.SequenceEqual(["A"])&&serial.CandidateProbes==0&&serial.Current?.Profile.Id=="A","tun-keeps-current-without-independent-evidence");
         var serialWin=new FakeHost("serial-win"){Separate=false,StopAtCycle=6,Latency=(_,p)=>p.Id=="A"?3000:600};await Execute(serialWin);
-        check(serialWin.Connected.SequenceEqual(["A","B"])&&serialWin.Current?.Profile.Id=="B","tun-safe-serial-trial-keeps-confirmed-faster-path");
+        check(serialWin.Connected.SequenceEqual(["A"])&&serialWin.Current?.Profile.Id=="A","tun-skips-unmeasurable-candidate-even-if-faster");
         var hidden=new FakeHost("hidden"){Visible=false};await Execute(hidden);
         check(hidden.Current?.Queries==3&&hidden.CandidateProbes==0,"hidden-window-generates-no-periodic-network-probes");
         var hiddenFailure=new FakeHost("hidden-failure"){Visible=false,FailedAtCycle=1};await Execute(hiddenFailure,PathSelectionMode.Failover);

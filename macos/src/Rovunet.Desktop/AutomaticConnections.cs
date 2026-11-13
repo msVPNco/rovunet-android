@@ -129,7 +129,7 @@ public sealed partial class MainWindow
             using var agent=new AgentClient();
             var effective=GlobalResolvers.ForConnection(profile,window.data.GlobalResolverEnabled,window.data.GlobalResolverList).Effective;
             var selected=await window.ApplyDnsPool(effective,deadline.Token);
-            var started=await agent.Send(new(){Action="connect",Profile=selected,HostKey=window.data.SshKeys.GetValueOrDefault(SshHostKey.Scope(profile),""),SlipCertificate=window.StoredSlipCertificate(profile)},deadline.Token);
+            var started=await agent.Send(new(){Action="connect",Profile=selected,TlsCertificatePin=MacTlsPolicy.ApprovedPin(window.data,profile),HostKey=window.data.SshKeys.GetValueOrDefault(SshHostKey.Scope(profile),""),SlipCertificate=window.StoredSlipCertificate(profile)},deadline.Token);
             if(started.State!="connected")return null;
             var samples=new List<long?>();
             for(int i=0;i<3;i++){
@@ -164,13 +164,15 @@ public sealed partial class MainWindow
                 // Cancelling a monitor must not cancel AgentClient's framed read:
                 // cancelling that read disposes the running connection. Drain it
                 // privately; explicit disconnect can still terminate this owner.
+                var request=window.BeginProbe(ProbeKind.Automatic);
                 window.automaticProbeInFlight=agent;
                 var pending=agent.Send(new(){Action="probe",ProbeUrl=window.data.ProbeUrl,ProbeFallbacks=false});
                 async Task Drain(){try{await pending;}catch{}finally{if(ReferenceEquals(window.automaticProbeInFlight,agent))window.automaticProbeInFlight=null;}}
                 _=Drain();
                 var reply=await pending.WaitAsync(cancellation);
                 if(!IsCurrent||!ReferenceEquals(window.client,agent))return null;
-                window.state=reply;window.UpdateStatus();return reply.Verified?reply.ElapsedMs:null;
+                if(reply.Error=="CANCELLED"||!window.RecordProof(request,reply.Verified))return null;
+                window.RefreshLiveCard(profile.Id);window.UpdateStatus();return reply.Verified?reply.ElapsedMs:null;
             }
             finally{window.automaticMeasuring=false;}
         }

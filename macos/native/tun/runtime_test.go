@@ -81,7 +81,13 @@ func TestTunConfigurationHasNoDirectFallback(t *testing.T) {
 	if rules[len(rules)-1] != "MATCH,ROVUNET" {
 		t.Fatal("non-engine traffic bypasses proxy")
 	}
-	for i, rule := range rules[:len(rules)-1] {
+	if len(rules) != len(enginePaths(base))+2 || rules[len(rules)-2] != "DST-PORT,53,ROVUNET-DNS" || cfg.Proxies["ROVUNET-DNS"] == nil {
+		t.Fatal("DNS routing order is not engine / internal DNS / selected proxy")
+	}
+	if len(tunOptions("utun90").DNSHijack) != 0 {
+		t.Fatal("wildcard hijack intercepts engine bootstrap before process matching")
+	}
+	for i, rule := range rules[:len(rules)-2] {
 		if rule != "PROCESS-PATH,"+enginePaths(base)[i]+",DIRECT" {
 			t.Fatal("unbounded process bypass")
 		}

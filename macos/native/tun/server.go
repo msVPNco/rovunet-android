@@ -58,10 +58,14 @@ func (s *service) serve(ctx context.Context, conn net.Conn, p peer) {
 	defer cancel()
 	worker, e := s.spawn(owner, r, base)
 	if e != nil {
-		_ = writeFrame(conn, reply{State: "error", Error: "MAC_TUN_START_FAILED"})
+		_ = writeFrame(conn, reply{State: "error", Error: workerError(e)})
 		return
 	}
-	defer worker.Close()
+	defer func() {
+		if worker != nil {
+			_ = worker.Close()
+		}
+	}()
 	if writeFrame(conn, worker.Ready()) != nil {
 		return
 	}
@@ -98,7 +102,7 @@ func (s *service) serve(ctx context.Context, conn net.Conn, p peer) {
 			}
 			if next.Action == "stop" {
 				e = worker.Close()
-				worker = nilReplyWorker{}
+				worker = nil
 				if e != nil {
 					_ = writeFrame(conn, reply{State: "error", Error: "MAC_TUN_RESTORE_PENDING"})
 				} else {
@@ -117,18 +121,13 @@ func (s *service) serve(ctx context.Context, conn net.Conn, p peer) {
 	}
 }
 
-type nilReplyWorker struct{}
-
-func (nilReplyWorker) Close() error          { return nil }
-func (nilReplyWorker) Done() <-chan struct{} { return nil }
-func (nilReplyWorker) Ready() reply          { return reply{} }
-
 type childWorker struct {
-	cmd   *exec.Cmd
-	input io.WriteCloser
-	done  chan struct{}
-	ready reply
-	once  sync.Once
+	cmd     *exec.Cmd
+	input   io.WriteCloser
+	done    chan struct{}
+	waitErr error
+	ready   reply
+	once    sync.Once
 }
 
 func (c *childWorker) Done() <-chan struct{} { return c.done }
@@ -137,6 +136,9 @@ func (c *childWorker) Close() error {
 	c.once.Do(func() { c.input.Close() })
 	select {
 	case <-c.done:
+		if c.waitErr != nil {
+			return errors.New("MAC_TUN_RESTORE_PENDING")
+		}
 		return nil
 	case <-time.After(8 * time.Second):
 		_ = c.cmd.Process.Kill()
@@ -166,13 +168,18 @@ func spawnWorker(ctx context.Context, r request, base string) (sessionWorker, er
 		return nil, e
 	}
 	child := &childWorker{cmd: cmd, input: input, done: make(chan struct{})}
-	go func() { _ = cmd.Wait(); close(child.done) }()
+	// Drain the readiness frame before Wait can close stdout on an early worker error.
+	received := make(chan error, 1)
+	go func() {
+		received <- readFrame(output, &child.ready)
+		_, _ = io.Copy(io.Discard, output)
+		child.waitErr = cmd.Wait()
+		close(child.done)
+	}()
 	if e = writeFrame(input, workerRequest{Proxy: r, Base: base}); e != nil {
 		child.Close()
 		return nil, e
 	}
-	received := make(chan error, 1)
-	go func() { received <- readFrame(output, &child.ready) }()
 	select {
 	case e = <-received:
 	case <-ctx.Done():
@@ -180,10 +187,13 @@ func spawnWorker(ctx context.Context, r request, base string) (sessionWorker, er
 	case <-time.After(30 * time.Second):
 		e = context.DeadlineExceeded
 	}
-	if e != nil || child.ready.State != "active" {
+	if e != nil {
 		child.Close()
 		return nil, errors.New("MAC_TUN_START_FAILED")
 	}
-	go io.Copy(io.Discard, output)
+	if child.ready.State != "active" {
+		child.Close()
+		return nil, errors.New(workerError(errors.New(child.ready.Error)))
+	}
 	return child, nil
 }

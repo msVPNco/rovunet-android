@@ -21,7 +21,7 @@ public static class SafeDiagnostics
     public static string Json(string runtime,string state,bool verified,bool proxyRequested,bool proxyActive,bool tunRequested=false,bool tunActive=false)=>JsonSerializer.Serialize(new{
         version=BuildVersion.Text,runtime,connection=state,verified,systemProxyRequested=proxyRequested,systemProxyActive=proxyActive,
         tunRequested,tunActive,source="local macos development snapshot; pinned Windows 562a3d71670ceb7de909146bf68116d5cc614496",
-        scope="0.1.6 Beta; Apple Silicon dev.6 base accepted by owner; Intel testing limited; version-only rebuild",
+        scope="0.1.7 Beta 1; managed functional changes; host fixture evidence only; native macOS acceptance pending on each architecture",
         events=Events()
     },new JsonSerializerOptions{WriteIndented=true});
 }

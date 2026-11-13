@@ -76,6 +76,31 @@ func executablePath(pid int) (string, error) {
 	}
 	return unix.ByteSliceToString(buf), nil
 }
+
+// LOCAL_PEERTOKEN binds the code-signing check to a kernel process instance.
+func peerAuditToken(conn net.Conn) (token [8]uint32, err error) {
+	c, ok := conn.(*net.UnixConn)
+	if !ok {
+		return token, errors.New("MAC_TUN_NOT_AUTHORIZED")
+	}
+	raw, err := c.SyscallConn()
+	if err != nil {
+		return token, err
+	}
+	var inner error
+	err = raw.Control(func(fd uintptr) {
+		size := uint32(unsafe.Sizeof(token))
+		_, _, errno := syscall.Syscall6(syscall.SYS_GETSOCKOPT, fd, unix.SOL_LOCAL, unix.LOCAL_PEERTOKEN,
+			uintptr(unsafe.Pointer(&token[0])), uintptr(unsafe.Pointer(&size)), 0)
+		if errno != 0 || size != uint32(unsafe.Sizeof(token)) {
+			inner = errors.New("MAC_TUN_NOT_AUTHORIZED")
+		}
+	})
+	if err == nil {
+		err = inner
+	}
+	return token, err
+}
 func authenticate(conn net.Conn) (peer, error) {
 	uid, pid, e := socketCredentials(conn)
 	if e != nil || !consoleUser(uid) || pid <= 0 {
@@ -100,7 +125,11 @@ func authenticate(conn net.Conn) (peer, error) {
 		}
 		parts = append(parts, `cdhash H"`+hash+`"`)
 	}
-	if e = checkGuest(pid, strings.Join(parts, " or ")); e != nil {
+	audit, e := peerAuditToken(conn)
+	if e != nil || audit[1] != uid || int(audit[5]) != pid {
+		return peer{}, errors.New("MAC_TUN_NOT_AUTHORIZED")
+	}
+	if e = checkGuest(audit, strings.Join(parts, " or ")); e != nil {
 		return peer{}, e
 	}
 	path, e := executablePath(pid)
@@ -115,7 +144,7 @@ func authenticate(conn net.Conn) (peer, error) {
 
 var frameworkOnce sync.Once
 var frameworkError error
-var api struct{ stringCreate, numberCreate, dictionaryCreate, release, copyGuest, requirementCreate, checkValidity, pidKey, keyCallbacks, valueCallbacks uintptr }
+var api struct{ stringCreate, dataCreate, dictionaryCreate, release, copyGuest, requirementCreate, checkValidity, auditKey, keyCallbacks, valueCallbacks uintptr }
 
 func bindSecurity() error {
 	frameworkOnce.Do(func() {
@@ -133,7 +162,7 @@ func bindSecurity() error {
 			h      uintptr
 			name   string
 			target *uintptr
-		}{{cf, "CFStringCreateWithCString", &api.stringCreate}, {cf, "CFNumberCreate", &api.numberCreate}, {cf, "CFDictionaryCreate", &api.dictionaryCreate}, {cf, "CFRelease", &api.release}, {cf, "kCFTypeDictionaryKeyCallBacks", &api.keyCallbacks}, {cf, "kCFTypeDictionaryValueCallBacks", &api.valueCallbacks}, {sec, "kSecGuestAttributePid", &api.pidKey}, {sec, "SecCodeCopyGuestWithAttributes", &api.copyGuest}, {sec, "SecRequirementCreateWithString", &api.requirementCreate}, {sec, "SecCodeCheckValidity", &api.checkValidity}} {
+		}{{cf, "CFStringCreateWithCString", &api.stringCreate}, {cf, "CFDataCreate", &api.dataCreate}, {cf, "CFDictionaryCreate", &api.dictionaryCreate}, {cf, "CFRelease", &api.release}, {cf, "kCFTypeDictionaryKeyCallBacks", &api.keyCallbacks}, {cf, "kCFTypeDictionaryValueCallBacks", &api.valueCallbacks}, {sec, "kSecGuestAttributeAudit", &api.auditKey}, {sec, "SecCodeCopyGuestWithAttributes", &api.copyGuest}, {sec, "SecRequirementCreateWithString", &api.requirementCreate}, {sec, "SecCodeCheckValidity", &api.checkValidity}} {
 			*symbol.target, e = dlsym(symbol.h, symbol.name)
 			if e != nil {
 				frameworkError = e
@@ -148,21 +177,20 @@ func release(ref uintptr) {
 		syscall_syscall(api.release, ref, 0, 0)
 	}
 }
-func checkGuest(pid int, requirement string) error {
+func checkGuest(audit [8]uint32, requirement string) error {
 	if e := bindSecurity(); e != nil {
 		return e
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	number := int32(pid)
-	pidNumber, _, _ := syscall_syscall(api.numberCreate, 0, 3, uintptr(unsafe.Pointer(&number)))
-	if pidNumber == 0 {
+	auditData, _, _ := syscall_syscall(api.dataCreate, 0, uintptr(unsafe.Pointer(&audit[0])), unsafe.Sizeof(audit))
+	if auditData == 0 {
 		return errors.New("MAC_TUN_NOT_AUTHORIZED")
 	}
-	defer release(pidNumber)
-	key := *(*uintptr)(unsafe.Pointer(api.pidKey))
+	defer release(auditData)
+	key := *(*uintptr)(unsafe.Pointer(api.auditKey))
 	keys := []uintptr{key}
-	values := []uintptr{pidNumber}
+	values := []uintptr{auditData}
 	attributes, _, _ := syscall_syscall6(api.dictionaryCreate, 0, uintptr(unsafe.Pointer(&keys[0])), uintptr(unsafe.Pointer(&values[0])), 1, api.keyCallbacks, api.valueCallbacks)
 	if attributes == 0 {
 		return errors.New("MAC_TUN_NOT_AUTHORIZED")
@@ -190,7 +218,7 @@ func checkGuest(pid int, requirement string) error {
 	runtime.KeepAlive(text)
 	runtime.KeepAlive(keys)
 	runtime.KeepAlive(values)
-	runtime.KeepAlive(number)
+	runtime.KeepAlive(audit)
 	if int32(status) != 0 {
 		return fmt.Errorf("MAC_TUN_NOT_AUTHORIZED")
 	}

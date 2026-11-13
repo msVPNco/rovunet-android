@@ -3,7 +3,7 @@
 Runs on Windows or macOS; edits only the selected macos/engines directory.
 Modified Mach-O load commands require signing after this stage.
 """
-import argparse, hashlib, json, pathlib, posixpath, shutil, struct, tarfile
+import argparse, hashlib, json, pathlib, posixpath, re, shutil, struct, tarfile
 import urllib.parse, urllib.request
 
 parser = argparse.ArgumentParser()
@@ -83,6 +83,9 @@ def openssl_name(name):
         return 'lib/' + basename
     return 'licenses/openssl/LICENSE.txt' if basename == 'LICENSE.txt' else None
 members(fetch(openssl['opensslArchive'], openssl['url'], openssl['opensslArchiveSHA256'], openssl['repository']), openssl_name)
+actual_versions=set(re.findall(rb'OpenSSL ([0-9]+\.[0-9]+\.[0-9]+) ',(destination/'lib/libcrypto.3.dylib').read_bytes()))
+if openssl['opensslVersion'].encode() not in actual_versions:
+    raise RuntimeError('OpenSSL archive contents do not match pinned version metadata')
 for name in ['slipstream-client', 'lib/libssl.3.dylib', 'lib/libcrypto.3.dylib']:
     relocate(destination / name)
 tor = next(p for p in pins['torAssets'] if p['rid'] == args.rid)

@@ -19,7 +19,7 @@ public sealed partial class MainWindow
             if(pool&&wire is not("udp" or "tcp"))throw new SafeError("MAC_POOL_WIRE");
             input.Text=pool?string.Join('\n',DnsPool.Parse(text)):GlobalResolvers.Normalize(text);
         })));
-        page.Children.Add(ActionButton("SAVE",()=>{RequireIdle();string text=pool?string.Join('\n',DnsPool.Parse(input.Text??"")):GlobalResolvers.Normalize(input.Text??"");if(enabled.IsChecked==true&&text.Length==0)throw new SafeError("DNS_IP_REQUIRED");Commit(d=>{if(pool){d.DnsPoolEnabled=enabled.IsChecked==true;d.DnsPoolList=text;d.DnsPoolVerify=verified.IsChecked==true;}else{d.GlobalResolverEnabled=enabled.IsChecked==true;d.GlobalResolverList=text;}});message=L.Text("SETTINGS_SAVED");UpdateStatus();},true));Navigate(pool?"DNS_POOL_TITLE":"GLOBAL_RESOLVER_TITLE",page);
+        page.Children.Add(ActionButton("SAVE",()=>{RequireIdle();string text=pool?string.Join('\n',DnsPool.Parse(input.Text??"")):GlobalResolvers.Normalize(input.Text??"");if(enabled.IsChecked==true&&text.Length==0)throw new SafeError("DNS_IP_REQUIRED");Commit(d=>{if(pool){d.DnsPoolEnabled=enabled.IsChecked==true;d.DnsPoolList=text;d.DnsPoolVerify=verified.IsChecked==true;}else{d.GlobalResolverEnabled=enabled.IsChecked==true;d.GlobalResolverList=text;}});message=L.Text("SETTINGS_SAVED");Back();},true));Navigate(pool?"DNS_POOL_TITLE":"GLOBAL_RESOLVER_TITLE",page);
     }
     async Task<Profile> ApplyDnsPool(Profile profile,CancellationToken stop)
     {

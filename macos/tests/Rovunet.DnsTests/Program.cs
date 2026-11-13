@@ -7,8 +7,7 @@ using Rovunet.Core;
 using Rovunet.Platform;
 
 int checks=0,failures=0;var results=new List<object>();void Check(bool pass,string name){checks++;if(!pass){failures++;Console.WriteLine("FAIL "+name);}results.Add(new{name,passed=pass});}
-string output=Path.GetFullPath(args[1]);Directory.CreateDirectory(output);EnginePaths.Root=Path.Combine(AppContext.BaseDirectory,"engines");Directory.CreateDirectory(EnginePaths.Root);
-foreach(string name in new[]{"xray.exe","rovunet-transports.exe","engine-manifest.json"})File.Copy(Path.Combine(Path.GetFullPath(args[0]),name),Path.Combine(EnginePaths.Root,name),true);
+string output=Path.GetFullPath(args[1]);Directory.CreateDirectory(output);EnginePaths.Root=Path.GetFullPath(args[0]);
 using var resolver=new FixtureDns();using var silent=new FixtureDns(true);using var limit=new CancellationTokenSource(TimeSpan.FromSeconds(35));
 try{
     var plan=new ScanCheckpoint{Mode="advanced",Family="dnstt",Zone="t.example.invalid",Candidates=[$"127.0.0.1:{resolver.Port}","127.0.0.1:9"],Transports=["udp","tcp"],Workers=2,TimeoutMS=800,Count=1,Threshold=1};
@@ -41,7 +40,7 @@ try{
     bool remaining=System.Diagnostics.Process.GetProcesses().Any(process=>{try{return process.Id!=Environment.ProcessId&&process.MainModule?.FileName?.StartsWith(AppContext.BaseDirectory,StringComparison.OrdinalIgnoreCase)==true;}catch{return false;}finally{process.Dispose();}});Check(!remaining,"cancelled-tunnel-probe-leaves-no-agent-or-native-child");
     using(var key=new SessionSecretVault(()=>RandomNumberGenerator.GetBytes(32))){var store=new PrivateStore(Path.Combine(output,"checkpoint"),key);store.Save(plan);var restored=store.Load<ScanCheckpoint>();Check(restored.Results.Count==4&&restored.Results.Count(r=>r.Pass)==2,"real-native-results-roundtrip-in-encrypted-checkpoint");}
 }catch(Exception e){failures++;Console.WriteLine(e.GetType().Name+" "+(e is SafeError error?error.Code:e.Message));}
-File.WriteAllText(Path.Combine(output,"dns-tests.json"),JsonSerializer.Serialize(new{host="Windows x64, real pinned native scan engine and C# Agent",macRuntimeValidated=false,controlledLoopbackOnly=true,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"DNS: {checks} checks, {failures} failures");return failures==0?0:1;
+File.WriteAllText(Path.Combine(output,"dns-tests.json"),JsonSerializer.Serialize(new{host=System.Runtime.InteropServices.RuntimeInformation.OSDescription+" / "+System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture+", real pinned native scan engine and C# Agent",macRuntimeValidated=false,controlledLoopbackOnly=true,checks,failures,results},new JsonSerializerOptions{WriteIndented=true}));Console.WriteLine($"DNS: {checks} checks, {failures} failures");return failures==0?0:1;
 
 sealed class FixtureDns : IDisposable
 {

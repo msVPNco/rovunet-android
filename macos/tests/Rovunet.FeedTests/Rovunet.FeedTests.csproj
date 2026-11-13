@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType></PropertyGroup><ItemGroup>
-<ProjectReference Include="../../src/Rovunet.Platform/Rovunet.Platform.csproj" />
-<Compile Include="../../src/Rovunet.Desktop/SubscriptionClient.cs" Link="SubscriptionClient.cs" />
-<Compile Include="../../../windows/src/Rovunet.Desktop/PublicFeed.cs" Link="PublicFeed.cs" />
+<ProjectReference Include="../../src/Rovunet.Desktop/Rovunet.Desktop.csproj" />
 <Compile Include="../../../windows/src/Rovunet.Desktop/ResolverCatalog.cs" Link="ResolverCatalog.cs" />
 <EmbeddedResource Include="../../../windows/transports/resolverdata/*" LogicalName="Rovunet.ResolverData.%(Filename)%(Extension)" />
 </ItemGroup></Project>

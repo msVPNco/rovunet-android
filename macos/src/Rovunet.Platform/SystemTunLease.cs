@@ -31,6 +31,7 @@ public sealed class SystemTunLease : IDisposable
     Task heartbeat=Task.CompletedTask;
     bool stopped;
     volatile bool alive;
+    public string InterfaceName {get;private set;}="";
     public bool IsAlive=>alive&&!client.HasExited;
     public string Error {get;private set;}="MAC_TUN_WORKER_EXITED";
     SystemTunLease(Process process){client=process;_=client.StandardError.BaseStream.CopyToAsync(Stream.Null);}
@@ -43,7 +44,7 @@ public sealed class SystemTunLease : IDisposable
             var reply=await Wire.Read<TunReply>(client.StandardOutput.BaseStream,deadline.Token);
             if(reply.Error is "MAC_TUN_HELPER_REQUIRED" or "MAC_TUN_NOT_AUTHORIZED")return false;
             if(reply.Error.Length>0)throw new SafeError(SafeCode(reply.Error));
-            return reply.State=="available"&&reply.Version=="0.1.0-dev.3";
+            return reply.State=="available"&&reply.Version=="0.1.0-dev.4";
         }catch(OperationCanceledException){throw new SafeError("MAC_TUN_START_FAILED");}
         finally{client.StandardInput.Close();if(!client.HasExited)EngineProcess.Terminate(client);}
     }
@@ -57,13 +58,13 @@ public sealed class SystemTunLease : IDisposable
             await Wire.Write(process.StandardInput.BaseStream,new TunRequest{Action="start",SocksPort=socks,SocksUser=user,SocksPassword=password},deadline.Token).ConfigureAwait(false);
             var reply=await Wire.Read<TunReply>(process.StandardOutput.BaseStream,deadline.Token).ConfigureAwait(false);
             if(reply.Error.Length>0)throw new SafeError(SafeCode(reply.Error));
-            // Helper protocol/code is unchanged from dev.3. Preserve the exact
-            // client CDHash so an installed dev.3 service needs no reinstall.
-            if(reply.State!="active"||!reply.DNS||!reply.IPv6||reply.Version!="0.1.0-dev.3")throw new SafeError("MAC_TUN_START_FAILED");
+            if(reply.Version!="0.1.0-dev.4")throw new SafeError("MAC_TUN_HELPER_REQUIRED");
+            if(reply.State!="active"||!reply.DNS||!reply.IPv6||!MacTunHttp.ValidInterface(reply.Interface))throw new SafeError("MAC_TUN_START_FAILED");
+            lease.InterfaceName=reply.Interface;
             lease.alive=true;lease.heartbeat=lease.Heartbeat();return lease;
         }catch{lease.Dispose();throw;}
     }
-    static string SafeCode(string value)=>value is "MAC_TUN_HELPER_REQUIRED" or "MAC_TUN_BUSY" or "MAC_TUN_NOT_AUTHORIZED" or "MAC_TUN_CONSOLE_REQUIRED" or "MAC_TUN_RESTORE_PENDING"?value:"MAC_TUN_START_FAILED";
+    static string SafeCode(string value)=>value is "MAC_TUN_HELPER_REQUIRED" or "MAC_TUN_BUSY" or "MAC_TUN_NOT_AUTHORIZED" or "MAC_TUN_CONSOLE_REQUIRED" or "MAC_TUN_RESTORE_PENDING" or "MAC_TUN_SOCKS_UNAVAILABLE" or "MAC_TUN_SOCKS_AUTH_FAILED" or "MAC_TUN_CONFIG_FAILED" or "MAC_TUN_DEVICE_BUSY"?value:"MAC_TUN_START_FAILED";
     async Task Heartbeat()
     {
         try{

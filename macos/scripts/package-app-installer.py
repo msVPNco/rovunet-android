@@ -12,7 +12,7 @@ ARCHITECTURES={'osx-arm64':('arm64','Apple Silicon'),'osx-x64':('x86_64','Intel 
 def distribution(template,rid):
     architecture,label=ARCHITECTURES[rid]
     root=ET.fromstring(template)
-    root.find('title').text='Rovunet 0.1.6 Beta — '+label
+    root.find('title').text='Rovunet 0.1.7 Beta 1 — '+label
     root.find('options').set('hostArchitectures',architecture)
     return ET.tostring(root,encoding='utf-8',xml_declaration=True)
 
@@ -21,12 +21,12 @@ def main():
     assert a.app.name=='Rovunet.app' and a.app.is_dir()
     assert not a.output.exists(),'Refusing to overwrite an existing candidate'
     info=json.loads((a.app/'Contents/Resources/BUILD-INFO.json').read_text(encoding='utf-8-sig'))
-    assert info['rid'] in ARCHITECTURES and info['version']=='0.1.6-beta' and info['developmentAdhocSigned']
+    assert info['rid'] in ARCHITECTURES and info['version']=='0.1.7-beta.1' and info['developmentAdhocSigned']
     architecture,label=ARCHITECTURES[info['rid']]
     a.output.parent.mkdir(parents=True,exist_ok=True)
     component=a.output.parent/'Rovunet-App.pkg'
     assert not component.exists(),'Use a fresh output folder'
-    args=[str(a.tool),'build',str(a.app.parent),str(component),'--identifier','org.rovunet.macos.development.pkg','--version','0.1.6.0','--install-location','/Applications','--ownership','recommended','--no-bundle-relocation','--compression','gzip','--min-os-version','15.0','--auth','root','--source-date-epoch','1794355200','--filter','a^']
+    args=[str(a.tool),'build',str(a.app.parent),str(component),'--identifier','org.rovunet.macos.development.pkg','--version','0.1.7.1','--install-location','/Applications','--ownership','recommended','--no-bundle-relocation','--compression','gzip','--min-os-version','15.0','--auth','root','--source-date-epoch','1794355200','--filter','a^']
     native=[]
     for file in sorted(a.app.rglob('*')):
         if not file.is_file():continue

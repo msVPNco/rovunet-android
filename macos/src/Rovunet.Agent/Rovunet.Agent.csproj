@@ -2,4 +2,5 @@
   <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>Rovunet.Agent</AssemblyName></PropertyGroup>
   <PropertyGroup><RuntimeIdentifiers>osx-arm64;osx-x64</RuntimeIdentifiers></PropertyGroup>
   <ItemGroup><ProjectReference Include="../Rovunet.Platform/Rovunet.Platform.csproj" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="Rovunet.NetworkTests" /></ItemGroup>
 </Project>

@@ -53,12 +53,16 @@ public sealed partial class MainWindow
             else{var input=Field(panel,LabelKey(key),isNew&&key is "server" or "auth" or "privatekey" or "publickey"?"":value,key is "extra" or "fm",key is "auth" or "privatekey" or "presharedkey" or "encryption" or "obfs-password");controls[key]=input.Parent as Control??input;values[key]=()=>input.Text??"";}
         }
         void Refresh(){if(form.Kind is not("vless" or "trojan" or "vmess"))return;string Get(string k)=>values.TryGetValue(k,out var read)?read():fields.GetValueOrDefault(k,"");string type=Get("type"),security=Get("security");void Visible(string k,bool yes){if(controls.TryGetValue(k,out var c))c.IsVisible=yes;}foreach(string k in new[]{"sni","fp"})Visible(k,security!="none");Visible("alpn",security=="tls");Visible("cs",security=="tls");Visible("fm",security=="tls");foreach(string k in new[]{"pbk","sid","spx"})Visible(k,security=="reality");Visible("host",type is "ws" or "xhttp" or "httpupgrade");Visible("path",type is "ws" or "xhttp" or "httpupgrade");Visible("heartbeatPeriod",type=="ws");Visible("mtu",type=="kcp");Visible("tti",type=="kcp");foreach(string k in new[]{"serviceName","authority"})Visible(k,type=="grpc");foreach(string k in new[]{"mode","extra"})Visible(k,type=="xhttp");Visible("flow",type=="tcp"&&security!="none");}
-        panel.Children.Add(ActionButton("CORE_SAVE_PROFILE",()=>{RequireIdle();var edits=new Dictionary<string,string>(fields);foreach(var (k,get) in values)edits[k]=get();Profile changed;bool copy=false;if(core!=null){var result=CoreProfileEditing.Apply(original,name.Text??"",edits);changed=result.Profile;copy=result.CreatesCopy;}else changed=ExtraProfileEditing.Apply(original,name.Text??"",edits);if(isNew){changed.Id=Guid.NewGuid().ToString("N");Commit(d=>d.Profiles.Add(changed));}else SaveEdited(original,changed,copy);GoHome();},true));
+        panel.Children.Add(ActionButton("CORE_SAVE_PROFILE",()=>{RequireIdle();var edits=new Dictionary<string,string>(fields);foreach(var (k,get) in values)edits[k]=get();Profile changed;bool copy=false;if(core!=null){var result=CoreProfileEditing.Apply(original,name.Text??"",edits);changed=result.Profile;copy=result.CreatesCopy;}else changed=ExtraProfileEditing.Apply(original,name.Text??"",edits);if(isNew){changed.Id=Guid.NewGuid().ToString("N");Commit(d=>d.Profiles.Add(changed));}else SaveEdited(original,changed,copy);if(isNew)GoHome();else Back();},true));
         panel.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(original,isNew)));Refresh();Navigate(isNew?"ADD_MANUAL":"EDIT_PROFILE",panel);
     }
     void ShowRawEditor(Profile original,bool isNew=false)
     {
-        var panel=Page();panel.Children.Add(Label(L.Text("MAC_RAW_OPTION_HINT"),13,"Muted"));var raw=Field(panel,"ADVANCED_RAW",original.Raw,true);panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var draft=MacImport.Read(raw.Text??"");if(draft.Count!=1)throw new SafeError("INVALID_IMPORT");if(isNew)Commit(d=>d.Profiles.Add(draft[0]));else SaveEdited(original,MacProfileEditing.Replace(original,draft[0].Raw));GoHome();},true));Navigate("ADVANCED_RAW",panel);
+        var panel=Page();panel.Children.Add(Label(L.Text("MAC_RAW_OPTION_HINT"),13,"Muted"));var raw=Field(panel,"ADVANCED_RAW",original.Raw,true);panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();var draft=MacImport.Read(raw.Text??"");if(draft.Count!=1)throw new SafeError("INVALID_IMPORT");if(isNew)Commit(d=>d.Profiles.Add(draft[0]));else SaveEdited(original,MacProfileEditing.Replace(original,draft[0].Raw));
+            if(isNew){GoHome();return;}
+            var saved=data.Profiles.Single(p=>p.Id==original.Id);Back();
+            if(route=="EDIT_PROFILE"){Back();ShowEditor(saved);}
+        },true));Navigate("ADVANCED_RAW",panel);
     }
     void SaveEdited(Profile original,Profile changed,bool copy=false)
     {
@@ -73,7 +77,7 @@ public sealed partial class MainWindow
     }
     void ShowEndpointEditor(Profile original)
     {
-        var endpoint=EndpointEditing.Read(original);if(endpoint==null){ShowRawEditor(original);return;}var panel=Page();var name=Field(panel,"PROFILE_NAME",original.Name);var host=Field(panel,"SERVER_HOST",endpoint.Host);var port=Field(panel,"SERVER_PORT",endpoint.Port.ToString());panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();string raw=EndpointEditing.Apply(original,name.Text??"",host.Text??"",port.Text??"");SaveEdited(original,ProfileEditing.Replace(original,raw));GoHome();},true));panel.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(original)));Navigate("EDIT_PROFILE",panel);
+        var endpoint=EndpointEditing.Read(original);if(endpoint==null){ShowRawEditor(original);return;}var panel=Page();var name=Field(panel,"PROFILE_NAME",original.Name);var host=Field(panel,"SERVER_HOST",endpoint.Host);var port=Field(panel,"SERVER_PORT",endpoint.Port.ToString());panel.Children.Add(ActionButton("SAVE",()=>{RequireIdle();string raw=EndpointEditing.Apply(original,name.Text??"",host.Text??"",port.Text??"");SaveEdited(original,ProfileEditing.Replace(original,raw));Back();},true));panel.Children.Add(ActionButton("ADVANCED_RAW",()=>ShowRawEditor(original)));Navigate("EDIT_PROFILE",panel);
     }
     void ShowNativeManual(string kind)
     {
