@@ -41,6 +41,7 @@ import app.slipnet.service.VpnConnectionManager
 import app.slipnet.tunnel.SnowflakeBridge
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,7 @@ data class MainUiState(
     val connectedProfileId: Long? = null,
     val connectingProfileId: Long? = null,
     val connectedChainId: Long? = null,
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val error: String? = null,
     val exportedJson: String? = null,
     val importPreview: ImportPreview? = null,
@@ -499,6 +500,8 @@ class MainViewModel @Inject constructor(
     private fun checkForUpdate() {
         if (app.slipnet.BuildConfig.PRIVATE_CANDIDATE) return
         viewModelScope.launch {
+            // Optional network work must not contend with the first local profile load.
+            uiState.first { !it.isLoading }
             // Throttle: skip if checked recently
             val lastCheck = preferencesDataStore.lastUpdateCheckTime.first()
             val now = System.currentTimeMillis()
@@ -532,7 +535,9 @@ class MainViewModel @Inject constructor(
     private fun observeProfiles() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val saved = connectionHistoryStore.load()
+            // History IO and Room/decryption may run concurrently; selection is still
+            // restored before any connect action becomes available.
+            val savedHistory = async(Dispatchers.IO) { connectionHistoryStore.load() }
             var restored = false
             combine(
                 getProfilesUseCase(),
@@ -540,6 +545,7 @@ class MainViewModel @Inject constructor(
             ) { profiles, activeProfile ->
                 Pair(profiles, activeProfile)
             }.catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { (profiles, activeProfile) ->
+                val saved = savedHistory.await()
                 val unchanged = app.slipnet.domain.model.ProbeCache.unchanged(_uiState.value.profiles, profiles)
                 val results = if (!restored) withContext(Dispatchers.Default) {
                     ConnectionHistory.restoreResults(saved, profiles)

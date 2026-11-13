@@ -190,6 +190,22 @@ fun MainScreen(
     onNavigateToEditChain: (Long) -> Unit = {},
     viewModel: MainViewModel = hiltViewModel()
 ) {
+    val loading by viewModel.uiState.collectAsState()
+    StartupPresentation(loading = loading.isLoading) {
+        MainScreenContent(onNavigateToAddProfile, onNavigateToEditProfile, onNavigateToSettings,
+            onNavigateToAddChain, onNavigateToEditChain, viewModel)
+    }
+}
+
+@Composable
+private fun MainScreenContent(
+    onNavigateToAddProfile: (tunnelType: String) -> Unit,
+    onNavigateToEditProfile: (Long) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAddChain: () -> Unit = {},
+    onNavigateToEditChain: (Long) -> Unit = {},
+    viewModel: MainViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val statusLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var statusClock by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
