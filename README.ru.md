@@ -26,7 +26,7 @@
 | Платформа | Состояние | Загрузка и подробности |
 | --- | --- | --- |
 | **Android** | Публичный выпуск: **0.3.0-alpha20 Full, код 43** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [Страница Android](docs/android/README.ru.md) |
-| **Windows** | **0.1.2 Beta · x64 · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [Страница Windows](windows/README.md) |
+| **Windows** | **0.1.3 Beta · x64 · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Rovunet-Windows-0.1.3-Beta-x64-Setup.exe) · [Страница Windows](windows/README.md) |
 | **Linux** | Планируется | Выпусков пока нет |
 | **macOS** | **0.1.7-beta · Local Preview · Apple Silicon / Intel · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.7-beta) · [Страница Mac](docs/macos/README.ru.md) · Intel: **не проверено на физическом Intel Mac** |
 
