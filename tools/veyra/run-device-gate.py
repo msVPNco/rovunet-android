@@ -16,6 +16,12 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.service.SubscriptionDeviceTest", "panelFixturesRefreshPersistentlyForBothSavedUrls"),
+    ("app.slipnet.data.subscription.AccountStatusDeviceTest", "suppliedPanelStatusFixturesPersistPeriodsForBothSubscriptionAliases"),
+    ("app.slipnet.data.subscription.StatusTrustDeviceTest", "privateHighWaterSurvivesHealthyInvalidMissingHeadersAndReopen"),
+    ("app.slipnet.data.subscription.StatusTrustDeviceTest", "concurrentResponsesIdentityChangesAndLateUrlResponsesCannotReplaceCommittedState"),
+    ("app.slipnet.data.subscription.StatusTrustDeviceTest", "twoSourcesRetainIndependentAccountBindingsAndHighWaters"),
+    ("app.slipnet.data.subscription.StatusCacheMigrationTest", "actualSchema50MigratesPrivateBindingAndAdvisorySeparatelyWithoutDeletingRows"),
     ("app.slipnet.presentation.StartupCoverDeviceTest", "brandCoverUsesAllThemesAndLanguagesAndReleasesContentWithoutAMinimumWait"),
     ("app.slipnet.service.StartupReviewDeviceTest", "deferredMapperDigestsKeepTheOriginalSnapshotAndRefuseStaleReviewedDeletion"),
     ("app.slipnet.service.MahsaSubscriptionDeviceTest", "legacyMahsaRefreshIsDirectAtomicAndRemovesOnlyUnmodifiedRetiredFeedRows"),

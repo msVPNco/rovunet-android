@@ -1,6 +1,7 @@
 package app.slipnet.tunnel
 
 import android.content.Context
+import app.slipnet.core.ProcessCompatibility
 import app.slipnet.util.AppLog as Log
 import snowflake.Snowflake
 import snowflake.SnowflakeClient
@@ -396,7 +397,7 @@ object SnowflakeBridge {
             ))
         }
 
-        if (!process.isAlive) {
+        if (!ProcessCompatibility.isAlive(process)) {
             val exitCode = process.exitValue()
             Log.e(TAG, "Lyrebird exited prematurely with code $exitCode")
             lyrebirdProcess = null
@@ -421,12 +422,12 @@ object SnowflakeBridge {
                 // Close stdin to signal graceful shutdown
                 try { p.outputStream.close() } catch (_: Exception) {}
                 Thread.sleep(500)
-                if (p.isAlive) {
+                if (ProcessCompatibility.isAlive(p)) {
                     p.destroy()
                     Thread.sleep(300)
                 }
-                if (p.isAlive) {
-                    p.destroyForcibly()
+                if (ProcessCompatibility.isAlive(p)) {
+                    ProcessCompatibility.destroyForcibly(p)
                 }
                 Log.d(TAG, "Lyrebird process stopped")
             } catch (e: Exception) {
@@ -467,8 +468,8 @@ object SnowflakeBridge {
                 Log.d(TAG, "Stopping Tor process...")
                 p.destroy()
                 Thread.sleep(500)
-                if (p.isAlive) {
-                    p.destroyForcibly()
+                if (ProcessCompatibility.isAlive(p)) {
+                    ProcessCompatibility.destroyForcibly(p)
                 }
                 Log.d(TAG, "Tor process stopped")
             } catch (e: Exception) {
@@ -501,7 +502,7 @@ object SnowflakeBridge {
     fun isRunning(): Boolean {
         // For non-Snowflake transports, client is null — only Tor needs to be alive
         // Lyrebird also needs to be alive if it was started
-        val lyrebirdOk = lyrebirdProcess == null || lyrebirdProcess?.isAlive == true
+        val lyrebirdOk = lyrebirdProcess == null || lyrebirdProcess?.let(ProcessCompatibility::isAlive) == true
         return (client == null || client?.isRunning == true) && lyrebirdOk && isTorProcessAlive()
     }
 
@@ -510,7 +511,7 @@ object SnowflakeBridge {
     }
 
     private fun isTorProcessAlive(): Boolean {
-        return torProcess?.isAlive == true
+        return torProcess?.let(ProcessCompatibility::isAlive) == true
     }
 
     // --- Helper functions ---

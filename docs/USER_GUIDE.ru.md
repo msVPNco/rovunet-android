@@ -1,5 +1,8 @@
 # Руководство Rovunet — alpha20
 
+**Alpha21 Full / code46 · prerelease:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This preview is not Latest; alpha20 is retained.
+
+
 Alpha20 Full / код43: фирменный стартовый экран Rovunet в трёх темах и четырёх языках, меньше лишних вычислений при загрузке профилей, прямое получение зашифрованной Mahsa, скрытые URL публичных источников, безопасное обновление через активный туннель, ограниченный отменяемый импорт файлов, красные ошибки и небольшой английский текст лицензий. Исправлена обработка длины домена SOCKS вспомогательного движка. Возможности alpha19 сохранены; новых протоколов нет.
 
 Alpha20: повторный импорт URL обновляет источник. DNS предлагается только после неудачи прямых путей и согласия. Длинный текст движется в фиксированной строке. Добавлены AnyTLS, TUIC v5 и однопортовый Mieru `mierus://`. [Alpha20](releases/alpha20.md).

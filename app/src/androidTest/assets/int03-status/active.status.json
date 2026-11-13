@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "server_id": "12121212121212121212121212121212",
+  "account_id": "abababababababababababababababab",
+  "period_id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+  "account_status": "active",
+  "expires_at": null,
+  "limit_bytes": 1073741824,
+  "used_bytes": 1134,
+  "metering_status": "complete",
+  "sampled_at": "2026-11-08T09:58:00Z",
+  "generated_at": "2026-11-08T10:00:00Z",
+  "revision": 1
+}

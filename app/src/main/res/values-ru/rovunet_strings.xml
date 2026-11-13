@@ -202,7 +202,7 @@
     <string name="delete_collection_confirm">Удалить группу «%1$s»? Конфигураций: %2$d.</string>
     <string name="collection_chain_protected">В группе есть участники цепочек. Сначала измените цепочки.</string>
     <string name="collection_delete_failed">Группа изменилась или удаление не удалось. Проверьте её снова.</string>
-<string name="community_telegram">Группа Rovunet в Telegram</string>
+<string name="community_telegram">Канал Rovunet в Telegram</string>
     
 <string name="community_open_failed">Установите Telegram или браузер, чтобы открыть ссылку.</string>
 
@@ -265,4 +265,6 @@
     <string name="test_stopped_early">Проверка остановилась, не дойдя до всех путей</string>
     <string name="import_all_present">Все профили уже есть в приложении; ничего не добавлено</string>
     <string name="import_some_present">Профили, уже имеющиеся в приложении, пропущены</string>
+    <string name="subscription_limit_unknown_usage">Лимит %1$s %2$s · расход неизвестен</string>
+    <string name="subscription_limit_partial_usage">Лимит %1$s %2$s · расход учтён частично</string>
 </resources>

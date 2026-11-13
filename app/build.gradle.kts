@@ -21,8 +21,8 @@ require(!minifiedBindingTests || deviceCandidate) { "Minified binding instrument
 // Prepare a non-installable Release artifact for an offline signer; never a debug-signed public APK.
 val unsignedPublication = providers.gradleProperty("rovunetUnsignedPublication").orNull == "true"
 require(!(unsignedPublication && deviceCandidate)) { "Unsigned publication and private-candidate modes are separate" }
-val appVersionName = if (deviceCandidate) "0.3.0-alpha20-review03" else "0.3.0-alpha20"
-val appVersionCode = 43
+val appVersionName = if (deviceCandidate) "0.3.0-alpha21-review02" else "0.3.0-alpha21"
+val appVersionCode = 46
 val cargoProfile = (findProperty("CARGO_PROFILE") as String?) ?: run {
     val isRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
     if (isRelease) "release" else "debug"
@@ -77,6 +77,7 @@ android {
     namespace = "app.slipnet"
     compileSdk = 36
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = javaVersion
         targetCompatibility = javaVersion
     }
@@ -389,6 +390,8 @@ tasks.named("clean") {
 }
 
 dependencies {
+    // Backport java.time without raising the supported Android7/API24 floor.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // Go libraries — flavor-specific AARs built via: cd gomobile-build && make build
     // Full: DNSTT + Snowflake, Lite: DNSTT only (smaller binary)
     "fullImplementation"(files("libs/golibs-full.aar"))

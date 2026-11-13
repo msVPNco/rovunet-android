@@ -19,6 +19,8 @@
 
 **Rovunet is a family of VPN clients for reaching your own server by several different routes.** It brings DNS tunnels, SSH transports, HTTPS proxies and Xray-backed profiles into one interface. Related paths stay together in named collections: connect a selected path directly, or separately measure HTTPS through the actual tunnel. Every client lives in this one repository; the matching server side is [Rovunet Panel](https://github.com/msVPNco/rovunet-panel).
 
+**Android preview:** [alpha21 Full / code46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — account trust, independent caches and Room50→51. Opt-in prerelease; existing public alpha20 remains available. [Evidence and upgrade limits](docs/releases/alpha21.md).
+
 <a id="apps"></a>
 
 ## Apps

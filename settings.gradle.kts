@@ -31,7 +31,11 @@ dependencyResolutionManagement {
                         url = File(gradle.gradleUserHomeDir, "verified-maven").toURI()
                     }
                 }
-                filter { includeModule("org.jetbrains.kotlin", "kotlin-compiler-embeddable") }
+                filter {
+                    includeModule("org.jetbrains.kotlin", "kotlin-compiler-embeddable")
+                    includeModule("com.android.tools", "desugar_jdk_libs")
+                    includeModule("com.android.tools", "desugar_jdk_libs_configuration")
+                }
             }
         }
         google()

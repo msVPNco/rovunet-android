@@ -1,3 +1,5 @@
+**Android 预发布：** [alpha21 Full / 代码46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — 账户信任、独立缓存与 Room50→51。可选预发布，不设 Latest；保留 alpha20。[证据与升级限制](../releases/alpha21.md)。
+
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
 Alpha20 Full / 代码43：三主题、四语言 Rovunet 启动封面，减少配置加载时重复摘要计算，直接获取并解密 Mahsa，隐藏公共来源原始地址，通过活动隧道安全下载更新，可取消且有大小限制的文件导入，红色失败文字和小号英文法律署名。修复辅助引擎 SOCKS 域名长度处理。保留 alpha19 功能，没有新增协议。

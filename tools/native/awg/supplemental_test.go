@@ -193,11 +193,13 @@ func TestSupplementalEncryptedRelayAndShutdown(t *testing.T) {
 			defer target.Close()
 			address := netip.MustParseAddrPort(strings.TrimPrefix(target.URL, "http://"))
 			tcp, _ := socksConnect(t, local, 1, address)
-			tcp.Write([]byte("GET / HTTP/1.0\r\nHost: fixture\r\n\r\n"))
+			if _, err := io.WriteString(tcp, "GET / HTTP/1.0\r\nHost: fixture\r\n\r\n"); err != nil {
+				t.Fatalf("TCP request write: %v", err)
+			}
 			body, err := io.ReadAll(tcp)
 			tcp.Close()
 			if err != nil || !strings.Contains(string(body), "verified-supplemental-payload") {
-				t.Fatalf("TCP relay: %v", err)
+				t.Fatalf("TCP relay: read %d bytes, payload matched=%t, read error=%v", len(body), strings.Contains(string(body), "verified-supplemental-payload"), err)
 			}
 			echo, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
 			if err != nil {

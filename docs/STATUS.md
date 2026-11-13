@@ -1,4 +1,10 @@
-# Current Android alpha20/code43 — 2026-11-13
+# Current Android preview alpha21/code46 — 2026-11-14
+
+**Alpha21 Full / code46 · prerelease:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This preview is not Latest; alpha20 is retained.
+
+ACT03 Android01–04 remain partial; all119 baseline rows/16 actions and earlier acceptance/history remain preserved. Private status2, single expanded card and native/runtime acceptance are next-version work.
+
+# Historical public Android alpha20/code43 — 2026-11-13
 
 Alpha20 Full / code43 adds a themed Rovunet startup cover and removes redundant startup digest work; direct encrypted Mahsa fetching, public-source URL privacy, secure active-tunnel update downloads, bounded cancellable file import, red failure labels and small English legal attribution. It also fixes SOCKS domain-length handling in the constrained auxiliary engine. Alpha19 capabilities are retained; this version adds no new protocol.
 

@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "status": "owner-authorized-alpha21-prerelease",
+  "publicationAuthorized": true,
+  "ownerAcceptedExactSignedApk": false,
+  "channel": {
+    "prerelease": true,
+    "make_latest": false
+  },
+  "sourceCommit": "36e5f13e6aa1aa78ba7ea164d95f9f426445930f",
+  "sourceTree": "f7a07c83f1712822cea9c8e74013ad4b01d4e1a8",
+  "apkAndJvmActualCheckout": "d2130fed20445e355b584914f302dc7476a03c84",
+  "checkoutTreeEqualsHead": true,
+  "roomActualCheckout": "36e5f13e6aa1aa78ba7ea164d95f9f426445930f",
+  "roomMetadataCommit": "d2130fed20445e355b584914f302dc7476a03c84",
+  "roomMetadataCorrection": "Workflow uses GITHUB_SHA (PR merge ref) despite explicit checkout of PR head; checkout log proves actual head.",
+  "pr": "https://github.com/msVPNco/rovunet-app/pull/22",
+  "apk": {
+    "apk": "Rovunet-v0.3.0-alpha21-Full.apk",
+    "sha256": "04ba1d0569ca6c994f11b17bfa79eb26ae70d48f2535f944c8ad3feed5635428",
+    "size": 158821929,
+    "certificate_sha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+    "unsigned_sha256": "938effab2bc354d746eb0539df2c7fb67f59d6b933a74fe5f8b6f997868ba05f",
+    "payload_entries_identical": true,
+    "v2": true,
+    "v3": true,
+    "private_key_uploaded": false,
+    "package": "app.veyra.client",
+    "versionName": "0.3.0-alpha21",
+    "versionCode": 46,
+    "minSdk": 24,
+    "targetSdk": 35,
+    "compileSdk": 36,
+    "debuggable": false,
+    "minified": true,
+    "abi": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ]
+  },
+  "ci": {
+    "apkRun": 43504139712,
+    "verifyJob": 132157255021,
+    "deviceJob": 132157255455,
+    "roomRun": 43504141963,
+    "roomJob": 132157262498,
+    "artifacts": {
+      "alpha21-seven-room-methods.zip": "8c55500814bfc70cbe78309646d1b88cdb3e19a6045584de3ca18a13bb4a7690",
+      "rovunet-code46-review-validation.zip": "4fa8e5c5589ba9147058f3558ec0ef540f06dc02fe36051fc88667ddfd3a39fc"
+    },
+    "buildJob": "skipped; unsigned public APK was built in android-device job"
+  },
+  "tests": {
+    "jvm": 174,
+    "room": {
+      "status": "passed",
+      "methods": [
+        {
+          "method": "app.slipnet.data.subscription.AccountStatusDeviceTest#metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.data.subscription.AccountStatusDeviceTest#suppliedPanelStatusFixturesPersistPeriodsForBothSubscriptionAliases",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.data.subscription.StatusCacheMigrationTest#actualSchema50MigratesPrivateBindingAndAdvisorySeparatelyWithoutDeletingRows",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#concurrentResponsesIdentityChangesAndLateUrlResponsesCannotReplaceCommittedState",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#privateHighWaterSurvivesHealthyInvalidMissingHeadersAndReopen",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.data.subscription.StatusTrustDeviceTest#twoSourcesRetainIndependentAccountBindingsAndHighWaters",
+          "status": "passed"
+        },
+        {
+          "method": "app.slipnet.service.SubscriptionDeviceTest#panelFixturesRefreshPersistentlyForBothSavedUrls",
+          "status": "passed"
+        }
+      ],
+      "result_json_sha256": "fb13b7ec2926122fb7aea2be58b68adff4709475e4d0dfb2190311d9e0e228b7",
+      "log_sha256": {
+        "abi.log": "79c9aee88f512eee40a4049b5fd4011f899d48461bb6ae6c01f2fa611c143b3f",
+        "install-tests.log": "4afe36d2f86c838a7c8955ab40712645b25201c0c59473c64729ac94b7d50808",
+        "instrumentation.log": "75d1fb181a38d7905857f803e54274ffd59606627465320ab70a8310dd769344",
+        "health-state.log": "194480a27c23d70505929f82da841da0fcc8ef66f21ca99a0e5de96d82937bfc",
+        "installed-candidate.log": "d049b9019f0aff18f23bb4d8c8a7249494fd5b1a455822349d486ca2e628645e",
+        "health-boot.log": "97765304ef03a62cb58accd505f6cf74ab49078b51fdb916e4e889d2b7774048",
+        "sdk.log": "a65789b810641cf462bf6235fb10095d92f1ed79ecbf91a9804b5b1164a7aad2",
+        "health-package-service.log": "c5e788786e24118437a79cdb83a90f38f585c26cb71ef81162d6a7e510365999",
+        "install-app.log": "4afe36d2f86c838a7c8955ab40712645b25201c0c59473c64729ac94b7d50808"
+      },
+      "kit_manifest_sha256": "7089336c3f2fe1931d955132f35d22fed6af28f7cfd70bb36fea16cd9560c351",
+      "abi": "x86_64\n\nexit=0",
+      "sdk": "30\n\nexit=0",
+      "run": "https://github.com/msVPNco/rovunet-app/actions/runs/43504141963"
+    },
+    "scope": "Exact method-level Room results and JVM logs independently recovered; no rerun merely for reporting. Historical overlapping counts are not summed."
+  },
+  "verification": {
+    "officialApksignerJarSha256": "3716d9311e55d2b0918a2fd9d54ba9e406c5f6abeea700b287f11259bc163dec",
+    "signingApis": [
+      "24-27",
+      "28-36"
+    ],
+    "nativeLibraries": 39,
+    "nativeMatchesCode43": true,
+    "nativeInventory": "alpha21-native-inventory.json",
+    "r8MappingSha256": "083fe781a858297542bf8b8d1c43e28d75219ab207d45670183b8865bb589d0e"
+  },
+  "preserved": [
+    "SourceID/ItemID, names and local overrides",
+    "pins, TLS trust, stored/manual selection",
+    "settings, history and encrypted data",
+    "private/advisory separation, account binding and high-water",
+    "schema50→51 additive migration; no destructive fallback",
+    "existing native bytes and legal attribution"
+  ],
+  "limitations": [
+    "Owner reported successful isolated review phone use without installed hash/ABI/scenario; this does not prove main-package upgrade or real-device Keystore migration.",
+    "Main upgrade/Keystore, physical networks, all-ABI runtime and screen-off/Doze/battery acceptance remain unrun.",
+    "Private status2 and at-most-one expanded collection are next-version work; current production private parser remains v1.",
+    "39 native ELF hashes equal accepted code43; independent ARM64 security candidate is not integrated. Brotli/native applicability, licenses and runtime audit remain open; no security-clean or full reproducibility claim.",
+    "Earlier Mieru/onboarding fixture failures are historical and not newly claimed fixed. Owner-reported Hy2 success is preserved; WireGuard/TUN/kill-switch acceptance is not implied.",
+    "ACT03 Android01–04 remain partial; 119 baseline rows and 16 actions remain tracked."
+  ],
+  "upgrade": {
+    "method": "Install the same-package/signer APK over production alpha14+ without uninstall or clear-data.",
+    "rollback": "Room51→50 downgrade/data-safe rollback is untested and must not be forced; keep data and use a higher-version corrective upgrade or a supported verified recovery path."
+  }
+}

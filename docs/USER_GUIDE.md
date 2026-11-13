@@ -1,5 +1,8 @@
 # Rovunet user guide — alpha20 / راهنمای کاربر
 
+**Alpha21 Full / code46 · prerelease:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This preview is not Latest; alpha20 is retained.
+
+
 **Alpha20:** Import refreshes an existing URL without deleting its source. Direct success finishes collection tests without a DNS prompt; resolver fallback requires failure and consent. Long labels move inside fixed single-line bounds. AnyTLS, TUIC v5 and single-binding Mieru `mierus://` have import, manual and runtime support. Unsupported effective settings are rejected explicitly. [Details](releases/alpha20.md).
 
 Existing capabilities retained in code43 include subscription updates on the collection card, optional names, provider-reported usage/expiry, supported `cs`/`fm`, Shadowsocks 2022, Hy2 port hopping and single-peer AmneziaWG import. It retains the calm Soft Pop themes, visible-only latency monitoring, bounded smart recovery, isolated Slipstream resolver workers and native stop improvements. Patterniha is removed from the built-in catalog; existing imports are preserved.

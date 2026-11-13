@@ -71,6 +71,8 @@ class SubscriptionRepository @Inject constructor(
     internal suspend fun fetchAccountStatus(address: String): Download = fetchDocument(address, 65_536, true)
     private suspend fun fetchDocument(address: String, maxBytes: Int, account: Boolean): Download {
         var target = url(address)
+        val initialTarget = target.toString()
+        if (account) require(PrivateStatusPolicy.redirectAllowed(initialTarget, initialTarget)) { "UNTRUSTED_STATUS" }
         val state = connection.connectionState.value
         val transport = if (state is app.slipnet.domain.model.ConnectionState.Connected) {
             require(state.chainId <= 0) { "DISCONNECT_TO_UPDATE" }
@@ -128,7 +130,9 @@ class SubscriptionRepository @Inject constructor(
             }
             if (result.code !in 300..399) return result
             require(redirect < 3) { "DOWNLOAD_FAILED" }
-            target = url(target.resolve(result.location ?: error("DOWNLOAD_FAILED"))?.toString() ?: error("DOWNLOAD_FAILED"))
+            val next = url(target.resolve(result.location ?: error("DOWNLOAD_FAILED"))?.toString() ?: error("DOWNLOAD_FAILED"))
+            if (account) require(PrivateStatusPolicy.redirectAllowed(initialTarget, next.toString())) { "UNTRUSTED_STATUS" }
+            target = next
         }
         error("DOWNLOAD_FAILED")
     }
@@ -170,12 +174,17 @@ class SubscriptionRepository @Inject constructor(
             sourceEnvelope = DeviceSecrets.seal(PublicProviders.canonical(url(address).toString()), "subscription:$id"), autoUpdate = auto && !public)
         val publicResult = if (public) PublicFeed.parse(document, importer, connection.getDeviceId(), allowEmpty = true) else null
         val importWarnings = linkedSetOf<String>()
+        var unsupportedPanelItems = 0
         val legacyByCurrent = mutableMapOf<String, String>()
         val profiles = if (publicResult != null) publicResult.profiles.map { profile ->
             val stable = app.slipnet.domain.model.ProfileDuplicates.key(profile).copy(collectionId = "")
             hash(exporter.exportSingleProfile(stable)) to profile
         } else SubscriptionPayload.read(document).flatMap { item ->
             val parsed = importer.parseAndImport(item.link, connection.getDeviceId())
+            if (parsed is ImportResult.Error && SubscriptionPayload.unknownTransport(item)) {
+                unsupportedPanelItems++
+                return@flatMap emptyList()
+            }
             require(parsed is ImportResult.Success && parsed.profiles.isNotEmpty() && parsed.warnings.all { it in setOf("REVIEW03_JSON_CONNECTIONS_ONLY", "REVIEW03_JSON_UNSUPPORTED") }) { "INVALID_FEED" }
             require(item.key == null || parsed.profiles.size == 1) { "INVALID_FEED" }
             importWarnings += parsed.warnings
@@ -206,7 +215,7 @@ class SubscriptionRepository @Inject constructor(
         }
         val incoming = profiles.map { it.first }.toSet() + aliases.values
         val removed = (0 until old.length()).count { old.getJSONObject(it).getString("key") !in incoming }
-        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: 0, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList(), aliases)
+        SubscriptionPreview(source, existing, profiles, removed, publicResult?.unsupported ?: unsupportedPanelItems, publicResult?.duplicates ?: 0, publicResult?.stats.orEmpty(), importWarnings.toList(), aliases)
     }
     /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
@@ -298,13 +307,17 @@ class SubscriptionRepository @Inject constructor(
             }
         }
         db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
-        if (!preview.source.id.startsWith("public:") && (preview.metadata?.userInfo != null || accountStatusStore.endpoint(sourceUrl(preview.source)) == null)) {
+        if (!preview.source.id.startsWith("public:")) {
             val now = System.currentTimeMillis()
             val info = preview.metadata
             val usage = info?.userInfo?.let { runCatching { SubscriptionMetadata.usage(it, info.serverTime.takeIf { t -> t > 0 } ?: now) }.getOrNull() }
-            db.accountStatusDao().put(AccountStatusEntity(preview.source.id, hash(url(sourceUrl(preview.source)).toString()),
-                usage?.toString().orEmpty(), now, android.os.SystemClock.elapsedRealtime(),
-                info?.serverTime?.takeIf { it > 0 } ?: now, if (usage == null) "UNAVAILABLE" else ""))
+            val key = hash(url(sourceUrl(preview.source)).toString())
+            val advisory = db.accountStatusDao().get(preview.source.id)?.takeIf { it.sourceFingerprint == key }
+            // This advisory-only table must never write private payload/receipt/high-water.
+            db.accountStatusDao().put(if (usage == null && advisory != null) advisory.copy(error = "UNAVAILABLE") else
+                AccountStatusEntity(preview.source.id, key, usage?.toString().orEmpty(), now,
+                    android.os.SystemClock.elapsedRealtime(), info?.serverTime?.takeIf { it > 0 } ?: now,
+                    if (usage == null) "UNAVAILABLE" else ""))
         }
     }
     suspend fun refresh(id: String) {

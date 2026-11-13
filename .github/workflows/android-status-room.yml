@@ -1,0 +1,101 @@
+name: Android alpha21 status and migration
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  status-room:
+    if: github.event.pull_request.head.ref == 'release/android-alpha21-code46'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ANDROID_SERIAL: emulator-5554
+      IMAGE: system-images;android-30;google_apis;x86_64
+    steps:
+      - name: Check out tested PR head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Prepare official SDK and JVM tools
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865" >> "$GITHUB_ENV"
+          echo "ANDROID_USER_HOME=$RUNNER_TEMP/rovunet-status-android" >> "$GITHUB_ENV"
+          echo "ANDROID_AVD_HOME=$RUNNER_TEMP/rovunet-status-android/avd" >> "$GITHUB_ENV"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0' 'ndk;29.0.14206865' emulator "$IMAGE"
+      - name: Reuse verified Gradle inputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/verified-inputs
+            ~/.gradle/verified-maven
+          key: gradle-verified-${{ runner.os }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'tools/veyra/prepare-gradle.py') }}
+      - name: Prepare pinned bindings and released native input for Room-only tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/veyra/prepare-gradle.py
+          python3 tools/veyra/prepare-native.py --bindings-only
+          gh api repos/msVPNco/rovunet-app/releases/assets/742632542 -H 'Accept: application/octet-stream' > "$RUNNER_TEMP/alpha20-public.apk"
+          python3 - <<'PY'
+          import hashlib,os,pathlib,zipfile
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'alpha20-public.apk'
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=='930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12'
+          with zipfile.ZipFile(p) as z:
+              for n in z.namelist():
+                  if n.startswith('lib/') and n.endswith('.so') and not any(x in n for x in ['libandroidx.graphics.path','libdatastore_shared_counter']):
+                      parts=pathlib.PurePosixPath(n).parts
+                      assert len(parts)==3 and parts[1] in {'arm64-v8a','armeabi-v7a','x86_64'}
+                      out=pathlib.Path('app/src/main/jniLibs')/parts[1]/parts[2]
+                      out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(z.read(n))
+          print('Pinned released native input reused for isolated Room tests; no native rebuild or traffic acceptance.')
+          PY
+      - name: Build matching isolated Debug and Android test APKs
+        run: |
+          bash gradlew --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" :app:assembleFullDebug :app:assembleFullDebugAndroidTest -ProvunetVerifiedBuildInputs=true -PveyraPrebuiltNative=true -ProvunetDeviceCandidate=true --stacktrace
+          mkdir "$RUNNER_TEMP/status-room-kit"
+          cp app/build/outputs/apk/full/debug/*-full-debug-universal.apk "$RUNNER_TEMP/status-room-kit/Rovunet-isolated-debug.apk"
+          cp app/build/outputs/apk/androidTest/full/debug/*-androidTest.apk "$RUNNER_TEMP/status-room-kit/Rovunet-isolated-androidTest.apk"
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,re,subprocess
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'status-room-kit'
+          files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in root.glob('*.apk')}
+          signer=pathlib.Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0/apksigner'
+          digests=[]
+          for n in files:
+              text=subprocess.check_output([str(signer),'verify','--print-certs',str(root/n)],text=True)
+              digests.append(re.search(r'certificate SHA-256 digest: ([0-9a-f]{64})',text).group(1))
+          assert len(set(digests))==1 and digests[0]!='1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416'
+          manifest={'target_package':'app.veyra.client.candidate','test_package':'app.veyra.client.candidate.test','app':'Rovunet-isolated-debug.apk','tests':'Rovunet-isolated-androidTest.apk','runner':'app.veyra.client.candidate.test/androidx.test.runner.AndroidJUnitRunner','methods':json.loads(pathlib.Path('tools/veyra/status-room-methods.json').read_text()),'files':files,'source':{'commit':os.environ['GITHUB_SHA'],'head':os.environ['GITHUB_HEAD_REF'],'scope':'Debug isolated Room-only tests; released code43 native fixture reused. Not final APK native traffic, physical phone or production upgrade acceptance.'},'signer_sha256':digests[0]}
+          (root/'KIT-MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
+          PY
+      - name: Execute seven exact status and migration methods on accelerated Android
+        run: |
+          test -c /dev/kvm
+          sudo chgrp "$(id -gn)" /dev/kvm
+          sudo chmod g+rw /dev/kvm
+          mkdir -p "$ANDROID_USER_HOME" "$ANDROID_AVD_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name rovunet-status-ci --path "$ANDROID_AVD_HOME/rovunet-status-ci.avd" --package "$IMAGE" --device pixel <<< no
+          "$ANDROID_HOME/emulator/emulator" -avd rovunet-status-ci -accel on -port 5554 -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/status-emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          timeout 360 bash -c 'until [[ $(adb -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d "\r") == 1 ]]; do sleep 2; done' || { tail -60 "$RUNNER_TEMP/status-emulator.log"; exit 1; }
+          python3 tools/veyra/run-status-room-gate.py --serial "$ANDROID_SERIAL" --kit "$RUNNER_TEMP/status-room-kit"
+      - name: Retain paired APKs and method-level results
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: alpha21-seven-room-methods
+          path: |
+            ${{ runner.temp }}/status-room-kit/**
+            ${{ runner.temp }}/status-emulator.log
+          if-no-files-found: warn
+          retention-days: 5

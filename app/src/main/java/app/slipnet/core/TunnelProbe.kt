@@ -82,7 +82,7 @@ object TunnelProbe {
     }
 
     suspend fun measureCancellable(port: Int, username: String?, password: String?, host: String,
-                                   timeoutMs: Int): Long = withContext(Dispatchers.IO) {
+                                   timeoutMs: Int, diagnosticSession: Long = 0): Long = withContext(Dispatchers.IO) {
         suspendCancellableCoroutine { continuation ->
             val socket = Socket()
             continuation.invokeOnCancellation { runCatching { socket.close() } }
@@ -90,7 +90,7 @@ object TunnelProbe {
                 if (continuation.isActive) {
                     continuation.resumeWith(runCatching {
                         measureSocket(socket, port, username, password, host, 443, PATH,
-                            SSLSocketFactory.getDefault() as SSLSocketFactory, timeoutMs)
+                            SSLSocketFactory.getDefault() as SSLSocketFactory, timeoutMs, diagnosticSession = diagnosticSession)
                     })
                 }
             }
@@ -119,7 +119,7 @@ object TunnelProbe {
 
     private fun measureSocket(socket: Socket, port: Int, username: String?, password: String?,
                               host: String, remotePort: Int, path: String, factory: SSLSocketFactory,
-                              timeoutMs: Int, secure: Boolean = true): Long {
+                              timeoutMs: Int, secure: Boolean = true, diagnosticSession: Long = 0): Long {
         require(timeoutMs in 100..30000)
         val start = System.nanoTime()
         val timer = Timer("veyra-probe-deadline", true)
@@ -146,6 +146,7 @@ object TunnelProbe {
             val domain = host.toByteArray(Charsets.US_ASCII)
             require(domain.size in 1..255)
             out.write(byteArrayOf(5, 1, 0, 3, domain.size.toByte()) + domain + byteArrayOf((remotePort shr 8).toByte(), remotePort.toByte())); out.flush()
+            if (diagnosticSession > 0) app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_SOCKS_REQUEST_WRITTEN, diagnosticSession)
             check(input.readUnsignedByte() == 5 && input.readUnsignedByte() == 0) { "Tunnel CONNECT failed" }
             check(input.readUnsignedByte() == 0)
             val size = when (input.readUnsignedByte()) { 1 -> 4; 4 -> 16; 3 -> input.readUnsignedByte(); else -> error("Invalid SOCKS address") }
@@ -162,9 +163,11 @@ object TunnelProbe {
                 }
                 tls.outputStream.write("GET $path HTTP/1.1\r\nHost: $host\r\nConnection: close\r\nCache-Control: no-cache\r\n\r\n".toByteArray(Charsets.US_ASCII))
                 tls.outputStream.flush()
+                if (diagnosticSession > 0) app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_HTTP_REQUEST_WRITTEN, diagnosticSession)
                 val line = StringBuilder()
                 while (line.length < 1024) {
                     val b = tls.inputStream.read(); check(b >= 0) { "Empty HTTPS response" }
+                    if (diagnosticSession > 0 && line.isEmpty()) app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_RESPONSE_FIRST_BYTE, diagnosticSession)
                     if (b == 10) break
                     line.append(b.toChar())
                 }

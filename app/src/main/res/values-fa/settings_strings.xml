@@ -182,12 +182,15 @@
     <string name="settings_dns_scan_33ff80">اسکن DNS</string>
     <string name="settings_shows_dns_resolver_scan_progress_744073">نمایش پیشرفت اسکن رزولورهای DNS</string>
     <plurals name="settings_selected_apps_count">
+        <item quantity="one">%1$d برنامه انتخاب شده</item>
         <item quantity="other">%1$d برنامه انتخاب شده</item>
     </plurals>
     <plurals name="settings_domains_count">
+        <item quantity="one">%1$d دامنه تعیین شده</item>
         <item quantity="other">%1$d دامنه تعیین شده</item>
     </plurals>
     <plurals name="settings_resolvers_count">
+        <item quantity="one">%1$d رزولور</item>
         <item quantity="other">%1$d رزولور</item>
     </plurals>
     <string name="connection_setup_timeout">مهلت راه‌اندازی اتصال تمام شد؛ گزارش اتصال را بررسی کنید.</string>

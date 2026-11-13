@@ -1531,7 +1531,7 @@ class MainViewModel @Inject constructor(
                     if (detailed) "HTTPS $n/3" else "HTTPS")))
             }, successTarget = if (detailed) 3 else 1) { host ->
                 try {
-                    app.slipnet.core.TunnelProbe.measureCancellable(socks.port, socks.user, socks.password, host, policy.httpsMs).also {
+                    app.slipnet.core.TunnelProbe.measureCancellable(socks.port, socks.user, socks.password, host, policy.httpsMs, diagnosticSession = attemptId).also {
                         app.slipnet.util.ConnectionDiagnostics.record(app.slipnet.util.ConnectionDiagnostics.Event.PROBE_HTTPS_OK, attemptId)
                     }
                 } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }

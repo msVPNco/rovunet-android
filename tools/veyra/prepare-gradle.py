@@ -46,3 +46,19 @@ download_verified(maven/'kotlin-compiler-embeddable-2.2.21.pom',
     '0b33c64f2622ba3bc8283378bdb7505f2be330a2275807038ad54359b33ddf9b',
     ['https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.2.21/kotlin-compiler-embeddable-2.2.21.pom'], 1024*1024)
 print('Prepared checksum-verified Kotlin 2.2.21 file repository')
+
+# Keep java.time available on the declared Android7 floor. Pin the runtime and
+# its D8 configuration independently; no arbitrary Maven upgrades or TLS bypass.
+desugar_inputs = [
+    ('desugar_jdk_libs', 'pom', '2e195880f15d4545c8d60b2d2cac52201ccf98db7a29db2577ad5826a930fcca'),
+    ('desugar_jdk_libs', 'jar', 'd8044befae095781b9a80bf1faa92edc30382d75d437476784c1bf991598a976'),
+    ('desugar_jdk_libs_configuration', 'pom', 'b2099735b93905d6f01b52e136d1364280cd6a72c6e7ea3be274a6c67703f2b4'),
+    ('desugar_jdk_libs_configuration', 'jar', '7bc9051b3a1ec19806311dcb6aa9b9ba7ef9c22caa6f4810da55bde285fb7770'),
+]
+for module, extension, digest in desugar_inputs:
+    name = module + '-2.1.5.' + extension
+    destination = gradle_home / 'verified-maven/com/android/tools' / module / '2.1.5' / name
+    download_verified(destination, digest, [
+        'https://dl.google.com/dl/android/maven2/com/android/tools/' + module + '/2.1.5/' + name,
+    ], 8 * 1024 * 1024)
+print('Prepared checksum-verified desugar JDK2.1.5 runtime/configuration for API24')

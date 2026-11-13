@@ -6,17 +6,39 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class, app.slipnet.data.subscription.AccountStatusEntity::class],
-    version = 50,
+    entities = [ProfileEntity::class, ChainEntity::class, app.slipnet.data.subscription.SubscriptionEntity::class, app.slipnet.data.subscription.AccountStatusEntity::class, app.slipnet.data.subscription.PrivateAccountStatusEntity::class],
+    version = 51,
     exportSchema = true
 )
 abstract class SlipNetDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun subscriptionDao(): app.slipnet.data.subscription.SubscriptionDao
     abstract fun accountStatusDao(): app.slipnet.data.subscription.AccountStatusDao
+    abstract fun privateAccountStatusDao(): app.slipnet.data.subscription.PrivateAccountStatusDao
     abstract fun chainDao(): ChainDao
 
     companion object {
+        val MIGRATION_50_51 = object : Migration(50, 51) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS private_account_status (subscriptionId TEXT NOT NULL, sourceFingerprint TEXT NOT NULL, serverId TEXT NOT NULL, accountId TEXT NOT NULL, highWater INTEGER NOT NULL, payload TEXT NOT NULL, checkedAt INTEGER NOT NULL, checkedElapsed INTEGER NOT NULL, serverTime INTEGER NOT NULL, error TEXT NOT NULL, PRIMARY KEY(subscriptionId, sourceFingerprint), FOREIGN KEY(subscriptionId) REFERENCES subscriptions(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                val migrated = mutableListOf<Array<Any>>()
+                db.query("SELECT * FROM account_status").use { rows ->
+                    while (rows.moveToNext()) {
+                        fun text(key: String) = rows.getString(rows.getColumnIndexOrThrow(key))
+                        fun number(key: String) = rows.getLong(rows.getColumnIndexOrThrow(key))
+                        val status = runCatching { app.slipnet.data.subscription.AccountStatus.read(text("payload")) }.getOrNull() ?: continue
+                        migrated += arrayOf<Any>(
+                            text("subscriptionId"), text("sourceFingerprint"), status.serverId, status.accountId,
+                            status.revision, text("payload"), number("checkedAt"), number("checkedElapsed"), number("serverTime"), text("error"))
+                    }
+                }
+                migrated.forEach { values ->
+                    db.execSQL("INSERT INTO private_account_status VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+                    db.execSQL("DELETE FROM account_status WHERE subscriptionId = ?", arrayOf(values[0]))
+                }
+            }
+        }
+
         val MIGRATION_49_50 = object : Migration(49, 50) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE server_profiles ADD COLUMN slipstreamCertificate TEXT NOT NULL DEFAULT ''")

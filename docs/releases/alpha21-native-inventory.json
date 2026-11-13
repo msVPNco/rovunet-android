@@ -1,0 +1,355 @@
+{
+  "count": 39,
+  "by_abi": {
+    "arm64-v8a": 14,
+    "armeabi-v7a": 14,
+    "x86_64": 11
+  },
+  "files": [
+    {
+      "path": "lib/arm64-v8a/libandroidx.graphics.path.so",
+      "bytes": 10096,
+      "sha256": "41e9a793c43a0f4fddb19e33f346bace464f30f888ba7b9eaf96294ea115bfb6",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libdatastore_shared_counter.so",
+      "bytes": 51752,
+      "sha256": "96c1396995cc8ee32c85b88cb414a67a7327f7f5faa1195d241bc2fe1579266d",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libgojni.so",
+      "bytes": 18375912,
+      "sha256": "38fde6051ba8157b18605b6c8ec8bed92722e98070cb99318955f19972961aa2",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libhev-socks5-tunnel.so",
+      "bytes": 319544,
+      "sha256": "017a5a3fb54d6c75a4255fa54fc74931222e2cbbf1a5e2c46e2a2f2e934fbebb",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libhev-tunnel-jni.so",
+      "bytes": 7864,
+      "sha256": "62c31ba0ad3d4d844524c99f343a56e9952ce06ac596223a9d0e2bec16b502dc",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libnaive.so",
+      "bytes": 7226896,
+      "sha256": "23f950b4a813a63456070a7780001658da21e059b352f5a441ae8e66e5c97a74",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libobfs4proxy.so",
+      "bytes": 17042248,
+      "sha256": "b3863fd14a23a478cfdca139df70881598e46138c9051c8fbdbbf7a6024f5a5e",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/librovunet_awg.so",
+      "bytes": 51880168,
+      "sha256": "dc0c1b40aaa50915054ded7ead1ba3b01531eff2048bf496830795391487f4c1",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/librovunet_slipstream.so",
+      "bytes": 5849048,
+      "sha256": "a0b7928cd2a53d69bd9683fd6799734e1ad010d4a8fdb26c09943813e68a6c48",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libslipnet-sockops.so",
+      "bytes": 7400,
+      "sha256": "bb38ffb3f4bda886d92a142b7740b274f0758c309039b68022c9d1162c9f177b",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libslipstream.so",
+      "bytes": 5659408,
+      "sha256": "4976b633d35432094f21b01eafc2c4b4fd0acfa0e92e2b20c1270560d1489e0e",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libtor.so",
+      "bytes": 8679904,
+      "sha256": "42fcb483688fb4db001346edc2fe838a7cd75a652a0bfcc399973403bb796aed",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libveyra_core_launcher.so",
+      "bytes": 5664,
+      "sha256": "d11a0f2b4ded65b83d891d21d82bb1e2bc5c9aaa465f712334b89fde68793476",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/arm64-v8a/libveyra_xray.so",
+      "bytes": 33434488,
+      "sha256": "1e7ddaa15abd62f1013d7af4af5ea36dd6babd6a02156bc9e37e71dc846075e4",
+      "elf_class": 2,
+      "machine": 183
+    },
+    {
+      "path": "lib/armeabi-v7a/libandroidx.graphics.path.so",
+      "bytes": 7252,
+      "sha256": "41399eba6fc2a60f6f14642375c1824f3cf25eb8fec7397d753730a3ceda3e2b",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libdatastore_shared_counter.so",
+      "bytes": 51004,
+      "sha256": "b3aaaf476444e2773db581f36efeba2ee829f3d0a79741ad8cb60f44ed69bb2c",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libgojni.so",
+      "bytes": 17816612,
+      "sha256": "86a3f72f9ecb7aba1f0b01839f94cdefa461cdbd99d1cc7304a42b4fbd6dd929",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libhev-socks5-tunnel.so",
+      "bytes": 197948,
+      "sha256": "1ccec92a53d60a9428008afdba5e2fbebe5385b1db002921e1c544d9aa54b9e7",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libhev-tunnel-jni.so",
+      "bytes": 5868,
+      "sha256": "39a44d39155a1badb69864599284830d937653781ca8e1085cd09e48ebe56abe",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libnaive.so",
+      "bytes": 5270656,
+      "sha256": "e9a0268da4b2e1ba6e89fbac3333ea232c041cc6d5ee75bd2bed2854b0cdac14",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libobfs4proxy.so",
+      "bytes": 16260196,
+      "sha256": "e395f0ea03ea918b7282ee9207f00c8b06c1b49fcd3faec47511006a62cb4590",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/librovunet_awg.so",
+      "bytes": 47580096,
+      "sha256": "6bb06c9a35e50e0bed6aa418235fcde1ae401e0b0b360f2a118da0146206ffbe",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/librovunet_slipstream.so",
+      "bytes": 3825116,
+      "sha256": "3207c742b4c4dc020a655573f3d8f059674d08b7b3bc7a1cb1cf5a5dbd904d6a",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libslipnet-sockops.so",
+      "bytes": 5200,
+      "sha256": "b8dcdcf8663ab9317f778b14379fbafce1dec7c074db9a522bfb5d37cfd481a4",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libslipstream.so",
+      "bytes": 4205556,
+      "sha256": "fb060df2b0d7ece10b5f965aff43262e19993524630e6a22e4a1d520b0780eed",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libtor.so",
+      "bytes": 5425404,
+      "sha256": "7e6c56ac4ef46aeba2c9ed9c35795c1af9a4f6d9c74765a8194e2103bcd733db",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libveyra_core_launcher.so",
+      "bytes": 4100,
+      "sha256": "6b74e9e58254bdbbf030f03227b9eba58d28bc3ee80b56efe366987a0197e6bd",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/armeabi-v7a/libveyra_xray.so",
+      "bytes": 32726904,
+      "sha256": "70442d7cdd0b42ab672ea33b4ca2d4fd985860be68ef8f6eec7e607afc4fdc87",
+      "elf_class": 1,
+      "machine": 40
+    },
+    {
+      "path": "lib/x86_64/libandroidx.graphics.path.so",
+      "bytes": 10760,
+      "sha256": "4e56c996f13670e70082658de7880c4020eabf4f25e43387f88ed78a713fc9f0",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libdatastore_shared_counter.so",
+      "bytes": 51752,
+      "sha256": "7840269969e5ff63c075a6d627a9d5f402bce2836ce2187e36071cca5789abee",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libgojni.so",
+      "bytes": 20797672,
+      "sha256": "03dacaa79b5ace02523c6def15b1f31bf2f9ba7b2db1d38377146002d80a738f",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libhev-socks5-tunnel.so",
+      "bytes": 324408,
+      "sha256": "52f1c9cfc384191049d81649e9b31d7c070c8eaee08d1769a529b3590f559e40",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libhev-tunnel-jni.so",
+      "bytes": 7800,
+      "sha256": "ff598c489f3c9acd0ad4bb47ad103aaceac57bb1b3037c1dd5c130839971e5f9",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/librovunet_awg.so",
+      "bytes": 55069672,
+      "sha256": "5b0f4d19590b5c1a68fcbf7c1c15b272bd5f8b2e7a346a2392428576c53c83a2",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/librovunet_slipstream.so",
+      "bytes": 6490752,
+      "sha256": "9b0ead515218e318f5a7ed09855ae1c947c6e45773db729f5252f4d4546dccb7",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libslipnet-sockops.so",
+      "bytes": 7336,
+      "sha256": "daa73c88eb18e146c1a2bdb7617920e6594669dd8597fa2f18aa63a179ca008d",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libslipstream.so",
+      "bytes": 6031144,
+      "sha256": "3b3c2dd3f6b016b70963fc67b619a31f96a1e0a1b181900c83c85e02cdb54fe6",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libveyra_core_launcher.so",
+      "bytes": 5568,
+      "sha256": "4e16b6d7ad4b16e0104f7f116230074e3ce0bfc6fd444b644144dfc6013c0892",
+      "elf_class": 2,
+      "machine": 62
+    },
+    {
+      "path": "lib/x86_64/libveyra_xray.so",
+      "bytes": 35758360,
+      "sha256": "96b7898b1b39ef41d30e43768d5739796264e84fb9716f0c4d8412f1920022c9",
+      "elf_class": 2,
+      "machine": 62
+    }
+  ],
+  "comparison_with_code43": {
+    "previous_apk_sha256": "930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12",
+    "unchanged": [
+      "lib/arm64-v8a/libandroidx.graphics.path.so",
+      "lib/arm64-v8a/libdatastore_shared_counter.so",
+      "lib/arm64-v8a/libgojni.so",
+      "lib/arm64-v8a/libhev-socks5-tunnel.so",
+      "lib/arm64-v8a/libhev-tunnel-jni.so",
+      "lib/arm64-v8a/libnaive.so",
+      "lib/arm64-v8a/libobfs4proxy.so",
+      "lib/arm64-v8a/librovunet_awg.so",
+      "lib/arm64-v8a/librovunet_slipstream.so",
+      "lib/arm64-v8a/libslipnet-sockops.so",
+      "lib/arm64-v8a/libslipstream.so",
+      "lib/arm64-v8a/libtor.so",
+      "lib/arm64-v8a/libveyra_core_launcher.so",
+      "lib/arm64-v8a/libveyra_xray.so",
+      "lib/armeabi-v7a/libandroidx.graphics.path.so",
+      "lib/armeabi-v7a/libdatastore_shared_counter.so",
+      "lib/armeabi-v7a/libgojni.so",
+      "lib/armeabi-v7a/libhev-socks5-tunnel.so",
+      "lib/armeabi-v7a/libhev-tunnel-jni.so",
+      "lib/armeabi-v7a/libnaive.so",
+      "lib/armeabi-v7a/libobfs4proxy.so",
+      "lib/armeabi-v7a/librovunet_awg.so",
+      "lib/armeabi-v7a/librovunet_slipstream.so",
+      "lib/armeabi-v7a/libslipnet-sockops.so",
+      "lib/armeabi-v7a/libslipstream.so",
+      "lib/armeabi-v7a/libtor.so",
+      "lib/armeabi-v7a/libveyra_core_launcher.so",
+      "lib/armeabi-v7a/libveyra_xray.so",
+      "lib/x86_64/libandroidx.graphics.path.so",
+      "lib/x86_64/libdatastore_shared_counter.so",
+      "lib/x86_64/libgojni.so",
+      "lib/x86_64/libhev-socks5-tunnel.so",
+      "lib/x86_64/libhev-tunnel-jni.so",
+      "lib/x86_64/librovunet_awg.so",
+      "lib/x86_64/librovunet_slipstream.so",
+      "lib/x86_64/libslipnet-sockops.so",
+      "lib/x86_64/libslipstream.so",
+      "lib/x86_64/libveyra_core_launcher.so",
+      "lib/x86_64/libveyra_xray.so"
+    ],
+    "changed": [],
+    "added": [],
+    "removed": []
+  },
+  "embedded_metadata": {},
+  "go_buildinfo_summary": [
+    "lib/arm64-v8a/libgojni.so: go1.27.3",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.0\th1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=",
+    "lib/arm64-v8a/libobfs4proxy.so: go1.25.6",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.1.1\th1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=",
+    "lib/arm64-v8a/librovunet_awg.so: go1.24.13",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.1.1\th1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=",
+    "lib/arm64-v8a/libveyra_xray.so: go1.27.0",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.3\th1:8H1qwOkl2LPfjf3YezB90JnCliZb6SInJ/OJkEbA5NQ=",
+    "lib/armeabi-v7a/libgojni.so: go1.27.3",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.0\th1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=",
+    "lib/armeabi-v7a/libobfs4proxy.so: go1.25.6",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.1.1\th1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=",
+    "lib/armeabi-v7a/librovunet_awg.so: go1.24.13",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.1.1\th1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=",
+    "lib/armeabi-v7a/libveyra_xray.so: go1.27.0",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.3\th1:8H1qwOkl2LPfjf3YezB90JnCliZb6SInJ/OJkEbA5NQ=",
+    "lib/x86_64/libgojni.so: go1.27.3",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.0\th1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=",
+    "lib/x86_64/librovunet_awg.so: go1.24.13",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.1.1\th1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=",
+    "lib/x86_64/libveyra_xray.so: go1.27.0",
+    "\tdep\tgithub.com/andybalholm/brotli\tv1.2.3\th1:8H1qwOkl2LPfjf3YezB90JnCliZb6SInJ/OJkEbA5NQ="
+  ]
+}

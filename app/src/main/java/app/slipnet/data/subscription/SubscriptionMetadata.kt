@@ -5,6 +5,32 @@ import org.json.JSONObject
 
 data class DownloadMetadata(val userInfo: String?, val serverTime: Long, val receivedAt: Long)
 
+internal enum class ProviderLimit { FINITE, UNLIMITED, UNKNOWN }
+internal enum class ProviderUsage { COMPLETE, PARTIAL, UNKNOWN }
+internal enum class ProviderExpiry { AT, NONE, UNKNOWN }
+
+/** Public advisory DTO, deliberately independent of private status v1. */
+internal data class ProviderMetadata(val limit: ProviderLimit, val limitBytes: Long?,
+    val usage: ProviderUsage, val usedBytes: Long?, val lowerBound: Long?,
+    val expiry: ProviderExpiry, val expiresAt: Long?, val receivedAt: Long) {
+    init {
+        require(if (limit == ProviderLimit.FINITE) limitBytes != null && limitBytes > 0 else limitBytes == null)
+        require(if (usage == ProviderUsage.COMPLETE) usedBytes != null && usedBytes >= 0 && lowerBound == null else usedBytes == null)
+        require(if (usage == ProviderUsage.PARTIAL) lowerBound != null && lowerBound >= 0 else lowerBound == null)
+        require(if (expiry == ProviderExpiry.AT) expiresAt != null && expiresAt > 0 else expiresAt == null)
+    }
+    fun json() = JSONObject().put("source", "subscription-userinfo").put("metadata_version", 2)
+        .put("limit_kind", limit.name).put("usage_kind", usage.name).put("expiry_kind", expiry.name)
+        .put("used", usedBytes ?: JSONObject.NULL).put("lower_bound", lowerBound ?: JSONObject.NULL)
+        .put("limit", limitBytes ?: JSONObject.NULL).put("volume_known", limit != ProviderLimit.UNKNOWN)
+        .put("expiry", expiresAt ?: JSONObject.NULL).put("expiry_known", expiry != ProviderExpiry.UNKNOWN)
+        .put("received", receivedAt)
+
+    fun display() = AccountStatus("", "", "", "active", expiresAt, limitBytes, usedBytes,
+        "provider_reported", receivedAt, receivedAt, 1, true, limit != ProviderLimit.UNKNOWN,
+        expiry != ProviderExpiry.UNKNOWN, lowerBound)
+}
+
 /** Provider-declared snapshot, not the panel's independently sampled/revisioned status. */
 internal object SubscriptionMetadata {
     fun name(entered: String, title: String?, host: String, existing: String? = null): String {
@@ -17,7 +43,9 @@ internal object SubscriptionMetadata {
             ?: host
     }
 
-    fun usage(header: String, received: Long): JSONObject {
+    fun usage(header: String, received: Long): JSONObject = parse(header, received).json()
+
+    fun parse(header: String, received: Long): ProviderMetadata {
         require(header.length <= 2048)
         val fields = linkedMapOf<String, Long>()
         header.split(';').filter { it.isNotBlank() }.forEach {
@@ -32,11 +60,11 @@ internal object SubscriptionMetadata {
             Math.addExact(fields.getValue("upload"), fields.getValue("download")) else null
         val expiry = fields["expire"]?.takeIf { it > 0 }?.let { Math.multiplyExact(it, 1000L) }
         val limit = fields["total"]?.takeIf { it > 0 }
-        require(fields.isNotEmpty() && (limit == null || used != null))
-        return JSONObject().put("source", "subscription-userinfo").put("used", used ?: JSONObject.NULL)
-            .put("limit", limit ?: JSONObject.NULL).put("volume_known", fields.containsKey("total") && used != null)
-            .put("expiry", expiry ?: JSONObject.NULL).put("expiry_known", fields.containsKey("expire"))
-            .put("received", received)
+        require(fields.isNotEmpty())
+        return ProviderMetadata(when { "total" !in fields -> ProviderLimit.UNKNOWN; limit == null -> ProviderLimit.UNLIMITED; else -> ProviderLimit.FINITE }, limit,
+            when { used != null -> ProviderUsage.COMPLETE; "upload" in fields || "download" in fields -> ProviderUsage.PARTIAL; else -> ProviderUsage.UNKNOWN }, used,
+            if (used == null) fields["upload"] ?: fields["download"] else null,
+            when { "expire" !in fields -> ProviderExpiry.UNKNOWN; expiry == null -> ProviderExpiry.NONE; else -> ProviderExpiry.AT }, expiry, received)
     }
 
     fun readStatus(payload: String): AccountStatus {
@@ -47,6 +75,15 @@ internal object SubscriptionMetadata {
         val limit = if (root.isNull("limit")) null else root.getLong("limit")
         val expiry = if (root.isNull("expiry")) null else root.getLong("expiry")
         val at = root.getLong("received")
-        return AccountStatus("", "", "", "active", expiry, limit, used, "provider_reported", at, at, 1, true, root.getBoolean("volume_known"), root.getBoolean("expiry_known"))
+        require(!root.has("metadata_version") || root.get("metadata_version").toString() == "2")
+        require(used == null || used >= 0); require(limit == null || limit > 0)
+        // Legacy provider-cache rows remain readable. They never become private records.
+        val limitKind = if (root.has("metadata_version")) ProviderLimit.valueOf(root.getString("limit_kind"))
+            else if (!root.getBoolean("volume_known")) ProviderLimit.UNKNOWN else if (limit == null) ProviderLimit.UNLIMITED else ProviderLimit.FINITE
+        val usageKind = if (root.has("metadata_version")) ProviderUsage.valueOf(root.getString("usage_kind")) else if (used == null) ProviderUsage.UNKNOWN else ProviderUsage.COMPLETE
+        val expiryKind = if (root.has("metadata_version")) ProviderExpiry.valueOf(root.getString("expiry_kind"))
+            else if (!root.getBoolean("expiry_known")) ProviderExpiry.UNKNOWN else if (expiry == null) ProviderExpiry.NONE else ProviderExpiry.AT
+        val lower = if (!root.has("lower_bound") || root.isNull("lower_bound")) null else root.getLong("lower_bound").also { require(it >= 0) }
+        return ProviderMetadata(limitKind, limit, usageKind, used, lower, expiryKind, expiry, at).display()
     }
 }

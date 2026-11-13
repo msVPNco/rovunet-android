@@ -1,4 +1,22 @@
-# Current alpha20/code43 — 2026-11-13
+# Unpublished ACTIONS03 review02 — 2026-11-13
+
+Local work continues from base `87a14cd9994cda77e9edbc210613567940b33efd` and the accepted review01 patch. Review01 alpha21/code44 is an existing signed owner-review APK, not a public release authorization. The next isolated test candidate uses code45 and `app.veyra.client.candidate`; it does not replace the production app.
+
+Current P1 findings, implemented but awaiting Android acceptance:
+
+1. `ANDROID18-STATUS-TRUST-01`: bind private status to source fingerprint, server and account; enforce the persisted high-water at transaction commit, preserve legitimate higher-revision renewals, reject cross-origin/port/token redirects, and prevent URL edits from silently resetting an existing binding. Legacy `/sub/` mapping is explicit. `/v2/sub/` feed recognition and proposed status mappings are tested separately; the unfinished v2 status contract is not probed in production.
+2. `ANDROID18-STATUS-CACHE-01`: keep private payload/receipts/binding/high-water separate from provider advisory headers. Incremental Room50→51 moves valid existing private rows and retains provider, malformed and unrelated data. Android tests cover migration interruption, reopen, healthy/bad/missing headers, rollback, identity changes and concurrent/late responses; compilation is not execution.
+3. `ANDROID18-METADATA-PARTIAL-01`: model finite/unlimited/unknown cap, complete/partial/unknown usage and at/none/unknown expiry independently. Missing directions do not become zero; remaining/progress remain unknown. Keep private v1 strict. Display wording is present in all four languages.
+
+Outstanding acceptance gates remain Room/S1 on a stable authorized Android target, data-preserving code43 upgrade, real HTTPS/TLS and negative redirect requests, automatic refresh, endpoint-conflict/manual-choice GUI behavior, recovery, Doze, physical network and battery/data measurements. No suitable accelerated emulator or physical target is available in this workspace; do not repeat the failed software-emulator route as acceptance progress.
+
+Keep the successful review01 Linux Mieru tests and historical intermittent Mieru/onboarding/portable timeout failures distinct. Typed process/request/write/read diagnostic stages prepare Android investigation without extending deadlines. Audit the exact shipped Go1.24.13 auxiliary and dependency advisories; symbol findings are not exploit proof. A separately built native candidate must not silently replace healthy app engines. Exact inherited dnstt-mobile source and physical runtime/native acceptance remain open.
+
+The owner's reported Hy2 success is preserved, without attributing it to an untested candidate. Ordinary WireGuard remains independent. The mistakenly requested macOS-style Android redesign was withdrawn; it is not part of this iteration. No push, merge, dispatch, server change or public release is authorized here.
+
+The alpha20 and earlier sections below are historical evidence and do not override the current pending gates.
+
+# Accepted alpha20/code43 baseline — 2026-11-13
 
 The owner accepted the exact review03 APK and explicitly authorized publication. See [release](releases/alpha20.md), [completion](releases/alpha20-completion.md) and [provenance](releases/alpha20-provenance.json). Codes41/42 and earlier reviews remain historical. No rebuild/re-sign for publication.
 
@@ -216,3 +234,50 @@ Android `:app:compileFullDebugKotlin` succeeded against the prepared native depe
 - Removed the redundant Automatic selection menu item at the user's request; tapping the collection still selects automatic mode. This source change is not yet packaged in a new APK.
 - User reports manual SSH opens sites/apps with good speed and StunTLS also opens sites/apps despite failed automatic tests. These are user field observations, not reproduced device tests. Investigate false-negative setup results and separate historical test errors from live connection status; do not assume server failure or persistent SSH slowness.
 
+
+
+## Current owner-directed alpha21 main publication and next adapter — 2026-11-13
+
+The owner reported successful phone use after isolated review02/code45 and
+authorized a real production-package/signer alpha release of its reviewed code.
+This observation has no installed hash/ABI/scenario detail and does not establish
+Room instrumentation, main upgrade, Keystore, carrier or energy acceptance.
+Release alpha21 with a new code46+, matching the production certificate, marked
+prerelease and not repository Latest. Keep the reviewed 39 native files unchanged;
+the separate Go1.26.11/Brotli1.2.7 ARM64 candidate is not in this APK. Its remaining
+45 matched advisories require exposure assessment; the inherited Brotli Go issue
+is panic/loop/DoS, not a demonstrated RCE. All four ACT03 remain partial.
+
+Next Android version (authorized; do not hold this reviewed alpha release):
+
+1. Implement the finalized Panel Review22 feed1/status2 contract in an independent
+   strict private-v2 DTO/parser, exact-int64 numeric handling, atomic persistent
+   checkpoints per server/account/period, confirmed-usage anti-regression and
+   legitimate period renewal. Keep strict v1 compatibility. Canonical lowercase
+   hex32 `/v2/sub/<token>.json` and `.windows.json` retain feed body1; their status
+   aliases are `.status.json` and `.windows.status.json`, body2. Default/windows
+   aliases for the same approved HTTPS origin and server/account must share a
+   budget; unrelated origins/accounts must not merge. Preserve SourceID/ItemID,
+   overrides, pin, manual selection and bindings through URL/token changes.
+   Do not simply enable the proposed-v2 flag or parse status2 as status1.
+2. Preserve nullable confirmed/pending, finite/unlimited/unknown limit kinds,
+   at/none/unknown expiry, hold/archived, coverage/measurement and distinct
+   generated/sample/HTTP-Date timestamps. Exact integral decimal/exponent values
+   may be accepted only without rounding; reject overflow/fractional values.
+   404/502/503 keep trusted prior data stale/unknown, never authorize active or
+   unlimited status, reset trust, or fall back to legacy static/status1.
+3. Cover persistence/reopen, concurrent/late responses, account/server mismatch,
+   URL edits, alias identity, revision and confirmed regression, period switch,
+   null/int64 boundaries and hold with synthetic contract fixtures. The panel's
+   local endpoint contract is known; production rollout is separate. No new
+   client key/authorityID or cache reset follows from internal panel authority.
+4. At most one subscription/collection card may be expanded; all closed is valid.
+   Use stable-ID view state independent from selection, connection and enable.
+   Opening one closes others; refresh, restart, search and restore must not
+   recreate multiple expanded cards. This does not revive the canceled Mac-style
+   Android redesign. Give this next version a fresh code/hash; never replace
+   alpha21 bytes.
+
+The seven-method Debug instrumentation kit remains prepared, actual Android
+methods executed by the agent remain zero. Owner Hy2 success is retained; no
+WireGuard/TUN/kill-switch or battery claim follows from it.
