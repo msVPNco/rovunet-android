@@ -1,4 +1,4 @@
-> Historical code41 candidate. Current signed owner candidate: [review02 / code42](alpha20-mahsa-followup.md). The code41 bytes and verification below remain historical and unchanged.
+> Historical code41 candidate. Current signed owner candidate: [review03 / code43](alpha20-startup-review03.md). The code41 bytes and verification below remain historical and unchanged.
 
 # Android alpha20 / code41 — signed owner APK ready; phone acceptance pending
 

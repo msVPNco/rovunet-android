@@ -1,3 +1,5 @@
+> Historical code42 owner candidate. Current startup candidate: [review03 / code43](alpha20-startup-review03.md); the Mahsa/privacy implementation below remains included.
+
 # Android alpha20 owner review 02 / code42 — signed owner APK ready; phone acceptance pending
 
 This follow-up supersedes the incomplete public-feed behavior of the delivered code41 owner APK. Code41 evidence and bytes remain unchanged. No alpha20 public release, tag or merge is authorized before owner acceptance of the exact new signed APK.
