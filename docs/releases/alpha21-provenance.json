@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "status": "owner-authorized-alpha21-prerelease",
+  "status": "owner-authorized-alpha21-public-release",
   "publicationAuthorized": true,
   "ownerAcceptedExactSignedApk": false,
   "channel": {
-    "prerelease": true,
+    "prerelease": false,
     "make_latest": false
   },
   "sourceCommit": "36e5f13e6aa1aa78ba7ea164d95f9f426445930f",
@@ -134,5 +134,6 @@
   "upgrade": {
     "method": "Install the same-package/signer APK over production alpha14+ without uninstall or clear-data.",
     "rollback": "Room51→50 downgrade/data-safe rollback is untested and must not be forced; keep data and use a higher-version corrective upgrade or a supported verified recovery path."
-  }
+  },
+  "ownerChannelCorrection": "2026-11-14: owner explicitly requested Release, not prerelease; application bytes and version unchanged."
 }

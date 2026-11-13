@@ -1,4 +1,4 @@
-name: Publish authorized Android alpha21 prerelease
+name: Publish authorized Android alpha21 release
 on: create
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
-      - name: Verify exact artifacts and publish prerelease
+      - name: Verify exact artifacts and publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

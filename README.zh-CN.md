@@ -19,7 +19,7 @@
 
 **Rovunet 是一组 VPN 客户端，用多条不同路径连接你自己的服务器。** 它把 DNS 隧道、SSH、HTTPS 代理和基于 Xray 的配置整合到同一界面。相关路径按命名配置组放在一起：可直接连接选中的路径，也可单独测量经过真实隧道的 HTTPS。所有客户端都在本仓库；对应的服务器端是 [Rovunet Panel](https://github.com/msVPNco/rovunet-panel)。
 
-**Android 预发布：** [alpha21 Full / 代码46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — 账户信任、独立缓存与 Room50→51。可选预发布，不设 Latest；保留 alpha20。[证据与升级限制](docs/releases/alpha21.md)。
+**Android alpha 正式发布：** [alpha21 Full / 代码46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — 账户信任、独立缓存与 Room50→51。公开 alpha 发行，不设 Latest；保留 alpha20。[证据与升级限制](docs/releases/alpha21.md)。
 
 <a id="apps"></a>
 

@@ -1,6 +1,6 @@
-# Current Android preview alpha21/code46 — 2026-11-14
+# Current Android alpha21 release/code46 — 2026-11-14
 
-**Alpha21 Full / code46 · prerelease:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This preview is not Latest; alpha20 is retained.
+**Alpha21 Full / code46 · public alpha release:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This alpha release is not Latest; alpha20 is retained.
 
 ACT03 Android01–04 remain partial; all119 baseline rows/16 actions and earlier acceptance/history remain preserved. Private status2, single expanded card and native/runtime acceptance are next-version work.
 

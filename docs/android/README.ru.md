@@ -1,4 +1,4 @@
-**Предварительный Android:** [alpha21 Full / код46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — доверие аккаунта, отдельные кеши и Room50→51. Не Latest; alpha20 остаётся доступной. [Проверки и ограничения обновления](../releases/alpha21.md).
+**Публичный Android alpha:** [alpha21 Full / код46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — доверие аккаунта, отдельные кеши и Room50→51. Не Latest; alpha20 остаётся доступной. [Проверки и ограничения обновления](../releases/alpha21.md).
 
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 

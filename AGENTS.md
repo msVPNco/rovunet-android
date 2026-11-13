@@ -125,3 +125,7 @@ Private status2 adaptation and at-most-one expanded collection are authorized
 next-version work. They are not part of the reviewed alpha21 release scope and
 must not silently change the current artifact. Panel/server/desktop work is not
 authorized by this Android release. Keep all ACT03 partial/open gates and history.
+
+## Alpha21 publication channel correction — 2026-11-14
+
+The owner explicitly instructed: publish a Release, not a prerelease. For the same signed alpha21/code46 APK, set prerelease=false and keep make_latest=false. This supersedes the prerelease-only channel wording above for this iteration. It does not claim stable/device acceptance or close ACT03. Publication-only fixes may follow merged PR22 without rebuilding the tested app; keep original source/checks and private signing material outside GitHub.

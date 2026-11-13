@@ -1,22 +1,22 @@
-# Rovunet 0.3.0-alpha21 Full · code46 · Pre-release
+# Rovunet 0.3.0-alpha21 Full · code46 · Public alpha release
 
 ## فارسی
 
-آلفا۲۱ وضعیت خصوصی حساب را به منبع، سرور و حساب متصل می‌کند، high-water را در برابر پاسخ دیرهنگام یا تغییر هویت حفظ می‌کند و cache خصوصی و header عمومی را در مهاجرت افزایشی Room50→51 جدا نگه می‌دارد. total/expire مستقل پذیرفته می‌شوند؛ مصرف نامعلوم صفر و باقی‌ماندهٔ ساختگی نمایش داده نمی‌شود. مالکیت diagnostic و سازگاری API24 نیز اصلاح شده‌اند. این نسخه پیش‌انتشار است و Latest نمی‌شود.
+آلفا۲۱ وضعیت خصوصی حساب را به منبع، سرور و حساب متصل می‌کند، high-water را در برابر پاسخ دیرهنگام یا تغییر هویت حفظ می‌کند و cache خصوصی و header عمومی را در مهاجرت افزایشی Room50→51 جدا نگه می‌دارد. total/expire مستقل پذیرفته می‌شوند؛ مصرف نامعلوم صفر و باقی‌ماندهٔ ساختگی نمایش داده نمی‌شود. مالکیت diagnostic و سازگاری API24 نیز اصلاح شده‌اند. این آلفا به‌صورت Release عمومی با prerelease=false منتشر می‌شود و Latest نمی‌شود.
 
 نصب روی اپ اصلی با همان package و امضای تولیدی، بدون حذف اپ یا پاک‌کردن داده انجام شود. SourceID/ItemID، نام‌ها، ویرایش محلی، pin، اعتماد TLS، انتخاب‌ها، تنظیمات، سابقه و داده‌های رمز‌شده باید حفظ شوند. آزمون واقعی ارتقای main و Keystore گوشی هنوز انجام نشده است. برگشت اجباری از Room51 به نسخهٔ قدیمی Room50 مسیر آزموده‌شده‌ای نیست؛ داده را حفظ کنید و برای رفع مشکل از نسخهٔ اصلاحی با کد بالاتر یا بازیابی پشتیبانی‌شده و بررسی‌شده استفاده کنید.
 
 ## English
 
-Alpha21 binds private account status to its saved source/server/account and preserves revision high-water across late or changed-identity responses. An additive Room50→51 migration separates private authority from public advisory cache. Partial volume/expiry headers retain unknown usage without invented remaining quota. Diagnostic ownership, API24 process compatibility and java.time desugaring are retained. This is an opt-in prerelease, not Latest.
+Alpha21 binds private account status to its saved source/server/account and preserves revision high-water across late or changed-identity responses. An additive Room50→51 migration separates private authority from public advisory cache. Partial volume/expiry headers retain unknown usage without invented remaining quota. Diagnostic ownership, API24 process compatibility and java.time desugaring are retained. This is a public alpha release with prerelease=false, not Latest. It is not a claim of completed stable/device acceptance.
 
 ## Русский
 
-Alpha21 привязывает приватный статус к источнику, серверу и аккаунту, сохраняет верхнюю границу ревизий и разделяет приватный и публичный кеши миграцией Room50→51. Неполные заголовки объёма и срока не превращают неизвестный расход в ноль. Сохранены исправления владельца диагностики и совместимости API24. Это предварительный выпуск, не Latest. Установка поверх основной версии с той же подписью, без удаления приложения и данных; реальное обновление/Keystore и безопасный откат на Room50 ещё не проверены.
+Alpha21 привязывает приватный статус к источнику, серверу и аккаунту, сохраняет верхнюю границу ревизий и разделяет приватный и публичный кеши миграцией Room50→51. Неполные заголовки объёма и срока не превращают неизвестный расход в ноль. Сохранены исправления владельца диагностики и совместимости API24. Это публичный alpha-релиз (prerelease=false), не Latest. Установка поверх основной версии с той же подписью, без удаления приложения и данных; реальное обновление/Keystore и безопасный откат на Room50 ещё не проверены.
 
 ## 简体中文
 
-Alpha21 将私有账户状态绑定到来源、服务器和账户，保留修订高水位，并通过增量 Room50→51 迁移分离私有与公共建议缓存。不完整的流量或到期头不会把未知用量当作零，也不虚构剩余额度。保留诊断会话归属和 API24 兼容性修复。此版本为可选预发布，不设为 Latest。使用原包名和签名覆盖安装，不卸载或清除数据；真实主应用升级、Keystore 和回退到 Room50 尚未验证。
+Alpha21 将私有账户状态绑定到来源、服务器和账户，保留修订高水位，并通过增量 Room50→51 迁移分离私有与公共建议缓存。不完整的流量或到期头不会把未知用量当作零，也不虚构剩余额度。保留诊断会话归属和 API24 兼容性修复。此版本为公开 alpha 发行（prerelease=false），不设为 Latest。使用原包名和签名覆盖安装，不卸载或清除数据；真实主应用升级、Keystore 和回退到 Room50 尚未验证。
 
 ## Identity and evidence
 
