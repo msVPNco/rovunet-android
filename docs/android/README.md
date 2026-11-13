@@ -1,3 +1,5 @@
+**Android preview:** [alpha21 Full / code46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — account trust, independent caches and Room50→51. Opt-in prerelease; existing public alpha20 remains available. [Evidence and upgrade limits](../releases/alpha21.md).
+
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 
 Alpha20 Full / code43 adds a themed Rovunet startup cover and removes redundant startup digest work; direct encrypted Mahsa fetching, public-source URL privacy, secure active-tunnel update downloads, bounded cancellable file import, red failure labels and small English legal attribution. It also fixes SOCKS domain-length handling in the constrained auxiliary engine. Alpha19 capabilities are retained; this version adds no new protocol.

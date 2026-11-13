@@ -1,5 +1,10 @@
 # Release procedure
 
+## Alpha21 authorized prerelease
+
+The owner authorized production-package alpha21/code46 after isolated-review phone use. This iteration supersedes the review hold without claiming exact installed hash/ABI or main-upgrade acceptance. Use the fixed signer. `publish/alpha21-approved` (or a numbered retry) runs the one-version publisher after PR22 merge: restore pinned CI payload plus public signature metadata, verify both CI runs and seven raw Room methods, prepare allowlisted assets, verify draft digests, publish with prerelease=true and make_latest=false, then redownload and hash the real release APK. No key is used in CI and no existing asset is replaced. Application source remains36e5f13; publication documentation/tooling commits are separate. [Provenance](releases/alpha21-provenance.json).
+
+
 ## Alpha18.1 authorization
 
 The owner explicitly authorized implementation and release on 2026-11-10, superseding the review-only hold for this iteration. This is authorization, not a claim of new physical-phone acceptance. Use the fixed production signer, passing final-source CI and pinned public APK copy record. Later releases retain the ordinary phone-review rule below.

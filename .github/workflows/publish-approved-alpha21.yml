@@ -1,0 +1,43 @@
+name: Publish authorized Android alpha21 prerelease
+on: create
+permissions:
+  contents: read
+concurrency:
+  group: authorized-alpha21-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'msVPNco/rovunet-app' && github.event.ref_type == 'branch' && startsWith(github.event.ref, 'publish/alpha21-approved')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    steps:
+      - name: Check out exact merged publication revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: Verify exact artifacts and publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export PATH="$JAVA_HOME_21_X64/bin:$PATH"
+          python3 tools/release/publish_approved_alpha21.py \
+            --ci-zip "$RUNNER_TEMP/alpha21-ci.zip" \
+            --room-zip "$RUNNER_TEMP/alpha21-room.zip" \
+            --previous-source "$RUNNER_TEMP/alpha15.4-source.zip" \
+            --ci-log-dir "$RUNNER_TEMP/alpha21-job-logs" \
+            --output "$RUNNER_TEMP/alpha21-publication" --publish
+      - name: Retain publication readback receipt
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: alpha21-publication-receipt
+          path: ${{ runner.temp }}/PUBLICATION-RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 30
