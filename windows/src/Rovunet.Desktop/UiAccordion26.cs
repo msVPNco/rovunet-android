@@ -64,7 +64,7 @@ public sealed partial class MainWindow
                 if(Count()>1)throw new InvalidOperationException("Accordion expanded more than one collection");
             }
             checks["recorded_real_wpf_sequence_always_zero_or_one"]=true;
-            var manualData=new UserData{Profiles=[Importer.Single("socks5://127.0.0.1:19999#Legacy-manual")],ExpandedCollections=new(){[""]=true},UseSystemProxy=false};var manualWindow=new MainWindow(manualData,true);manualWindow.storeSaveFixture28=()=>{};
+            var legacyManual=Importer.Single("socks5://127.0.0.1:19999#Legacy-manual");legacyManual.CollectionId="";var manualData=new UserData{Profiles=[legacyManual],ExpandedCollections=new(){[""]=true},UseSystemProxy=false};var manualWindow=new MainWindow(manualData,true);manualWindow.storeSaveFixture28=()=>{};
             try{checks["legacy_empty_manual_id_opens_without_data_rewrite"]=manualWindow.CountOpen26()==1&&manualData.OpenCollectionId==""&&manualData.Profiles.Single().CollectionId=="";manualWindow.ToggleCollection26("");checks["empty_manual_id_can_close_all_and_reopen"]=manualWindow.CountOpen26()==0&&manualData.OpenCollectionId==null;manualWindow.ToggleCollection26("");checks["empty_manual_id_can_close_all_and_reopen"]&=manualWindow.CountOpen26()==1;}finally{manualWindow.Close();}
         }catch(Exception e){checks["exception_"+e.GetType().Name]=false;File.WriteAllText(report+".error",e.ToString());}
         finally{storeSaveFixture28=null;}
@@ -73,6 +73,7 @@ public sealed partial class MainWindow
     }
     int CountOpen26()=>groups.Count(g=>g.Paths.Visibility==Visibility.Visible);
 }
+
 
 
 
