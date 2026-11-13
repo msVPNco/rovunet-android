@@ -1,0 +1,83 @@
+{
+  "tag": "v0.3.0-alpha20",
+  "release_id": 443911947,
+  "url": "https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20",
+  "published_at": "2026-11-13T06:58:26Z",
+  "latest_verified": true,
+  "publication_commit": "f743bb013f4af8258d5e2aff31cf22072296a27e",
+  "application_commit": "4714442846226c2c9c44444d43794ef25953761b",
+  "merge_commit": "b00be647c2c8e10d7123149a3489938429d5cc42",
+  "publication_run": 43382296853,
+  "publication_run_conclusion": "success",
+  "apk_download_independently_verified": true,
+  "apk_rebuilt": false,
+  "apk_resigned": false,
+  "assets": [
+    {
+      "name": "APK-SHA256.txt",
+      "bytes": 98,
+      "digest": "sha256:cd852f454be996fc04160b75ef8ee910ef2131af4d261c183f7ac6ee33df9821"
+    },
+    {
+      "name": "APK-SIGNATURE-VERIFICATION.txt",
+      "bytes": 5769,
+      "digest": "sha256:17d1f8c3a691fb62904f02d9804b1a14a1d392428156b61089b569931fbee840"
+    },
+    {
+      "name": "Rovunet-0.3.0-alpha20-Guide-FA.txt",
+      "bytes": 16464,
+      "digest": "sha256:9a2fb35a86b413a22f0f332f27244b68da9c489d8a681a859e34911c3f1ef253"
+    },
+    {
+      "name": "Rovunet-0.3.0-alpha20-source-light.zip",
+      "bytes": 21196751,
+      "digest": "sha256:32f5c002086a7efa408464e35c2b347b145a5847127f14d3be97e49c396803fe"
+    },
+    {
+      "name": "Rovunet-0.3.0-alpha20-source.zip",
+      "bytes": 59596110,
+      "digest": "sha256:89b499c510e6cb4eece1d6ecee645c0ed7055fa4cc0989536da225af05a6f32b"
+    },
+    {
+      "name": "Rovunet-alpha20-CI-evidence.json",
+      "bytes": 1483,
+      "digest": "sha256:214a15de41172f95745f62e35159e7b3daf2099e99dcaeedbc23af482ee69032"
+    },
+    {
+      "name": "Rovunet-alpha20-public-r8-mapping.zip",
+      "bytes": 5456867,
+      "digest": "sha256:669b9ce3e850300dbc3030099430f1d410add1de7dd5ded514126d5e60553cb5"
+    },
+    {
+      "name": "Rovunet-production-certificate.pem",
+      "bytes": 1444,
+      "digest": "sha256:a5920953e12ad14ff31ee7785e594f14950aa7eb1179c72b19a4d927cc2b24de"
+    },
+    {
+      "name": "Rovunet-v0.3.0-alpha20-Full.apk",
+      "bytes": 158698991,
+      "digest": "sha256:930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 1140,
+      "digest": "sha256:d65b53e23ae8f5416157d5d94910a6941a5a1ab3a526781c4500c0bf7e5e2734"
+    },
+    {
+      "name": "SIGNER-SHA256.txt",
+      "bytes": 65,
+      "digest": "sha256:d0b9bd9b40cbdf1bc2df9cab3c61b900d890d9b74c6f18dcbbe3a4d945ffc5a2"
+    },
+    {
+      "name": "SOURCE-MANIFEST.json",
+      "bytes": 4578,
+      "digest": "sha256:ed30d5cc4b75f46dee810a5dc174eaa223053992e3a1cebfa1b9cb168733bb44"
+    },
+    {
+      "name": "VERIFICATION.json",
+      "bytes": 6716,
+      "digest": "sha256:9b85150f21ec1c521920dc74d5183bddfe019aa7426da97dc34d70fed71af226"
+    }
+  ],
+  "documentation_followup": "Correct Chinese install build43 and Persian/Russian subscription wording; published APK/source assets remain immutable."
+}
