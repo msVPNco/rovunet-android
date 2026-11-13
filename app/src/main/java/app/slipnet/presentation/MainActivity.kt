@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         when {
                             ready -> { val navController = rememberNavController(); NavGraph(navController = navController) }
+                            firstLaunchDone == null -> app.slipnet.presentation.main.StartupCover()
                             firstLaunchDone == false -> LanguageWelcome { code ->
                                 getSharedPreferences("rovunet_ui", MODE_PRIVATE).edit().putString("language", code).apply()
                                 recreate()

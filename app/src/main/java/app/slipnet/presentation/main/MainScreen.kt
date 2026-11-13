@@ -190,6 +190,23 @@ fun MainScreen(
     onNavigateToEditChain: (Long) -> Unit = {},
     viewModel: MainViewModel = hiltViewModel()
 ) {
+    val loading by viewModel.uiState.collectAsState()
+    StartupPresentation(loading = loading.isLoading) {
+        MainScreenContent(onNavigateToAddProfile, onNavigateToEditProfile, onNavigateToSettings,
+            onNavigateToAddChain, onNavigateToEditChain, viewModel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainScreenContent(
+    onNavigateToAddProfile: (tunnelType: String) -> Unit,
+    onNavigateToEditProfile: (Long) -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToAddChain: () -> Unit = {},
+    onNavigateToEditChain: (Long) -> Unit = {},
+    viewModel: MainViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val statusLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current
     var statusClock by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
@@ -331,17 +348,8 @@ fun MainScreen(
         pendingChain = null
     }
 
-    val importFileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    val json = inputStream.bufferedReader().readText()
-                    viewModel.parseImportConfig(json)
-                }
-            } catch (_: Exception) {}
-        }
+    val importFileLauncher = app.slipnet.presentation.common.components.rememberTextFileImport {
+        viewModel.parseImportConfig(it)
     }
 
     val qrScanLauncher = rememberLauncherForActivityResult(
@@ -362,7 +370,7 @@ fun MainScreen(
     var showSubscriptions by remember { mutableStateOf(false) }
     if (showSubscriptions || uiState.subscriptionUrl != null || uiState.subscriptionId != null) SubscriptionDialog(
         viewModel.subscriptionRepository, uiState.subscriptionUrl, uiState.subscriptionId,
-        onDisconnect = viewModel::disconnect, onDismiss = { showSubscriptions = false; viewModel.closeSubscription() })
+        onDisconnect = viewModel::disconnect, initialPreview = uiState.subscriptionPreview, onDismiss = { showSubscriptions = false; viewModel.closeSubscription() })
     if (showLanguage) AlertDialog(
         onDismissRequest = { showLanguage = false }, title = { Text(androidx.compose.ui.res.stringResource(app.slipnet.R.string.rv_language_a4fe65)) },
         text = { Column {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_error_route">更新路径已更改或不可用。请连接 VPN 后重试。暂不支持通过链式连接下载。</string>
+    <string name="file_import_invalid">无法读取文件。请选择有效 UTF-8 文本，最大 2 MiB（SSH 密钥为 128 KiB）。已保留原有设置。</string>
+</resources>

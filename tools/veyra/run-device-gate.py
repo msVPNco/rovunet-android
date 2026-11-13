@@ -16,6 +16,18 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.StartupCoverDeviceTest", "brandCoverUsesAllThemesAndLanguagesAndReleasesContentWithoutAMinimumWait"),
+    ("app.slipnet.service.StartupReviewDeviceTest", "deferredMapperDigestsKeepTheOriginalSnapshotAndRefuseStaleReviewedDeletion"),
+    ("app.slipnet.service.MahsaSubscriptionDeviceTest", "legacyMahsaRefreshIsDirectAtomicAndRemovesOnlyUnmodifiedRetiredFeedRows"),
+    ("app.slipnet.presentation.main.PublicSourcePrivacyDeviceTest", "bothBuiltinDialogsHideUrlsInFourLanguagesAndThreeThemes"),
+    ("app.slipnet.presentation.main.PublicSourcePrivacyDeviceTest", "savedPublicSubscriptionCannotRevealOrCopyItsSourceWhilePrivateEntryRemainsEditable"),
+    ("app.slipnet.core.CoreDeviceSmokeTest", "packagedAuxiliarySurvivesMaximumSocksDomainLengths"),
+    ("app.slipnet.util.UpdateNetworkDeviceTest", "partialDownloadResumesAndStillRejectsWrongRangeOrChecksum"),
+    ("app.slipnet.presentation.Alpha20UiDeviceTest", "failedTextIsRedAndLegalFooterStaysEnglishInFourLanguagesAndThreeThemes"),
+    ("app.slipnet.util.UpdateNetworkDeviceTest", "authenticatedTunnelCarriesHttpsAndCdnRedirectWithoutLocalDns"),
+    ("app.slipnet.util.UpdateNetworkDeviceTest", "cancellationClosesAStalledBodyAndSessionChangeNeverFallsBackToDirect"),
+    ("app.slipnet.util.UpdateNetworkDeviceTest", "tunnelStillRejectsAnUntrustedTlsCertificate"),
+
     ("app.slipnet.presentation.MarqueeDeviceTest", "overflowingTextMovesInsideFixedSingleLineWhileShortTextStaysStill"),
     ("app.slipnet.core.CoreDeviceSmokeTest", "packagedSupplementalProtocolsOwnAuthenticatedEndpointsAndReleaseThem"),
     ("app.slipnet.presentation.main.SubscriptionUiDeviceTest", "cardUpdateStaysOnCardAndDisablesRepeatedRequests"),
@@ -179,7 +191,8 @@ def main():
     # Synthetic scanner screenshot: no real profile, address or credential data.
     previews = ROOT / "tools/veyra/device-results"
     previews.mkdir(exist_ok=True)
-    for filename in ("scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
+    for filename in ("startup-code43-light.png", "startup-code43-dark.png", "startup-code43-amoled.png",
+                     "scanner-fa-review02.png", "subscription-fa-code29.png", "account-status-fa-code32.png",
                      "home-alpha18-en-dark.png", "home-alpha18-fa-dark.png", "home-alpha18-fa-amoled.png", "home-alpha18-en-light.png"):
         with (previews / filename).open("wb") as image:
             subprocess.run(["adb", "-s", serial, "exec-out", "run-as", PACKAGE,

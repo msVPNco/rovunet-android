@@ -9,6 +9,44 @@ import java.net.Socket
 
 /** Requires an attached Android device/emulator. This is NOT an internet test. */
 class CoreDeviceSmokeTest {
+    @Test fun packagedAuxiliarySurvivesMaximumSocksDomainLengths() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val core = CoreProcess(diagnostics = false)
+        val endpoint = LocalSocksEndpoint.privateCore()
+        val link = "anytls://synthetic@127.0.0.1:12345?sni=example.invalid"
+        try {
+            core.start(File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so"),
+                CoreLink.runtime(link, endpoint.port, endpoint.user, endpoint.password),
+                File(context.applicationInfo.nativeLibraryDir, "libveyra_core_launcher.so"),
+                workDirectory = context.cacheDir).getOrThrow()
+            for (length in listOf(253, 254, 255)) {
+                Socket("127.0.0.1", endpoint.port).use { socket ->
+                    socket.soTimeout = 2000
+                    val output = socket.outputStream
+                    val input = java.io.DataInputStream(socket.inputStream)
+                    output.write(byteArrayOf(5, 1, 2)); output.flush()
+                    assertEquals(5, input.readUnsignedByte()); assertEquals(2, input.readUnsignedByte())
+                    val user = endpoint.user.orEmpty().toByteArray()
+                    val password = endpoint.password.orEmpty().toByteArray()
+                    output.write(byteArrayOf(1, user.size.toByte()) + user + byteArrayOf(password.size.toByte()) + password)
+                    output.flush()
+                    assertEquals(1, input.readUnsignedByte()); assertEquals(0, input.readUnsignedByte())
+                    output.write(byteArrayOf(5, 1, 0, 3, length.toByte()) + "a".repeat(length).toByteArray() + byteArrayOf(1, 0xbb.toByte()))
+                    output.flush()
+                    assertEquals(5, input.readUnsignedByte())
+                }
+                Thread.sleep(150) // let the child dispatch the framed address to its inbound parser
+                assertTrue("Child exited for domain length $length", core.isRunning())
+                Socket("127.0.0.1", endpoint.port).use { socket ->
+                    socket.soTimeout = 2000; socket.outputStream.write(byteArrayOf(5, 1, 2))
+                    assertEquals(5, socket.inputStream.read()); assertEquals(2, socket.inputStream.read())
+                }
+            }
+        } finally { core.stop() }
+        assertFalse(core.isRunning())
+        ServerSocket(endpoint.port).close()
+    }
+
     @Test fun packagedSupplementalProtocolsOwnAuthenticatedEndpointsAndReleaseThem() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val binary = File(context.applicationInfo.nativeLibraryDir, "libveyra_xray.so")

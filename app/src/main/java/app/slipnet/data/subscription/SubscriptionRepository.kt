@@ -29,7 +29,8 @@ import kotlin.coroutines.resumeWithException
 
 data class SubscriptionPreview(val source: SubscriptionEntity, val expectedSource: SubscriptionEntity?,
     val profiles: List<Pair<String, ServerProfile>>, val removed: Int, val unsupported: Int = 0, val duplicates: Int = 0, val publicStats: List<PublicFeed.Stat> = emptyList(), val importWarnings: List<String> = emptyList(),
-    val legacyKeys: Map<String, String> = emptyMap(), val metadata: DownloadMetadata? = null)
+    val legacyKeys: Map<String, String> = emptyMap(), val metadata: DownloadMetadata? = null,
+    val reviewedUnsupported: Boolean = false)
 
 @Singleton
 class SubscriptionRepository @Inject constructor(
@@ -56,10 +57,13 @@ class SubscriptionRepository @Inject constructor(
         require(it.isHttps && it.username.isEmpty() && it.password.isEmpty() && it.fragment == null) { "HTTPS_REQUIRED" }
     }
     fun sourceUrl(row: SubscriptionEntity): String = DeviceSecrets.open(row.sourceEnvelope, "subscription:${row.id}")
-    fun host(row: SubscriptionEntity): String = runCatching { url(sourceUrl(row)).host }.getOrDefault("—")
+    fun host(row: SubscriptionEntity): String = runCatching {
+        val address = sourceUrl(row)
+        if (PublicProviders.hidesAddress(row.id, address)) "" else url(address).host
+    }.getOrDefault(if (row.id.startsWith("public:")) "" else "—")
     suspend fun findSource(address: String): SubscriptionEntity? = withContext(Dispatchers.IO) {
-        val normalized = url(address).toString()
-        db.subscriptionDao().all().firstOrNull { runCatching { url(sourceUrl(it)).toString() == normalized }.getOrDefault(false) }
+        val normalized = PublicProviders.canonical(url(address).toString())
+        db.subscriptionDao().all().firstOrNull { runCatching { PublicProviders.canonical(url(sourceUrl(it)).toString()) == normalized }.getOrDefault(false) }
     }
     internal data class Download(val code: Int, val location: String?, val text: String,
         val serverTime: Long = 0, val receivedAt: Long = 0, val userInfo: String? = null, val title: String? = null)
@@ -128,13 +132,19 @@ class SubscriptionRepository @Inject constructor(
         }
         error("DOWNLOAD_FAILED")
     }
-    suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
+    suspend fun prepare(name: String, address: String, existingId: String? = null, auto: Boolean = false): SubscriptionPreview =
+        prepareUsing(name, address, existingId, auto) { target, limit -> fetchDocument(target, limit, false) }
+
+    internal suspend fun prepareUsing(name: String, address: String, existingId: String?, auto: Boolean,
+        download: suspend (String, Int) -> Download): SubscriptionPreview = withContext(Dispatchers.IO) {
         val resolvedId = existingId ?: findSource(address)?.id
         val initial = resolvedId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val response = if (initial?.id?.startsWith("public:") == true) null else fetchDocument(address, 2 * 1024 * 1024, false)
-        val document = response?.text ?: PublicProviders.download(url(address).toString(), ::fetch)
+        val normalized = PublicProviders.canonical(url(address).toString())
+        val public = initial?.id?.startsWith("public:") == true || PublicProviders.provider(normalized) != null
+        val response = if (public) null else download(normalized, 2 * 1024 * 1024)
+        val document = response?.text ?: PublicProviders.download(normalized) { target, limit -> download(target, limit).text }
         val resolvedName = SubscriptionMetadata.name(name, response?.title, url(address).host, initial?.name)
-        val preview = prepareDocument(resolvedName, address, resolvedId, if (existingId == null && initial != null) initial.autoUpdate else auto, document).copy(
+        val preview = prepareDocument(resolvedName, normalized, resolvedId, if (existingId == null && initial != null) initial.autoUpdate else auto, document, publicMode = public).copy(
             metadata = response?.let { DownloadMetadata(it.userInfo, it.serverTime, it.receivedAt) })
         require(preview.expectedSource == initial) { "SOURCE_CHANGED" }
         preview
@@ -142,7 +152,7 @@ class SubscriptionRepository @Inject constructor(
 
     suspend fun preparePublic(name: String, address: String, updateExisting: Boolean = false): SubscriptionPreview = withContext(Dispatchers.IO) {
         val existing = findSource(address)
-        require(existing == null || (updateExisting && existing.id.startsWith("public:"))) { "SOURCE_EXISTS" }
+        require(existing == null || (updateExisting && PublicProviders.hidesAddress(existing.id, sourceUrl(existing)))) { "SOURCE_EXISTS" }
         val document = PublicProviders.download(url(address).toString(), ::fetch)
         val preview = prepareDocument(existing?.name ?: name, address, existing?.id, false, document, publicMode = true)
         require(preview.expectedSource == existing) { "SOURCE_CHANGED" }
@@ -154,10 +164,10 @@ class SubscriptionRepository @Inject constructor(
         require(name.length <= 120) { "NAME_REQUIRED" }
         val safeName = SubscriptionMetadata.name(name, null, url(address).host)
         val existing = existingId?.let { db.subscriptionDao().get(it) ?: error("SOURCE_CHANGED") }
-        val public = publicMode || existing?.id?.startsWith("public:") == true
+        val public = publicMode || existing?.id?.startsWith("public:") == true || PublicProviders.provider(address) != null
         val id = existing?.id ?: (if (public) "public:" else "") + UUID.randomUUID().toString()
         val source = (existing ?: SubscriptionEntity(id, safeName, "")).copy(name = safeName,
-            sourceEnvelope = DeviceSecrets.seal(url(address).toString(), "subscription:$id"), autoUpdate = auto && !public)
+            sourceEnvelope = DeviceSecrets.seal(PublicProviders.canonical(url(address).toString()), "subscription:$id"), autoUpdate = auto && !public)
         val publicResult = if (public) PublicFeed.parse(document, importer, connection.getDeviceId(), allowEmpty = true) else null
         val importWarnings = linkedSetOf<String>()
         val legacyByCurrent = mutableMapOf<String, String>()
@@ -201,6 +211,7 @@ class SubscriptionRepository @Inject constructor(
     /** Pure additions do not acquire the native lifecycle lock or change an active owner. */
     suspend fun apply(preview: SubscriptionPreview) = withContext(Dispatchers.IO) {
         require(preview.profiles.isNotEmpty()) { "PUBLIC_FEED_EMPTY" }
+        require(preview.unsupported == 0 || preview.reviewedUnsupported) { "REVIEW_REQUIRED" }
         mutex.withLock {
             if (preview.expectedSource == null) {
                 applyTransaction(preview, addition = true)
@@ -216,9 +227,9 @@ class SubscriptionRepository @Inject constructor(
     private suspend fun applyTransaction(preview: SubscriptionPreview, addition: Boolean) = db.withTransaction {
         val current = db.subscriptionDao().get(preview.source.id)
         require(current == preview.expectedSource) { "SOURCE_CHANGED" }
-        val address = url(sourceUrl(preview.source)).toString()
+        val address = PublicProviders.canonical(url(sourceUrl(preview.source)).toString())
         require(db.subscriptionDao().all().none {
-            it.id != preview.source.id && runCatching { url(sourceUrl(it)).toString() == address }.getOrDefault(false)
+            it.id != preview.source.id && runCatching { PublicProviders.canonical(url(sourceUrl(it)).toString()) == address }.getOrDefault(false)
         }) { "SOURCE_EXISTS" }
         val old = JSONArray(current?.membersJson ?: "[]")
         val previous = (0 until old.length()).map { old.getJSONObject(it) }.associateBy { it.getString("key") }.toMutableMap()
@@ -265,15 +276,25 @@ class SubscriptionRepository @Inject constructor(
             }
         }
         val incoming = preview.profiles.map { it.first }.toSet()
-        // Refresh never deletes a saved profile. Retired source entries become
-        // a normal local collection and retain their row, secrets and chain IDs.
+        val publicSource = PublicProviders.hidesAddress(preview.source.id, address)
+        val referenced = if (publicSource) db.profileDao().chainSnapshots().flatMap { chain ->
+            val ids = JSONArray(chain.profileIdsJson)
+            (0 until ids.length()).map { ids.getLong(it) }
+        }.toSet() else emptySet()
+        // Only unmodified retired free-feed rows can be removed. Local edits,
+        // locked/unreadable records and chain references remain explicit local copies.
         previous.filterKeys { it !in incoming }.values.forEach { saved ->
             require(connection.connectionState.value.isDisconnected) { "DISCONNECT_TO_UPDATE" }
             val row = db.profileDao().getProfileById(saved.getLong("id"))
             if (row != null && row.collectionId == preview.source.id) {
-                val suffix = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
-                    .getString(app.slipnet.R.string.subscription_retained)
-                db.profileDao().updateMembership(row.id, preview.source.id + ":retained", resolvedName + " · " + suffix)
+                val local = mapper.toDomain(row)
+                if (publicSource && row.id !in referenced && !local.needsCredentials && !local.isLocked && !local.isPinned && digest(local) == saved.getString("digest")) {
+                    db.profileDao().deleteProfile(row.id)
+                } else {
+                    val suffix = app.slipnet.presentation.theme.RovunetStrings.localizedContext(context)
+                        .getString(app.slipnet.R.string.subscription_retained)
+                    db.profileDao().updateMembership(row.id, preview.source.id + ":retained", resolvedName + " · " + suffix)
+                }
             }
         }
         db.subscriptionDao().put(preview.source.copy(name = resolvedName, membersJson = members.toString(), lastSuccess = System.currentTimeMillis(), lastError = ""))
@@ -302,7 +323,7 @@ class SubscriptionRepository @Inject constructor(
     }
     suspend fun detach(id: String) = mutex.withLock { db.subscriptionDao().delete(id) }
     suspend fun setAutomatic(id: String, enabled: Boolean) = mutex.withLock {
-        db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(autoUpdate = enabled && !id.startsWith("public:"))) }
+        db.subscriptionDao().get(id)?.let { db.subscriptionDao().put(it.copy(autoUpdate = enabled && !PublicProviders.hidesAddress(id, sourceUrl(it)))) }
     }
     suspend fun refreshAutomatic() {
         if (!connection.connectionState.value.isDisconnected) return

@@ -1,0 +1,108 @@
+{
+  "status": "signed-owner-review-pending-phone-acceptance",
+  "publicationAuthorized": false,
+  "sourceCommit": "4714442846226c2c9c44444d43794ef25953761b",
+  "sourceTree": "e577b6e333d0d521126fb66cb779ae84b6daa23c",
+  "prCheckoutCommit": "51092656f11e4190e3eb083ac10e3975d477d110",
+  "prCheckoutTree": "e577b6e333d0d521126fb66cb779ae84b6daa23c",
+  "ci": {
+    "run": 43372323547,
+    "verifyJob": 131710720858,
+    "deviceJob": 131710721168,
+    "conclusion": "success",
+    "artifactId": 14014222637,
+    "artifactName": "rovunet-code43-review-validation",
+    "artifactZipBytes": 322700510,
+    "artifactZipSha256": "c0df914bbf6a96e7203187a2659bfcfecc4667ecb98e09e69b0d6df4218edf06"
+  },
+  "apk": {
+    "filename": "Rovunet-v0.3.0-alpha20-Full-review03.apk",
+    "bytes": 158698991,
+    "sha256": "930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12",
+    "versionName": "0.3.0-alpha20",
+    "versionCode": 43,
+    "package": "app.veyra.client",
+    "signerSha256": "1e40bd201489a8209043e346255772823d9d52ee21b468bdef2c152d239bc416",
+    "ciPayloadUnchanged": true
+  },
+  "tests": {
+    "portableJUnit": 154,
+    "debugEmulator": 86,
+    "minifiedReleaseJNI": 2,
+    "startupMatrix": "Four languages and three themes; opaque teal glyph pixels checked in every combination, content mounts on readiness without minimum delay; cover gone after 140ms exit animation.",
+    "deletionSafety": "Lazy review value/equality/export tests plus real mapper/DAO: original frozen snapshot preserved when Room changes before first digest access; stale deletion rejected, fresh reviewed deletion succeeds.",
+    "previousWork": "Mahsa direct source, public-source privacy, connection history/selection and protocol/transport regressions retained."
+  },
+  "visualReview": {
+    "light": {
+      "sha256": "bbd3671fc585cf457cf914cc417eac5084be4820d833422af7f87ad3e5164a7a",
+      "opaqueTealGlyphPixels": 16564,
+      "visualReview": "R, wordmark, progress text and layout inspected; static themed background."
+    },
+    "dark": {
+      "sha256": "0bf47414578eb9bb81e7fa886e9c1a38a4d8a0029a52d1391f8b694db4d831bb",
+      "opaqueTealGlyphPixels": 16564,
+      "visualReview": "R, wordmark, progress text and layout inspected; static themed background."
+    },
+    "amoled": {
+      "sha256": "1dc04e6a176fc060d72fcb802e3c4354f38ef8fd5e5d1138279bc8caa48caed7",
+      "opaqueTealGlyphPixels": 16564,
+      "visualReview": "R, wordmark, progress text and layout inspected; static themed background."
+    }
+  },
+  "verification": {
+    "signingApis": [
+      "24-27",
+      "28-36"
+    ],
+    "officialApksignerJarSha256": "3716d9311e55d2b0918a2fd9d54ba9e406c5f6abeea700b287f11259bc163dec",
+    "debuggable": false,
+    "nativeLibraries": 39,
+    "aligned64BitElfFiles": 25,
+    "gomobileDexDefinitions": "pass",
+    "slipstream": "CI checks separate client JNI/SONAME and pinned legacy codecs for all three ABIs; signed payload byte-identical to unsigned CI APK.",
+    "externalSchemes": [
+      "wireguard",
+      "anytls",
+      "tuic",
+      "mierus"
+    ]
+  },
+  "earlierAttempts": [
+    {
+      "source": "133c7ae5b199d1c1079ce679a8afbcc0ad689b5c",
+      "result": "Compile failed because extracted MainScreenContent lacked the existing Material API opt-in. Corrected before native rebuild."
+    },
+    {
+      "source": "5c40496229888a1623333042b247bedd2fb35c18",
+      "run": 43368695796,
+      "result": "154/86/2 passed, but initial visual previews were inconsistent for Dark/AMOLED. Working APK was not delivered; switched same brand geometry to one Canvas and added pixel checks.",
+      "undeliveredWorkingApkSha256": "7d9e10547cb4dbfc4523a6882d32ddef056afdc1fdcc8a448e9f74f8d79844c0"
+    },
+    {
+      "source": "4714442846226c2c9c44444d43794ef25953761b",
+      "run": 43372317753,
+      "result": "Independent push attempt failed the unchanged local Mieru TCP relay test and the existing realHome onboarding-persistence 15s deadline. The exact-source PR run passed all gates. Verify-only retry succeeded without code changes; Android job is still recorded as failed. Neither failure is described as fixed by the startup UI.",
+      "initialVerifyJob": 131710701157,
+      "verifyRetryJob": 131722552639,
+      "verifyRetryConclusion": "success",
+      "androidFailureJob": 131710701433
+    }
+  ],
+  "preserved": [
+    "production package and signing identity",
+    "schema 50 and credential encryption",
+    "existing review41/42 bytes and provenance",
+    "desktop/panel and root README layout",
+    "saved/manual selection restored before controls become available"
+  ],
+  "limitations": [
+    "Physical phone startup duration and acceptance are unmeasured; no percentage, battery or data saving claim.",
+    "Known local Mieru test intermittency and onboarding timeout need separate investigation; no physical carrier diagnosis from emulator success.",
+    "Own-panel WireGuard/Hy2 and exact dnstt-mobile source availability remain separate.",
+    "No release, tag or merge before exact owner APK approval."
+  ],
+  "deferred": [
+    "Telegram group label to channel in four languages, keeping project link."
+  ]
+}

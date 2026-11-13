@@ -7,8 +7,14 @@ def run(args,**kw):subprocess.run([str(x) for x in args],check=True,**kw)
 with tempfile.TemporaryDirectory(prefix='rovunet-awg-build-') as tmp:
  source=pathlib.Path(tmp)/'mihomo'
  run(['git','clone','--no-checkout','https://github.com/MetaCubeX/mihomo.git',source]);run(['git','checkout',PIN],cwd=source)
+ # Backport upstream c65570ed0924a7e48a48160463c68015b9a84ca8 / PR3359.
+ # Preserve the reviewed core pin; domain-length byte arithmetic must not crash the child.
+ patch=ROOT/'tools/native/mihomo-socks-domain.patch'
+ run(['git','apply','--check',patch],cwd=source)
+ run(['git','apply',patch],cwd=source)
  dest=source/'cmd/rovunet-awg';shutil.copytree(ROOT/'tools/native/awg',dest)
  go=os.environ.get('GO','go')
+ run([go,'test','./adapter/inbound','-run','TestParseSocksAddr(DomainLengths|FQDN)$','-count=1'],cwd=source)
  if os.environ.get('ROVUNET_AWG_HOST'):
   run([go,'test','./cmd/rovunet-awg'],cwd=source)
   run([go,'build','-trimpath','-ldflags=-s -w -checklinkname=0','-o',os.environ['ROVUNET_AWG_HOST'],'./cmd/rovunet-awg'],cwd=source)

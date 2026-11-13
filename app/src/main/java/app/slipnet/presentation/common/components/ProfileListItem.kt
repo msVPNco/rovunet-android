@@ -80,7 +80,12 @@ fun ProfileListItem(
                 }
                 val test = when (pingResult) {
                     is PingResult.Success -> if (pingResult.verified) "" else stringResource(R.string.ui_not_verified)
-                    is PingResult.Error -> stringResource(R.string.ui_last_test_failed)
+                    is PingResult.Error -> {
+                        val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
+                            androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
+                        stringResource(R.string.ui_last_test_failed) + " · " + stringResource(
+                            if (ProbeCache.fresh(pingResult, measurementNowMillis)) R.string.review02_ping_fresh else R.string.review02_ping_previous, time)
+                    }
                     is PingResult.Pending, is PingResult.Testing -> stringResource(R.string.ui_testing)
                     PingResult.ReviewIdentity -> stringResource(R.string.probe_review_identity)
                     else -> ""
@@ -104,8 +109,15 @@ fun ProfileListItem(
                         "vmess" -> stringResource(R.string.review03_vmess)
                         else -> profile.tunnelType.displayName
                     } else profile.tunnelType.displayName
-                    MarqueeText(listOf(protocolLabel, status, test).filter { it.isNotEmpty() }.joinToString(" · "), modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
-                        color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MarqueeText(listOf(protocolLabel, status).filter { it.isNotEmpty() }.joinToString(" · "),
+                            modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+                            color = if (isConnected) ConnectedGreen else colors.onSurfaceVariant)
+                        if (test.isNotEmpty()) MarqueeText(test,
+                            modifier = Modifier.weight(1f).testTag("profile-test-result-${profile.id}"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (pingResult is PingResult.Error) colors.error else colors.onSurfaceVariant)
+                    }
                 }
                 IconButton(onClick = onEditClick, enabled = canEdit, modifier = Modifier.testTag("profile-edit-${profile.id}")) {
                     Icon(Icons.Default.Edit, stringResource(R.string.ui_edit), Modifier.size(20.dp))
@@ -158,7 +170,8 @@ fun ProfileListItem(
                 else -> stringResource(R.string.ui_not_verified)
             }
             if (pingResult is PingResult.Success) Text(stringResource(R.string.alpha17_ping_hint), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
-            Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
+                color = if (pingResult is PingResult.Error) colors.error else colors.onSurfaceVariant)
             if ((pingResult is PingResult.Success && !pingResult.currentNetwork) || (pingResult is PingResult.Error && !pingResult.currentNetwork)) {
                 Text(stringResource(R.string.probe_previous_network), Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
                     style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)

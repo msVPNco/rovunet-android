@@ -129,8 +129,12 @@ class ProfileMapper @Inject constructor(
             soarDiscoveryCustom = entity.soarDiscoveryCustom,
             soarTcpMode = entity.soarTcpMode
         )
-        return profile.copy(deletionReview = ProfileDeletionReview(
-            ProfileSnapshots.digest(stored), ProfileSnapshots.digest(toSnapshot(profile))))
+        // Freeze the same canonical snapshot as before; keep certificate validation and
+        // concurrency protection, but do not serialize/hash two complete rows just to draw a card.
+        val snapshot = toSnapshot(profile)
+        return profile.copy(deletionReview = ProfileDeletionReview.deferred(stored) {
+            ProfileSnapshots.digest(stored) to ProfileSnapshots.digest(snapshot)
+        })
     }
 
     fun toEntity(profile: ServerProfile): ProfileEntity {

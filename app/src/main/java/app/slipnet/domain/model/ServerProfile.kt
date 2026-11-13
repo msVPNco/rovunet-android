@@ -193,7 +193,24 @@ data class ServerProfile(
     val isExpired: Boolean get() = expirationDate > 0 && System.currentTimeMillis() > expirationDate
 }
 
-data class ProfileDeletionReview(val storedDigest: String, val contentDigest: String)
+/** Immutable read-time review origin; expensive digests are needed only for reviewed deletion. */
+class ProfileDeletionReview private constructor(private val origin: Any, calculate: () -> Pair<String, String>) {
+    private val digests = lazy(calculate)
+    constructor(storedDigest: String, contentDigest: String) :
+        this(Eager(storedDigest, contentDigest), { storedDigest to contentDigest })
+    val storedDigest: String get() = digests.value.first
+    val contentDigest: String get() = digests.value.second
+    override fun equals(other: Any?): Boolean = other is ProfileDeletionReview && origin == other.origin
+    override fun hashCode(): Int = origin.hashCode()
+    override fun toString(): String = "ProfileDeletionReview(redacted)"
+    private data class Eager(val stored: String, val content: String)
+    private data class Deferred(val row: Any)
+    companion object {
+        /** Callers must supply an immutable row and a frozen canonical snapshot. No plaintext cache on disk. */
+        internal fun deferred(row: Any, calculate: () -> Pair<String, String>) =
+            ProfileDeletionReview(Deferred(row), calculate)
+    }
+}
 
 data class DnsResolver(
     val host: String,

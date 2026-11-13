@@ -41,6 +41,7 @@ import app.slipnet.service.VpnConnectionManager
 import app.slipnet.tunnel.SnowflakeBridge
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -82,13 +83,14 @@ data class MainUiState(
     val connectedProfileId: Long? = null,
     val connectingProfileId: Long? = null,
     val connectedChainId: Long? = null,
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val error: String? = null,
     val exportedJson: String? = null,
     val importPreview: ImportPreview? = null,
     val isImporting: Boolean = false,
     val subscriptionUrl: String? = null,
     val subscriptionId: String? = null,
+    val subscriptionPreview: app.slipnet.data.subscription.SubscriptionPreview? = null,
     val subscriptionIds: Set<String> = emptySet(),
     val smartStatus: app.slipnet.service.SmartConnectionController.Status = app.slipnet.service.SmartConnectionController.Status(),
     val smartVersion: Long = 0,
@@ -498,6 +500,8 @@ class MainViewModel @Inject constructor(
     private fun checkForUpdate() {
         if (app.slipnet.BuildConfig.PRIVATE_CANDIDATE) return
         viewModelScope.launch {
+            // Optional network work must not contend with the first local profile load.
+            uiState.first { !it.isLoading }
             // Throttle: skip if checked recently
             val lastCheck = preferencesDataStore.lastUpdateCheckTime.first()
             val now = System.currentTimeMillis()
@@ -507,7 +511,7 @@ class MainViewModel @Inject constructor(
             val skipped = preferencesDataStore.skippedUpdateVersion.first()
             val current = app.slipnet.BuildConfig.VERSION_NAME
 
-            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null } ?: return@launch
+            val update = try { app.slipnet.util.UpdateChecker.check(appContext, current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null } ?: return@launch
 
             // Don't show if user already skipped this version
             if (update.versionName == skipped) return@launch
@@ -531,7 +535,9 @@ class MainViewModel @Inject constructor(
     private fun observeProfiles() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val saved = connectionHistoryStore.load()
+            // History IO and Room/decryption may run concurrently; selection is still
+            // restored before any connect action becomes available.
+            val savedHistory = async(Dispatchers.IO) { connectionHistoryStore.load() }
             var restored = false
             combine(
                 getProfilesUseCase(),
@@ -539,6 +545,7 @@ class MainViewModel @Inject constructor(
             ) { profiles, activeProfile ->
                 Pair(profiles, activeProfile)
             }.catch { _uiState.value = _uiState.value.copy(error = "DATABASE_UNAVAILABLE", isLoading = false) }.collect { (profiles, activeProfile) ->
+                val saved = savedHistory.await()
                 val unchanged = app.slipnet.domain.model.ProbeCache.unchanged(_uiState.value.profiles, profiles)
                 val results = if (!restored) withContext(Dispatchers.Default) {
                     ConnectionHistory.restoreResults(saved, profiles)
@@ -1014,7 +1021,7 @@ class MainViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(exportedJson = null)
     }
 
-    fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null) }
+    fun closeSubscription() { _uiState.value = _uiState.value.copy(subscriptionUrl = null, subscriptionId = null, subscriptionPreview = null) }
     fun requestSubscription(id: String) {
         if (id in _uiState.value.updatingSubscriptions) return
         _uiState.value = _uiState.value.copy(updatingSubscriptions = _uiState.value.updatingSubscriptions + id)
@@ -1023,6 +1030,10 @@ class MainViewModel @Inject constructor(
             try {
                 val row = subscriptionRepository.observe().first().firstOrNull { it.id == id } ?: error("SOURCE_NOT_FOUND")
                 val preview = subscriptionRepository.prepare(row.name, subscriptionRepository.sourceUrl(row), id, row.autoUpdate)
+                if (preview.unsupported > 0) {
+                    _uiState.value = _uiState.value.copy(subscriptionId = id, subscriptionPreview = preview)
+                    return@launch
+                }
                 subscriptionRepository.apply(preview)
                 _uiState.value = _uiState.value.copy(subscriptionNotice = resources.getString(
                     app.slipnet.R.string.subscription_updated_inline, preview.profiles.size, preview.unsupported, preview.removed) +

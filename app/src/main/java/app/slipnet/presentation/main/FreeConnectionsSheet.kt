@@ -73,7 +73,10 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (preview == null) {
                 OutlinedTextField(name, { name = it.take(120) }, enabled = !busy, label = { Text(stringResource(R.string.subscription_name)) }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(address, { address = it }, enabled = !busy && provider == null, label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
+                if (provider == null) OutlinedTextField(address, { address = it }, enabled = !busy,
+                    label = { Text(stringResource(R.string.subscription_url)) }, modifier = Modifier.fillMaxWidth())
+                else Text(stringResource(R.string.public_source_address_hidden), modifier = Modifier.testTag("public-source-address-hidden"),
+                    style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.alpha17_public_consent), style = MaterialTheme.typography.bodySmall)
                 Row { Checkbox(agreed, { agreed = it }, enabled = !busy, modifier = Modifier.testTag("public-source-consent")); Text(stringResource(R.string.alpha17_public_ack), style = MaterialTheme.typography.bodySmall) }
             } else preview?.let { item ->
@@ -95,7 +98,7 @@ internal fun PublicSourceDialog(repository: SubscriptionRepository, provider: Pu
             TextButton(modifier = Modifier.testTag("public-source-confirm"), enabled = !busy && agreed && name.isNotBlank() && address.isNotBlank() && (preview == null || preview?.profiles?.isNotEmpty() == true), onClick = {
                 execute { val ready = preview
                     if (ready == null) preview = prepare(name, address, provider != null)
-                    else { repository.apply(ready); onImported() }
+                    else { repository.apply(ready.copy(reviewedUnsupported = true)); onImported() }
                 }
             }) { Text(stringResource(if (preview == null) R.string.subscription_preview else R.string.alpha17_public_import)) }
         }, dismissButton = { TextButton(onClick = { work?.cancel(); onDismiss() }) { Text(stringResource(android.R.string.cancel)) } })

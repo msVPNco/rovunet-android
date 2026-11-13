@@ -1,6 +1,10 @@
-# Build and verification — alpha19
+# Build and verification — alpha20
 
-Target: 0.3.0-alpha19, versionCode 40. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
+Alpha20 Full / code43 adds a themed Rovunet startup cover and removes redundant startup digest work; direct encrypted Mahsa fetching, public-source URL privacy, secure active-tunnel update downloads, bounded cancellable file import, red failure labels and small English legal attribution. It also fixes SOCKS domain-length handling in the constrained auxiliary engine. Alpha19 capabilities are retained; this version adds no new protocol.
+
+Owner accepted exact code43 on 2026-11-13; no detailed physical timing/carrier/battery measurements supplied. [Release and limitations](releases/alpha20.md).
+
+Target: 0.3.0-alpha20, versionCode 43. A source/build record is not a public release. Exact source commit/tree, APK hashes, package/signer and executed checks belong in VERIFICATION.json next to the final assets. Alpha11 records remain historical.
 
 ## Source and native provenance
 
@@ -22,7 +26,7 @@ bash gradlew :app:assembleFullDebug :app:assembleFullDebugAndroidTest :app:testF
   -Dorg.gradle.jvmargs="-Xmx6g -Dfile.encoding=UTF-8" --max-workers=2
 ```
 
-This produces app.veyra.client.candidate / Rovunet Test, code 40, version 0.3.0-alpha19-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
+This produces app.veyra.client.candidate / Rovunet Test, code 43, version 0.3.0-alpha20-review01. It is separate from the public app. Do not publish a private/debug signer as a production update.
 
 ## Signed public Release
 
@@ -71,7 +75,7 @@ For a disposable emulator with VPN consent, build the private application/tests 
 
 Before delivering an APK, verify ZIP integrity, manifest, apksigner output, all native entries and `tools/quality/check-apk-native.py`. Only record checks actually executed on the final source and distinguish the private validation binary from the unsigned/public Release.
 
-Exact alpha19 source, executed checks and signed artifact identities are recorded in [release provenance](releases/alpha19-provenance.json).
+Exact alpha20 source, executed checks and signed artifact identities are recorded in [release provenance](releases/alpha20-provenance.json).
 
 The final unsigned Full APK is signed offline with the fixed production key. Publication metadata/tooling cannot alter application/build/test inputs; the public copy record restores exactly the signed bytes without possessing that key. Exact artifact, APK hashes and public certificate are in release provenance. Full sources include pinned Xray and Mihomo sources, the AWG adapter and available inherited expanded trees; the unavailable old dnstt-mobile tree is disclosed. No complete offline build kit or battery saving is claimed.
 

@@ -91,6 +91,7 @@ enum class UpdateCheckResult {
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context,
     private val preferencesDataStore: PreferencesDataStore
 ) : ViewModel() {
 
@@ -618,7 +619,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.CHECKING)
         viewModelScope.launch {
             val current = app.slipnet.BuildConfig.VERSION_NAME
-            val update = try { app.slipnet.util.UpdateChecker.check(current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (error: Exception) {
+            val update = try { app.slipnet.util.UpdateChecker.check(appContext, current, preferencesDataStore.previewUpdates.first()) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (error: Exception) {
                 _uiState.value = _uiState.value.copy(updateCheckResult = UpdateCheckResult.ERROR, updateErrorResource = app.slipnet.util.UpdateChecker.errorResource(error))
                 return@launch
             }
