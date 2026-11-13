@@ -1,4 +1,12 @@
-# Current Android alpha19/code40
+# Current Android alpha20/code43 — 2026-11-13
+
+Alpha20 Full / code43 adds a themed Rovunet startup cover and removes redundant startup digest work; direct encrypted Mahsa fetching, public-source URL privacy, secure active-tunnel update downloads, bounded cancellable file import, red failure labels and small English legal attribution. It also fixes SOCKS domain-length handling in the constrained auxiliary engine. Alpha19 capabilities are retained; this version adds no new protocol.
+
+آلفا۲۰ Full، کد ۴۳: صفحهٔ آغاز برند Rovunet در سه تم و چهار زبان، کاهش کار اضافی هنگام خواندن پروفایل‌های ذخیره‌شده، دریافت مستقیم و رمزگشایی منبع مهسا، پنهان‌شدن نشانی خام منابع عمومی، دانلود امن آپدیت از تونل فعال، واردسازی فایل قابل لغو و محدود، نمایش قرمز خطا و متن حقوقی کوچک انگلیسی. اصلاح طول دامنه در SOCKS موتور کمکی نیز اعمال شده است. قابلیت‌های آلفا۱۹ حفظ شده‌اند؛ این نسخه پروتکل تازه‌ای اضافه نمی‌کند.
+
+Owner accepted exact review03 APK for publication. [Release notes](releases/alpha20.md), [completion report](releases/alpha20-completion.md), [provenance](releases/alpha20-provenance.json). Exact-source PR CI passed154 portable/JUnit, Gradle unit task,86 Debug emulator and2 minified JNI cases. Independent Mieru fixture/onboarding timeout failures remain disclosed; no new physical timing, carrier, idle battery/data measurement or panel WireGuard/Hy2 fix is claimed. Telegram channel wording remains deferred. Desktop status below is unchanged.
+
+# Historical Android alpha19/code40
 
 Subscription refresh/reimport, direct-first DNS fallback, moving labels, manual controls and AnyTLS/TUIC/Mieru are implemented. [Notes](releases/alpha19.md), [validation](releases/alpha19-completion.md) and [provenance](releases/alpha19-provenance.json). No new physical-phone, carrier or screen-off battery/data measurement is claimed. Panel WireGuard/Hy2 remains a separate investigation.
 

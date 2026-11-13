@@ -123,3 +123,7 @@ AGENTS/README/docs/release-tool changes are checked separately.
 ## Owner-approved alpha17 publication
 
 The one-version branch trigger is `publish/alpha17-approved` (or a numbered retry after a packaging-only correction). `tools/release/publish_approved_alpha17.py` verifies the passing CI artifact, public copy record, signer and every asset before publishing Latest. Application/build/test inputs must match the accepted source. No private signing key is used.
+
+## Alpha20 exact accepted publication
+
+On 2026-11-13 the owner accepted delivered review03/code43 and explicitly authorized publication. `publish/alpha20-approved` (or numbered retry) invokes `tools/release/publish_approved_alpha20.py` after PR20 merge. It restores the exact accepted SHA256930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12 from pinned CI43372323547 and public ZIP/signature metadata, without a private key, rebuild or re-sign. The script checks clean publication revision, unchanged app/build/test inputs, SDK verifier hash, APK signatures, source pins, all13 allowlisted assets and GitHub digests before publishing Latest. The passing exact-source PR run is the binary evidence; independent push Mieru/onboarding failures remain disclosed. No future-release authorization or new detailed physical measurements are implied. [Notes](releases/alpha20.md), [provenance](releases/alpha20-provenance.json).

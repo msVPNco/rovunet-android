@@ -5,7 +5,7 @@
 <p align="center"><b>Несколько путей к вашему серверу — на любом устройстве</b><br>DNS-туннели, SSH, HTTPS-прокси и профили Xray в именованных группах, с прямым подключением и настоящими тестами HTTPS.</p>
 
 <p align="center">
-  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
+  <a href="https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20"><img alt="Android release" src="https://img.shields.io/github/v/release/msVPNco/rovunet-app?sort=date&display_name=tag&filter=v*&label=android&color=0E7C86"></a>
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%C2%B7%20Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-14304D">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-6D4AFF"></a>
   <a href="https://t.me/RovunetVPN"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-RovunetVPN-2F6FEB?logo=telegram&logoColor=white"></a>
@@ -25,7 +25,7 @@
 
 | Платформа | Состояние | Загрузка и подробности |
 | --- | --- | --- |
-| **Android** | Публичный выпуск: **0.3.0-alpha19 Full, код 40** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) · [Страница Android](docs/android/README.ru.md) |
+| **Android** | Публичный выпуск: **0.3.0-alpha20 Full, код 43** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [Страница Android](docs/android/README.ru.md) |
 | **Windows** | **0.1.1 Beta · x64 · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [Страница Windows](windows/README.md) |
 | **Linux** | Планируется | Выпусков пока нет |
 | **macOS** | **0.1.6 Beta · Apple Silicon / Intel · предварительный выпуск** | [Скачать](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.6-beta) · [Страница Mac](docs/macos/README.ru.md) · Intel: ограниченное тестирование |
@@ -47,7 +47,7 @@
 
 ## Быстрый старт на Android
 
-1. **Скачайте** Full APK со [страницы выпуска](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha19) и установите. Публичные alpha14 и новее обновляются поверх, без удаления.
+1. **Скачайте** Full APK со [страницы выпуска](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) и установите. Публичные alpha14 и новее обновляются поверх, без удаления.
 2. **Откройте** Rovunet, выберите язык и тему и дайте разрешение Android VPN.
 3. **Импорт**: Подписки → вставьте HTTPS-ссылку подписки → **Импорт**, либо **+ → Импорт** для ссылки, QR-кода или файла.
 4. **Подключение**: раскройте группу, нажмите путь для выбора и нажмите ещё раз для подключения.
@@ -61,7 +61,7 @@
 | [Страница Android](docs/android/README.ru.md) | Состояние выпуска, возможности, протоколы и ограничения |
 | [Платформы](docs/PLATFORMS.md) · [Текущее состояние](docs/STATUS.md) · [Обновление](docs/UPGRADE.md) | Каналы выпусков, состояние выпуска, подпись и миграция |
 
-PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha19](docs/releases/alpha19.md).
+PDF сохраняют оформление и редакцию alpha15.4; новые статус, меню и режим простоя описаны в текущем руководстве и [заметках alpha19](docs/releases/alpha20.md).
 
 ## Исходники и поддержка
 

@@ -1,6 +1,23 @@
+# Current alpha20/code43 — 2026-11-13
+
+The owner accepted the exact review03 APK and explicitly authorized publication. See [release](releases/alpha20.md), [completion](releases/alpha20-completion.md) and [provenance](releases/alpha20-provenance.json). Codes41/42 and earlier reviews remain historical. No rebuild/re-sign for publication.
+
+Implemented: branded startup in12 language/theme combinations; lazy frozen-snapshot digests with stale-deletion protection; concurrent local history and deferred optional networking; direct encrypted Mahsa and old-alias migration; public-source URL privacy; reviewed safe public replacement; tunneled updater with bounded resume and identity checks; bounded cancellable file import; red failures; small English legal footer; pinned Mihomo SOCKS domain-length correction. Alpha19 subscription refresh/direct-first DNS fallback/marquee/manual forms/protocols remain included.
+
+Remaining priorities:
+1. Physical-phone cold start, full-card stop, reconnect, Wi-Fi/mobile transitions and weaker-phone responsiveness. Do not infer measured speedup from a cover.
+2. Own-panel WireGuard/Hy2 comparison and actual traffic diagnosis; no proven fix yet.
+3. Screen-off/idle battery and data, including four independent Slipstream resolver workers; measure before claiming improvement.
+4. Investigate intermittent local Mieru TCP fixture and onboarding-persistence15s emulator timeout. Preserve failed attempts in evidence.
+5. Complete supported protocol formats without silently dropping effective settings; AnyTLS/TUIC/Mieru and AmneziaWG already exist, not new future protocols.
+6. Deferred owner request: Telegram group wording becomes channel in all four languages; keep project URL. Requires next APK, not a documentation-only change to accepted code43.
+7. Exact inherited dnstt-mobile source remains unavailable; do not substitute an unrelated revision or claim full native reproducibility.
+
+Historical planning/evidence follows and must not override current completion.
+
 # Rovunet next iteration
 
-## Current alpha19/code40 completion — 2026-11-11
+## Historical alpha19/code40 completion — 2026-11-11
 
 The owner authorized implementing the discussed Android work, self-testing and
 release without a preview/phone-acceptance hold. This supersedes all backlog-only
