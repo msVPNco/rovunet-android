@@ -20,6 +20,26 @@ class SubscriptionPayloadTest {
             assertTrue(text, runCatching { SubscriptionPayload.read(text) }.isFailure)
         }
     }
+    @Test fun panelV1ValidatesOptionalNameAndUnicodeIdLength() {
+        fun feed(id: String, name: String) =
+            """{"version":1,"name":$name,"items":[{"id":"$id","link":"vless://fixture"}]}"""
+        val boundary = "🌐".repeat(200)
+        assertEquals(boundary, SubscriptionPayload.read(feed(boundary, "\"panel\"")).single().key)
+        assertTrue(runCatching { SubscriptionPayload.read(feed(boundary + "a", "\"panel\"")) }.isFailure)
+        assertTrue(runCatching { SubscriptionPayload.read(feed("stable", "null")) }.isFailure)
+    }
+
+    @Test fun unknownTransportNeverDowngradesKnownOrProtectedInput() {
+        fun eligible(link: String) = SubscriptionPayload.unknownTransport(SubscriptionPayload.Item("stable", link))
+        assertTrue(eligible("exampletransport://user@node.example.invalid:443"))
+        for (link in listOf("vless://invalid", "wireguard://invalid", "rovunet-enc://invalid",
+            "slipnet-bundle-enc://invalid", "https://node.example.invalid:443", "future://",
+            "future://node.example.invalid:70000", "future://node.example.invalid:443\nrovunet-enc://x")) {
+            assertFalse(link, eligible(link))
+        }
+        assertFalse(SubscriptionPayload.unknownTransport(SubscriptionPayload.Item(null, "future://node.example.invalid:443")))
+    }
+
     @Test fun compressedCollectionRoundTripRejectsFutureVersion() {
         val text = (1..30).joinToString("\n") { "rovunet://synthetic$it" }
         assertEquals(text, CollectionLink.decode(CollectionLink.encode(text)))

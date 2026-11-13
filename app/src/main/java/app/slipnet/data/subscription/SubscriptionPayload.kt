@@ -6,6 +6,16 @@ import org.json.JSONObject
 /** Unknown JSON versions and partially invalid feeds are never applied. */
 object SubscriptionPayload {
     data class Item(val key: String?, val link: String)
+    /** Only a standalone, syntactically valid authority URI in a named panel item. */
+    fun unknownTransport(item: Item): Boolean {
+        if (item.key == null || app.slipnet.data.export.ConfigSchemes.accepts(item.link)) return false
+        val uri = runCatching { java.net.URI(item.link).parseServerAuthority() }.getOrNull() ?: return false
+        val scheme = uri.scheme?.lowercase() ?: return false
+        if (scheme in setOf("http", "https", "file", "content") ||
+            listOf("rovunet", "slipnet", "veyra").any { scheme.startsWith(it) }) return false
+        return !uri.host.isNullOrBlank() && uri.port in 1..65535
+    }
+
     fun read(body: String): List<Item> {
         val text = body.removePrefix("\uFEFF").trim()
         require(text.isNotBlank() && !text.startsWith("<")) { "INVALID_FEED" }
@@ -23,6 +33,7 @@ object SubscriptionPayload {
             val root = JSONObject(text)
             if (!root.has("version") && !root.has("items") && (root.has("outbounds") || root.has("protocol") || root.has("type"))) return listOf(Item(null, text))
             require(root.get("version") is Number && root.get("version").toString() == "1" && root.keys().asSequence().all { it in setOf("version", "items", "name") }) { "UNSUPPORTED_FEED" }
+            require(!root.has("name") || root.opt("name") is String) { "INVALID_FEED" }
             val array = root.getJSONArray("items")
             require(array.length() in 1..1000) { "INVALID_FEED" }
             return (0 until array.length()).map { n ->
@@ -30,7 +41,7 @@ object SubscriptionPayload {
                 require(item.keys().asSequence().all { it in setOf("id", "link") }) { "UNSUPPORTED_FEED" }
                 require(item.opt("id") is String && item.opt("link") is String) { "INVALID_FEED" }
                 val key = item.getString("id")
-                require(key.isNotBlank() && key.length <= 200) { "INVALID_FEED" }
+                require(key.isNotBlank() && key.codePointCount(0, key.length) <= 200) { "INVALID_FEED" }
                 Item(key, item.getString("link"))
             }.also { require(it.map(Item::key).distinct().size == it.size) { "INVALID_FEED" } }
         }

@@ -34,11 +34,13 @@ internal fun AccountStatusSummary(view: AccountStatusView) {
         status?.state == "expired" || view.remainingMillis == 0L -> stringResource(R.string.account_status_expired)
         status?.state == "limit_reached" || status?.remainingBytes == 0L -> stringResource(R.string.account_status_limit_reached)
         status != null -> {
-            val volume = if (!status.volumeKnown) stringResource(R.string.subscription_volume_unknown) else status.remainingBytes?.let { bytes ->
+            val volume = if (!status.volumeKnown) stringResource(R.string.subscription_volume_unknown) else (status.remainingBytes ?: status.limitBytes)?.let { bytes ->
                 val gib = bytes >= 1024L * 1024 * 1024
                 val divisor = if (gib) 1024.0 * 1024 * 1024 else 1024.0 * 1024
                 val number = NumberFormat.getNumberInstance().apply { maximumFractionDigits = 1 }.format(bytes / divisor)
-                stringResource(R.string.account_status_remaining_volume, number, if (gib) "GiB" else "MiB")
+                val label = if (status.usedBytes != null) R.string.account_status_remaining_volume
+                    else if (status.usageLowerBound != null) R.string.subscription_limit_partial_usage else R.string.subscription_limit_unknown_usage
+                stringResource(label, number, if (gib) "GiB" else "MiB")
             } ?: stringResource(R.string.account_status_unlimited_volume)
             val time = if (!status.expiryKnown) stringResource(R.string.subscription_expiry_unknown) else view.remainingMillis?.let { millis ->
                 when {
@@ -56,7 +58,7 @@ internal fun AccountStatusSummary(view: AccountStatusView) {
         if (status?.providerReported == true) MarqueeText(stringResource(R.string.subscription_provider_snapshot,
             java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(status.generatedAt))),
             style = MaterialTheme.typography.labelSmall, color = collectionTones.headerText.copy(alpha = .65f))
-        if (view.trustworthy && status != null && (status.metering == "complete" || status.providerReported) && status.limitBytes != null && status.state == "active") {
+        if (view.trustworthy && status != null && (status.metering == "complete" || status.providerReported) && status.limitBytes != null && status.remainingBytes != null && status.state == "active") {
             LinearProgressIndicator(progress = { (requireNotNull(status.remainingBytes).toDouble() / status.limitBytes).coerceIn(0.0, 1.0).toFloat() },
                 modifier = Modifier.fillMaxWidth().height(3.dp), color = color,
                 trackColor = collectionTones.headerText.copy(alpha = .12f))

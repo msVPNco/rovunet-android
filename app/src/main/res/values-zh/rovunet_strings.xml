@@ -199,7 +199,7 @@
     <string name="delete_collection_confirm">删除「%1$s」及其中的全部 %2$d 个配置？</string>
     <string name="collection_chain_protected">此配置组包含链式配置，请先编辑链。</string>
     <string name="collection_delete_failed">配置组已更改或删除失败，请重新检查。</string>
-<string name="community_telegram">Rovunet Telegram 群组</string>
+<string name="community_telegram">Rovunet Telegram 频道</string>
     
 <string name="community_open_failed">请安装 Telegram 或浏览器以打开此链接。</string>
 
@@ -262,4 +262,6 @@
     <string name="test_stopped_early">测试在检查完所有路径之前已停止</string>
     <string name="import_all_present">所有配置已在应用中；未添加任何内容</string>
     <string name="import_some_present">已在应用中的配置已被跳过</string>
+    <string name="subscription_limit_unknown_usage">限额 %1$s %2$s · 用量未知</string>
+    <string name="subscription_limit_partial_usage">限额 %1$s %2$s · 用量仅部分上报</string>
 </resources>

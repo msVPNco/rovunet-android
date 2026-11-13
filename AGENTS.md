@@ -107,3 +107,21 @@ On 2026-11-11 the owner explicitly requested GitHub publication as Windows0.1.0 
 ## Alpha20 exact owner acceptance and publication — 2026-11-13
 
 The owner explicitly accepted delivered review03/code43 and instructed publication plus a full report. This supersedes the review hold only for this exact APK: SHA256930687063ffd7109cddff9ec798d988d1c2f129a806a8f861ff2da55d5d82d12, app source4714442846226c2c9c44444d43794ef25953761b, passing PR run43372323547. Publish unchanged bytes, same production signer; no rebuild/re-sign. Documentation and release tooling may change after source. Preserve desktop/panel and owner README formatting. Owner acceptance is not detailed physical timing/carrier/battery evidence. Independent Mieru/onboarding failures remain disclosed. Telegram channel wording stays deferred. This is not authorization for later releases.
+
+## Alpha21 main release authorization — 2026-11-13
+
+After receiving isolated review02/code45, the owner reported a successful phone
+test and explicitly authorized building and publishing the reviewed Android code
+with the original applicationId and production certificate. Use a fresh code46
+or higher after checking issued versions, a new artifact and an alpha/pre-release
+marked not Latest. This supersedes the review hold for this iteration; a repeat
+review APK or permission request is not required. The owner did not identify the
+installed hash, ABI or scenarios; do not claim seven Room methods or main upgrade
+passed. Record unrun upgrade/Keystore/device gates. Preserve reviewed native bytes
+for this alpha; the separate ARM64 Go/Brotli candidate is not integrated or accepted
+as Android evidence. Disclose the remaining native advisory investigation.
+
+Private status2 adaptation and at-most-one expanded collection are authorized
+next-version work. They are not part of the reviewed alpha21 release scope and
+must not silently change the current artifact. Panel/server/desktop work is not
+authorized by this Android release. Keep all ACT03 partial/open gates and history.

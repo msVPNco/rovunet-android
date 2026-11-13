@@ -200,7 +200,7 @@
     <string name="delete_collection_confirm">مجموعهٔ «%1$s» و هر %2$d کانفیگ آن حذف شود؟</string>
     <string name="collection_chain_protected">این مجموعه عضو زنجیره دارد؛ ابتدا زنجیره‌ها را ویرایش کنید.</string>
     <string name="collection_delete_failed">مجموعه تغییر کرده یا حذف انجام نشد؛ دوباره بررسی کنید.</string>
-<string name="community_telegram">گروه تلگرام Rovunet</string>
+<string name="community_telegram">کانال تلگرام Rovunet</string>
     
 <string name="community_open_failed">برای باز کردن لینک، تلگرام یا یک مرورگر نصب کنید.</string>
 
@@ -263,4 +263,6 @@
     <string name="test_stopped_early">آزمون پیش از رسیدن به همه‌ی مسیرها متوقف شد</string>
     <string name="import_all_present">همه‌ی پروفایل‌ها از قبل در اپ بودند؛ چیزی اضافه نشد</string>
     <string name="import_some_present">پروفایل‌هایی که از قبل در اپ بودند رد شدند</string>
+    <string name="subscription_limit_unknown_usage">سقف %1$s %2$s · مصرف نامشخص</string>
+    <string name="subscription_limit_partial_usage">سقف %1$s %2$s · مصرف ناقص گزارش شده</string>
 </resources>

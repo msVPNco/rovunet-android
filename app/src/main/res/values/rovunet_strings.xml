@@ -200,7 +200,7 @@
     <string name="delete_collection_confirm">Delete %1$s and all %2$d configurations?</string>
     <string name="collection_chain_protected">This collection contains chain members. Edit the chains before deleting it.</string>
     <string name="collection_delete_failed">Collection changed or deletion failed. Review it again.</string>
-<string name="community_telegram">Rovunet Telegram group</string>
+<string name="community_telegram">Rovunet Telegram channel</string>
     
 <string name="community_open_failed">Install Telegram or a browser to open this link.</string>
 
@@ -263,4 +263,6 @@
     <string name="test_stopped_early">The test stopped before every path was tested</string>
     <string name="import_all_present">Every profile was already in the app; nothing was added</string>
     <string name="import_some_present">Profiles already in the app were skipped</string>
+    <string name="subscription_limit_unknown_usage">Limit %1$s %2$s · usage unknown</string>
+    <string name="subscription_limit_partial_usage">Limit %1$s %2$s · usage partially reported</string>
 </resources>

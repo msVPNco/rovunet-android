@@ -24,7 +24,8 @@ class Alpha18CompletionTest {
         assertTrue(unlimited.volumeKnown); assertNull(unlimited.limitBytes); assertEquals(100L, unlimited.usedBytes)
         val unknown = SubscriptionMetadata.readStatus(SubscriptionMetadata.usage("expire=0", at).toString())
         assertFalse(unknown.volumeKnown)
-        rejected { SubscriptionMetadata.usage("total=100;expire=0", at) }
+        val capOnly = SubscriptionMetadata.readStatus(SubscriptionMetadata.usage("total=100;expire=0", at).toString())
+        assertEquals(100L, capOnly.limitBytes); assertNull(capOnly.usedBytes); assertNull(capOnly.remainingBytes)
         rejected { SubscriptionMetadata.usage("upload=9223372036854775807;download=1;total=0", at) }
         rejected { SubscriptionMetadata.usage("upload=-1;download=0", at) }
         rejected { SubscriptionMetadata.usage("expire=1;expire=2", at) }

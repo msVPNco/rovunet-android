@@ -69,7 +69,7 @@ class ActivePathMonitor @Inject constructor(
         val measurements = TunnelProbe.sample({}, successTarget = 1) { host ->
             if (!valid()) error("Probe ownership changed")
             target = host
-            TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 5_000)
+            TunnelProbe.measureCancellable(endpoint.port, endpoint.user, endpoint.password, host, 5_000, diagnosticSession = session)
         }
         if (!valid()) return@withLock null
         val ms = measurements.summary?.medianMs

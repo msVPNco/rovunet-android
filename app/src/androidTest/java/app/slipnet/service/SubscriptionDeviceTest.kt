@@ -16,6 +16,102 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SubscriptionDeviceTest {
+    @Test fun panelFixturesRefreshPersistentlyForBothSavedUrls() = runBlocking {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val db = androidx.room.Room.inMemoryDatabaseBuilder(context, app.slipnet.data.local.database.SlipNetDatabase::class.java).build()
+        val repository = app.slipnet.data.subscription.StatusReviewHarness.repository(context, db)
+        val mapper = ProfileMapper(Gson())
+        fun fixture(name: String) = instrumentation.context.assets.open("int03/$name.json")
+            .bufferedReader().use { it.readText() }
+        try {
+            for ((suffix, full) in listOf(".json" to "unlimited", ".windows.json" to "unlimited.windows")) {
+                val address = "https://subscription.example.invalid/sub/" + "a".repeat(32) + suffix
+                val initial = repository.prepareUsing("Panel fixture", address, null, false) { target, limit ->
+                    assertEquals(address, target)
+                    assertEquals(2 * 1024 * 1024, limit)
+                    app.slipnet.data.subscription.SubscriptionRepository.Download(200, null, fixture("old20"))
+                }
+                val sourceId = initial.source.id
+                suspend fun rows() = db.profileDao().getAllProfiles().first().filter { it.collectionId == sourceId }
+                suspend fun refresh(file: String) {
+                    repository.apply(repository.prepareUsing(initial.source.name, address, sourceId, false) { target, limit ->
+                        assertEquals(address, target)
+                        assertEquals(2 * 1024 * 1024, limit)
+                        app.slipnet.data.subscription.SubscriptionRepository.Download(200, null, fixture(file))
+                    })
+                }
+                try {
+                    repository.apply(initial)
+                    val original = rows()
+                    assertEquals(20, original.size)
+                    val edited = original.first()
+                    db.profileDao().updateProfile(mapper.toEntity(mapper.toDomain(edited).copy(name = "Local override", isPinned = true)))
+                    db.profileDao().activateProfile(edited.id)
+                    refresh(full)
+                    val expanded = rows().map { it.id }.toSet()
+                    assertEquals(24, expanded.size)
+                    assertTrue(original.all { it.id in expanded })
+                    for (file in listOf(full, "renewed")) {
+                        refresh(file)
+                        assertEquals(expanded, rows().map { it.id }.toSet())
+                        assertTrue(requireNotNull(db.profileDao().getProfileById(edited.id)).isActive)
+                        assertEquals(address, repository.sourceUrl(requireNotNull(db.subscriptionDao().get(sourceId))))
+                        assertEquals("Local override", mapper.toDomain(requireNotNull(db.profileDao().getProfileById(edited.id))).name)
+                        assertTrue(requireNotNull(db.profileDao().getProfileById(edited.id)).isPinned)
+                    }
+                    val mixedBeforeRows = rows().sortedBy { it.id }
+                    val mixedBeforeSource = db.subscriptionDao().get(sourceId)
+                    val mixed = repository.prepareUsing(initial.source.name, address, sourceId, false) { target, _ ->
+                        assertEquals(address, target)
+                        app.slipnet.data.subscription.SubscriptionRepository.Download(200, null, fixture("unsupported"))
+                    }
+                    assertEquals(1, mixed.unsupported)
+                    assertEquals(24, mixed.profiles.size)
+                    assertTrue(runCatching { repository.apply(mixed) }.isFailure)
+                    assertEquals(mixedBeforeRows, rows().sortedBy { it.id })
+                    assertEquals(mixedBeforeSource, db.subscriptionDao().get(sourceId))
+                    repository.apply(mixed.copy(reviewedUnsupported = true))
+                    assertEquals(expanded, rows().map { it.id }.toSet())
+                    val fixed = java.time.Instant.parse("2026-11-08T10:00:00Z").toEpochMilli()
+                    var statusBody = ""
+                    val statusStore = app.slipnet.data.subscription.AccountStatusStore(db, repository) { target ->
+                        assertEquals("https://subscription.example.invalid/sub/" + "a".repeat(32) + ".status.json", target)
+                        app.slipnet.data.subscription.SubscriptionRepository.Download(200, null, statusBody, fixed, System.currentTimeMillis())
+                    }
+                    var lastStatus: app.slipnet.data.subscription.AccountStatus? = null
+                    for (state in listOf("active", "partial", "expired", "renewed", "limit-reached")) {
+                        statusBody = instrumentation.context.assets.open("int03-status/$state.status.json").bufferedReader().use { it.readText() }
+                        val expected = app.slipnet.data.subscription.AccountStatus.read(statusBody)
+                        statusStore.refresh(true)
+                        val fingerprint = java.security.MessageDigest.getInstance("SHA-256").digest(address.toByteArray()).joinToString("") { "%02x".format(it) }
+                        val cache = requireNotNull(db.privateAccountStatusDao().get(sourceId, fingerprint))
+                        assertEquals(expected, app.slipnet.data.subscription.AccountStatus.read(cache.payload))
+                        lastStatus?.let { assertTrue(expected.accepts(it)) }
+                        assertTrue(requireNotNull(db.profileDao().getProfileById(edited.id)).isActive)
+                        assertEquals(expanded, rows().map { it.id }.toSet())
+                        if (state == "partial") assertFalse(cache.display().view().trustworthy)
+                        lastStatus = expected
+                    }
+                    for (file in listOf("empty", "duplicate", "protected", "all-unknown", "known-invalid", "malformed")) {
+                        val before = db.subscriptionDao().get(sourceId)
+                        val beforeRows = db.profileDao().getAllProfiles().first().sortedBy { it.id }
+                        assertTrue(runCatching { refresh(file) }.isFailure)
+                        assertEquals(before, db.subscriptionDao().get(sourceId))
+                        assertEquals(beforeRows, db.profileDao().getAllProfiles().first().sortedBy { it.id })
+                        assertEquals(expanded, rows().map { it.id }.toSet())
+                    }
+                } finally {
+                    val owned = rows().map { it.id }
+                    repository.detach(sourceId)
+                    owned.forEach { db.profileDao().deleteProfile(it) }
+                }
+            }
+        } finally {
+            db.close()
+        }
+    }
+
     @Test fun providerMetadataAndOptionalNamePersistAtomicallyWithoutPanelRequests() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = EntryPointAccessors.fromApplication(context, SubscriptionWorkerEntryPoint::class.java).subscriptions()

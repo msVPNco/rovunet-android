@@ -71,7 +71,8 @@ object DatabaseModule {
                 SlipNetDatabase.MIGRATION_46_47,
                 SlipNetDatabase.MIGRATION_47_48,
                 SlipNetDatabase.MIGRATION_48_49,
-                SlipNetDatabase.MIGRATION_49_50
+                SlipNetDatabase.MIGRATION_49_50,
+                SlipNetDatabase.MIGRATION_50_51
             )
             .build()
     }

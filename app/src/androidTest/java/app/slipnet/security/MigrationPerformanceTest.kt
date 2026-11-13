@@ -74,7 +74,7 @@ class MigrationPerformanceTest {
         }
         val db = Room.databaseBuilder(context, SlipNetDatabase::class.java, name)
             .addMigrations(observedMigration, SlipNetDatabase.MIGRATION_47_48, SlipNetDatabase.MIGRATION_48_49,
-                SlipNetDatabase.MIGRATION_49_50).build()
+                SlipNetDatabase.MIGRATION_49_50, SlipNetDatabase.MIGRATION_50_51).build()
         val repo = ProfileRepositoryImpl(db.profileDao(), ProfileMapper(Gson()))
         val heartbeat = launch(Dispatchers.Main) {
             while (true) { if (migrating.get()) beats.incrementAndGet(); delay(50) }

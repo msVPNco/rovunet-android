@@ -14,6 +14,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
 
     @Volatile private var child: Process? = null
     private var outputThread: Thread? = null
+    private var diagnosticOwner = 0L
 
     private fun alive(process: Process): Boolean = try {
         process.exitValue()
@@ -44,6 +45,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         if (diagnostics) when (outboundProtocol) {
             "hysteria" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_HYSTERIA2_START, diagnosticSession)
             "wireguard" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.XRAY_WIREGUARD_START, diagnosticSession)
+            "mieru" -> ConnectionDiagnostics.record(ConnectionDiagnostics.Event.AUXILIARY_MIERU_START, diagnosticSession)
         }
         val port = inbound.getInt("port")
         require(port in 1..65535)
@@ -70,6 +72,8 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         }
         val process = builder.start()
         child = process
+        diagnosticOwner = diagnosticSession
+        if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_PROCESS_STARTED, diagnosticSession)
         outputThread = Thread({
             runCatching {
                 process.inputStream.buffered().use { input ->
@@ -95,6 +99,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         }, "veyra-core-output").apply { isDaemon = true; start() }
         try {
             process.outputStream.bufferedWriter().use { it.write(settings.toString()) }
+            if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_CONFIG_WRITTEN, diagnosticSession)
             val deadline = System.nanoTime() + startupTimeoutMs * 1_000_000
             while (true) {
                 check(alive(process)) { "Core rejected configuration or could not bind its port" }
@@ -119,7 +124,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
                 check(System.nanoTime() < deadline) { "Core proxy startup timed out" }
                 check(!awaitExit(process, 25)) { "Core stopped during startup" }
             }
-            if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_READY)
+            if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_READY, diagnosticSession)
         } catch (e: Exception) { stop(); throw e }
     }
 
@@ -140,6 +145,6 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         check(outputThread?.isAlive != true) { "Previous core output reader did not stop" }
         outputThread = null
         child = null
-        if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_STOP)
+        if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_STOP, diagnosticOwner)
     }
 }

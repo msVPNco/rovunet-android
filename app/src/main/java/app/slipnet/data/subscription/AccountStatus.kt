@@ -7,12 +7,15 @@ import org.json.JSONObject
 /** Advisory panel metadata: never grants, blocks or changes a saved connection. */
 data class AccountStatus(val serverId: String, val accountId: String, val periodId: String,
     val state: String, val expiresAt: Long?, val limitBytes: Long?, val usedBytes: Long?,
-    val metering: String, val sampledAt: Long?, val generatedAt: Long, val revision: Long, val providerReported: Boolean = false, val volumeKnown: Boolean = true, val expiryKnown: Boolean = true) {
-    val remainingBytes: Long? get() = limitBytes?.let { (it - requireNotNull(usedBytes)).coerceAtLeast(0) }
+    val metering: String, val sampledAt: Long?, val generatedAt: Long, val revision: Long, val providerReported: Boolean = false, val volumeKnown: Boolean = true, val expiryKnown: Boolean = true,
+    val usageLowerBound: Long? = null) {
+    val remainingBytes: Long? get() = if (metering in setOf("partial", "unavailable")) null else
+        limitBytes?.let { limit -> usedBytes?.let { (limit - it).coerceAtLeast(0) } }
     fun sameAccountPeriod(other: AccountStatus) = serverId == other.serverId && accountId == other.accountId && periodId == other.periodId
     fun accepts(previous: AccountStatus): Boolean {
-        // Revision belongs to the source URL, including renewals. A new token has
-        // a different source fingerprint and is compared against no old payload.
+        if (providerReported || previous.providerReported || serverId != previous.serverId || accountId != previous.accountId) return false
+        // Period renewal keeps the bound account/server and advances the source's
+        // independent high-water revision. Equal-revision period changes fail below.
         if (revision < previous.revision) return false
         return revision != previous.revision || copy(sampledAt = null, generatedAt = 0) == previous.copy(sampledAt = null, generatedAt = 0)
     }
@@ -74,13 +77,14 @@ data class AccountStatusView(val status: AccountStatus?, val serverNow: Long?, v
                 ((status.metering == "complete" || status.providerReported) && status.sampledAt != null && serverNow != null &&
                     serverNow - status.sampledAt in -5_000L..(15 * 60_000L)))
             val trustworthy = freshFile && measured && error.isEmpty()
+            val remaining = status?.remainingBytes
             val severity = when {
                 !trustworthy || status == null -> AccountSeverity.UNKNOWN
                 status.state != "active" || (status.expiresAt != null && status.expiresAt <= requireNotNull(serverNow)) -> AccountSeverity.CRITICAL
                 status.remainingBytes == 0L -> AccountSeverity.CRITICAL
-                status.limitBytes != null && requireNotNull(status.remainingBytes).toDouble() / status.limitBytes <= .05 -> AccountSeverity.CRITICAL
+                status.limitBytes != null && remaining != null && remaining.toDouble() / status.limitBytes <= .05 -> AccountSeverity.CRITICAL
                 status.expiresAt != null && status.expiresAt - requireNotNull(serverNow) <= 86_400_000 -> AccountSeverity.CRITICAL
-                status.limitBytes != null && requireNotNull(status.remainingBytes).toDouble() / status.limitBytes <= .20 -> AccountSeverity.WARNING
+                status.limitBytes != null && remaining != null && remaining.toDouble() / status.limitBytes <= .20 -> AccountSeverity.WARNING
                 status.expiresAt != null && status.expiresAt - requireNotNull(serverNow) <= 3 * 86_400_000L -> AccountSeverity.WARNING
                 else -> AccountSeverity.NORMAL
             }

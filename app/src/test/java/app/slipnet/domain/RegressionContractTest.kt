@@ -144,6 +144,9 @@ class RegressionContractTest {
 
     @Test fun explicitChoiceAndHistoricalEvidence() = connectionChoiceRegression()
     @Test fun scannerHttpUrlUsesTheExplicitSocksTunnelWithoutLocalDns() = kotlinx.coroutines.runBlocking {
+        app.slipnet.util.ConnectionDiagnostics.clear()
+        app.slipnet.util.ConnectionDiagnostics.begin(7001, "XRAY")
+        try {
         java.net.ServerSocket(0).use { server ->
             val observed = java.util.concurrent.CompletableFuture<String>()
             val peer = Thread {
@@ -171,6 +174,11 @@ class RegressionContractTest {
             assertEquals("never-resolve.invalid GET /probe?x=1 HTTP/1.1", observed.get(3, java.util.concurrent.TimeUnit.SECONDS))
             peer.join(3000)
         }
+        val timeline = app.slipnet.util.ConnectionDiagnostics.report()
+        assertFalse("A scanner must not borrow the active connection's trace", timeline.contains("PROBE_HTTP_REQUEST_WRITTEN"))
+        assertFalse(timeline.contains("PROBE_SOCKS_REQUEST_WRITTEN"))
+        assertFalse(timeline.contains("PROBE_RESPONSE_FIRST_BYTE"))
+        } finally { app.slipnet.util.ConnectionDiagnostics.clear() }
     }
     @Test fun phaseBudgetsCancellationAndApprovalWait() = collectionPhaseRegression()
     @Test fun attemptExpirationCancellationAndReplacement() = attemptWatchdogRegression()

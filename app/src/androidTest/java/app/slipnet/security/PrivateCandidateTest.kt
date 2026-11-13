@@ -54,7 +54,7 @@ class PrivateCandidateTest {
         }
         fun open() = Room.databaseBuilder(context, SlipNetDatabase::class.java, name)
             .addMigrations(SlipNetDatabase.MIGRATION_46_47, SlipNetDatabase.MIGRATION_47_48, SlipNetDatabase.MIGRATION_48_49,
-                SlipNetDatabase.MIGRATION_49_50).build()
+                SlipNetDatabase.MIGRATION_49_50, SlipNetDatabase.MIGRATION_50_51).build()
         try {
             val interrupted = open()
             try {
