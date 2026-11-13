@@ -26,7 +26,7 @@
 | 平台 | 状态 | 下载与详情 |
 | --- | --- | --- |
 | **Android** | 公开版本：**0.3.0-alpha20 Full，代码 43** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [Android 页面](docs/android/README.zh-CN.md) |
-| **Windows** | **0.1.2 Beta · x64 · 预发布** | [下载](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [Windows 页面](windows/README.md) |
+| **Windows** | **0.1.3 Beta · x64 · 预发布** | [下载](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Rovunet-Windows-0.1.3-Beta-x64-Setup.exe) · [Windows 页面](windows/README.md) |
 | **Linux** | 计划中 | 暂无发布 |
 | **macOS** | **0.1.7-beta · Local Preview · Apple Silicon / Intel · 预发布** | [下载](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.7-beta) · [Mac 页面](docs/macos/README.zh-CN.md) · Intel：**未在真实 Intel Mac 上测试** |
 
