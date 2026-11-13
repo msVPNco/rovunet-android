@@ -28,7 +28,7 @@
 | پلتفرم | وضعیت | دانلود و جزئیات |
 | --- | --- | --- |
 | **اندروید** | انتشار عمومی: **آلفا۲۰ Full با کد نسخهٔ ۴۳** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha20) · [صفحهٔ اندروید](docs/android/README.fa.md) |
-| **ویندوز** | **0.1.1 Beta · نسخهٔ x64 · پیش‌انتشار** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta) · [صفحهٔ ویندوز](windows/README.md) |
+| **ویندوز** | **0.1.2 Beta · نسخهٔ x64 · پیش‌انتشار** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [صفحهٔ ویندوز](windows/README.md) |
 | **لینوکس** | برنامه‌ریزی‌شده | هنوز انتشاری ندارد |
 | **مک** | **0.1.7-beta · Local Preview · Apple Silicon / Intel · پری‌ریلیز** | [دانلود](https://github.com/msVPNco/rovunet-app/releases/tag/macos-v0.1.7-beta) · [صفحهٔ مک](docs/macos/README.fa.md) · Intel: **روی مک اینتل واقعی تست نشده** |
 
