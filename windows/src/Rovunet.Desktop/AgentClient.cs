@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Security.Cryptography;
 using Rovunet.Core;
+using Rovunet.Platform;
 
 namespace Rovunet.Desktop;
 
@@ -22,7 +23,7 @@ public sealed class AgentClient(bool probeOnly = false) : IAsyncDisposable
         pipe = new NamedPipeClientStream(".", name, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         timeout.CancelAfter(TimeSpan.FromSeconds(12));
-        try { await pipe.ConnectAsync(timeout.Token); } catch { await DisposeAsync(); throw new SafeError("AGENT_FAILED"); }
+        try { await pipe.ConnectAsync(timeout.Token);PipePeer28.RequireServer(pipe.SafePipeHandle,agent.Id); } catch { await DisposeAsync(); throw new SafeError("AGENT_FAILED"); }
     }
     public async Task<AgentReply> Send(AgentCommand cmd,CancellationToken pendingCancellation=default,Action? written=null)
     {
@@ -39,6 +40,12 @@ public sealed class AgentClient(bool probeOnly = false) : IAsyncDisposable
         finally { commands.Release(); }
     }
     public void Abort() => pipe?.Dispose();
+    internal async Task StopForSystemShutdown(CancellationToken stop)
+    {
+        stopping=true;pipe?.Dispose();
+        var owned=agent;
+        if(owned!=null)await owned.WaitForExitAsync(stop).ConfigureAwait(false);
+    }
     async Task Write(AgentCommand command,CancellationToken token)
     {
         await writes.WaitAsync(token);try{if(pipe==null||!pipe.IsConnected)throw new SafeError("AGENT_FAILED");await Wire.Write(pipe,command,token);}finally{writes.Release();}

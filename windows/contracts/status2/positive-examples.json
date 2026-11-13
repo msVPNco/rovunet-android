@@ -1,0 +1,61 @@
+{
+  "schema": "normative examples derived from TestV2StatusLifecycle; these timestamps are illustrative, not captured HTTP responses",
+  "status_version": 2,
+  "feed_version": 1,
+  "examples": [
+    {
+      "version": 2,
+      "server_id": "ffffffffffffffffffffffffffffffff",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 2,
+      "account_status": "active",
+      "limit_kind": "finite",
+      "limit_bytes": 1073741824,
+      "expiry_kind": "none",
+      "expires_at": null,
+      "confirmed_bytes": 0,
+      "pending_bytes": 100,
+      "coverage": "partial",
+      "measurement": "accounted_lower_bound",
+      "sampled_at": null,
+      "generated_at": "2030-01-01T00:00:00Z"
+    },
+    {
+      "version": 2,
+      "server_id": "ffffffffffffffffffffffffffffffff",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 3,
+      "account_status": "active",
+      "limit_kind": "finite",
+      "limit_bytes": 1073741824,
+      "expiry_kind": "none",
+      "expires_at": null,
+      "confirmed_bytes": 13,
+      "pending_bytes": 0,
+      "coverage": "partial",
+      "measurement": "accounted_lower_bound",
+      "sampled_at": null,
+      "generated_at": "2030-01-01T00:00:01Z"
+    }
+  ],
+  "source_transition_cases": [
+    {
+      "case": "URL rotation",
+      "server_account_period": "same",
+      "new_token": "changed",
+      "expected": "preserve saved source, item identity, pin, override and manual selection"
+    },
+    {
+      "case": "extra address reorder",
+      "base_item_id": "stable",
+      "extra_item_id": "current -ipN uses list position; unchanged order preserves it; reordering needs explicit reconciliation, not a promise of address-order-independent IDs",
+      "expected": "do not derive profile identity from display name or order"
+    },
+    {
+      "case": "conflicting server or trust",
+      "expected": "reject metadata/cache application; do not change source credentials or trusted TLS pins"
+    }
+  ]
+}

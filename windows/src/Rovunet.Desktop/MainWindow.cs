@@ -20,7 +20,10 @@ public sealed partial class MainWindow : Window
     readonly Dictionary<string, string> statusBodies = [];
 
     readonly System.Windows.Threading.DispatcherTimer statusExpiry = new();
-    AgentClient? client; AgentReply state = new();
+    readonly RouteGeneration routeGeneration=new();
+    AgentClient? agentClientValue;
+    AgentClient? client { get=>agentClientValue;set {if(!ReferenceEquals(agentClientValue,value)){routeGeneration.Advance();agentClientValue=value;}} }
+    AgentReply state = new();
     StackPanel cards = null!; TextBlock connectionText = null!, detail = null!, errorText = null!; Button connect = null!;
     Border shield = null!; CheckBox proxy = null!; bool busy, closing, allowClose;
     AgentClient? lostClient;
@@ -36,6 +39,7 @@ public sealed partial class MainWindow : Window
     {
         
         this.data = data; if(data.LiveLatencyRevision<1){data.LiveLatency=true;data.LiveLatencyRevision=1;} fixtureMode=uiSmoke; Title = uiSmoke ? "Rovunet — UI fixture" : "Rovunet"; allowClose = uiSmoke;
+        NormalizeCollections26();
         foreach(var p in data.Profiles)if(SshHostKey.Required(p)&&data.SshKeys.ContainsKey(p.Id)&&!data.SshKeyScopes.ContainsKey(p.Id))data.SshKeyScopes[p.Id]=SshHostKey.Scope(p);
         Style = (Style)Application.Current.FindResource(typeof(Window));
         
@@ -45,7 +49,11 @@ public sealed partial class MainWindow : Window
         Height = UiPolicy.WindowSize(Math.Max(data.WindowHeight,880), area.Height, 880);
         MinWidth = Math.Min(480, Width); MinHeight = Math.Min(880, Height);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        foreach(var sub in data.Subscriptions){try{if(sub.Usage!=null){subscriptionUsage20[sub.Id]=sub.Usage;statuses[sub.Id]=sub.Usage.Snapshot(sub.Id);}else if(sub.StatusBody.Length>0)statuses[sub.Id]=new(){Status=AccountStatus.Read(sub.StatusBody),Error="ACCOUNT_STALE"};}catch{}}
+        foreach(var sub in data.Subscriptions){
+            if(sub.Usage!=null)subscriptionUsage20[sub.Id]=sub.Usage;
+            if(sub.StatusBody.Length>0||sub.StatusSchemaVersion==2||V2Feed21(sub.Url))LoadPrivateStatus21(sub);
+            else if(sub.Usage!=null){try{statuses[sub.Id]=sub.Usage.Snapshot(sub.Id);}catch{}}
+        }
         ApplyTheme();Build();WireAdaptiveBounds21();
         SizeChanged += (_, args) => { if(args.WidthChanged&&!closing){if(NavigationDepth>0)ResizeInnerPage(args.NewSize.Width);else if((args.NewSize.Width<ContextThreshold)!=compactLayout)RebuildForResize();} };
         SizeChanged += (_, args) => { if(args.HeightChanged&&!closing&&heroCard19!=null)RefreshHeroCollapse19(); };
@@ -101,13 +109,14 @@ public sealed partial class MainWindow : Window
         catch { lastError = "RECOVERY_REQUIRED"; SetState(new() { State = "error", Error = lastError }); }
     }
     TextBlock Text(string value, double size = 14, Brush? brush = null) => new() { Text = value, FontSize = Typography.Size(size),FontWeight=Typography.Body, Foreground = brush ?? (Brush)FindResource("Ink"), Margin = new(4, 3, 4, 3), TextWrapping = TextWrapping.Wrap };
+    Action<Exception>? uiEventError15;
     Button Button(string key, Action action, bool primary = false)
     {
-        var b = new Button { Content = L.Text(key), HorizontalAlignment = HorizontalAlignment.Stretch };
+        var b = new Button { Content = L.Text(key), HorizontalAlignment = HorizontalAlignment.Stretch, BorderThickness = new(1), BorderBrush = GlassEdge(Tone("Outline")), Background = GlassSurface("Selected") };
         if (primary) { b.Background = Accent; b.Foreground = SystemParameters.HighContrast ? SystemColors.HighlightTextBrush : darkTheme ? Tone("Bg") : Brushes.White; b.FontWeight = FontWeights.SemiBold; }
-        b.Click += (_, _) => { try { action(); } catch (Exception e) { lastError = e is SafeError se ? se.Code : "UNEXPECTED_ERROR"; if (errorText != null) SetState(state); } }; System.Windows.Automation.AutomationProperties.SetName(b, L.Text(key)); return b;
+        b.Click += (_, _) => { try { action(); } catch (Exception e) { if(fixtureMode)uiEventError15?.Invoke(e);lastError = e is SafeError se ? se.Code : "UNEXPECTED_ERROR"; if (errorText != null) SetState(state); } }; System.Windows.Automation.AutomationProperties.SetName(b, L.Text(key)); return b;
     }
-    void Save() { if(!fixtureMode) PrivateStore.Save("profiles.dpapi", data); }
+    void Save() { if(fixtureMode){storeSaveFixture28?.Invoke();return;}PrivateStore.Save("profiles.dpapi", data); }
     Profile? Selected => data.Profiles.FirstOrDefault(p => p.Id == data.SelectedId);
     async Task Run(Func<Task> operation)
     {
@@ -123,6 +132,7 @@ public sealed partial class MainWindow : Window
         p = resolverPlan.Effective;
         if (resolverPlan.Notice.Length > 0) lastError = resolverPlan.Notice;
         p = await ApplyDnsPool(p);
+        PrepareChainCertificates25(p);
         string slipPin = StoredSlipPin(p);
         if (TransportPlan.UsesSlip(p.Raw) && slipPin.Length == 0)
         {
@@ -139,17 +149,18 @@ public sealed partial class MainWindow : Window
         SetState(new() { State = "connecting" });
         try
         {
-            await current.Start(); var result = await current.Send(new() { Action = "connect", Profile = p, SystemProxy = proxy.IsChecked == true, LocalHttpPort=fixtureMode?0:data.LocalHttpPort, LocalSocksPort=fixtureMode?0:data.LocalSocksPort, SlipCertificate = slipPin, SlipInterval = SlipInterval(p), SshTlsCa=StoredSshTlsCa(p), HostKey = StoredSshKey(p) });
-            if (result.State == "trust")
+            await current.Start(); var result = await current.Send(new() { Action = "connect", Profile = p, SystemProxy = proxy.IsChecked == true, LocalHttpPort=fixtureMode?0:data.LocalHttpPort, LocalSocksPort=fixtureMode?0:data.LocalSocksPort, SlipCertificate = slipPin, SlipInterval = SlipInterval(p), SshTlsCa=StoredSshTlsCa(p), HostKey = StoredSshKey(p),ChainIdentities=ChainIdentityOptions25(p) });
+            for(int trustAttempt=0;result.State=="trust"&&trustAttempt<4;trustAttempt++)
             {
-                if (!connectCancelled && !closing && Confirm(L.Text(result.Error) + "\n\n" + p.Name + "\n" + L.Text("SSH_TRUST_HINT"), result.Fingerprint))
+                var trustProfile=TrustLayer25(p,result);
+                if (!connectCancelled && !closing && Confirm(L.Text(result.Error) + "\n\n" + trustProfile.Name + "\n" + L.Text("SSH_TRUST_HINT"), result.Fingerprint))
                 {
-                    data.SshKeys[p.Id] = result.HostKey; data.SshKeyScopes[p.Id]=SshHostKey.Scope(p); Save();
-                    result = await current.Send(new() { Action = "connect", Profile = p, SystemProxy = proxy.IsChecked == true, LocalHttpPort=fixtureMode?0:data.LocalHttpPort, LocalSocksPort=fixtureMode?0:data.LocalSocksPort, SlipCertificate = slipPin, SlipInterval = SlipInterval(p), SshTlsCa=StoredSshTlsCa(p), HostKey = result.HostKey });
+                    data.SshKeys[trustProfile.Id] = result.HostKey; data.SshKeyScopes[trustProfile.Id]=SshHostKey.Scope(trustProfile); Save();
+                    result = await current.Send(new() { Action = "connect", Profile = p, SystemProxy = proxy.IsChecked == true, LocalHttpPort=fixtureMode?0:data.LocalHttpPort, LocalSocksPort=fixtureMode?0:data.LocalSocksPort, SlipCertificate = slipPin, SlipInterval = SlipInterval(p), SshTlsCa=StoredSshTlsCa(p), HostKey = ChainProfiles.IsChain(p.Raw)?StoredSshKey(p):result.HostKey,ChainIdentities=ChainIdentityOptions25(p) });
                 }
                 else result = new() { State = "disconnected", Error = "CANCELLED" };
             }
-            lastConnectMs = result.ElapsedMs; if (result.State == "connected") { activeProfile = p; connectedSince = DateTimeOffset.UtcNow; }
+            lastConnectMs = result.ElapsedMs; if (result.State == "connected") { activeProfile = p; connectedSince = DateTimeOffset.UtcNow;RecordConnectedUse17(p); }
             SetState(result); if (result.State != "connected") { await current.DisposeAsync(); if (client == current) client = null; }
         }
         catch { await current.DisposeAsync(); if (client == current) client = null; throw; }
@@ -235,28 +246,32 @@ public sealed partial class MainWindow : Window
         SetState(state); BuildCards();
     }
     void SubscriptionDialog()=>SubscriptionDialog(null,null);
-    void SubscriptionDialog(string? selectedSource,string? initialUrl)
+    void SubscriptionDialog(string? selectedSource,string? initialUrl){if(!busy)BuildSubscriptionPage28(selectedSource,initialUrl).ShowDialog();}
+    DialogWindow BuildSubscriptionPage28(string? selectedSource=null,string? initialUrl=null)
     {
-        if (busy) return;
-
         var d = Dialog("SUBSCRIPTIONS", 620, 500); var content = new StackPanel { Margin = new(24) };
         content.Children.Add(Text(L.Text("SUBSCRIPTION_HINT"), 14, Muted));
         var choose = new ComboBox { Margin = new(4, 12, 4, 8), MinHeight = 34, DisplayMemberPath = "Name", ItemsSource = data.Subscriptions };
-        var subscriptionName=new TextBox{Text=selectedSource!=null?data.Subscriptions.FirstOrDefault(s=>s.Id==selectedSource)?.Name??"":"",Tag="SUBSCRIPTION_NAME"};content.Children.Add(OutlinedField("COLLECTION_NAME",subscriptionName)); var input = new TextBox { FlowDirection = FlowDirection.LeftToRight, MinHeight = 48 }; content.Children.Add(OutlinedField("SUBSCRIPTION_URL",input));
+        var subscriptionName=new TextBox{Text=selectedSource!=null?data.Subscriptions.FirstOrDefault(s=>s.Id==selectedSource)?.Name??"":"",Tag="SUBSCRIPTION_NAME"};content.Children.Add(OutlinedField("COLLECTION_NAME",subscriptionName));var input=new TextBox{FlowDirection=FlowDirection.LeftToRight,MinHeight=48};var inputFrame=OutlinedField("SUBSCRIPTION_URL",input);content.Children.Add(inputFrame);
+        string managedUrl="";bool settingSource=false;var managedLabel=Text("",15);managedLabel.Tag="PUBLIC_SOURCE_IDENTITY";managedLabel.Visibility=Visibility.Collapsed;content.Children.Add(managedLabel);
 
-        var publicBox = new ComboBox { Margin = new(4, 8, 4, 4), MinHeight = 34, DisplayMemberPath = "Name", ItemsSource = PublicFeed.Presets, SelectedIndex = -1 };
+        var publicBox = new ComboBox { Margin = new(4, 8, 4, 4), MinHeight = 34, DisplayMemberPath = "DisplayName", ItemsSource = PublicFeed.Presets, SelectedIndex = -1 };
 
         var publicHint = Text(L.Text("PUBLIC_CONSENT"), 12, Muted); publicHint.Visibility = Visibility.Collapsed; content.Children.Add(publicHint);
         var publicConsent=new CheckBox{Content=L.Text("PUBLIC_ACCEPT"),Visibility=Visibility.Collapsed};content.Children.Add(SettingsRow(publicConsent));
-        input.TextChanged+=(_,_)=>{bool known=PublicFeed.IsKnown(input.Text.Trim());publicConsent.Visibility=known?Visibility.Visible:Visibility.Collapsed;publicConsent.IsChecked=false;};
-        publicBox.SelectionChanged += (_, _) => { if (publicBox.SelectedItem is PublicFeed.Preset pr) { input.Text = pr.Url; publicHint.Visibility = Visibility.Visible; } };
-        choose.SelectionChanged += (_, _) => { if (choose.SelectedItem is Subscription s) input.Text = s.Url; };
+        string CurrentUrl()=>managedUrl.Length>0?managedUrl:input.Text.Trim();
+        void SelectSource(string url){
+            settingSource=true;try{var preset=PublicFeed.Resolve(url);managedUrl=preset?.Url??"";input.Text=preset==null?url:"";inputFrame.Visibility=preset==null?Visibility.Visible:Visibility.Collapsed;managedLabel.Text=preset==null?"":preset.DisplayName+" · "+L.Text("PUBLIC_SOURCE_MANAGED");managedLabel.Visibility=preset==null?Visibility.Collapsed:Visibility.Visible;publicHint.Visibility=publicConsent.Visibility=preset==null?Visibility.Collapsed:Visibility.Visible;publicConsent.IsChecked=false;}finally{settingSource=false;}
+        }
+        input.TextChanged+=(_,_)=>{if(settingSource)return;if(PublicFeed.Resolve(input.Text.Trim())!=null)SelectSource(input.Text.Trim());else{managedUrl="";managedLabel.Visibility=publicHint.Visibility=publicConsent.Visibility=Visibility.Collapsed;publicConsent.IsChecked=false;}};
+        publicBox.SelectionChanged+=(_,_)=>{if(publicBox.SelectedItem is PublicFeed.Preset pr)SelectSource(pr.Url);};
+        choose.SelectionChanged+=(_,_)=>{if(choose.SelectedItem is Subscription s)SelectSource(ManagedSource28(s)?.Url??s.Url);};
         if(selectedSource!=null)choose.SelectedItem=data.Subscriptions.FirstOrDefault(s=>s.Id==selectedSource);
-        if(initialUrl!=null){input.Text=initialUrl;publicHint.Visibility=Visibility.Visible;}
+        if(initialUrl!=null)SelectSource(initialUrl);
         var previewSummary=Text("",13,Muted);previewSummary.Tag="IMPORT_PREVIEW";content.Children.Add(previewSummary);
         var error = Text("", 13, Muted); content.Children.Add(error); var actions = new WrapPanel(); content.Children.Add(actions);
-        using var cancellation = new CancellationTokenSource();
-        d.Closed += (_, _) => cancellation.Cancel();
+        var cancellation = new CancellationTokenSource();
+        d.Closed += (_, _) => {cancellation.Cancel();cancellation.Dispose();};
         string fetchedUrl = ""; List<Profile>? preview = null; bool fetching = false;
         string FeedError(string code, string sourceId)
         {
@@ -275,29 +290,30 @@ public sealed partial class MainWindow : Window
         }
         async Task Update()
         {
-            if(PublicFeed.IsKnown(input.Text.Trim())&&publicConsent.IsChecked!=true)throw new SafeError("PUBLIC_APPROVAL_REQUIRED");
-            var uri = SubscriptionUrls.Validate(input.Text);
+            if(PublicFeed.IsKnown(CurrentUrl())&&publicConsent.IsChecked!=true)throw new SafeError("PUBLIC_APPROVAL_REQUIRED");
+            var uri = SubscriptionUrls.Validate(PublicFeed.CanonicalUrl(CurrentUrl()));
             string source = Importer.Fingerprint(uri.AbsoluteUri);
             var sub = data.Subscriptions.FirstOrDefault(s => s.Id == source);
-            bool publicFeed=PublicFeed.IsKnown(input.Text.Trim());if(!publicFeed)await RefreshStatus(uri, sub, cancellation.Token); BuildCards();
+            bool publicFeed=PublicFeed.IsKnown(CurrentUrl());if(!publicFeed){await RefreshStatus(uri,sub,cancellation.Token);RequireV2StatusReady21(uri,source);}BuildCards();
             int proxyPort=state.State=="connected"?state.HttpPort:0;
-            var payload = publicFeed ? await PublicFeed.Fetch(input.Text.Trim(), cancellation.Token,proxyPort) : await SubscriptionClient.Fetch(uri,proxyPort,cancellation: cancellation.Token); if(!publicFeed)CaptureUsage20(source,payload); var batch = publicFeed?PublicFeed.Preview(payload.Body,data.IncludeExperimental):Importer.ReadCompatible(SubscriptionUsage20.ConfigBody(payload.Body), data.IncludeExperimental); previewSummary.Text=ImportSummary(batch);preview = batch.Profiles; if (preview.Count == 0) throw new SafeError("NO_SUPPORTED_IMPORT"); fetchedUrl = uri.AbsoluteUri;
+            var payload = publicFeed ? await FetchPublic28(uri.AbsoluteUri,cancellation.Token,proxyPort) : await SubscriptionClient.Fetch(uri,proxyPort,cancellation: cancellation.Token); if(!publicFeed)CaptureUsage20(source,payload); var batch = publicFeed?PublicFeed.Preview(payload.Body,data.IncludeExperimental):Importer.ReadCompatible(SubscriptionUsage20.ConfigBody(payload.Body), data.IncludeExperimental); previewSummary.Text=ImportSummary(batch);PublicFeed.ValidateForApply(uri.AbsoluteUri,batch);preview = batch.Profiles; if (preview.Count == 0) throw new SafeError("NO_SUPPORTED_IMPORT"); fetchedUrl = uri.AbsoluteUri;
             error.Text = L.Text("UPDATE_READY"); BuildCards();
         }
         var update = Button("UPDATE", () => { }); var import = Button("IMPORT", () => { }, true);
         update.Click += async (_, _) =>
-        { if (fetching) return; fetching = true; input.IsEnabled = choose.IsEnabled = false; update.IsEnabled = import.IsEnabled = false; try { await Update(); } catch (Exception e) { preview = null; error.Text = FeedError(e is SafeError se ? se.Code : "FETCH_FAILED", SourceOf(input.Text)); } finally { fetching = false; input.IsEnabled = choose.IsEnabled = true; update.IsEnabled = import.IsEnabled = true; } };
+        { if (fetching) return; fetching = true; input.IsEnabled = choose.IsEnabled = false; update.IsEnabled = import.IsEnabled = false; try { await Update(); } catch (Exception e) { preview = null; error.Text = FeedError(e is SafeError se ? se.Code : "FETCH_FAILED", SourceOf(CurrentUrl())); } finally { fetching = false; input.IsEnabled = choose.IsEnabled = true; update.IsEnabled = import.IsEnabled = true; } };
         import.Click += async (_, _) =>
         {
             if (fetching) return; fetching = true; input.IsEnabled = choose.IsEnabled = false; update.IsEnabled = import.IsEnabled = false;
             try
             {
-                var uri = SubscriptionUrls.Validate(input.Text); if (preview == null || fetchedUrl != uri.AbsoluteUri){await Update();error.Text+="\n"+L.Text("IMPORT_REVIEW_CONFIRM");return;}
+                var uri = SubscriptionUrls.Validate(PublicFeed.CanonicalUrl(CurrentUrl())); if (preview == null || fetchedUrl != uri.AbsoluteUri){await Update();error.Text+="\n"+L.Text("IMPORT_REVIEW_CONFIRM");return;}
                 if (!d.IsVisible) return;
-                CommitSubscription20(uri,preview!,subscriptionName.Text);
+                string? keep=choose.SelectedItem is Subscription selected&&(ManagedSource28(selected)?.Key==PublicFeed.Resolve(uri.AbsoluteUri)?.Key&&PublicFeed.IsKnown(uri.AbsoluteUri)||selected.Url==uri.AbsoluteUri)?selected.Id:null;
+                CommitSubscription20(uri,preview!,subscriptionName.Text,keep);
                 BuildCards(); d.DialogResult = true;
             }
-            catch (Exception e) { error.Text = FeedError(e is SafeError se ? se.Code : "FETCH_FAILED", SourceOf(input.Text)); }
+            catch (Exception e) { error.Text = FeedError(e is SafeError se ? se.Code : "FETCH_FAILED", SourceOf(CurrentUrl())); }
             finally { fetching = false; input.IsEnabled = choose.IsEnabled = true; update.IsEnabled = import.IsEnabled = true; }
         };
         import.MinWidth=280;import.MinHeight=58;import.FontSize=18;import.Padding=new(24,10,24,10);actions.Children.Add(import);
@@ -310,23 +326,9 @@ public sealed partial class MainWindow : Window
                 summary.Text = L.Text("PATHS") + " · " + count + "\n" + L.Text("LAST_UPDATED") + " · " + (data.SubscriptionUpdated.TryGetValue(selected.Id, out var time) ? time.ToLocalTime().ToString("g") : L.Text("UNKNOWN"));
             }
         };
-        d.Content = content; d.ShowDialog();
+        d.Content = content;return d;
     }
-    async Task RefreshStatus(Uri uri, Subscription? subscription, CancellationToken cancellation = default)
-    {
-        var id = Importer.Fingerprint(uri.AbsoluteUri); var statusUri = SubscriptionUrls.Status(uri);
-        if (statusUri == null) { statuses[id] = new() { Error = "INVALID_STATUS" }; return; }
-        statuses.TryGetValue(id, out var prior);
-        try
-        {
-            var payload = await SubscriptionClient.Fetch(statusUri, state.State=="connected"?state.HttpPort:0, 65536, cancellation); var account = AccountStatus.Read(payload.Body);
-            var previous = prior?.Status ?? (subscription?.StatusBody.Length > 0 ? AccountStatus.Read(subscription.StatusBody) : null);
-            if (previous != null && !account.Accepts(previous)) throw new SafeError("INVALID_STATUS");
-            ownAccountSources20.Add(id);statuses[id] = new() { Status = account, ServerDate = payload.Date };
-            statusBodies[id] = payload.Body; if (subscription != null) { subscription.StatusBody = payload.Body; Save(); }
-        }
-        catch (Exception e) { statuses[id] = new() { Status = prior?.Status, ServerDate = prior?.ServerDate, ReceivedAt = prior?.ReceivedAt ?? DateTimeOffset.UtcNow, ReceivedTick = prior?.ReceivedTick ?? Stopwatch.GetTimestamp(), Error = e is SafeError se ? se.Code : "INVALID_STATUS" }; }
-    }
+    Task RefreshStatus(Uri uri, Subscription? subscription, CancellationToken cancellation = default) => RefreshPrivateStatus21(uri,subscription,cancellation);
     void ProbeDialog()
     {
         if (busy || client == null || state.State != "connected") return;
@@ -341,7 +343,7 @@ public sealed partial class MainWindow : Window
             if(active)return;string url;try{url=SubscriptionUrls.Validate(input.Text).AbsoluteUri;}catch(SafeError e){result.Text=L.Text(e.Code);return;}
             active=true;written=cancellationSent=false;manualStop=new();test.IsEnabled=input.IsEnabled=false;cancel.Content=L.Text("STOP_TEST");cancel.Visibility=Visibility.Visible;cancel.IsEnabled=true;
             var profile=activeProfile??Selected;if(profile!=null){string key=CollectionKey(profile);data.CollectionTestStarted[key]=DateTimeOffset.UtcNow;collectionRuns.Remove(key);liveMeasurements.ExceptWith(data.Profiles.Where(p=>CollectionKey(p)==key).Select(p=>p.Id));}
-            try{await Run(async()=>{AgentReply reply;try{reply=await connection.Send(new(){Action="probe",ProbeUrl=url,ProbeFallbacks=data.ProbeFallbacks},manualStop.Token,()=>{written=true;if(manualStop.IsCancellationRequested)_=SendCancellation();});}catch(OperationCanceledException)when(manualStop.IsCancellationRequested){result.Text=L.Text("CANCELLED");result.Foreground=Muted;return;}bool stopped=reply.Error=="CANCELLED";result.Text=(stopped?L.Text("CANCELLED"):ProbeResultText(reply))+" · "+reply.ElapsedMs+" ms";result.Foreground=stopped?Muted:reply.Verified?Green:HttpsProbePolicy.Unconfirmed(reply.Error)?Amber:Red;
+            try{await Run(async()=>{AgentReply reply;try{reply=await connection.Send(new(){Action="probe",ProbeUrl=url,ProbeFallbacks=data.ProbeFallbacks},manualStop.Token,()=>{written=true;if(manualStop.IsCancellationRequested)_=SendCancellation();});}catch(OperationCanceledException)when(manualStop.IsCancellationRequested){result.Text=L.Text("CANCELLED");result.Foreground=Muted;return;}bool stopped=reply.Error=="CANCELLED";result.Text=(stopped?L.Text("CANCELLED"):ProbeResultText(reply))+" · "+reply.ElapsedMs+" ms";result.Foreground=stopped?Muted:ProbeInk28(reply);
                 if(!stopped&&profile!=null){measurements[profile.Id]=reply;data.Measurements[profile.Id]=new(){Verified=reply.Verified,ProbeFallbackUsed=reply.ProbeFallbackUsed,ElapsedMs=reply.ElapsedMs,Error=reply.Error,Stage=reply.ProbeStage,Attempts=1,Passes=reply.Verified?1:0,SampledAt=DateTimeOffset.UtcNow};liveMeasurements.Add(profile.Id);Save();}
                 if(stopped)reply.Error="";SetState(reply);
             });}finally{active=false;manualStop.Dispose();manualStop=null;test.IsEnabled=input.IsEnabled=true;cancel.Visibility=Visibility.Collapsed;if(closePending)d.Close();}
@@ -357,7 +359,7 @@ public sealed partial class MainWindow : Window
     }
     void Help() => Info("HELP", L.Text("HELP_BODY"));
     void About() => AboutDialog();
-    static string SafeProtocol(string protocol) => new[] { "VLESS WS", "VLESS XHTTP", "VLESS REALITY", "VLESS TCP", "SSH", "NaiveProxy", "NaiveProxy + SSH", "Hysteria2", "WireGuard", "SOCKS5", "Soar", "Soar + SSH", "DNSTT", "DNSTT + SSH", "NoizDNS", "NoizDNS + SSH", "VayDNS", "VayDNS + SSH", "Slipstream", "Slipstream + SSH" }.Contains(protocol) ? protocol : "other";
+    static string SafeProtocol(string protocol) => new[] { "VLESS WS", "VLESS XHTTP", "VLESS REALITY", "VLESS TCP", "SSH", "NaiveProxy", "NaiveProxy + SSH", "Hysteria2", "WireGuard", "AmneziaWG", "SOCKS5", "Soar", "Soar + SSH", "DNSTT", "DNSTT + SSH", "NoizDNS", "NoizDNS + SSH", "VayDNS", "VayDNS + SSH", "Slipstream", "Slipstream + SSH" }.Contains(protocol) ? protocol : "other";
     void ExportDiagnostics()
     {
         var d = new SaveFileDialog { FileName = "Rovunet-diagnostics.json", Filter = "JSON|*.json" }; if (d.ShowDialog(this) != true) return;
@@ -365,7 +367,3 @@ public sealed partial class MainWindow : Window
         catch { lastError = "SAVE_FAILED"; SetState(state); }
     }
 }
-
-
-
-

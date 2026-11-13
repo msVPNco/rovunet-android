@@ -27,12 +27,7 @@ public sealed partial class MainWindow
         }
         var yes = Button("APPROVE", () => d.DialogResult = true, true); stack.Children.Add(yes); d.Content = stack; return d.ShowDialog() == true;
     }
-    void AboutDialog()
-    {
-        var d = Dialog("ABOUT", 620, 460); var stack = new StackPanel { Margin = new(24) }; stack.Children.Add(Technical(Text("Rovunet " + Version, 16))); stack.Children.Add(Text(L.Text("ABOUT_BODY")));
-        stack.Children.Add(Button("COPY_VERSION", () => Clipboard.SetText("Rovunet " + Version + "\nWindows x64 · system/local proxy · unsigned preview")));
-        stack.Children.Add(Button("LICENSES", () => Process.Start(new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "licenses")) { UseShellExecute = true }))); d.Content = stack; d.ShowDialog();
-    }
+    void AboutDialog() => BuildAboutSupport26().ShowDialog();
     void ImportDialog() => AddConfiguration();
     void Edit(Profile p)
     {
@@ -47,6 +42,8 @@ public sealed partial class MainWindow
     void Editor(Profile? existing, bool rawOnly = false)
     {
         if (busy) return;
+        if(!rawOnly&&existing!=null&&ChainProfiles.IsChain(existing.Raw)){BuildChainEditor25(existing).ShowDialog();return;}
+        if(!rawOnly&&existing!=null&&AlternativeProfiles.Handles(existing.Raw)){BuildAlternativeEditor25(AlternativeProfiles.Kind(existing.Raw),existing).ShowDialog();return;}
         if(!rawOnly&&existing!=null&&ExtraProfileEditing.Read(existing)!=null){BuildExtraProtocolEditor(existing).ShowDialog();return;}
         if (!rawOnly && existing != null && ProfileEditing.IsDns(existing)) { DnsProfileEditor(existing); return; }
         if(!rawOnly&&existing!=null&&CoreProfileEditing.CanEdit(existing)){BuildCoreProfileEditor(existing).ShowDialog();return;}

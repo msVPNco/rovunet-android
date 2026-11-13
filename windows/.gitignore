@@ -10,3 +10,6 @@ engines/**
 *.key
 *.log
 .vs/
+
+!engines/tor-manifest.json
+!engines/supplemental-pins.json

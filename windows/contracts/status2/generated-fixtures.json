@@ -1,0 +1,155 @@
+{
+  "expired": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 6,
+      "account_status": "expired",
+      "limit_kind": "unlimited",
+      "limit_bytes": null,
+      "expiry_kind": "at",
+      "expires_at": "2000-01-01T00:00:00Z",
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "not_metered",
+      "measurement": "none",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.013639548Z"
+    },
+    "subscription_userinfo": "total=0; expire=946684800"
+  },
+  "invalid-limit": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 7,
+      "account_status": "hold",
+      "limit_kind": "unknown",
+      "limit_bytes": null,
+      "expiry_kind": "none",
+      "expires_at": null,
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "unavailable",
+      "measurement": "unknown",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.014038405Z"
+    },
+    "subscription_userinfo": ""
+  },
+  "malformed-expiry": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 5,
+      "account_status": "hold",
+      "limit_kind": "unlimited",
+      "limit_bytes": null,
+      "expiry_kind": "unknown",
+      "expires_at": null,
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "not_metered",
+      "measurement": "none",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.013515105Z"
+    },
+    "subscription_userinfo": "total=0"
+  },
+  "mixed-unknown": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 4,
+      "account_status": "hold",
+      "limit_kind": "finite",
+      "limit_bytes": 1073741824,
+      "expiry_kind": "at",
+      "expires_at": "2030-01-01T00:00:00Z",
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "unavailable",
+      "measurement": "unknown",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.013369785Z"
+    },
+    "subscription_userinfo": "total=1073741824; expire=1893456000"
+  },
+  "negative": {
+    "conflicting_server_accept": false,
+    "malformed_identity_accept": false,
+    "missing_status_http": 404,
+    "token_rewrites_source_item_pin": false
+  },
+  "time-only": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 2,
+      "account_status": "active",
+      "limit_kind": "unlimited",
+      "limit_bytes": null,
+      "expiry_kind": "at",
+      "expires_at": "2030-01-01T00:00:00Z",
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "not_metered",
+      "measurement": "none",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.01302663Z"
+    },
+    "subscription_userinfo": "total=0; expire=1893456000"
+  },
+  "unlimited": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 1,
+      "account_status": "active",
+      "limit_kind": "unlimited",
+      "limit_bytes": null,
+      "expiry_kind": "none",
+      "expires_at": null,
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "not_metered",
+      "measurement": "none",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.012796477Z"
+    },
+    "subscription_userinfo": "total=0"
+  },
+  "volume-unknown": {
+    "body": {
+      "version": 2,
+      "server_id": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "account_id": "acacacacacacacacacacacacacacacac",
+      "period_id": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+      "revision": 3,
+      "account_status": "hold",
+      "limit_kind": "finite",
+      "limit_bytes": 1073741824,
+      "expiry_kind": "none",
+      "expires_at": null,
+      "confirmed_bytes": null,
+      "pending_bytes": null,
+      "coverage": "unavailable",
+      "measurement": "unknown",
+      "sampled_at": null,
+      "generated_at": "2026-11-13T17:15:01.013210314Z"
+    },
+    "subscription_userinfo": "total=1073741824"
+  }
+}

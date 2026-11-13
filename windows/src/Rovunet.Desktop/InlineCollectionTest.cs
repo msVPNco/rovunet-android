@@ -86,7 +86,7 @@ public sealed partial class MainWindow
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(token);deadline.CancelAfter(UiPolicy.TestBudget(TransportPlan.UsesSlip(p.Raw),115));
         var probe=testing=new AgentClient(probeOnly:true);using var abort=deadline.Token.Register(probe.Abort);
         try{
-            await probe.Start(deadline.Token);var reply=await probe.Send(new(){Action="connect",Profile=p,SystemProxy=false,SlipCertificate=StoredSlipPin(p),SlipInterval=SlipInterval(p),SshTlsCa=StoredSshTlsCa(p),HostKey=StoredSshKey(p)});
+            await probe.Start(deadline.Token);var reply=await probe.Send(new(){Action="connect",Profile=p,SystemProxy=false,SlipCertificate=StoredSlipPin(p),SlipInterval=SlipInterval(p),SshTlsCa=StoredSshTlsCa(p),HostKey=StoredSshKey(p),ChainIdentities=ChainIdentityOptions25(p)});
             if(reply.State=="connected")return await probe.Send(new(){Action="probe",ProbeUrl=url,ProbeFallbacks=data.ProbeFallbacks});
             return reply;
         }catch(SafeError e){return new(){Error=deadline.IsCancellationRequested?token.IsCancellationRequested?"CANCELLED":"TEST_TIMEOUT":e.Code};}
@@ -95,7 +95,7 @@ public sealed partial class MainWindow
     void RenderCollectionRow(RowView row)
     {
         if(!collectionRuns.TryGetValue(CollectionKey(row.Profile),out var job))return;
-        if(job.Pending.TryGetValue(row.Profile.Id,out var phase)){row.Result.Visibility=Visibility.Visible;row.Result.Text=L.Text(phase);row.Result.Foreground=Muted;row.Timing.Foreground=Muted;row.Timing.Visibility=data.Measurements.GetValueOrDefault(row.Profile.Id)?.Verified==true?Visibility.Visible:Visibility.Collapsed;}
+        if(job.Pending.TryGetValue(row.Profile.Id,out var phase)){row.Result.Visibility=Visibility.Visible;row.Result.Text=L.Text(phase);row.Result.Foreground=MessageInk28(phase);row.Timing.Foreground=Muted;row.Timing.Visibility=data.Measurements.GetValueOrDefault(row.Profile.Id)?.Verified==true?Visibility.Visible:Visibility.Collapsed;}
         else if(job.Tcp&&job.Results.TryGetValue(row.Profile.Id,out var reply)){row.Result.Visibility=row.Timing.Visibility=Visibility.Visible;row.Result.Text=reply.Error.Length==0?L.Text("TCP_REPLIED"):L.Text(reply.Error);row.Result.Foreground=row.Timing.Foreground=reply.Error.Length==0?Green:Red;row.Timing.Text=reply.Error.Length==0?reply.ElapsedMs.ToString(CultureInfo.InvariantCulture)+" ms":"—";}
     }
     void RenderCollectionProgress(GroupView group)
@@ -107,6 +107,7 @@ public sealed partial class MainWindow
         group.Test.Content=new System.Windows.Shapes.Path{Data=Geometry.Parse(running?"M5,5 H19 V19 H5 Z":"M4,5 H20 V20 H4 Z M8,2 V8 M16,2 V8 M8,13 L11,16 L17,10"),Stroke=Tone("Ink"),StrokeThickness=1.7,Width=22,Height=22,Stretch=Stretch.Uniform};
         group.Progress.Visibility=running?Visibility.Visible:Visibility.Collapsed;
         if(job==null)return;OrderCollectionCards(group,job);group.Progress.Maximum=Math.Max(1,job.Total);group.Progress.Value=job.Completed;group.Summary.Visibility=Visibility.Visible;
+        group.Summary.Foreground=job.Error.Length>0?MessageInk28(job.Error):Muted;
         group.Summary.Text=running?L.Text(stopping?"CANCELLING":job.Phase)+" · "+job.Completed+"/"+job.Total+" · "+job.Current:L.Text(job.Cancelled?"CANCELLED":"GROUP_DONE")+" · "+string.Format(L.Text("GROUP_COUNTS"),job.Passed,job.Completed,job.Total)+(job.Error.Length>0?" · "+L.Text(job.Error):"");
         int unknown=job.Results.Values.Count(r=>!r.Verified&&HttpsProbePolicy.Unconfirmed(r.Error));if(!running&&unknown>0)group.Summary.Text+=" · "+string.Format(L.Text("GROUP_UNCONFIRMED_COUNT"),unknown);
     }

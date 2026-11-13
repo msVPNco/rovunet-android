@@ -57,7 +57,7 @@ public sealed partial class MainWindow
         if(navigationShell==null)return;pageContent.Content=null;
         if(pageStack.Count==0){sidebarRoute20="HOME";RefreshSidebar20();}
         bool open=pageStack.Count>0;homeContent.Visibility=open?Visibility.Collapsed:Visibility.Visible;pageContent.Visibility=open?Visibility.Visible:Visibility.Collapsed;
-        if(open)pageContent.Content=pageStack[^1].PageVisual;
+        if(open){pageStack[^1].RefreshPageLanguage();pageContent.Content=pageStack[^1].PageVisual;}
     }
     async Task<bool> CloseNavigation()
     {

@@ -190,8 +190,10 @@ public sealed partial class MainWindow
 
         var configBody=new StackPanel();var settingsViewport=new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled};var visualRoot=new Grid();visualRoot.Children.Add(settingsViewport);ScannerPresentation? presentation=null;
         var showResults=Button("SCAN_RESULTS",()=>ShowResults());showResults.IsEnabled=false;
-        searchAction=IconButton("SEARCH",MenuIcon("SEARCH"),()=>{filter.Visibility=filter.Visibility==Visibility.Visible?Visibility.Collapsed:Visibility.Visible;if(filter.IsVisible)filter.Focus();else filter.Clear();});searchAction.Background=Brushes.Transparent;searchAction.Visibility=Visibility.Collapsed;d.AddToolbarAction(searchAction);
+        searchAction=IconButton("SEARCH",MenuIcon("SEARCH"),()=>{});searchAction.Background=Brushes.Transparent;searchAction.Visibility=Visibility.Collapsed;d.AddToolbarAction(searchAction);
+        BindSearchAction30(filter,searchAction,FilterResults,"SCAN_SEARCH_ACTION");
         moreAction=IconButton("MORE","M12,3 V5 M12,11 V13 M12,19 V21",()=>{});moreAction.Background=Brushes.Transparent;moreAction.Visibility=Visibility.Collapsed;d.AddToolbarAction(moreAction);
+        moreAction.Content=FilledMoreIcon28();moreAction.Tag="SCANNER_MORE";
         void ShowResults(bool show=true){resultsShown=show;settingsViewport.Visibility=show?Visibility.Collapsed:Visibility.Visible;if(presentation!=null)presentation.Root.Visibility=show?Visibility.Visible:Visibility.Collapsed;searchAction.Visibility=moreAction.Visibility=show?Visibility.Visible:Visibility.Collapsed;d.SetPageTitle(L.Text(show?"SCAN_RESULTS":"DNS_SCANNER"));}
         void SaveView(){var prior=data.ScannerViews.GetValueOrDefault(scope);data.ScannerViews[scope]=new(){Sort=sort.SelectedValue?.ToString()??"order",Score=scoreMinimum,PrismMinimum=prismMinimum,Probes=requiredProbes.ToArray(),Status=statusFilter.SelectedValue?.ToString()??"passed",Transport=transportFilter.SelectedValue?.ToString()??"all"};try{Save();}catch{if(prior==null)data.ScannerViews.Remove(scope);else data.ScannerViews[scope]=prior;progress.Text=L.Text("PRIVATE_STORE_FAILED");}}
         bool ScorePass(ScanEntry entry)=>session?.DirectTunnel==true||entry.Result.Completed==0||entry.Score>=scoreMinimum;

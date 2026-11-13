@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"errors"
+	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"strconv"
@@ -18,9 +19,17 @@ import (
 
 // Only the CC0 upstream client is used. Keep one authenticated multiplexed
 // session for every TCP connection of this profile.
-func startVay(o *owner, f []string) (tunnelStream, error) {
+func startVay(o *owner, f []string, chainPorts ...int) (tunnelStream, error) {
+	chain := 0
+	if len(chainPorts) > 0 {
+		chain = chainPorts[0]
+	}
+	if chain > 0 && f[22] == "udp" {
+		f = append([]string(nil), f...)
+		f[22] = "tcp"
+	}
 	if f[22] == "https" || !strings.Contains(f[4], ",") {
-		return startVaySingle(o, f)
+		return startVaySingle(o, f, chain)
 	}
 	candidates := strings.Split(f[4], ",")
 	if len(candidates) > 16 {
@@ -37,7 +46,7 @@ func startVay(o *owner, f []string) (tunnelStream, error) {
 		attempt := newOwner(o.ctx)
 		fields := append([]string(nil), f...)
 		fields[4] = candidate
-		stream, err := startVaySingle(attempt, fields)
+		stream, err := startVaySingle(attempt, fields, chain)
 		if err == nil {
 			o.stops = append(o.stops, attempt.stop)
 			return stream, nil
@@ -47,7 +56,11 @@ func startVay(o *owner, f []string) (tunnelStream, error) {
 	return nil, errors.New("no authenticated resolver")
 }
 
-func startVaySingle(o *owner, f []string) (tunnelStream, error) {
+func startVaySingle(o *owner, f []string, chainPorts ...int) (tunnelStream, error) {
+	chain := 0
+	if len(chainPorts) > 0 {
+		chain = chainPorts[0]
+	}
 	addr, err := dnsAddress(f)
 	if err != nil || strings.Contains(addr, ",") {
 		return nil, errors.New("single resolver required")
@@ -70,11 +83,22 @@ func startVaySingle(o *owner, f []string) (tunnelStream, error) {
 	if err != nil {
 		return nil, err
 	}
+	if chain > 0 {
+		d, e := proxy.SOCKS5("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(chain)), nil, proxy.Direct)
+		if e != nil {
+			return nil, e
+		}
+		cd := d.(proxy.ContextDialer)
+		resolver.DialContext = cd.DialContext
+	}
 	resolver.UDPWorkers = 4
 	resolver.UDPTimeout = time.Duration(num(f[47])) * time.Millisecond
 	if kind == vay.ResolverTypeDOH {
 		tr := http.DefaultTransport.(*http.Transport).Clone()
 		tr.Proxy = nil
+		if resolver.DialContext != nil {
+			tr.DialContext = resolver.DialContext
+		}
 		resolver.RoundTripper = tr
 		o.stops = append(o.stops, tr.CloseIdleConnections)
 	}

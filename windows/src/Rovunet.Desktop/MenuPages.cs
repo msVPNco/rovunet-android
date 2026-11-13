@@ -53,7 +53,7 @@ public sealed partial class MainWindow
         foreach(var item in menu.Items.OfType<MenuItem>().Where(i=>i.Tag is string)){
             item.IsEnabled=!busy;
             if(item.Tag is "RENAME" or "DELETE_COLLECTION" or "TEST_COLLECTION" or "STABILITY_TEST")item.IsEnabled=idle;
-            if(item.Tag is "UPDATE")item.IsEnabled=!updatingSubscriptions20.Contains(members[0].SourceId);
+            if(item.Tag is "UPDATE")item.IsEnabled=!updatingSubscriptions20.Contains(members[0].SourceId)&&!PublicFeed.IsRemoved(data.Subscriptions.FirstOrDefault(s=>s.Id==members[0].SourceId)?.Url??"");
             if(item.Tag is "MOVE_COLLECTION")item.IsEnabled=idle&&members.All(p=>p.SourceId.Length==0);
             if(item.Tag is "STOP_TEST")item.IsEnabled=currentCollection is{Running:true}&&currentCollection.Key==CollectionKey(members[0]);
             if(item.Tag is "SORT_RESULTS"){
@@ -71,8 +71,7 @@ public sealed partial class MainWindow
     }
     void ToggleCollection(List<Profile> members)
     {
-        string key=CollectionKey(members[0]);bool old=data.ExpandedCollections.GetValueOrDefault(key);
-        data.ExpandedCollections[key]=!old;try{Save();}catch{data.ExpandedCollections[key]=old;throw;}RefreshCards();
+        ToggleCollection26(CollectionKey(members[0]));
     }
     void TogglePin(Profile profile)
     {
@@ -86,14 +85,16 @@ public sealed partial class MainWindow
         var tiles=rows.Where(r=>group.Members.Any(p=>p.Id==r.Profile.Id)).ToDictionary(r=>r.Profile.Id,r=>r.Tile);
         var current=group.Paths.Children.Cast<Border>().ToArray();
         var pinned=group.Members.Where(p=>data.PinnedProfileIds.Contains(p.Id)).Select(p=>tiles[p.Id]).ToHashSet();
-        var ordered=current.OrderByDescending(p=>pinned.Contains(p)).ToArray();
+        var recent=data.RecentProfileIds.Select((id,index)=>(id,index)).ToDictionary(x=>x.id,x=>x.index);
+        var byTile=tiles.ToDictionary(x=>x.Value,x=>x.Key);
+        var ordered=current.OrderBy(p=>recent.GetValueOrDefault(byTile[p],int.MaxValue)).ThenByDescending(p=>pinned.Contains(p)).ToArray();
         if(current.SequenceEqual(ordered))return;group.Paths.Children.Clear();foreach(var tile in ordered)group.Paths.Children.Add(tile);
     }
     void ChooseCollectionPath(List<Profile> members)
     {
         var page=Dialog("PATH_SELECTION");var panel=new StackPanel{Margin=new(20)};
         panel.Children.Add(Text(L.Text("SELECT_PATH"),14,Muted));
-        foreach(var profile in members){var button=SettingsAction("SELECT",()=>{if(busy)return;string old=data.SelectedId;data.SelectedId=profile.Id;try{Save();}catch{data.SelectedId=old;throw;}RefreshCards();page.DialogResult=true;});button.Content=profile.Name+" · "+profile.Protocol;button.IsEnabled=profile.CanConnect;panel.Children.Add(Card(button));}
+        foreach(var profile in members){var button=SettingsAction("SELECT",()=>{if(busy)return;SelectProfile20(profile);page.DialogResult=true;});button.Content=profile.Name+" · "+profile.Protocol;button.IsEnabled=profile.CanConnect;panel.Children.Add(Card(button));}
         page.Content=panel;page.ShowDialog();
     }
     void ShowMeasurement(Profile profile)
@@ -125,7 +126,7 @@ public sealed partial class MainWindow
     void PublicSourcesPage()
     {
         var page=Dialog("PUBLIC_SOURCES");var panel=new StackPanel{Margin=new(20)};panel.Children.Add(Text(L.Text("PUBLIC_CONSENT"),14,Muted));
-        foreach(var preset in PublicFeed.Presets){var body=new StackPanel();body.Children.Add(Text(preset.Name,19));body.Children.Add(Text(L.Text("PUBLIC_PREVIEW_HINT"),12,Muted));body.Children.Add(Button("REVIEW_IMPORT",()=>SubscriptionDialog(null,preset.Url),true));panel.Children.Add(Card(body));}
+        foreach(var preset in PublicFeed.Presets){var body=new StackPanel();body.Children.Add(Text(preset.DisplayName,19));body.Children.Add(Text(L.Text("PUBLIC_PREVIEW_HINT"),12,Muted));body.Children.Add(Button("REVIEW_IMPORT",()=>SubscriptionDialog(null,preset.Url),true));panel.Children.Add(Card(body));}
         page.Content=panel;page.ShowDialog();
     }
     void ShareQr(List<Profile> profiles)

@@ -36,7 +36,7 @@ public sealed partial class MainWindow
                 checks[id+"_first_run_power_visible_and_actionable"]=connect.IsEnabled&&Equals(connect.Background,Tone("AddSurface"))&&connect.ActualWidth>=44&&connect.IsVisible;
                 SavePage((FrameworkElement)Content,Path.Combine(outputDirectory,"first-run-"+id+".png"));
                 if(language=="en"&&theme=="light"){
-                    Click(connect);await Idle();checks["first_power_click_opens_add_hub"]=addHub?.IsOpen==true&&Visuals<Button>(addHub.Child).Count()==4&&NavigationDepth==0;CloseAddHub();
+                    Click(connect);await Idle();checks["first_power_click_opens_add_hub"]=addHub?.IsOpen==true&&Visuals<Button>(addHub.Child).Select(AutomationProperties.GetAutomationId).SequenceEqual(new[]{"add:ADD_LINK_FILE","add:ADD_SUBSCRIPTION","add:ADD_MANUAL","add:PUBLIC_SOURCES","add:CHAIN_TITLE"})&&NavigationDepth==0;CloseAddHub();
                 }
                 var ssh=Importer.Single(ManualProfiles.Native("ssh","SSH fixture","gateway.example.invalid",22,"fixture","fixture"));data.Profiles=[ssh];data.SelectedId=ssh.Id;BuildCards();
                 var page=BuildEndpointEditor(ssh);page.Show();await Idle();var field=Visuals<TextBox>(page.PageVisual).Single(t=>Equals(t.Tag,"SSH_HOST_PUBLIC_KEY"));field.Text=publicLine;await Idle();

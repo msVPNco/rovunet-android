@@ -17,25 +17,25 @@ public sealed partial class MainWindow
     {
         var palette = !darkTheme ? new Dictionary<string, string>
         {
-            ["Bg"]="#F0F1FB", ["BgTop"]="#FAFAFF", ["Card"]="#FFFFFF", ["Soft"]="#FFFFFF",
-            ["Sidebar"]="#F5F5FD", ["Ink"]="#1A2940", ["Muted"]="#56647B", ["Accent"]="#6345AC",
-            ["Outline"]="#C5C9DB", ["Selected"]="#E3E4F3", ["Green"]="#125439", ["Red"]="#AD2645", ["Amber"]="#885706",
-            ["PowerSurface"]="#B1E8C7", ["PowerInk"]="#125439", ["AddSurface"]="#D6CAF8", ["AddInk"]="#302748",
-            ["Collection"]="#E5DFF3", ["StatusSurface"]="#FFFFFF", ["Hero"]="#FFFFFF", ["HeroEnd"]="#EAEAF7", ["ScanCyan"]="#146A78"
+            ["Bg"]="#F2F2FB", ["BgTop"]="#FCFCFF", ["Card"]="#FFFFFF", ["Soft"]="#FFFFFF",
+            ["Sidebar"]="#F5F5FD", ["Ink"]="#202C42", ["Muted"]="#526078", ["Accent"]="#6345AC",
+            ["Outline"]="#BDC1D4", ["Selected"]="#E4D7ED", ["Green"]="#125439", ["Red"]="#AD2645", ["Amber"]="#885706",
+            ["PowerSurface"]="#B5E9CC", ["PowerInk"]="#125439", ["AddSurface"]="#D6CAF8", ["AddInk"]="#302748",
+            ["Collection"]="#E8DEEF", ["StatusSurface"]="#FFFFFF", ["Hero"]="#FFFFFF", ["HeroEnd"]="#EDEAF8", ["ScanCyan"]="#146A78"
         } : IsAmoled ? new Dictionary<string, string>
         {
-            ["Bg"]="#000000", ["BgTop"]="#080A0F", ["Card"]="#151D27", ["Soft"]="#151D27",
+            ["Bg"]="#000000", ["BgTop"]="#10131C", ["Card"]="#171E29", ["Soft"]="#171E29",
             ["Sidebar"]="#080B11", ["Ink"]="#F2F5FC", ["Muted"]="#BDC7D5", ["Accent"]="#D1C5ED",
-            ["Outline"]="#546273", ["Selected"]="#3D4256", ["Green"]="#A3E7BF", ["Red"]="#FF9BAB", ["Amber"]="#F3CF7D",
+            ["Outline"]="#596072", ["Selected"]="#50435F", ["Green"]="#A3E7BF", ["Red"]="#FF9BAB", ["Amber"]="#F3CF7D",
             ["PowerSurface"]="#A3E7BF", ["PowerInk"]="#123C2B", ["AddSurface"]="#D1C5ED", ["AddInk"]="#2A293E",
-            ["Collection"]="#333348", ["StatusSurface"]="#171A24", ["Hero"]="#171A24", ["HeroEnd"]="#080B11", ["ScanCyan"]="#83D4DD"
+            ["Collection"]="#393143", ["StatusSurface"]="#151922", ["Hero"]="#151922", ["HeroEnd"]="#080B11", ["ScanCyan"]="#83D4DD"
         } : new Dictionary<string, string>
         {
-            ["Bg"]="#16263C", ["BgTop"]="#293B55", ["Card"]="#2A3D53", ["Soft"]="#2A3D53",
-            ["Sidebar"]="#1B2B40", ["Ink"]="#F4F7FF", ["Muted"]="#C7D2E1", ["Accent"]="#D4C8F3",
-            ["Outline"]="#64788E", ["Selected"]="#4B5068", ["Green"]="#A1E3BF", ["Red"]="#FF9BAB", ["Amber"]="#F3CF7D",
-            ["PowerSurface"]="#A1E3BF", ["PowerInk"]="#143D35", ["AddSurface"]="#D4C8F3", ["AddInk"]="#302C49",
-            ["Collection"]="#4A4966", ["StatusSurface"]="#23344B", ["Hero"]="#23344B", ["HeroEnd"]="#17273E", ["ScanCyan"]="#83D4DD"
+            ["Bg"]="#17273F", ["BgTop"]="#304367", ["Card"]="#2B3E59", ["Soft"]="#2B3E59",
+            ["Sidebar"]="#101A2B", ["Ink"]="#F4F6FF", ["Muted"]="#D0D6E7", ["Accent"]="#D6C8F2",
+            ["Outline"]="#748299", ["Selected"]="#9C87AE", ["Green"]="#A5E6C0", ["Red"]="#FF9BAB", ["Amber"]="#F3CF7D",
+            ["PowerSurface"]="#A5E6C0", ["PowerInk"]="#164737", ["AddSurface"]="#D6C8F2", ["AddInk"]="#302344",
+            ["Collection"]="#716082", ["StatusSurface"]="#293952", ["Hero"]="#0E1829", ["HeroEnd"]="#18243B", ["ScanCyan"]="#83D4DD"
         };
         foreach (var (key, color) in palette)
         {

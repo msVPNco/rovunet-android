@@ -1,0 +1,9 @@
+# Connection display correction — 0.1.3 Beta (prerelease)
+
+The owner reported Connected/Disconnected text remaining from the previous state until the language was switched. The underlying connection state, power colour and detail could already have changed. A TextBlock inside the marquee Canvas did not reliably invalidate its enclosing viewport: retained glyph/layout and natural width could lag behind the current text. Do not reverse the translated Connected/Disconnected labels to work around it.
+
+MarqueeLine now observes text and typography changes only while loaded, remeasures its source and viewport, and restarts motion at the new text's origin. Unloading removes the observers; reloading remeasures text changed while another page was open. Foreground changes and live connection state still use the existing state pipeline. There is no polling timer and no network/Agent policy change. Inactive/minimized windows retain the no-animation policy.
+
+A real WPF regression reproduces the old layout fault: 228 of 624 checks fail on the unmodified marquee. The corrected candidate passes 631 checks: 192 state transitions across four languages, three themes and 480/1120 DIP widths; English retained glyph characters, viewport widths/pixel stability; active/inactive/minimized motion, long-to-short-to-long updates and unload/change/reload. The final packaged payload is checked separately and its execution receipts are stored outside the source tree. These are synthetic UI checks, not live network/TUN acceptance.
+
+Public Windows 0.1.2 Beta, its tag/assets and the owner's installation are unchanged. This hotfix does not close outstanding ACT03/native/service/boot/independent-peer or physical touch/mixed-DPI gates. Existing one-open accordion, connection-only persistent recent ordering, profiles, imports and trust policy are preserved.

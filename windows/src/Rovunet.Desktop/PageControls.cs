@@ -11,7 +11,7 @@ public sealed partial class MainWindow
         control.Margin=new(0);control.MinHeight=Math.Max(control.MinHeight,48);control.Padding=new(12,10,12,8);
         control.Background=Brushes.Transparent;control.BorderThickness=new(0);
         AutomationProperties.SetName(control,L.Text(key));control.Tag ??= key;
-        var field=new Grid();var outline=new Border{BorderBrush=Tone("Muted"),BorderThickness=new(1),CornerRadius=new(6),Margin=new(0,8,0,0),Child=control};field.Children.Add(outline);
+        var field=new Grid();var outline=new Border{BorderBrush=GlassEdge(Tone("Outline")),BorderThickness=new(1),CornerRadius=new(6),Margin=new(0,8,0,0),Child=control};field.Children.Add(outline);
         var label=Text(L.Text(key),13,Muted);label.FontWeight=FontWeights.Medium;label.TextWrapping=TextWrapping.NoWrap;label.TextTrimming=TextTrimming.CharacterEllipsis;label.MaxWidth=double.IsFinite(control.Width)?Math.Max(60,control.Width-8):340;label.ToolTip=L.Text(key);label.Background=Tone("Bg");label.Padding=new(4,0,4,0);label.Margin=new(10,0,10,0);label.HorizontalAlignment=HorizontalAlignment.Left;label.VerticalAlignment=VerticalAlignment.Top;field.Children.Add(label);
         var body=new StackPanel{Margin=new(0,0,0,18)};body.Children.Add(field);if(hintKey!=null)body.Children.Add(Text(L.Text(hintKey),13,Muted));
         return new Border{Child=body};

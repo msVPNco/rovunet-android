@@ -2,11 +2,16 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Rovunet.Core;
 
 namespace Rovunet.Platform;
 public static class PrivateStore
 {
+    // Win32 UI_FORBIDDEN is 0x1; LOCAL_MACHINE is 0x4 and is intentionally absent.
+    const int CryptProtectUiForbidden=0x1;
+    const int MaxBytes=32*1024*1024;
     public static string Root => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rovunet");
     [StructLayout(LayoutKind.Sequential)] struct Blob { public int Size; public IntPtr Data; }
     [DllImport("crypt32.dll", SetLastError = true)] static extern bool CryptProtectData(ref Blob input, IntPtr description, IntPtr entropy, IntPtr reserved, IntPtr prompt, int flags, out Blob output);
@@ -18,26 +23,41 @@ public static class PrivateStore
         Blob output = default;
         try
         {
-            bool ok = protect ? CryptProtectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output) : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, 1, out output);
+            bool ok = protect ? CryptProtectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, CryptProtectUiForbidden, out output) : CryptUnprotectData(ref input, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, CryptProtectUiForbidden, out output);
             if (!ok) throw new SafeError("PRIVATE_STORE_FAILED");
             var bytes = new byte[output.Size]; Marshal.Copy(output.Data, bytes, 0, bytes.Length); return bytes;
         }
-        finally { for (int i = 0; i < input.Size; i++) Marshal.WriteByte(input.Data, i, 0); Marshal.FreeHGlobal(input.Data); if (output.Data != IntPtr.Zero) LocalFree(output.Data); }
+        finally { for (int i = 0; i < input.Size; i++) Marshal.WriteByte(input.Data, i, 0); Marshal.FreeHGlobal(input.Data); if (output.Data != IntPtr.Zero) {for(int i=0;i<output.Size;i++)Marshal.WriteByte(output.Data,i,0);LocalFree(output.Data);} }
     }
-    public static void Save<T>(string name, T value)
+    static string StorePath(string directory,string name)
     {
-        Directory.CreateDirectory(Root); var path = Path.Combine(Root, name); var temp = path + ".tmp";
-        byte[] plain = JsonSerializer.SerializeToUtf8Bytes(value); byte[] bytes;
-        try { bytes = Crypt(plain, true); } finally { CryptographicOperations.ZeroMemory(plain); }
-        using (var file = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough)) { file.Write(bytes); file.Flush(true); }
-        File.Move(temp, path, true);
+        if(!Path.IsPathFullyQualified(directory)||string.IsNullOrWhiteSpace(name)||name.Length>128||name is "." or ".."||name.IndexOfAny(Path.GetInvalidFileNameChars())>=0||Path.GetFileName(name)!=name)throw new SafeError("PRIVATE_STORE_FAILED");
+        return Path.Combine(Path.GetFullPath(directory),name);
     }
-    public static T? Load<T>(string name)
+    public static void Save<T>(string name,T value)=>SaveIn(Root,name,value);
+    // The explicit directory permits independent Windows fixtures without an
+    // environment-variable override of the real user's store.
+    public static void SaveIn<T>(string directory,string name,T value)
     {
-        var path = Path.Combine(Root, name); if (!File.Exists(path)) return default;
-        if (new FileInfo(path).Length > 32 * 1024 * 1024) throw new SafeError("PRIVATE_STORE_FAILED");
-        byte[] plain = Crypt(File.ReadAllBytes(path), false);
-        try { return JsonSerializer.Deserialize<T>(plain); } catch { throw new SafeError("PRIVATE_STORE_FAILED"); } finally { CryptographicOperations.ZeroMemory(plain); }
+        var path=StorePath(directory,name);string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";
+        try{
+            Directory.CreateDirectory(directory);byte[] plain=JsonSerializer.SerializeToUtf8Bytes(value);byte[] encrypted;
+            try{if(plain.Length>MaxBytes-4096)throw new SafeError("PRIVATE_STORE_FAILED");encrypted=Crypt(plain,true);}finally{CryptographicOperations.ZeroMemory(plain);}
+            var sid=WindowsIdentity.GetCurrent().User!;var acl=new FileSecurity();acl.SetAccessRuleProtection(true,false);acl.SetOwner(sid);acl.AddAccessRule(new FileSystemAccessRule(sid,FileSystemRights.FullControl,AccessControlType.Allow));
+            using(var file=new FileInfo(temp).Create(FileMode.CreateNew,FileSystemRights.Read|FileSystemRights.Write|FileSystemRights.Delete,FileShare.None,4096,FileOptions.WriteThrough,acl)){file.Write(encrypted);file.Flush(true);}
+            File.Move(temp,path,true);
+        }catch(SafeError){throw;}catch{throw new SafeError("PRIVATE_STORE_FAILED");}
+        finally{try{if(File.Exists(temp))File.Delete(temp);}catch{/* Encrypted, owner-only transient; never delete the destination on failure. */}}
+    }
+    public static T? Load<T>(string name)=>LoadFrom<T>(Root,name);
+    public static T? LoadFrom<T>(string directory,string name)
+    {
+        var path=StorePath(directory,name);if(!File.Exists(path))return default;
+        byte[]? plain=null;
+        try{
+            using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);if(file.Length>MaxBytes||file.Length==0)throw new SafeError("PRIVATE_STORE_FAILED");
+            var encrypted=new byte[(int)file.Length];file.ReadExactly(encrypted);plain=Crypt(encrypted,false);var value=JsonSerializer.Deserialize<T>(plain);if(value is null)throw new SafeError("PRIVATE_STORE_FAILED");return value;
+        }catch(SafeError){throw;}catch{throw new SafeError("PRIVATE_STORE_FAILED");}finally{if(plain!=null)CryptographicOperations.ZeroMemory(plain);}
     }
 }
 
@@ -53,8 +73,10 @@ public sealed class UserData
 {
     public List<Profile> Profiles { get; set; } = [];
     public List<Subscription> Subscriptions { get; set; } = [];
+    public Dictionary<string,Status2Authority> Status2Authorities {get;set;}=[];
     public string Language { get; set; } = "fa";
     public string SelectedId { get; set; } = "";
+    public List<string> RecentProfileIds { get; set; } = [];
     public HashSet<string> PinnedProfileIds { get; set; } = [];
     public HashSet<string> FastSlipProfiles { get; set; } = [];
     public Dictionary<string,string> SlipCertificates { get; set; } = [];
@@ -87,6 +109,8 @@ public sealed class UserData
     public Dictionary<string,string> LocalOverrideSources { get; set; } = [];
     public Dictionary<string,string> LocalOverrideNames { get; set; } = [];
     public Dictionary<string, bool> ExpandedCollections { get; set; } = [];
+    public string? OpenCollectionId { get; set; }
+    public int CollectionExpansionRevision { get; set; }
     public Dictionary<string, DateTimeOffset> SubscriptionUpdated { get; set; } = [];
     public Dictionary<string, PathMeasurement> Measurements { get; set; } = [];
     public Dictionary<string, DateTimeOffset> CollectionTestStarted { get; set; } = [];
@@ -154,4 +178,3 @@ public sealed class GroupChange
     public string Name { get; set; }="";
     public string Group { get; set; }="";
 }
-

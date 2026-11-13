@@ -1,2 +1,4 @@
 licenses/** -whitespace
 *.ico binary
+# Unified-diff context contains intentional prefix spaces before Go tabs.
+native-patches/**/*.patch -whitespace

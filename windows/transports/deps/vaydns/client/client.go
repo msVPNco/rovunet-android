@@ -85,6 +85,8 @@ type Resolver struct {
 	// DialerControl is an optional callback for setting socket options
 	// (SO_MARK, SO_BINDTODEVICE, etc.) on UDP sockets.
 	DialerControl func(network, address string, c syscall.RawConn) error
+	// Optional TCP dialer for a validated preceding chain layer.
+	DialContext func(context.Context, string, string) (net.Conn, error)
 
 	// UDP transport settings (only apply to ResolverTypeUDP).
 	UDPWorkers      int           // concurrent UDP workers (0 = DefaultUDPWorkers)
@@ -347,7 +349,11 @@ func (t *Tunnel) InitiateResolverConnection() error {
 	case ResolverTypeTCP:
 		t.remoteAddr = turbotunnel.DummyAddr{}
 		dialer := &net.Dialer{Timeout: 8 * time.Second, Control: r.DialerControl}
-		conn, err := NewTLSPacketConn(r.ResolverAddr, dialer.DialContext, t.effectivePacketQueueSize(), t.effectiveQueueOverflowMode())
+		dial := dialer.DialContext
+		if r.DialContext != nil {
+			dial = r.DialContext
+		}
+		conn, err := NewTLSPacketConn(r.ResolverAddr, dial, t.effectivePacketQueueSize(), t.effectiveQueueOverflowMode())
 		if err != nil {
 			return err
 		}
@@ -364,6 +370,24 @@ func (t *Tunnel) InitiateResolverConnection() error {
 		} else {
 			dialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return (&tls.Dialer{NetDialer: &net.Dialer{Timeout: 8 * time.Second}}).DialContext(ctx, network, addr)
+			}
+		}
+		if r.DialContext != nil {
+			dialTLSContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+				host, _, e := net.SplitHostPort(address)
+				if e != nil {
+					return nil, e
+				}
+				raw, e := r.DialContext(ctx, network, address)
+				if e != nil {
+					return nil, e
+				}
+				secured := tls.Client(raw, &tls.Config{MinVersion: tls.VersionTLS12, ServerName: host})
+				if e = secured.HandshakeContext(ctx); e != nil {
+					raw.Close()
+					return nil, e
+				}
+				return secured, nil
 			}
 		}
 		conn, err := NewTLSPacketConn(r.ResolverAddr, dialTLSContext, t.effectivePacketQueueSize(), t.effectiveQueueOverflowMode())

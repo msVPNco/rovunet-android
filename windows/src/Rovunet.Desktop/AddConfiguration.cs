@@ -83,7 +83,7 @@ public sealed partial class MainWindow
             catch (Exception e) { qrError.Text = L.Text(e is SafeError s ? s.Code : "QR_NOT_FOUND"); }
         }; qrActions.Children.Add(fromFile);
         var clip = Button("QR_CLIPBOARD", () => { }); clip.Click += async (_, _) => { try { if (!Clipboard.ContainsImage()) throw new SafeError("QR_NOT_FOUND"); await Decode(Clipboard.GetImage() ?? throw new SafeError("QR_NOT_FOUND")); } catch { qrError.Text = L.Text("QR_NOT_FOUND"); } }; qrActions.Children.Add(clip); qr.Children.Add(qrActions); qr.Children.Add(qrError); tabs.Items.Add(new TabItem { Header = L.Text("QR_CODE"), Content = qr });
-        var manual = new StackPanel(); var kind = new ComboBox { ItemsSource = new[] { "VLESS", "SOCKS5", "Hysteria2", "WireGuard", "SSH", "NaiveProxy", L.Text("DNS_FAMILIES") }, SelectedIndex = 0,Tag="PROTOCOL" }; manual.Children.Add(OutlinedField("PROTOCOL",kind));
+        var manual = new StackPanel(); var kind = new ComboBox { ItemsSource = new[] { "VLESS", "SOCKS5", "Hysteria2", "WireGuard", "SSH", "NaiveProxy", L.Text("DNS_FAMILIES") }, SelectedIndex = 0,Tag="PROTOCOL" }; var protocolFrame=OutlinedField("PROTOCOL",kind);manual.Children.Add(protocolFrame);
         var extraTypes=new WrapPanel();foreach(string protocol in new[]{"Trojan","VMess","Shadowsocks"}){var create=Button("ADD",()=>NewExtraProfile(protocol));create.Content=protocol;extraTypes.Children.Add(create);}manual.Children.Insert(0,extraTypes);
         var labels = new Dictionary<TextBox, FrameworkElement>();
         TextBox Field(string key, string initial = "") { var box = new TextBox { Text = initial, FlowDirection = FlowDirection.LeftToRight };var field=OutlinedField(key,box);manual.Children.Add(field);labels[box]=field;return box; }
@@ -119,10 +119,17 @@ public sealed partial class MainWindow
             foreach (var (box, label) in labels) { bool visible = box == wg ? wire : !wire && (box == name || box == host || box == port || box == identity && (vless || socks) || box == sni && (vless || hy) || vless && (box == wsHost || box == path || box == publicKey || box == shortId)); box.Visibility = label.Visibility = visible && !isDns ? Visibility.Visible : Visibility.Collapsed; }
             transportLabel.Visibility = securityLabel.Visibility = transport.Visibility = security.Visibility = vless ? Visibility.Visible : Visibility.Collapsed;
         }
-        kind.SelectionChanged += (_, _) => { if (kind.SelectedIndex == 4 && port.Text == "443") port.Text = "22"; Fields(); }; security.SelectionChanged += (_, _) => { if (security.SelectedItem?.ToString() == "reality") transport.SelectedItem = "tcp"; }; Fields();
+        string previousDefaultPort="443";
+        kind.SelectionChanged += (_, _) => { string nextDefault=kind.SelectedIndex==4?"22":kind.SelectedIndex==1?"1080":"443";if(port.Text==previousDefaultPort)port.Text=nextDefault;previousDefaultPort=nextDefault;Fields();if(tab==2)d.SetPageTitle(L.Text("ADD")+" · "+(kind.SelectedIndex==6?manualProtocol??L.Text("DNS_FAMILIES"):kind.SelectedItem)); }; security.SelectionChanged += (_, _) => { if (security.SelectedItem?.ToString() == "reality") transport.SelectedItem = "tcp"; }; Fields();
         input.PreviewKeyDown+=(_,key)=>{if(key.Key==System.Windows.Input.Key.Enter && System.Windows.Input.Keyboard.Modifiers==System.Windows.Input.ModifierKeys.Control){key.Handled=true;_=ImportText();}};
         if(manualProtocol!=null){if(manualProtocol is "REALITY" or "XHTTP" or "VLESS WS"){kind.SelectedItem="VLESS";if(manualProtocol=="REALITY"){transport.SelectedItem="tcp";security.SelectedItem="reality";}else if(manualProtocol=="XHTTP")transport.SelectedItem="xhttp";}else if(kind.Items.Contains(manualProtocol))kind.SelectedItem=manualProtocol;else kind.SelectedIndex=6;}
-        tabs.SelectedIndex = tab; d.Content = tabs;return d;
+        tabs.SelectedIndex = tab;
+        if(tab==2){
+            ((TabItem)tabs.Items[2]).Content=null;manual.Children.Remove(extraTypes);manual.Margin=new(18);
+            if(kind.SelectedIndex==6)protocolFrame.Visibility=Visibility.Collapsed;
+            d.SetPageTitle(L.Text("ADD")+" · "+(manualProtocol??kind.SelectedItem?.ToString()));d.Content=manual;
+        }else d.Content=tabs;
+        return d;
     }
     StackPanel DnsManualForm(string[] types, Func<string,bool> apply, TextBlock importError,string? initial=null)
     {
