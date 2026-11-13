@@ -1,6 +1,6 @@
 # Rovunet 用户指南 — alpha20
 
-**Alpha21 Full / code46 · prerelease:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This preview is not Latest; alpha20 is retained.
+**Alpha21 Full / code46 · public alpha release:** Account/source binding and revision high-water, independent private/advisory cache, additive Room50→51, partial metadata without invented usage and diagnostic ownership. [Release, source and limitations](releases/alpha21.md). Same production signer; install over the app without uninstall/clear-data. Seven Room methods and174 JVM tests passed; real main-upgrade/Keystore and device/network/Doze gates remain open. This alpha release is not Latest; alpha20 is retained.
 
 
 Alpha20 Full / 代码43：三主题、四语言 Rovunet 启动封面，减少配置加载时重复摘要计算，直接获取并解密 Mahsa，隐藏公共来源原始地址，通过活动隧道安全下载更新，可取消且有大小限制的文件导入，红色失败文字和小号英文法律署名。修复辅助引擎 SOCKS 域名长度处理。保留 alpha19 功能，没有新增协议。

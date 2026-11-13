@@ -1,4 +1,4 @@
-**Android preview:** [alpha21 Full / code46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — account trust, independent caches and Room50→51. Opt-in prerelease; existing public alpha20 remains available. [Evidence and upgrade limits](../releases/alpha21.md).
+**Android alpha release:** [alpha21 Full / code46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — account trust, independent caches and Room50→51. Public alpha release; existing public alpha20 remains available. [Evidence and upgrade limits](../releases/alpha21.md).
 
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 

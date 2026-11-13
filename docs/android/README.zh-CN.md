@@ -1,4 +1,4 @@
-**Android 预发布：** [alpha21 Full / 代码46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — 账户信任、独立缓存与 Room50→51。可选预发布，不设 Latest；保留 alpha20。[证据与升级限制](../releases/alpha21.md)。
+**Android alpha 正式发布：** [alpha21 Full / 代码46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — 账户信任、独立缓存与 Room50→51。公开 alpha 发行，不设 Latest；保留 alpha20。[证据与升级限制](../releases/alpha21.md)。
 
 <p align="center"><img src="../../assets/rovunet-logo.png" alt="Rovunet" width="140"></p>
 

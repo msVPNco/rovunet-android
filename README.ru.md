@@ -19,7 +19,7 @@
 
 **Rovunet — семейство VPN-клиентов для доступа к собственному серверу разными путями.** DNS-туннели, SSH, HTTPS-прокси и профили на базе Xray собраны в одном интерфейсе. Связанные пути остаются вместе в именованных группах: подключайте выбранный путь напрямую или отдельно измеряйте HTTPS через настоящий туннель. Все клиенты находятся в одном репозитории; серверная часть — [Rovunet Panel](https://github.com/msVPNco/rovunet-panel).
 
-**Предварительный Android:** [alpha21 Full / код46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — доверие аккаунта, отдельные кеши и Room50→51. Не Latest; alpha20 остаётся доступной. [Проверки и ограничения обновления](docs/releases/alpha21.md).
+**Публичный Android alpha:** [alpha21 Full / код46](https://github.com/msVPNco/rovunet-app/releases/tag/v0.3.0-alpha21) — доверие аккаунта, отдельные кеши и Room50→51. Не Latest; alpha20 остаётся доступной. [Проверки и ограничения обновления](docs/releases/alpha21.md).
 
 <a id="apps"></a>
 

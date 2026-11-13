@@ -2,7 +2,7 @@
 """Publish only the owner-authorized alpha21 signed bytes, without a signing key in CI.
 
 Restore public ZIP/signature metadata over the pinned passing unsigned CI artifact.
-Keep the original source identity, seven exact Room results and prerelease channel.
+Keep the original source identity, seven exact Room results and public alpha release channel.
 """
 import argparse, base64, hashlib, io, json, os, re, shutil, struct, subprocess, sys, tarfile, tempfile, zipfile, zlib
 from pathlib import Path, PurePosixPath
@@ -45,6 +45,8 @@ def api(path, method='GET', payload=None, binary_path=None):
     if payload is not None:
         command += ['--input', '-']
     if binary_path is not None:
+        if path.startswith('actions/jobs/') and path.endswith('/logs'):
+            command += ['--allow-escape-sequences']
         # Actions artifact redirects require the JSON media type; release assets
         # negotiate their binary bytes using octet-stream.
         media_type = 'application/octet-stream' if path.startswith('releases/assets/') else 'application/vnd.github+json'
@@ -228,7 +230,7 @@ def source_archives(old_path, out, revision):
         'additional_mihomo_source': previous['additional_mihomo_source'],
         'expanded_tree_source': {'archive': 'Rovunet-0.3.0-alpha15.4-source.zip', 'sha256': OLD_SHA, 'method': 'Only expanded upstream source entries, with every root gitlink compared to current pins'},
         'external_build_inputs': previous['external_build_inputs'], 'signing_keys_included': False,
-        'owner_authorized_implementation_and_release': True, 'owner_accepted_exact_apk': False, 'new_detailed_physical_measurements': False, 'owner_approval_date': '2026-11-13', 'channel': 'prerelease-not-latest', 'actual_apk_checkout': CHECKOUT, 'actual_room_checkout': SOURCE,
+        'owner_authorized_implementation_and_release': True, 'owner_accepted_exact_apk': False, 'new_detailed_physical_measurements': False, 'owner_approval_date': '2026-11-13', 'channel': 'public-alpha-not-latest', 'actual_apk_checkout': CHECKOUT, 'actual_room_checkout': SOURCE,
         'ci_application_run': f'https://github.com/{REPO}/actions/runs/{RUN}',
         'publication_commit_ci': 'Publication-only inputs; application evidence belongs to the recorded passing source',
         'light_source_excludes_extensions': ['.so', '.aar'],
@@ -371,7 +373,7 @@ def prepare(ci_path, room_path, old_path, out, log_dir, online):
     json_write(out / 'Rovunet-alpha21-CI-evidence.json', evidence)
     record = json.loads((ROOT / 'docs/releases/alpha21-provenance.json').read_text())
     record.update(publication_commit=revision, publication_tree=manifest['source_archive_tree'],
-                  publication='Owner-authorized alpha21 prerelease; not Latest', approved_apk_rebuilt=False,
+                  publication='Owner-authorized alpha21 public release; not Latest', approved_apk_rebuilt=False,
                   public_apk_restored_without_signing_key=True, merged=online)
     with zipfile.ZipFile(ci_path) as z:
         names = [n for n in z.namelist() if n.endswith('/outputs/mapping/fullRelease/mapping.txt')]
@@ -391,8 +393,11 @@ def prepare(ci_path, room_path, old_path, out, log_dir, online):
 
 def ensure_merged(revision):
     pr = api('pulls/22')
-    if pr['head']['sha'] != revision or pr['base']['ref'] != 'main' or not pr['merged'] or not pr['merge_commit_sha']:
-        raise ValueError('Exact publication PR22 has not merged')
+    if pr['base']['ref'] != 'main' or not pr['merged'] or not pr['merge_commit_sha']:
+        raise ValueError('Publication PR22 has not merged')
+    subprocess.run(['git', 'merge-base', '--is-ancestor', 'd19f4de3c061e3395c06a157c9b4e4e30287dc99', revision], cwd=ROOT, check=True)
+    # Later publication-only fixes retain the merged PR's tested app source.
+    # validate_publication_revision rejects any app/build/test delta.
     return pr['merge_commit_sha']
 
 
@@ -416,7 +421,7 @@ def publish(out, revision):
     else:
         release=api('releases','POST',{'tag_name':TAG,'target_commitish':revision,
             'name':'Rovunet 0.3.0-alpha21 — Account trust and independent caches',
-            'body':(ROOT/'docs/releases/alpha21.md').read_text(),'draft':True,'prerelease':True,'make_latest':'false'})
+            'body':(ROOT/'docs/releases/alpha21.md').read_text(),'draft':True,'prerelease':False,'make_latest':'false'})
     existing={a['name']:a for a in api(f"releases/{release['id']}/assets?per_page=100")}
     if set(existing)-set(expected): raise ValueError('Unexpected existing draft asset')
     for name,digest in expected.items():
@@ -429,9 +434,9 @@ def publish(out, revision):
     for a in assets:
         if a['size']!=(out/a['name']).stat().st_size or a.get('digest')!='sha256:'+expected[a['name']]:
             raise ValueError('Server asset digest mismatch')
-    final=api(f"releases/{release['id']}",'PATCH',{'draft':False,'prerelease':True,'make_latest':'false'})
+    final=api(f"releases/{release['id']}",'PATCH',{'draft':False,'prerelease':False,'make_latest':'false'})
     latest_after=api('releases/latest')['id']
-    if final['draft'] or not final['prerelease'] or latest_after==final['id']: raise ValueError('Prerelease channel verification failed')
+    if final['draft'] or final['prerelease'] or latest_after==final['id']: raise ValueError('Public alpha release channel verification failed')
     apk_asset=next(a for a in assets if a['name']==APK_NAME)
     import urllib.request, time
     with tempfile.TemporaryDirectory(prefix='alpha21-release-readback-') as tmp:
@@ -446,7 +451,7 @@ def publish(out, revision):
                 time.sleep(3)
         verified_file(downloaded,APK_SHA)
     receipt={'release_url':final['html_url'],'apk_url':apk_asset['browser_download_url'],'sha256':APK_SHA,
-        'release_id':final['id'],'asset_id':apk_asset['id'],'prerelease':True,'latest_before':latest_before,
+        'release_id':final['id'],'asset_id':apk_asset['id'],'prerelease':False,'latest_before':latest_before,
         'latest_after':latest_after,'application_source':SOURCE,'application_tree':TREE,
         'publication_commit':revision,'merge_commit':merged,'release_redownload_verified':True,
         'server_digests':{a['name']:a['digest'] for a in assets}}
