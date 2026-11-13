@@ -45,6 +45,10 @@ class StartupCoverDeviceTest {
             compose.onNodeWithTag("startup-brand").assertTextEquals("Rovunet")
             compose.onNodeWithTag("startup-message").assertIsDisplayed()
             compose.onNodeWithText("Synthetic content ready").assertDoesNotExist()
+            val symbol=compose.onNodeWithTag("startup-symbol").captureToImage().asAndroidBitmap()
+            val ink=symbol.getPixel(symbol.width*34/108,symbol.height*55/108)
+            assertTrue("R glyph disappeared in $lang/$mode",android.graphics.Color.red(ink)<30 &&
+                android.graphics.Color.green(ink)>90 && android.graphics.Color.blue(ink)>100)
             if (lang == "en") {
                 val image=compose.onRoot().captureToImage().asAndroidBitmap()
                 File(base.filesDir,"startup-code43-${mode.name.lowercase()}.png").outputStream().use {
