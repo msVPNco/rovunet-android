@@ -2,6 +2,59 @@
 
 # Rovunet · Windows
 
+**0.1.3 Beta · Windows x64 · Pre-release**
+
+[Download installer](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Rovunet-Windows-0.1.3-Beta-x64-Setup.exe) · [Release and checksums](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.3-beta) · [Exact source](https://github.com/msVPNco/rovunet-app/tree/windows-v0.1.3-beta/windows)
+
+</div>
+
+## Connection display correction
+
+The stale Connected/Disconnected title reported in 0.1.2 Beta is fixed. Changing text and typography now remeasure the marquee source and viewport immediately; returning from another page also displays current text. A language change is no longer needed. Inactive/minimized windows keep animation stopped; no polling timer was added.
+
+Single click still selects only; successful connection updates persistent recent ordering. Compact cards, zero-or-one open collection, profile data and account checkpoints are preserved. Transport, TLS/SSH verification and account logic are unchanged by this correction.
+
+**فارسی:** مشکل ماندن عنوان اتصال/قطع روی وضعیت قبلی اصلاح شد؛ دیگر تغییر زبان لازم نیست. متن تازه در همان کادر و پس از برگشت به صفحه نمایش داده می‌شود. انیمیشن در پنجرهٔ غیرفعال یا مینیمایز متوقف است. تک‌کلیک فقط انتخاب می‌کند و فقط اتصال موفق ترتیب را تغییر می‌دهد.
+
+**Русский:** Исправлено запаздывание текста состояния подключения. Для обновления надписей больше не нужно менять язык. В неактивном или свёрнутом окне анимация остановлена; сохранённые данные и порядок после успешного подключения сохранены.
+
+**简体中文:** 修复连接状态标题及动态滚动文字保留旧内容的问题，无需切换语言即可更新。窗口不活动或最小化时停止动画；保存的数据、单击选择和成功连接后的最近排序保持不变。
+
+## Install and verification
+
+Download **Rovunet-Windows-0.1.3-Beta-x64-Setup.exe** above. Upgrade without deleting/resetting profiles. Publication does not automatically replace the owner's installation.
+
+Installer SHA-256: `c5cbf4341c9b6e76795c0d9b51b41699d7d458d54b5b498d25afcbcc482d7981`.
+
+The installer has **no trusted Authenticode publisher signature**. Compare with the attached SHA256SUMS.txt; checksums do not replace publisher signing.
+
+[Practical checks / راهنمای بررسی](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/QUICK-TEST-FA.txt) · [Build provenance](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/WINDOWS-PROVENANCE.json) · [Four-language release notes](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/RELEASE-NOTES.md)
+
+Final packaged payload: **631 connection/text/focus + 110 accordion + 10 connection-order checks**. Four languages, three themes and compact/wide widths; actual WPF with synthetic profiles/state transitions. This does not certify a new live-server/network test, physical touch, mixed-monitor DPI or device-wide protection.
+
+![Compact native WPF synthetic fixture](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Windows-0.1.3-Beta-compact.png)
+
+![Wide native WPF synthetic fixture](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Windows-0.1.3-Beta-wide.png)
+
+[Connection-state demonstration — synthetic, real WPF](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/Windows-0.1.3-Beta-demo-synthetic.mp4)
+
+## Scope and source
+
+Local HTTP/SOCKS proxy consumer. Native laboratory TUN/kill-switch/service/boot gates remain separate and are not enabled. Existing native binaries and Tor are reused at their pins; no new independent-peer acceptance is claimed. Account schema/migration and hardware acceptance limits remain as documented in the source and prior scoped reports.
+
+Tag/source commit: `windows-v0.1.3-beta` / `f82d8def467d2860e8b42ca2570a6a4601ff92ed`. Exact Windows tree: `0d8f473ed7cc4e1368aac5a9e16fca658255a4e9`. Explicit Windows source ZIP and corresponding native-source offers accompany the installer.
+
+Previous release tags/assets and repository-wide Latest are preserved. Choose Windows assets, not Android/macOS downloads.
+
+AGPL-3.0; based on SlipNet 2.5.6 Full by Anonvector. [Licence](LICENSE) · [Notices](NOTICE.md). Rovunet is an independent project.
+
+<details>
+<summary>0.1.2 Beta and earlier — historical release documentation</summary>
+
+<div align="center">
+
+# Rovunet · Windows
+
 **0.1.2 Beta · Windows x64 · Pre-release**
 
 [Download installer](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.2-beta/Rovunet-Windows-0.1.2-Beta-x64-Setup.exe) · [Release and checksums](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.2-beta) · [Exact source](https://github.com/msVPNco/rovunet-app/tree/windows-v0.1.2-beta/windows)
@@ -107,6 +160,9 @@ Rovunet中央仓库中的Windows客户端。[下载0.1.1 Beta](https://github.co
 ---
 
 [Architecture](docs/ARCHITECTURE.md) · [Build](docs/BUILDING.md) · [Backlog](docs/BACKLOG.md) · [License](LICENSE) · [Attribution](NOTICE.md)
+
+
+</details>
 
 
 </details>
