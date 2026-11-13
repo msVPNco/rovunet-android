@@ -8,6 +8,12 @@
 
 </div>
 
+## Connection title display notice
+
+An owner-reported refresh issue in 0.1.2 Beta can leave the Connected/Disconnected title showing the preceding state until the page is rebuilt, even when the power colour/detail has changed. Changing the language temporarily refreshes it. A correction has been prepared and is being checked in a separate local build; the published 0.1.2 installer is unchanged.
+
+در نسخهٔ 0.1.2 ممکن است عنوان اتصال یا قطع، وضعیت قبلی را نشان دهد؛ تعویض زبان موقتاً آن را تازه می‌کند. اصلاح در ساخت محلی جداگانه در حال بررسی است و فایل منتشرشدهٔ 0.1.2 جایگزین نشده است.
+
 ## What changed
 
 - Compact closed collections and fixed 66-DIP profile cards, with 44-DIP action targets and lighter edges/shadows. Long text moves inside its bounds; short text stays still.
