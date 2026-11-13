@@ -1,0 +1,9 @@
+[
+  "app.slipnet.service.SubscriptionDeviceTest#panelFixturesRefreshPersistentlyForBothSavedUrls",
+  "app.slipnet.data.subscription.AccountStatusDeviceTest#suppliedPanelStatusFixturesPersistPeriodsForBothSubscriptionAliases",
+  "app.slipnet.data.subscription.AccountStatusDeviceTest#metadataCacheSurvivesSourceUpdatesAndRejectsDetachedOrReplacedSources",
+  "app.slipnet.data.subscription.StatusTrustDeviceTest#privateHighWaterSurvivesHealthyInvalidMissingHeadersAndReopen",
+  "app.slipnet.data.subscription.StatusTrustDeviceTest#concurrentResponsesIdentityChangesAndLateUrlResponsesCannotReplaceCommittedState",
+  "app.slipnet.data.subscription.StatusTrustDeviceTest#twoSourcesRetainIndependentAccountBindingsAndHighWaters",
+  "app.slipnet.data.subscription.StatusCacheMigrationTest#actualSchema50MigratesPrivateBindingAndAdvisorySeparatelyWithoutDeletingRows"
+]

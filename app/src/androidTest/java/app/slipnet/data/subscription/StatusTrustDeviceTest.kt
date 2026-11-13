@@ -7,27 +7,15 @@ import app.slipnet.data.export.ConfigExporter
 import app.slipnet.data.export.ConfigImporter
 import app.slipnet.data.local.DeviceSecrets
 import app.slipnet.data.local.database.SlipNetDatabase
-import app.slipnet.data.local.datastore.PreferencesDataStore
 import app.slipnet.data.mapper.ProfileMapper
-import app.slipnet.service.VpnConnectionManager
 import com.google.gson.Gson
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.components.SingletonComponent
 import java.security.MessageDigest
 import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
-
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-internal interface StatusReviewDependencies {
-    fun connection(): VpnConnectionManager
-    fun preferences(): PreferencesDataStore
-}
 
 internal object StatusReviewHarness {
     fun repository(context: Context, db: SlipNetDatabase): SubscriptionRepository {
