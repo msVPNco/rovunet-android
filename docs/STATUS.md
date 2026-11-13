@@ -16,11 +16,10 @@ Apple Silicon's dev.6 functional base was tested and accepted by the owner on a 
 
 ## Historical alpha18.1 status
 
-## Windows 0.1.1 Beta
+## Windows 0.1.3 Beta
 
-Windows x64 [pre-release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.1-beta): [source and scope](../windows/README.md), [verification manifest](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.1-beta/VERIFICATION.json). Includes active-card priority, fresh green latency, three themes, responsive layout and the full 60,370-entry Default resolver bank. Passed 738 UI/behavior assertions, 97 installer assertions and a real local HTTPS fixture. No trusted Authenticode signature yet; Hysteria2/WireGuard remain limited, AmneziaWG is not integrated, and there is no device-wide TUN. Android Latest remains separate.
+Windows x64 [pre-release](https://github.com/msVPNco/rovunet-app/releases/tag/windows-v0.1.3-beta): [installer, source and scope](../windows/README.md), [verification manifest](https://github.com/msVPNco/rovunet-app/releases/download/windows-v0.1.3-beta/WINDOWS-PROVENANCE.json). Fixes stale connection titles and changing marquee text without switching language. Final packaged-payload verification: 631 connection/text/focus, 110 accordion and 10 connection-order checks; actual WPF with synthetic state transitions across four languages, three themes and compact/wide widths. Selection-only first click, connection-based recent ordering, current consumer features and saved profiles/checkpoints are preserved. No trusted Authenticode signature; no new live-peer/hardware/native-service acceptance and no device-wide TUN enabled. Platform-specific releases remain separate from repository Latest.
 
-# Rovunet — current release / وضعیت فعلی
 
 ## English
 
