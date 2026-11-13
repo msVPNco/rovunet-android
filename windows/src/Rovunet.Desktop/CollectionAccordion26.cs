@@ -24,7 +24,7 @@ public sealed partial class MainWindow
         if(group.Details26==null||group.ClosedStatus26==null||group.ClosedLine26==null)return;
         group.Details26.Visibility=open?Visibility.Visible:Visibility.Collapsed;
         string summary="";
-        if(group.Quota?.Root.Visibility==Visibility.Visible)summary=string.Join(" · ",new[]{group.Quota.Used.Text,group.Quota.Time.Text}.Where(t=>t.Length>0));
+        if(group.Quota?.Root.Visibility==Visibility.Visible)summary=string.Join(" · ",new[]{group.Quota.Used.Text,group.Quota.Time.Text,group.Quota.Note.Visibility==Visibility.Visible?group.Quota.Note.Text:""}.Where(t=>t.Length>0));
         bool known=group.Members[0].SourceId.Length>0&&statuses.GetValueOrDefault(group.Members[0].SourceId)?.Status!=null;
         if(!known&&group.Quota!=null){group.Quota.Root.Visibility=Visibility.Collapsed;summary=group.Members[0].SourceId.Length>0?L.Text("ACCOUNT_UNKNOWN"):"";}
         if(collectionRuns.TryGetValue(group.Key,out var run)&&(run.Running||run.Error.Length>0))summary=group.Summary.Text;

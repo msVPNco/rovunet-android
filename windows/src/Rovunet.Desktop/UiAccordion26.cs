@@ -40,6 +40,10 @@ public sealed partial class MainWindow
             activeProfile=chosen;RecordConnectedUse17(chosen);SetState(new(){State="connected"});RefreshCards();checks["connection_reorder_does_not_expand_another_group"]=Count()==1&&data.OpenCollectionId==openBefore;activeProfile=null;SetState(new(){State="disconnected"});
             var saved=PrivateStore.LoadFrom<UserData>(store,"profiles.dpapi")!;var restarted=new MainWindow(saved,true);try{checks["restart_preserves_one_stable_id"]=restarted.CountOpen26()==1&&saved.OpenCollectionId==a.Key;}finally{restarted.Close();}
             checks["toggle_does_not_change_selection_pin_override_or_membership"]=Preserved()==baseline;
+            var originalSnapshot=statuses[a.Members[0].SourceId];statuses[a.Members[0].SourceId]=new(){Status=originalSnapshot.Status,Error="ACCOUNT_STALE"};
+            if(data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);RefreshCards();
+            checks["closed_cached_status_keeps_explicit_stale_label"]=a.ClosedStatus26!.Text.Contains(L.Text("QUOTA_CACHED"));
+            statuses[a.Members[0].SourceId]=originalSnapshot;RefreshCards();
             foreach(string language in new[]{"fa","en","ru","zh-CN"})foreach(string theme in new[]{"light","dark","amoled"})foreach(double width in new[]{480d,1120d}){
                 L.Language=data.Language=language;data.Theme=theme;Width=width;ApplyTheme();Build();await Idle18();if(data.OpenCollectionId!.Length>0)ToggleCollection26(data.OpenCollectionId);await Idle18();
                 string tag=language+"_"+theme+"_"+width;checks[tag+"_closed_headers_72_to_88"]=groups.All(g=>g.Header.ActualHeight>=72&&g.Header.ActualHeight<=88)&&Count()==0;
