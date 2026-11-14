@@ -38,6 +38,6 @@ if format_result.returncode:
     # this change. Keep those sources intact, as requested by the owner.
     print('Existing upstream formatting drift retained; checking the edited verifier separately.', flush=True)
 run(['rustfmt','--check','--edition','2021','crates/slipstream-client/src/pinning.rs'], cwd=SOURCE)
-run(['cargo','clippy','--locked','--workspace','--all-targets','--features','openssl-vendored,picoquic-minimal-build','--','-D','warnings'], cwd=SOURCE, env=host_env)
+run(['python3', ROOT/'tools/native/check-slipstream-clippy.py', SOURCE], cwd=SOURCE, env=host_env)
 run(['cargo','test','--locked','-p','slipstream-client','--features','openssl-vendored,picoquic-minimal-build','pinning::tests'], cwd=SOURCE, env=host_env)
 run(['cargo','build','--locked','--release','-p','slipstream-server','--features','openssl-vendored,picoquic-minimal-build','-j2'], cwd=SOURCE, env=host_env)

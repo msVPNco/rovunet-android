@@ -1,0 +1,26 @@
+[
+  {
+    "file": "crates/slipstream-client/src/runtime/setup.rs",
+    "code": "unused_imports",
+    "line": 7,
+    "sha256": "0cd75118716f570c0071d0b08e2f358e1fffe96f4cf8ae7a91d551e6130e8718"
+  },
+  {
+    "file": "crates/slipstream-client/src/runtime.rs",
+    "code": "clippy::manual_clamp",
+    "line": 404,
+    "sha256": "96041b6099446b38bfa6cd0938acdef07f4f7b0c54eedece0a889ec520bbb38f"
+  },
+  {
+    "file": "crates/slipstream-client/src/streams.rs",
+    "code": "clippy::needless_bool",
+    "line": 325,
+    "sha256": "9f504eb19ac5306f2780757b5fffae6096385ab4abbd854a5891c8ff97e78468"
+  },
+  {
+    "file": "crates/slipstream-server/src/udp_fallback.rs",
+    "code": "clippy::question_mark",
+    "line": 225,
+    "sha256": "48fddc4b8817cde3ef4573a7c1c692317425c79f817fc1a3066c4d44932515ce"
+  }
+]

@@ -212,7 +212,7 @@ index d6bb77e..4c99130 100644
      let prefer_static_openssl = cfg!(feature = "openssl-static");
      let openssl_no_vendor = env::var_os("OPENSSL_NO_VENDOR").is_some();
 diff --git a/crates/slipstream-client/src/pinning.rs b/crates/slipstream-client/src/pinning.rs
-index 08451bc..1dbc6a3 100644
+index 08451bc..b26c715 100644
 --- a/crates/slipstream-client/src/pinning.rs
 +++ b/crates/slipstream-client/src/pinning.rs
 @@ -8,7 +8,10 @@ use slipstream_ffi::picoquic::{
@@ -227,7 +227,7 @@ index 08451bc..1dbc6a3 100644
 
  const SIG_RSA_PKCS1_SHA256: u16 = 0x0401;
  const SIG_RSA_PKCS1_SHA384: u16 = 0x0501;
-@@ -47,8 +50,16 @@ static PINNING_ALGOS: [u16; 15] = [
+@@ -47,25 +50,45 @@ static PINNING_ALGOS: [u16; 15] = [
  #[repr(C)]
  struct PinnedCertVerifier {
      super_ctx: ptls_verify_certificate_t,
@@ -244,8 +244,15 @@ index 08451bc..1dbc6a3 100644
 +    automatic_path: Option<PathBuf>,
  }
 
- pub fn configure_pinned_certificate(
-@@ -58,14 +69,22 @@ pub fn configure_pinned_certificate(
+-pub fn configure_pinned_certificate(
++/// Register the verifier on a live picoquic context.
++///
++/// # Safety
++/// `quic` must be a valid context owned by this client until the registered free callback runs.
++pub unsafe fn configure_pinned_certificate(
+     quic: *mut picoquic_quic_t,
+     cert_path: &str,
+ ) -> Result<(), String> {
      if quic.is_null() {
          return Err("QUIC context is null".to_string());
      }
@@ -270,7 +277,7 @@ index 08451bc..1dbc6a3 100644
      });
      let raw = Box::into_raw(verifier);
      // SAFETY: `quic` is a valid context, and the verifier pointer remains alive until picoquic
-@@ -81,6 +100,10 @@ pub fn configure_pinned_certificate(
+@@ -81,6 +104,10 @@ pub fn configure_pinned_certificate(
  }
 
  fn load_pinned_cert(cert_path: &str) -> Result<(Vec<u8>, PKey<Public>), String> {
@@ -281,7 +288,7 @@ index 08451bc..1dbc6a3 100644
      let pem =
          fs::read(cert_path).map_err(|err| format!("Failed to read cert {}: {}", cert_path, err))?;
      let mut certs = X509::stack_from_pem(&pem)
-@@ -98,6 +121,97 @@ fn load_pinned_cert(cert_path: &str) -> Result<(Vec<u8>, PKey<Public>), String>
+@@ -98,6 +125,97 @@ fn load_pinned_cert(cert_path: &str) -> Result<(Vec<u8>, PKey<Public>), String>
      Ok((der, pkey))
  }
 
@@ -379,7 +386,7 @@ index 08451bc..1dbc6a3 100644
  unsafe extern "C" fn pinned_verify_free(ctx: *mut ptls_verify_certificate_t) {
      if ctx.is_null() {
          return;
-@@ -114,7 +228,13 @@ unsafe extern "C" fn pinned_verify_certificate(
+@@ -114,7 +232,13 @@ unsafe extern "C" fn pinned_verify_certificate(
      certs: *mut ptls_iovec_t,
      num_certs: size_t,
  ) -> c_int {
@@ -394,7 +401,7 @@ index 08451bc..1dbc6a3 100644
          return -1;
      }
      let verifier = &*(self_ptr as *const PinnedCertVerifier);
-@@ -125,15 +245,12 @@ unsafe extern "C" fn pinned_verify_certificate(
+@@ -125,15 +249,12 @@ unsafe extern "C" fn pinned_verify_certificate(
          return -1;
      }
      let leaf_bytes = std::slice::from_raw_parts(leaf.base as *const u8, leaf.len);
@@ -416,7 +423,7 @@ index 08451bc..1dbc6a3 100644
      0
  }
 
-@@ -146,18 +263,21 @@ unsafe extern "C" fn pinned_verify_sign(
+@@ -146,18 +267,21 @@ unsafe extern "C" fn pinned_verify_sign(
      if verify_ctx.is_null() {
          return -1;
      }
@@ -441,7 +448,7 @@ index 08451bc..1dbc6a3 100644
          Ok(false) => -1,
          Err(_) => -1,
      }
-@@ -265,3 +385,151 @@ fn verify_eddsa(
+@@ -265,3 +389,151 @@ fn verify_eddsa(
      verifier.update(data).map_err(|err| err.to_string())?;
      verifier.verify(sig).map_err(|err| err.to_string())
  }
@@ -593,3 +600,17 @@ index 08451bc..1dbc6a3 100644
 +        fs::remove_dir_all(dir).unwrap();
 +    }
 +}
+diff --git a/crates/slipstream-client/src/runtime.rs b/crates/slipstream-client/src/runtime.rs
+index a221611..2cc362f 100644
+--- a/crates/slipstream-client/src/runtime.rs
++++ b/crates/slipstream-client/src/runtime.rs
+@@ -240,7 +240,8 @@ pub async fn run_client(config: &ClientConfig<'_>) -> Result<i32, ClientError> {
+             slipstream_set_default_path_mode(resolver_mode_to_c(resolvers[primary_idx].mode));
+         }
+         if let Some(cert) = config.cert {
+-            configure_pinned_certificate(quic, cert).map_err(ClientError::new)?;
++            // SAFETY: this client owns the live context created above until teardown.
++            unsafe { configure_pinned_certificate(quic, cert) }.map_err(ClientError::new)?;
+         }
+         let mut server_storage = resolvers[primary_idx].storage;
+         info!("Using resolver {} as primary (index {})", resolvers[primary_idx].addr, primary_idx);

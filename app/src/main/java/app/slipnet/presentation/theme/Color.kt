@@ -52,4 +52,4 @@ val ConnectionSuccessColor: Color
 val PreviousResultColor: Color
     @androidx.compose.runtime.Composable get() =
         if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF56606D)
-        else Color(0xFFC0C4CC)
+        else Color(0xFFCDD0D5)

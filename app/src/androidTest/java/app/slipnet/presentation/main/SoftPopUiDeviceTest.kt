@@ -90,7 +90,9 @@ class SoftPopUiDeviceTest {
                     var captured: Bitmap? = null
                     compose.waitUntil(15000) {
                         val frame = requireNotNull(inst.uiAutomation.takeScreenshot())
-                        val background = frame.getPixel(frame.width / 2, frame.height * 2 / 3)
+                        // The new visible test button makes cards taller; sample the outer
+                        // gutter so the theme check cannot mistake a card for the background.
+                        val background = frame.getPixel(2, frame.height * 2 / 3)
                         val surface = frame.getPixel(card.center.x.toInt().coerceIn(0, frame.width - 1),
                             card.center.y.toInt().coerceIn(0, frame.height - 1))
                         val red = android.graphics.Color.red(background)
