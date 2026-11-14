@@ -22,7 +22,7 @@ object SlipstreamCertificate {
             // verifying CertificateVerify. Existing pins are always checked and never replaced.
             return "tofu:" + File(directory, "authority-$scope.pem").absolutePath
         }
-        certificate.checkValidity()
+        (certificate as java.security.cert.X509Certificate).checkValidity()
         val digest = MessageDigest.getInstance("SHA-256").digest(certificate.encoded).joinToString("") { "%02x".format(it) }
         val file = File(directory, "$digest.pem")
         val temporary = File.createTempFile("certificate-", ".pem", directory)
