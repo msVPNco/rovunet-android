@@ -1585,6 +1585,13 @@ class MainViewModel @Inject constructor(
         if (_uiState.value.isPingRunning || onlyUnavailable(selected)) return
         val eligible = selected.filterNot { it.needsCredentials || it.isExpired || !it.tunnelType.isAvailable() }
         if (eligible.isEmpty()) return
+        val hasUdpHandshake = eligible.any { ProfileCollections.isUdp(it) && app.slipnet.core.ProtocolHandshake.supports(it.coreLink) }
+        // A second WireGuard handshake can roam the server's peer away from the
+        // live tunnel. Preserve the existing disconnected-test boundary for UDP.
+        if (hasUdpHandshake && !connectionManager.connectionState.value.isDisconnected) {
+            _uiState.value = _uiState.value.copy(error = "PROBE_BUSY")
+            return
+        }
         val batchKey = ProfileCollections.key(eligible.first()) + ":quick"
         val offset = if (batched) (testBatchOffsets[batchKey] ?: 0).coerceAtMost(eligible.lastIndex) else 0
         val profiles = if (batched) (eligible.drop(offset) + eligible.take(offset)).take(50) else eligible
@@ -1603,6 +1610,11 @@ class MainViewModel @Inject constructor(
         activePathMonitor.pause(this, true)
         pingJob = viewModelScope.launch {
             var completed = initial.values.count { it == PingResult.Skipped }
+            val owner = kotlinx.coroutines.currentCoroutineContext()[Job]
+            val connectionGuard = if (hasUdpHandshake) launch {
+                connectionManager.connectionState.first { !it.isDisconnected }
+                owner?.cancel()
+            } else null
             try {
                 _uiState.value = _uiState.value.copy(pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers())
                 app.slipnet.util.scanWorkers(profiles.filter { initial[it.id] == PingResult.Pending }, 4) { profile ->
@@ -1632,6 +1644,7 @@ class MainViewModel @Inject constructor(
                     }
                 }
             } finally {
+                connectionGuard?.cancel()
                 if (batched && completed > 0) testBatchOffsets[batchKey] = (offset + completed) % eligible.size
                 _uiState.value = _uiState.value.copy(isPingRunning = false, pingResults = finishTestResults(originalResults))
                 activePathMonitor.pause(this@MainViewModel, false)

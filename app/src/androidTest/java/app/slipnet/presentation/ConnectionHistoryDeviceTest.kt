@@ -111,6 +111,16 @@ class ConnectionHistoryDeviceTest {
                         }
                     }
                     assertEquals(ids[0], (manager.connectionState.value as ConnectionState.Connected).profile.id)
+                    val fixtureText = requireNotNull(InstrumentationRegistry.getArguments().getString("udpProtocolFixture"))
+                    val udpFixture = org.json.JSONObject(String(android.util.Base64.decode(fixtureText, android.util.Base64.DEFAULT), Charsets.UTF_8))
+                    val udp = vm.uiState.value.profiles.single { it.id == ids[0] }.copy(tunnelType = TunnelType.XRAY,
+                        coreLink = udpFixture.getJSONArray("links").getString(0))
+                    val liveSession = manager.currentSessionId
+                    onMain { vm.pingSingleProfile(udp) }
+                    assertFalse(vm.uiState.value.isPingRunning)
+                    assertEquals("PROBE_BUSY", vm.uiState.value.error)
+                    assertEquals(liveSession, manager.currentSessionId)
+                    assertEquals(ids[0], (manager.connectionState.value as ConnectionState.Connected).profile.id)
                 } finally {
                     onMain { vm.disconnect() }
                     withTimeout(30_000) { manager.awaitSessionDisconnected(manager.currentSessionId) }
