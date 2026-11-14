@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='veyra-native-') as tmp:
   sys.exit(0)
  core=temp/'xray';run(['git','clone','https://github.com/XTLS/Xray-core.git',core]);run(['git','checkout',PIN],cwd=core)
  run(['python3',ROOT/'tools/native/patch-xray-certificates.py',core])
- run([GO,'test','./transport/internet/tls','-run','TestRovunetAutomaticCertificate','-count=1'],cwd=core)
+ run([GO,'test','./transport/internet/tls','-run','TestRovunet','-count=1'],cwd=core)
  for abi,arch,target in [('arm64-v8a','arm64','aarch64-linux-android24'),('armeabi-v7a','arm','armv7a-linux-androideabi24'),('x86_64','amd64','x86_64-linux-android24')]:
   cc=NDK/'toolchains/llvm/prebuilt/linux-x86_64/bin'/(target+'-clang');dest=ROOT/'app/src/main/jniLibs'/abi
   env=os.environ.copy();env.update(GOOS='android',GOARCH=arch,CGO_ENABLED='1',CC=str(cc),GOARM='7')

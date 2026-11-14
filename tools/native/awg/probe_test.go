@@ -67,7 +67,13 @@ func TestWireGuardProbeRequiresTheRealPeerWithoutAnyInternetDestination(t *testi
 	ft.events <- tun.EventUp
 	server := device.NewDevice(ft, fixtureBind{conn.NewDefaultBind()}, device.NewLogger(device.LogLevelSilent, ""), 2)
 	defer server.Close()
-	port := freePort(t)
+	// Choose a port usable by TCP too (Windows reserves some UDP-only ports).
+	tcp, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tcp.Close()
+	port := tcp.Addr().(*net.TCPAddr).Port
 	config := "private_key=" + hex.EncodeToString(serverPrivate) + "\nlisten_port=" + strconv.Itoa(port) + "\npublic_key=" + hex.EncodeToString(clientPublic) + "\nallowed_ip=10.77.0.2/32\n"
 	if err = server.IpcSet(config); err != nil {
 		t.Fatal(err)
@@ -76,11 +82,6 @@ func TestWireGuardProbeRequiresTheRealPeerWithoutAnyInternetDestination(t *testi
 		t.Fatal(err)
 	}
 	// A reachable TCP host must not turn a wrong WireGuard key into success.
-	tcp, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tcp.Close()
 	go func() {
 		for {
 			c, err := tcp.Accept()
@@ -130,7 +131,7 @@ func TestQuicProbesEnrollPrivateCertificatesAndUseProtocolHandshakes(t *testing.
 					t.Fatal("Protocol handshake failed", err)
 				}
 			}
-			pins, err := filepath.Glob(filepath.Join(directory, "*.pem"))
+			pins, err := filepath.Glob(filepath.Join(directory, "*.json"))
 			if err != nil || len(pins) != 1 {
 				t.Fatal("Certificate was not stored once", len(pins), err)
 			}

@@ -1,10 +1,11 @@
 package ca
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
-	"encoding/pem"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -19,6 +20,12 @@ import (
 var RovunetCertificateDirectory string
 var RovunetCertificateEndpoint string
 
+type rovunetIdentity struct {
+	Version     int    `json:"version"`
+	PublicCA    bool   `json:"publicCa"`
+	Certificate []byte `json:"certificate"`
+}
+
 func rovunetAutomaticCertificate(config *tls.Config, option Option) {
 	if RovunetCertificateDirectory == "" || RovunetCertificateEndpoint == "" || config.InsecureSkipVerify || option.Fingerprint != "" || option.NameCertVerify != "" || option.ZeroTrust {
 		return
@@ -26,9 +33,9 @@ func rovunetAutomaticCertificate(config *tls.Config, option Option) {
 	directory, endpoint := RovunetCertificateDirectory, RovunetCertificateEndpoint
 	host := config.ServerName
 	digest := sha256.Sum256([]byte(endpoint + "|" + strings.ToLower(host)))
-	path := filepath.Join(directory, hex.EncodeToString(digest[:])+".pem")
-	// Go verifies the peer's CertificateVerify signature before VerifyConnection.
-	// All chain/name/time and stored-key checks are performed by this callback.
+	path := filepath.Join(directory, hex.EncodeToString(digest[:])+".json")
+	// Go verifies CertificateVerify before invoking VerifyConnection. This callback
+	// owns all remaining chain, name, time and previously stored identity checks.
 	config.InsecureSkipVerify = true
 	config.VerifyConnection = func(state tls.ConnectionState) error {
 		if len(state.PeerCertificates) == 0 || len(state.PeerCertificates) > 16 {
@@ -45,86 +52,112 @@ func rovunetAutomaticCertificate(config *tls.Config, option Option) {
 		if err := cert.VerifyHostname(host); err != nil {
 			return errors.New("certificate name mismatch")
 		}
-		if known, err := rovunetReadPin(path); err == nil {
-			return rovunetSameKey(known, cert)
-		} else if !os.IsNotExist(err) {
-			return err
-		}
 		intermediates := x509.NewCertPool()
 		for _, parent := range state.PeerCertificates[1:] {
 			intermediates.AddCert(parent)
 		}
-		if _, err := cert.Verify(x509.VerifyOptions{DNSName: host, Roots: config.RootCAs, Intermediates: intermediates, CurrentTime: now}); err == nil {
-			return nil // Preserve ordinary CA renewal; only private certificates need TOFU pins.
+		_, chainError := cert.Verify(x509.VerifyOptions{DNSName: host, Roots: config.RootCAs, Intermediates: intermediates, CurrentTime: now})
+		publicCA := chainError == nil
+		known, err := rovunetReadIdentity(path)
+		if os.IsNotExist(err) {
+			created, err := rovunetWriteIdentity(path, rovunetIdentity{Version: 1, PublicCA: publicCA, Certificate: cert.Raw}, false)
+			if err != nil {
+				return err
+			}
+			if created {
+				return nil
+			}
+			// Another process published first. Its policy/identity wins; never replace it.
+			known, err = rovunetReadIdentity(path)
 		}
-		return rovunetPersistPin(path, cert)
+		if err != nil {
+			return err
+		}
+		previous, err := x509.ParseCertificate(known.Certificate)
+		if err != nil {
+			return err
+		}
+		if !known.PublicCA || !publicCA {
+			if sha256.Sum256(previous.RawSubjectPublicKeyInfo) != sha256.Sum256(cert.RawSubjectPublicKeyInfo) {
+				return errors.New("server certificate identity changed")
+			}
+			return nil
+		}
+		// Public CA renewal may change the key. A later untrusted key cannot use this
+		// renewal path, and a private TOFU pin can never become a public cache entry.
+		if bytes.Equal(known.Certificate, cert.Raw) {
+			return nil
+		}
+		_, err = rovunetWriteIdentity(path, rovunetIdentity{Version: 1, PublicCA: true, Certificate: cert.Raw}, true)
+		return err
 	}
 }
 
-func rovunetSameKey(known, peer *x509.Certificate) error {
-	if sha256.Sum256(known.RawSubjectPublicKeyInfo) != sha256.Sum256(peer.RawSubjectPublicKeyInfo) {
-		return errors.New("server certificate identity changed")
-	}
-	return nil
-}
-
-func rovunetReadPin(path string) (*x509.Certificate, error) {
+func rovunetReadIdentity(path string) (rovunetIdentity, error) {
+	var identity rovunetIdentity
 	info, err := os.Lstat(path)
 	if err != nil {
-		return nil, err
+		return identity, err
 	}
-	if !info.Mode().IsRegular() || info.Size() > 32768 {
-		return nil, errors.New("invalid certificate store")
+	if !info.Mode().IsRegular() || info.Size() > 65536 {
+		return identity, errors.New("invalid certificate store")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return identity, err
 	}
-	block, rest := pem.Decode(data)
-	if block == nil || block.Type != "CERTIFICATE" || len(strings.TrimSpace(string(rest))) != 0 {
-		return nil, errors.New("invalid certificate store")
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&identity); err != nil {
+		return identity, err
 	}
-	return x509.ParseCertificate(block.Bytes)
+	if identity.Version != 1 || len(identity.Certificate) == 0 || len(identity.Certificate) > 32768 {
+		return identity, errors.New("invalid certificate store")
+	}
+	if _, err = x509.ParseCertificate(identity.Certificate); err != nil {
+		return identity, err
+	}
+	return identity, nil
 }
 
-func rovunetPersistPin(path string, cert *x509.Certificate) error {
+func rovunetWriteIdentity(path string, identity rovunetIdentity, replacePublic bool) (bool, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
+		return false, err
 	}
 	file, err := os.CreateTemp(filepath.Dir(path), ".certificate-")
 	if err != nil {
-		return err
+		return false, err
 	}
 	temporary := file.Name()
 	defer os.Remove(temporary)
-	data := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-	if _, err = file.Write(data); err == nil {
+	if err = json.NewEncoder(file).Encode(identity); err == nil {
 		err = file.Sync()
 	}
 	closeErr := file.Close()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if closeErr != nil {
-		return closeErr
+		return false, closeErr
 	}
-	if err = os.Link(temporary, path); err != nil {
-		if !os.IsExist(err) {
-			return err
-		}
-		known, err := rovunetReadPin(path)
-		if err != nil {
-			return err
-		}
-		return rovunetSameKey(known, cert)
+	if replacePublic {
+		err = os.Rename(temporary, path)
+	} else {
+		err = os.Link(temporary, path)
+	}
+	if os.IsExist(err) && !replacePublic {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
 	}
 	if runtime.GOOS == "windows" {
-		return nil
-	} // Windows does not support fsync on a directory handle.
+		return true, nil
+	}
 	directory, err := os.Open(filepath.Dir(path))
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer directory.Close()
-	return directory.Sync()
+	return true, directory.Sync()
 }

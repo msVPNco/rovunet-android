@@ -26,6 +26,7 @@ object ProtocolHandshake {
         val process = ProcessBuilder(launcher.absolutePath, binary.absolutePath, "--probe")
             .directory(certificateDirectory.parentFile).redirectErrorStream(true).apply {
                 environment()["ROVUNET_CERTIFICATE_STORE"] = certificateDirectory.absolutePath
+                environment()["TMPDIR"] = certificateDirectory.parentFile.absolutePath
             }.start()
         suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { process.destroy() }
@@ -36,7 +37,6 @@ object ProtocolHandshake {
                     check(continuation.isActive && System.nanoTime() < deadline) { "Protocol handshake timed out" }
                     Thread.sleep(20)
                 }
-                check(process.exitValue() == 0) { "Protocol handshake failed" }
                 val reader = process.inputStream.reader(Charsets.UTF_8)
                 val output = CharArray(4097)
                 var size = 0
@@ -46,7 +46,13 @@ object ProtocolHandshake {
                     size += count
                 }
                 check(size < output.size) { "Invalid protocol probe response" }
-                val result = JSONObject(String(output, 0, size))
+                val result = runCatching { JSONObject(String(output, 0, size)) }.getOrNull()
+                if (process.exitValue() != 0) {
+                    val code = result?.optString("error").orEmpty().takeIf { it.matches(Regex("[a-z:-]{1,80}")) }
+                        ?: "exit-${process.exitValue()}"
+                    error("Protocol handshake failed ($code)")
+                }
+                requireNotNull(result) { "Invalid protocol probe response" }
                 require(result.getString("kind") == "protocol-handshake") { "Protocol handshake not confirmed" }
                 val elapsed = result.getLong("latencyMs")
                 require(elapsed in 0..12_000) { "Invalid handshake time" }

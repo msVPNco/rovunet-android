@@ -193,6 +193,14 @@ def main():
     adb("shell", "cmd", "appops", "set", PACKAGE, "ACTIVATE_VPN", "allow")
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/app.slipnet.presentation.MainActivity")
     with ssh_fixture(adb), soar_fixture() as soar_peers, slipstream_fixture(ROOT) as slipstream_peer, udp_protocol_fixture(ROOT) as udp_peers:
+        focused_classes = {"app.slipnet.core.ProtocolHandshakeDeviceTest",
+                           "app.slipnet.presentation.CardInteractionDeviceTest",
+                           "app.slipnet.service.SlipstreamIsolationDeviceTest"}
+        focused = adb("shell", "am", "instrument", "-w", "-r", "-e", "class", ",".join(sorted(focused_classes)),
+                      "-e", "slipstreamFixture", slipstream_peer, "-e", "udpProtocolFixture", udp_peers,
+                      f"{PACKAGE}.test/androidx.test.runner.AndroidJUnitRunner", timeout=240)
+        print(focused, flush=True)
+        print(f"PASS: {len(verified_tests(focused, {case for case in REQUIRED if case[0] in focused_classes}))} focused device tests.", flush=True)
         print("Running device regressions with local SSH and TLS peers", flush=True)
         result = adb("shell", "am", "instrument", "-w", "-r", "-e", "testVpnMtu", "true",
                      "-e", "sshFixturePort", "39222", "-e", "tlsFixturePort", "39223",

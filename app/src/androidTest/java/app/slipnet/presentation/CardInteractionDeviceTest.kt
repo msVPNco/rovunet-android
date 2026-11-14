@@ -82,6 +82,7 @@ class CardInteractionDeviceTest {
         }
         for (theme in listOf(DarkMode.LIGHT, DarkMode.DARK, DarkMode.AMOLED)) {
             compose.runOnIdle { mode = theme; result = PingResult.Success(22, quick = true, measuredAt = 1_000_000) }
+            compose.waitForIdle()
             assertEquals(expectedGreen, color("profile-latency-701"))
             compose.onNodeWithTag("profile-latency-701", useUnmergedTree = true).assertTextContains("TCP")
             compose.runOnIdle { result = PingResult.Success(22, quick = true, measuredAt = 699_999) }

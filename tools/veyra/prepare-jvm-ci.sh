@@ -26,7 +26,7 @@ trap 'rm -rf "$core_source"' EXIT
 git clone https://github.com/XTLS/Xray-core.git "$core_source"
 git -C "$core_source" checkout 63ca2e0c1d31b89f67700c33842431f541fedd25
 python3 tools/native/patch-xray-certificates.py "$core_source"
-(cd "$core_source" && go test ./transport/internet/tls -run TestRovunetAutomaticCertificate -count=1)
+(cd "$core_source" && go test ./transport/internet/tls -run TestRovunet -count=1)
 (cd "$core_source" && go build -trimpath -ldflags='-s -w -checklinkname=0' -o "$XRAY" ./main)
 cc -O2 app/src/main/cpp/veyra-core-launcher.c -o "$CORE_LAUNCHER"
 

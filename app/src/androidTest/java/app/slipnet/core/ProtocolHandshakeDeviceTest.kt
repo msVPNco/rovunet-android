@@ -21,13 +21,14 @@ class ProtocolHandshakeDeviceTest {
             repeat(3) { index ->
                 val link = links.getString(index)
                 assertTrue(ProtocolHandshake.supports(link))
-                assertTrue(withTimeout(15000) { measure(link) } >= 0)
+                try { assertTrue(withTimeout(15000) { measure(link) } >= 0) }
+                catch (error: Exception) { throw AssertionError("UDP fixture index $index: ${error.message}", error) }
                 assertEquals(before, app.slipnet.tunnel.XrayBridge.activeEndpoint)
             }
-            val stored = certificates.listFiles().orEmpty().filter { it.extension == "pem" }.associate { it.name to it.readText() }
+            val stored = certificates.listFiles().orEmpty().filter { it.extension == "json" }.associate { it.name to it.readText() }
             assertEquals(2, stored.size)
             repeat(2) { offset -> assertTrue(withTimeout(15000) { measure(links.getString(offset + 1)) } >= 0) }
-            assertEquals(stored, certificates.listFiles().orEmpty().filter { it.extension == "pem" }.associate { it.name to it.readText() })
+            assertEquals(stored, certificates.listFiles().orEmpty().filter { it.extension == "json" }.associate { it.name to it.readText() })
             val failed = runCatching { withTimeout(15000) { measure(fixture.getString("wrongWireguard")) } }
             assertTrue("Wrong WireGuard key was accepted", failed.isFailure)
             val pending = async(Dispatchers.IO) { measure(fixture.getString("wrongWireguard")) }

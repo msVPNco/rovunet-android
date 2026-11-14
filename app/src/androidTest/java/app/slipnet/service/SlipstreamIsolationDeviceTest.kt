@@ -20,25 +20,35 @@ class SlipstreamIsolationDeviceTest {
         var savedAt = 0L
         try {
             repeat(3) {
+                var phase = "worker"
+                try {
                 withTimeout(60000) {
                     SlipstreamProbePool.use(context) { client ->
                         assertTrue("Worker process was reused", pids.add(client.processId()))
                         val port = java.net.ServerSocket(0).use { it.localPort }
                         client.start(profile, "10.0.2.2", fixture.getInt("port"), port).getOrThrow()
+                        phase = "quic-ready"
                         while (!client.isQuicReady()) delay(50)
+                        phase = "echo"
                         withContext(Dispatchers.IO) {
                             java.net.Socket("127.0.0.1", client.getClientPort()).use { socket ->
                                 socket.soTimeout = 30000
                                 val sent = ByteArray(65536) { (it % 251).toByte() }
-                                socket.getOutputStream().write(sent)
                                 val received = ByteArray(sent.size)
-                                java.io.DataInputStream(socket.getInputStream()).readFully(received)
+                                coroutineScope {
+                                    val writer = async(Dispatchers.IO) { socket.getOutputStream().write(sent) }
+                                    java.io.DataInputStream(socket.getInputStream()).readFully(received)
+                                    writer.await()
+                                }
                                 assertArrayEquals(java.security.MessageDigest.getInstance("SHA-256").digest(sent),
                                     java.security.MessageDigest.getInstance("SHA-256").digest(received))
                             }
                         }
                         assertNull(app.slipnet.tunnel.TransportTrust.request.value)
                     }
+                }
+                } catch (error: Exception) {
+                    throw AssertionError("Automatic Slipstream iteration $it failed in $phase; certificate saved=${path.isFile}, bytes=${path.length()}", error)
                 }
                 assertTrue(path.isFile)
                 if (saved == null) { saved = path.readBytes(); savedAt = path.lastModified() }

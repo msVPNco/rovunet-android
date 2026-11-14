@@ -128,7 +128,14 @@ object TransportTrust {
         }
         val certificateKey = "$spkiKey.certificate"
         val certificate = android.util.Base64.encodeToString(chain.first().encoded, android.util.Base64.NO_WRAP)
-        val pinIdentity = privateCertificate || preferences.contains(spkiKey) || preferences.contains(legacyKey)
+        val cached = preferences.getString(certificateKey, null)
+        val hasPrivatePin = preferences.contains(spkiKey) || preferences.contains(legacyKey)
+        if (privateCertificate && !hasPrivatePin && cached != null) {
+            val previous = java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(
+                android.util.Base64.decode(cached, android.util.Base64.DEFAULT).inputStream()) as X509Certificate
+            check(previous.publicKey.encoded.contentEquals(chain.first().publicKey.encoded)) { "Server identity changed; connection refused" }
+        }
+        val pinIdentity = hasPrivatePin || (privateCertificate && cached == null)
         if ((pinIdentity && preferences.getString(spkiKey, null) != pin) || preferences.getString(certificateKey, null) != certificate || preferences.contains(legacyKey)) {
             val edit = preferences.edit().putString(certificateKey, certificate).remove(legacyKey)
             if (pinIdentity) edit.putString(spkiKey, pin)
