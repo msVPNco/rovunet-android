@@ -168,7 +168,7 @@ func run() error {
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--probe" {
 		if err := runProbe(); err != nil {
-			json.NewEncoder(os.Stdout).Encode(map[string]string{"error":probeFailure(err)})
+			json.NewEncoder(os.Stdout).Encode(map[string]string{"error": probeFailure(err)})
 			os.Exit(1)
 		}
 		return
