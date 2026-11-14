@@ -55,10 +55,10 @@ fun ProfileListItem(
                         style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     if (profile.isPinned) Icon(Icons.Default.PushPin, stringResource(R.string.ui_pinned), Modifier.size(14.dp), tint = colors.primary)
                     if (profile.isLocked) Icon(Icons.Default.Lock, stringResource(R.string.ui_locked), Modifier.size(14.dp))
-                    if (pingResult is PingResult.Success && pingResult.verified) {
+                    if (pingResult is PingResult.Success && (pingResult.verified || pingResult.quick)) {
                         val fresh = ProbeCache.fresh(pingResult, measurementNowMillis) && (!isConnected || measurementNowMillis - pingResult.measuredAt <= 65_000)
-                        val green = if (fresh) ConnectedGreen else colors.onSurfaceVariant
-                        Text(stringResource(R.string.alpha17_ping, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
+                        val green = if (fresh) ConnectedGreen else app.slipnet.presentation.theme.PreviousResultColor
+                        Text(stringResource(if (pingResult.verified) R.string.alpha17_ping else if (pingResult.handshake) R.string.probe_handshake_latency else R.string.probe_tcp_latency, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
                             .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                             color = green, style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
                             fontWeight = FontWeight.SemiBold)
@@ -79,7 +79,7 @@ fun ProfileListItem(
                     else -> ""
                 }
                 val test = when (pingResult) {
-                    is PingResult.Success -> if (pingResult.verified) "" else stringResource(R.string.ui_not_verified)
+                    is PingResult.Success -> if (pingResult.verified || pingResult.quick) "" else stringResource(R.string.ui_not_verified)
                     is PingResult.Error -> {
                         val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM,
                             androidx.compose.ui.platform.LocalResources.current.configuration.locales[0]).format(java.util.Date(pingResult.measuredAt))
@@ -161,7 +161,11 @@ fun ProfileListItem(
         if (details) {
             HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = colors.outlineVariant)
             val text = when (pingResult) {
-                is PingResult.Success -> if (pingResult.quick) stringResource(R.string.probe_quick_details, pingResult.setupMs,
+                is PingResult.Success -> if (pingResult.handshake) stringResource(R.string.probe_handshake_details,
+                    java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
+                else if (pingResult.quick && !pingResult.verified) stringResource(R.string.probe_tcp_details,
+                    java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
+                else if (pingResult.quick) stringResource(R.string.probe_quick_details, pingResult.setupMs,
                     java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
                 else stringResource(R.string.probe_stability_details, pingResult.successes, pingResult.attempts, pingResult.jitterMs, pingResult.setupMs,
                     java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
@@ -169,7 +173,7 @@ fun ProfileListItem(
                     java.text.DateFormat.getTimeInstance().format(java.util.Date(pingResult.measuredAt)), pingResult.message)
                 else -> stringResource(R.string.ui_not_verified)
             }
-            if (pingResult is PingResult.Success) Text(stringResource(R.string.alpha17_ping_hint), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+            if (pingResult is PingResult.Success && pingResult.verified) Text(stringResource(R.string.alpha17_ping_hint), Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
             Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = if (pingResult is PingResult.Error) colors.error else colors.onSurfaceVariant)
             if ((pingResult is PingResult.Success && !pingResult.currentNetwork) || (pingResult is PingResult.Error && !pingResult.currentNetwork)) {

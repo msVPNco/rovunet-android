@@ -83,7 +83,8 @@ class SshIdentityTest {
                             delay(20)
                         }
                     }
-                    assertEquals(if (index == 0) 1 else 2, decisions)
+                    // TLS certificate enrollment is automatic; only the SSH host key asks.
+                    assertEquals(1, decisions)
                     assertEquals(profile.id, (manager.connectionState.value as ConnectionState.Connected).profile.id)
                     stop(session)
                     val repeat = connect(profile, prompt = true)

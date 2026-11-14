@@ -16,13 +16,13 @@ val collectionTones: CollectionTones
         val colors = MaterialTheme.colorScheme
         return when {
             colors.background == Color.Black -> CollectionTones(
-                Color(0xFF191E29), Color(0xFF272F40), Color(0xFFEBEDF4),
-                Color.Transparent, Color(0xFF161C25), Color(0xFF343C50), Color(0xFF333C49))
+                Color(0xFF302344), Color(0xFF4B3962), Color(0xFFFFF1FF),
+                Color.Transparent, Color(0xFF111F35), Color(0xFF20375A), Color(0xFF435A79))
             colors.background.luminance() > 0.5f -> CollectionTones(
-                Color(0xFFEAECF4), Color(0xFFDDE3EF), Color(0xFF1F2C42),
-                Color.Transparent, Color.White, Color(0xFFE4EAF4), Color(0xFFD8DFEA))
+                Color(0xFFE3CEFF), Color(0xFFD7BAFA), Color(0xFF302044),
+                Color.Transparent, Color(0xFFE3EEFF), Color(0xFFCADFFF), Color(0xFFA3B9DE))
             else -> CollectionTones(
-                Color(0xFF30364A), Color(0xFF3B435A), Color(0xFFF1F2F8),
-                Color.Transparent, Color(0xFF2C3D54), Color(0xFF4B536D), Color(0xFF53627B))
+                Color(0xFF49395F), Color(0xFF5C4878), Color(0xFFFFF1FF),
+                Color.Transparent, Color(0xFF223E61), Color(0xFF315580), Color(0xFF597BA8))
         }
     }

@@ -41,6 +41,59 @@ class CardInteractionDeviceTest {
     @get:Rule val compose = createComposeRule()
     private val profile = ServerProfile(id = 701, name = "Synthetic SSH", domain = "example.invalid", tunnelType = TunnelType.SSH, collectionId = "ui-synthetic")
 
+    @Test fun cardButtonAndBothMenuTestsCallTheirOwnAction() {
+        var quick = 0
+        var detailed = 0
+        var connections = 0
+        compose.setContent { SlipstreamTheme(darkMode = DarkMode.DARK) {
+            CollectionCard(listOf(profile), emptyMap(), selected = false, expanded = false,
+                connectedProfileId = null, manualProfileId = null, connecting = false,
+                busy = false, canConnect = true, onConnect = { connections++ }, onDetails = {}, onRename = {},
+                onMove = {}, onTest = { quick++ }, onStabilityTest = { detailed++ }, onExport = {}, onDelete = {}, canDelete = true)
+        } }
+        compose.onNodeWithTag("collection-quick-test-ui-synthetic").performClick()
+        val menu = InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.rv_collection_actions_06a9e8)
+        compose.onNodeWithContentDescription(menu).performClick()
+        compose.onNodeWithTag("collection-menu-quick-test").performClick()
+        compose.onNodeWithContentDescription(menu).performClick()
+        compose.onNodeWithTag("collection-menu-detailed-test").performClick()
+        compose.runOnIdle { assertEquals(2, quick); assertEquals(1, detailed); assertEquals(0, connections) }
+    }
+
+    @Test fun tcpResultsAreGreenThenGrayAndFailuresRemainRedAcrossThemes() {
+        var mode by mutableStateOf(DarkMode.DARK)
+        var result by mutableStateOf<PingResult>(PingResult.Success(22, quick = true, measuredAt = 1_000_000))
+        var expectedGreen = androidx.compose.ui.graphics.Color.Unspecified
+        var expectedGray = androidx.compose.ui.graphics.Color.Unspecified
+        var expectedRed = androidx.compose.ui.graphics.Color.Unspecified
+        compose.setContent { SlipstreamTheme(darkMode = mode) {
+            val green = app.slipnet.presentation.theme.ConnectionSuccessColor
+            val gray = app.slipnet.presentation.theme.PreviousResultColor
+            val red = androidx.compose.material3.MaterialTheme.colorScheme.error
+            SideEffect { expectedGreen = green; expectedGray = gray; expectedRed = red }
+            ProfileListItem(profile, isSelected = false, isConnected = false, pingResult = result, measurementNowMillis = 1_000_000,
+                onClick = {}, onConnectClick = {}, onEditClick = {}, onDeleteClick = {}, onExportClick = {},
+                onShareQrClick = {}, onPinClick = {}, onPingClick = {})
+        } }
+        fun color(tag: String): androidx.compose.ui.graphics.Color {
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithTag(tag, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+            return layouts.single().layoutInput.style.color
+        }
+        for (theme in listOf(DarkMode.LIGHT, DarkMode.DARK, DarkMode.AMOLED)) {
+            compose.runOnIdle { mode = theme; result = PingResult.Success(22, quick = true, measuredAt = 1_000_000) }
+            compose.waitForIdle()
+            assertEquals(expectedGreen, color("profile-latency-701"))
+            compose.onNodeWithTag("profile-latency-701", useUnmergedTree = true).assertTextContains("TCP", substring = true)
+            compose.runOnIdle { result = PingResult.Success(22, quick = true, measuredAt = 699_999) }
+            assertEquals(expectedGray, color("profile-latency-701"))
+            compose.runOnIdle { result = PingResult.Success(22, quick = true, measuredAt = 1_000_000, currentNetwork = false) }
+            assertEquals(expectedGray, color("profile-latency-701"))
+            compose.runOnIdle { result = PingResult.Error("Synthetic refusal") }
+            assertEquals(expectedRed, color("profile-test-result-701"))
+        }
+    }
+
     @Test fun lockedPathDoesNotRevealTheRestoredDestinationLine() {
         compose.setContent { SlipstreamTheme {
             ProfileListItem(profile.copy(isLocked = true), isSelected = false, isConnected = false,

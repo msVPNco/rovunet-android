@@ -46,5 +46,10 @@ val DownloadGreen = Color(0xFF4CAF50)
 /** Status text keeps sufficient contrast on both light and dark surfaces. */
 val ConnectionSuccessColor: Color
     @androidx.compose.runtime.Composable get() =
-        if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF126B46)
-        else Color(0xFFB0E8C8)
+        if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF08613B)
+        else Color(0xFF9CF0C4)
+
+val PreviousResultColor: Color
+    @androidx.compose.runtime.Composable get() =
+        if (androidx.compose.material3.MaterialTheme.colorScheme.background.luminance() > 0.5f) Color(0xFF56606D)
+        else Color(0xFFCDD0D5)

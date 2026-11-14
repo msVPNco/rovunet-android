@@ -28,6 +28,8 @@ jobs:
           echo "ANDROID_AVD_HOME=$RUNNER_TEMP/rovunet-android/avd" >> "$GITHUB_ENV"
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0' 'ndk;29.0.14206865' emulator "$IMAGE"
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - uses: actions/cache@v4
         with:
           path: |
@@ -76,12 +78,12 @@ jobs:
           python3 tools/quality/check-gomobile-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
           python3 tools/quality/check-slipstream-apk.py app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" "$RUNNER_TEMP/rovunet-apksigner.jar"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk > "$RUNNER_TEMP/rovunet-code46-apk-badging.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk > "$RUNNER_TEMP/rovunet-code47-apk-badging.txt"
       - name: Retain verified minified APKs
         if: always() && !cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: rovunet-code46-review-validation
+          name: rovunet-code47-review-validation
           path: |
             ${{ runner.temp }}/Rovunet-minified-private.apk
             app/build/outputs/apk/full/release/*-full-release-universal-unsigned.apk
@@ -93,6 +95,6 @@ jobs:
             tools/veyra/device-results/*.png
             ${{ runner.temp }}/minified-device-crash.log
             ${{ runner.temp }}/rovunet-apksigner.jar
-            ${{ runner.temp }}/rovunet-code46-apk-badging.txt
+            ${{ runner.temp }}/rovunet-code47-apk-badging.txt
           if-no-files-found: error
           retention-days: 5

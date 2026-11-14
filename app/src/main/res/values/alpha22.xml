@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="probe_tcp_latency">TCP %1$d ms</string>
+    <string name="probe_tcp_details">TCP endpoint reached · tested %1$s · HTTPS and tunnel health not verified</string>
+    <string name="probe_tcp_results">%1$d reachable by TCP</string>
+    <string name="probe_handshake_latency">Handshake %1$d ms</string>
+    <string name="probe_handshake_details">Cryptographic protocol handshake · tested %1$s · Internet data path and HTTPS not verified; a TUIC QUIC handshake alone does not confirm account credentials</string>
+    <string name="probe_handshake_results">%1$d protocol handshakes succeeded</string>
+</resources>

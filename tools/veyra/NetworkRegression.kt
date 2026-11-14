@@ -33,10 +33,11 @@ fun main() {
  val ctx=SSLContext.getInstance("TLS").apply{init(km.keyManagers,null,null)}
  val ssl=ctx.serverSocketFactory.createServerSocket(0) as SSLServerSocket
  thread(isDaemon=true){while(!ssl.isClosed)runCatching { val s=ssl.accept() as SSLSocket;thread(isDaemon=true){runCatching{s.use{it.startHandshake()}}} }}
- check(runCatching { TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort) }.isFailure)
- TransportTrust.allowPrompt=true
- approve(waitMs = 1200) { TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort).close() }
- approve { check(runCatching { TlsSocketFactory("wrong.invalid",1000).createSocket("127.0.0.1",ssl.localPort) }.isFailure) }
+ TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort).close()
+ check(TransportTrust.request.value == null)
+ TlsSocketFactory("localhost",1000).createSocket("127.0.0.1",ssl.localPort).close()
+ check(TransportTrust.request.value == null) { "Certificate enrollment prompted" }
+ check(runCatching { TlsSocketFactory("wrong.invalid",1000).createSocket("127.0.0.1",ssl.localPort) }.isFailure)
  TransportTrust.allowPrompt=false
  ssl.close()
  val hung=ServerSocket(0);val raw=CompletableFuture<Socket>()

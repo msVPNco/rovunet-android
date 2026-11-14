@@ -1187,7 +1187,7 @@ class VpnRepositoryImpl @Inject constructor(
             debugStreams = debugLogging,
             idlePollIntervalMs = 10000,
             idleTimeoutMs = 120000,
-            certificatePath = app.slipnet.tunnel.SlipstreamCertificate.materialize(context, profile.slipstreamCertificate)
+            certificatePath = app.slipnet.tunnel.SlipstreamCertificate.materialize(context, profile.slipstreamCertificate, profile.domain)
         ).getOrThrow() }
         if (result.isFailure) {
             val exception = result.exceptionOrNull()

@@ -30,5 +30,14 @@ print('Rebuilt patched pinned Slipstream JNI library for all three Full ABIs.')
 
 # A matching synthetic server is used by emulator tests, never shipped in the APK.
 host_env = os.environ.copy()
-host_env.update(PICOQUIC_AUTO_BUILD='1', PICOQUIC_BUILD_DIR=str(SOURCE/'.picoquic-build/host'), BUILD_TYPE='Release')
+host_env.update(PICOQUIC_AUTO_BUILD='1', PICOQUIC_BUILD_DIR=str(SOURCE/'.picoquic-build/host'), BUILD_TYPE='Release',
+                CARGO_BUILD_JOBS='2', CARGO_PROFILE_DEV_DEBUG='0', CARGO_PROFILE_TEST_DEBUG='0')
+format_result = subprocess.run(['cargo','fmt','--all','--','--check'], cwd=SOURCE)
+if format_result.returncode:
+    # The pinned upstream/previous Android overlay has formatting drift outside
+    # this change. Keep those sources intact, as requested by the owner.
+    print('Existing upstream formatting drift retained; checking the edited verifier separately.', flush=True)
+run(['rustfmt','--check','--edition','2021','crates/slipstream-client/src/pinning.rs'], cwd=SOURCE)
+run(['python3', ROOT/'tools/native/check-slipstream-clippy.py', SOURCE], cwd=SOURCE, env=host_env)
+run(['cargo','test','--locked','-p','slipstream-client','--features','openssl-vendored,picoquic-minimal-build','pinning::tests'], cwd=SOURCE, env=host_env)
 run(['cargo','build','--locked','--release','-p','slipstream-server','--features','openssl-vendored,picoquic-minimal-build','-j2'], cwd=SOURCE, env=host_env)

@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.*
 
-/** Private, endpoint-scoped pins. First use requires an explicit user decision. Changed pins fail closed. */
+/** Private endpoint pins. TLS certificates enroll automatically; SSH host keys retain approval. */
 object TransportTrust {
     data class Request(val endpoint: String, val fingerprint: String, internal val answer: CompletableFuture<Boolean> = CompletableFuture())
     private lateinit var preferences: android.content.SharedPreferences
@@ -112,7 +112,38 @@ object TransportTrust {
         override fun getHostKey(): Array<HostKey> = emptyArray()
         override fun getHostKey(host: String?, type: String?): Array<HostKey> = emptyArray()
     }
-    fun tlsFactory(host: String, port: Int): SSLSocketFactory {
+    /** Called only after the TLS handshake and hostname verification have succeeded. */
+    fun rememberTlsCertificate(host: String, port: Int, chain: Array<X509Certificate>, privateCertificate: Boolean) = synchronized(pending) {
+        require(chain.isNotEmpty())
+        chain.first().checkValidity()
+        val endpoint = "TLS · $host:$port"
+        val legacyKey = storageKey(endpoint)
+        val spkiKey = storageKey("$endpoint · SPKI/v1")
+        preferences.getString(legacyKey, null)?.let {
+            check(it == fingerprint(chain.first().encoded)) { "Server identity changed; connection refused" }
+        }
+        val pin = fingerprint(chain.first().publicKey.encoded)
+        preferences.getString(spkiKey, null)?.let {
+            check(it == pin) { "Server identity changed; connection refused" }
+        }
+        val certificateKey = "$spkiKey.certificate"
+        val certificate = android.util.Base64.encodeToString(chain.first().encoded, android.util.Base64.NO_WRAP)
+        val cached = preferences.getString(certificateKey, null)
+        val hasPrivatePin = preferences.contains(spkiKey) || preferences.contains(legacyKey)
+        if (privateCertificate && !hasPrivatePin && cached != null) {
+            val previous = java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(
+                android.util.Base64.decode(cached, android.util.Base64.DEFAULT).inputStream()) as X509Certificate
+            check(previous.publicKey.encoded.contentEquals(chain.first().publicKey.encoded)) { "Server identity changed; connection refused" }
+        }
+        val pinIdentity = hasPrivatePin || (privateCertificate && cached == null)
+        if ((pinIdentity && preferences.getString(spkiKey, null) != pin) || preferences.getString(certificateKey, null) != certificate || preferences.contains(legacyKey)) {
+            val edit = preferences.edit().putString(certificateKey, certificate).remove(legacyKey)
+            if (pinIdentity) edit.putString(spkiKey, pin)
+            check(edit.commit()) { "Could not save server certificate" }
+        }
+    }
+
+    fun tlsFactory(host: String, port: Int, onPrivateCertificate: () -> Unit): SSLSocketFactory {
         val system = (TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).apply { init(null as java.security.KeyStore?) }).trustManagers.filterIsInstance<X509TrustManager>().single()
         val manager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) = system.checkClientTrusted(chain, auth)
@@ -121,7 +152,7 @@ object TransportTrust {
                 val endpoint = "TLS · $host:$port"
                 val spkiEndpoint = "$endpoint · SPKI/v1"
                 require(chain.isNotEmpty())
-                val pinned = synchronized(pending) {
+                synchronized(pending) {
                     val legacyKey = storageKey(endpoint)
                     val spkiKey = storageKey(spkiEndpoint)
                     val legacy = preferences.getString(legacyKey, null)
@@ -129,21 +160,21 @@ object TransportTrust {
                         // Do not infer an old pin's public key from a different certificate.
                         chain.forEach { it.checkValidity() }
                         check(legacy == fingerprint(chain.first().encoded)) { "Server identity changed; connection refused" }
-                        check(preferences.edit().putString(spkiKey, fingerprint(chain.first().publicKey.encoded))
-                            .remove(legacyKey).commit()) { "Could not migrate server identity" }
+                        onPrivateCertificate()
                     }
-                    preferences.contains(spkiKey)
-                }
-                if (pinned) {
-                    chain.forEach { it.checkValidity() }
-                    if (!verify(endpoint, chain.first().publicKey.encoded, false, spkiEndpoint)) throw java.security.cert.CertificateException("Server identity changed")
-                    return
+                    if (preferences.contains(spkiKey)) {
+                        chain.forEach { it.checkValidity() }
+                        if (!verify(endpoint, chain.first().publicKey.encoded, false, spkiEndpoint)) throw java.security.cert.CertificateException("Server identity changed")
+                        onPrivateCertificate()
+                        return
+                    }
                 }
                 try { system.checkServerTrusted(chain, auth) }
-                catch (e: java.security.cert.CertificateException) {
-                    require(chain.isNotEmpty())
+                catch (_: java.security.cert.CertificateException) {
+                    // First-use private certificates are enrolled after proof of possession and
+                    // hostname verification in ValidatedTls, never during this callback.
                     chain.forEach { it.checkValidity() }
-                    if (!verify(endpoint, chain.first().publicKey.encoded, storedEndpoint = spkiEndpoint)) throw e
+                    onPrivateCertificate()
                 }
             }
         }

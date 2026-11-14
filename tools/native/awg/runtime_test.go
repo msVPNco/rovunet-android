@@ -32,11 +32,25 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	if os.Getenv("ROVUNET_UDP_DEVICE_FIXTURE") == "1" {
+		if runUdpDeviceFixture() != nil {
+			fmt.Fprintln(os.Stdout, "FIXTURE_FAILED")
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	if os.Getenv("ROVUNET_SUPPLEMENTAL_FIXTURE") == "1" {
 		runSupplementalFixture()
 		os.Exit(0)
 	}
 	if os.Getenv("ROVUNET_AWG_TEST_CHILD") == "1" {
+		if len(os.Args) == 2 && os.Args[1] == "--probe" {
+			if err := runProbe(); err != nil {
+				fmt.Fprintln(os.Stderr, "Synthetic probe:", err)
+				os.Exit(1)
+			}
+			os.Exit(0)
+		}
 		main()
 		os.Exit(0)
 	}

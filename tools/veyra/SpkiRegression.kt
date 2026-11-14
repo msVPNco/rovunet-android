@@ -76,6 +76,19 @@ fun main() {
             active.set(tls(renewed))
             check(runCatching { connect() }.isFailure)
             check(preferences.contains(legacyKey(endpoint)))
+            TransportTrust.clear()
+            val spkiKey = legacyKey("$endpoint · SPKI/v1")
+            val certificateKey = "$spkiKey.certificate"
+            val changedLeaf = store(changedFile).getCertificate("probe") as X509Certificate
+            TransportTrust.rememberTlsCertificate("localhost", server.localPort, arrayOf(oldLeaf), privateCertificate = false)
+            check(!preferences.contains(spkiKey))
+            val cached = preferences.getString(certificateKey, null)
+            check(runCatching { TransportTrust.rememberTlsCertificate("localhost", server.localPort, arrayOf(changedLeaf), privateCertificate = true) }.isFailure)
+            check(preferences.getString(certificateKey, null) == cached)
+            TransportTrust.rememberTlsCertificate("localhost", server.localPort, arrayOf(changedLeaf), privateCertificate = false)
+            TransportTrust.rememberTlsCertificate("localhost", server.localPort, arrayOf(changedLeaf), privateCertificate = true)
+            check(!preferences.contains(spkiKey))
+            check(TransportTrust.request.value == null)
         } finally { server.close(); TransportTrust.clear() }
         println("PASS real TLS SPKI: legacy migration, renewed certificate with unchanged key, changed-key and legacy-mismatch refusal")
     } finally { directory.deleteRecursively() }

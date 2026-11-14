@@ -987,10 +987,7 @@ private fun MainScreenContent(
                                             onUpdate = if (representative.collectionId in uiState.subscriptionIds) ({ viewModel.requestSubscription(representative.collectionId) }) else null,
                                             onDelete = { deleteCollectionTarget = collection.toList() },
                                             canDelete = uiState.connectionState.isDisconnected,
-                                            onTest = {
-                                                if (uiState.proxyOnlyMode) viewModel.pingCollection(representative)
-                                                else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative) }
-                                            },
+                                            onTest = { viewModel.pingCollection(representative) },
                                             onStabilityTest = {
                                                 if (uiState.proxyOnlyMode) viewModel.pingCollection(representative, detailed = true)
                                                 else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingCollection(representative, detailed = true) }
@@ -1039,7 +1036,10 @@ private fun MainScreenContent(
                                         },
                                         onPinClick = { viewModel.togglePinProfile(profile) },
                                         onPingClick = { viewModel.pingSingleProfile(profile) },
-                                        onStabilityTestClick = { viewModel.pingSingleProfile(profile, detailed = true) },
+                                        onStabilityTestClick = {
+                                            if (uiState.proxyOnlyMode) viewModel.pingSingleProfile(profile, detailed = true)
+                                            else mainActivity?.requestVpnPermissionAndConnect { viewModel.pingSingleProfile(profile, detailed = true) }
+                                        },
                                         isPingRunning = uiState.isPingRunning,
                                         modifier = Modifier
                                     )

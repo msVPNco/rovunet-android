@@ -1241,14 +1241,15 @@ class MainViewModel @Inject constructor(
         return state.profiles.filter { ProfileCollections.key(it) == key }
     }
 
-    fun pingAllProfiles() { runCollection(connectAfter = false) }
+    fun pingAllProfiles() { startQuickTests(selectedMembers(), batched = true) }
 
     fun pingCollection(profile: ServerProfile, detailed: Boolean = false) {
         if (_uiState.value.isPingRunning || _uiState.value.collectionPrompt) return
         val key = ProfileCollections.key(profile)
         val manual = ConnectionChoice.rememberedPath(key, manualChoices, _uiState.value.profiles)
         _uiState.value = _uiState.value.copy(selectedCollection = key, manualProfileId = manual)
-        runCollection(connectAfter = false, detailed = detailed)
+        if (detailed) runCollection(connectAfter = false, detailed = true)
+        else startQuickTests(selectedMembers(), batched = true)
     }
 
     private val regroupStore get() = appContext.getSharedPreferences("rovunet_regroup", android.content.Context.MODE_PRIVATE)
@@ -1577,14 +1578,28 @@ class MainViewModel @Inject constructor(
             return
         }
 
-        val selected = selectedMembers()
-        if (onlyUnavailable(selected)) return
-        val profiles = selected.filterNot { it.needsCredentials }
-        if (profiles.isEmpty()) return
+        startQuickTests(selectedMembers())
+    }
 
+    private fun startQuickTests(selected: List<ServerProfile>, batched: Boolean = false) {
+        if (_uiState.value.isPingRunning || onlyUnavailable(selected)) return
+        val eligible = selected.filterNot { it.needsCredentials || it.isExpired || !it.tunnelType.isAvailable() }
+        if (eligible.isEmpty()) return
+        val hasUdpHandshake = eligible.any { ProfileCollections.isUdp(it) && app.slipnet.core.ProtocolHandshake.supports(it.coreLink) }
+        // A second WireGuard handshake can roam the server's peer away from the
+        // live tunnel. Preserve the existing disconnected-test boundary for UDP.
+        if (hasUdpHandshake && !connectionManager.connectionState.value.isDisconnected) {
+            _uiState.value = _uiState.value.copy(error = "PROBE_BUSY")
+            return
+        }
+        val batchKey = ProfileCollections.key(eligible.first()) + ":quick"
+        val offset = if (batched) (testBatchOffsets[batchKey] ?: 0).coerceAtMost(eligible.lastIndex) else 0
+        val profiles = if (batched) (eligible.drop(offset) + eligible.take(offset)).take(50) else eligible
+        val originalResults = _uiState.value.pingResults
+        val network = physicalNetworkSnapshot()
         val skipped = PING_UNSUPPORTED_TYPES
         val initial = profiles.associate { profile ->
-            profile.id to if (profile.tunnelType in skipped || ProfileCollections.isUdp(profile)) {
+            profile.id to if (profile.tunnelType in skipped || (ProfileCollections.isUdp(profile) && !app.slipnet.core.ProtocolHandshake.supports(profile.coreLink))) {
                 PingResult.Skipped
             } else {
                 PingResult.Pending
@@ -1594,26 +1609,46 @@ class MainViewModel @Inject constructor(
 
         activePathMonitor.pause(this, true)
         pingJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers()
-            )
+            var completed = initial.values.count { it == PingResult.Skipped }
+            val owner = kotlinx.coroutines.currentCoroutineContext()[Job]
+            val connectionGuard = if (hasUdpHandshake) launch {
+                connectionManager.connectionState.first { !it.isDisconnected }
+                owner?.cancel()
+            } else null
             try {
-                val jobs = profiles.filter { it.tunnelType !in skipped && !ProfileCollections.isUdp(it) }.map { profile ->
-                    launch {
+                _uiState.value = _uiState.value.copy(pingingViaGlobalDns = preferencesDataStore.parsedGlobalResolvers())
+                app.slipnet.util.scanWorkers(profiles.filter { initial[it.id] == PingResult.Pending }, 4) { profile ->
+                    if (ProfileCollections.isUdp(profile)) {
+                        val result = pingProtocol(profile)
+                        completed++
+                        val current = _uiState.value.profiles.firstOrNull { it.id == profile.id }
+                        if (current != null && ProfileDuplicates.key(current) == ProfileDuplicates.key(profile)) {
+                            val measurement = if (physicalNetworkSnapshot() == network) result
+                                else app.slipnet.domain.model.ProbeCache.historical(mapOf(profile.id to result)).getValue(profile.id)
+                            _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to measurement))
+                        }
+                    } else {
                         val target = getSimplePingTarget(profile)
                         val result = if (target != null) {
                             pingTcp(target.first, target.second)
                         } else {
                             PingResult.Error("No target")
                         }
-                        _uiState.value = _uiState.value.copy(
-                            pingResults = _uiState.value.pingResults + (profile.id to result)
-                        )
+                        completed++
+                        val current = _uiState.value.profiles.firstOrNull { it.id == profile.id }
+                        if (current != null && ProfileDuplicates.key(current) == ProfileDuplicates.key(profile)) {
+                            val measurement = if (physicalNetworkSnapshot() == network) result
+                                else app.slipnet.domain.model.ProbeCache.historical(mapOf(profile.id to result)).getValue(profile.id)
+                            _uiState.value = _uiState.value.copy(pingResults = _uiState.value.pingResults + (profile.id to measurement))
+                        }
                     }
                 }
-                jobs.forEach { it.join() }
             } finally {
-                _uiState.value = _uiState.value.copy(isPingRunning = false)
+                connectionGuard?.cancel()
+                if (batched && completed > 0) testBatchOffsets[batchKey] = (offset + completed) % eligible.size
+                _uiState.value = _uiState.value.copy(isPingRunning = false, pingResults = finishTestResults(originalResults))
+                activePathMonitor.pause(this@MainViewModel, false)
+                rememberHistory()
             }
         }
     }
@@ -1642,14 +1677,9 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun pingTcp(host: String, port: Int): PingResult {
-        return withContext(Dispatchers.IO) {
-            try {
-                val socket = Socket()
-                val start = System.nanoTime()
-                socket.connect(InetSocketAddress(host, port), 5000)
-                val elapsed = (System.nanoTime() - start) / 1_000_000
-                socket.close()
-                PingResult.Success(elapsed)
+        return try {
+                PingResult.Success(app.slipnet.core.TcpPing.measure(host, port), quick = true)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
             } catch (e: Exception) {
                 val msg = when (e) {
                     is java.net.SocketTimeoutException -> "Timeout"
@@ -1659,13 +1689,22 @@ class MainViewModel @Inject constructor(
                 }
                 PingResult.Error(msg)
             }
-        }
     }
+
+    private suspend fun pingProtocol(profile: ServerProfile): PingResult = try {
+        val native = java.io.File(appContext.applicationInfo.nativeLibraryDir)
+        val elapsed = app.slipnet.core.ProtocolHandshake.measure(profile.coreLink,
+            java.io.File(native, "librovunet_awg.so"), java.io.File(native, "libveyra_core_launcher.so"),
+            java.io.File(appContext.filesDir, "native-certificates"))
+        PingResult.Success(elapsed, quick = true, handshake = true)
+    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+      catch (_: Exception) { PingResult.Error("Protocol handshake failed") }
 
     fun pingSingleProfile(profile: ServerProfile, detailed: Boolean = false) {
         if (rejectUnavailableCredentials(profile)) return
         if (_uiState.value.isPingRunning) return
-        startRealTests(listOf(profile), detailed)
+        if (detailed) startRealTests(listOf(profile), detailed = true)
+        else startQuickTests(listOf(profile))
     }
 
     fun cancelPing() {

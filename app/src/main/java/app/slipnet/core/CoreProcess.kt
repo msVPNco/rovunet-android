@@ -32,7 +32,7 @@ class CoreProcess(private val diagnostics: Boolean = true) {
     }
 
     @Synchronized
-    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000, workDirectory: File? = null): Result<Unit> = runCatching {
+    fun start(binary: File, config: String, launcher: File? = null, startupTimeoutMs: Long = 10_000, workDirectory: File? = null, certificateDirectory: File? = null): Result<Unit> = runCatching {
         stop()
         if (diagnostics) ConnectionDiagnostics.record(ConnectionDiagnostics.Event.CORE_START)
         require(binary.isFile && binary.canExecute()) { "Xray binary missing for this ABI" }
@@ -66,6 +66,24 @@ class CoreProcess(private val diagnostics: Boolean = true) {
         command.add(executable.absolutePath)
         if (!auxiliary) command.addAll(listOf("run", "-c", "stdin:"))
         val builder = ProcessBuilder(command).redirectErrorStream(true)
+        certificateDirectory?.let {
+            check(it.isDirectory || it.mkdirs()) { "Certificate storage unavailable" }
+            builder.environment()["ROVUNET_CERTIFICATE_STORE"] = it.absolutePath
+            val outbound = settings.getJSONArray("outbounds").getJSONObject(0)
+            val upstream = outbound.optJSONObject("settings")
+            val authority = when (outboundProtocol) {
+                "hysteria" -> upstream
+                "vless", "vmess" -> upstream?.optJSONArray("vnext")?.optJSONObject(0)
+                "trojan", "shadowsocks" -> upstream?.optJSONArray("servers")?.optJSONObject(0)
+                else -> null
+            }
+            authority?.let { peer ->
+                val host = peer.optString("address")
+                val remotePort = peer.optInt("port")
+                if (host.isNotBlank() && remotePort in 1..65535)
+                    builder.environment()["ROVUNET_CERTIFICATE_ENDPOINT"] = "$host:$remotePort"
+            }
+        }
         if (auxiliary && workDirectory != null) {
             require(workDirectory.isDirectory)
             builder.environment()["TMPDIR"] = workDirectory.absolutePath
