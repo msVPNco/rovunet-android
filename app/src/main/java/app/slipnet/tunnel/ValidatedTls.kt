@@ -20,13 +20,19 @@ object ValidatedTls {
             if (elapsed >= TimeUnit.MILLISECONDS.toNanos(deadline.toLong())) runCatching { raw.close() }
         }, 100, 100, TimeUnit.MILLISECONDS)
         try {
-            val tls = TransportTrust.tlsFactory(host, port).createSocket(raw, host, port, true) as SSLSocket
+            var privateCertificate = false
+            val tls = TransportTrust.tlsFactory(host, port) { privateCertificate = true }.createSocket(raw, host, port, true) as SSLSocket
             tls.sslParameters = tls.sslParameters.apply {
                 if (!host.contains(':') && !host.matches(Regex("[0-9.]+"))) serverNames = listOf(SNIHostName(host))
                 endpointIdentificationAlgorithm = "HTTPS"
             }
             tls.soTimeout = deadline
             try { tls.startHandshake() } catch (e: Exception) { runCatching { tls.close() }; throw e }
+            try {
+                check(javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(host, tls.session)) { "TLS hostname mismatch" }
+                TransportTrust.rememberTlsCertificate(host, port, tls.session.peerCertificates
+                    .map { it as java.security.cert.X509Certificate }.toTypedArray(), privateCertificate)
+            } catch (e: Exception) { runCatching { tls.close() }; throw e }
             tls.soTimeout = 0
             return tls
         } catch (e: Exception) { runCatching { raw.close() }; throw e }

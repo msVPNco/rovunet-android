@@ -7,6 +7,50 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SlipstreamIsolationDeviceTest {
+    @Test fun automaticCertificatePersistsAcrossWorkerDeathsWithoutDuplicates() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val encoded = requireNotNull(InstrumentationRegistry.getArguments().getString("slipstreamFixture"))
+        val fixture = org.json.JSONObject(String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT), Charsets.UTF_8))
+        val profile = app.slipnet.domain.model.ServerProfile(name = "Automatic synthetic tunnel", domain = "tunnel.example.invalid", authoritativeMode = true)
+        val path = java.io.File(app.slipnet.tunnel.SlipstreamCertificate.materialize(context, "", profile.domain).removePrefix("tofu:"))
+        assertTrue(path.canonicalPath.startsWith(context.filesDir.canonicalPath + java.io.File.separator))
+        path.delete()
+        val pids = mutableSetOf<Int>()
+        var saved: ByteArray? = null
+        var savedAt = 0L
+        try {
+            repeat(3) {
+                withTimeout(60000) {
+                    SlipstreamProbePool.use(context) { client ->
+                        assertTrue("Worker process was reused", pids.add(client.processId()))
+                        val port = java.net.ServerSocket(0).use { it.localPort }
+                        client.start(profile, "10.0.2.2", fixture.getInt("port"), port).getOrThrow()
+                        while (!client.isQuicReady()) delay(50)
+                        withContext(Dispatchers.IO) {
+                            java.net.Socket("127.0.0.1", client.getClientPort()).use { socket ->
+                                socket.soTimeout = 30000
+                                val sent = ByteArray(65536) { (it % 251).toByte() }
+                                socket.getOutputStream().write(sent)
+                                val received = ByteArray(sent.size)
+                                java.io.DataInputStream(socket.getInputStream()).readFully(received)
+                                assertArrayEquals(java.security.MessageDigest.getInstance("SHA-256").digest(sent),
+                                    java.security.MessageDigest.getInstance("SHA-256").digest(received))
+                            }
+                        }
+                        assertNull(app.slipnet.tunnel.TransportTrust.request.value)
+                    }
+                }
+                assertTrue(path.isFile)
+                if (saved == null) { saved = path.readBytes(); savedAt = path.lastModified() }
+                else { assertArrayEquals(saved, path.readBytes()); assertEquals(savedAt, path.lastModified()) }
+            }
+            val expected = app.slipnet.domain.model.SlipstreamIdentity.certificate(fixture.getString("certificate"))
+            val received = app.slipnet.domain.model.SlipstreamIdentity.certificate(path.readText())
+            assertArrayEquals(requireNotNull(expected).encoded, requireNotNull(received).encoded)
+            assertEquals(1, path.parentFile?.listFiles()?.count { it.name == path.name })
+        } finally { path.delete() }
+    }
+
     @Test fun fourWorkersHaveIndependentProcessesAndReleaseCancelledSlots() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val ready = java.util.concurrent.atomic.AtomicInteger()

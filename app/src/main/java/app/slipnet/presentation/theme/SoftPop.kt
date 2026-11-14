@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.dp
 val softPopBackground: Brush
     @Composable get() = Brush.verticalGradient(when {
         MaterialTheme.colorScheme.background == Color.Black -> listOf(Color.Black, Color.Black)
-        MaterialTheme.colorScheme.background.luminance() > .5f -> listOf(Color(0xFFEEF1F8), Color(0xFFF7F8FC), Color.White)
-        else -> listOf(Color(0xFF26334D), Color(0xFF18243A), Color(0xFF0B1321))
+        MaterialTheme.colorScheme.background.luminance() > .5f -> listOf(Color(0xFFF0E7FF), Color(0xFFF3F5FF), Color(0xFFEBF8FA))
+        else -> listOf(Color(0xFF1A2341), Color(0xFF10182F), Color(0xFF0B1020))
     })
 
 @Composable

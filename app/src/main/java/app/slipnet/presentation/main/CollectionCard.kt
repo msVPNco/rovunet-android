@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
     val completed = profiles.mapNotNull { results[it.id] }
     val verified = completed.count { it is PingResult.Success && it.verified && ProbeCache.fresh(it) }
+    val reachable = completed.count { it is PingResult.Success && it.quick && !it.verified && ProbeCache.fresh(it) }
     val failed = completed.count { it is PingResult.Error && ProbeCache.fresh(it) }
     var menuOpen by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
@@ -87,9 +89,11 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
                         DropdownMenuItem(text = { Text(stringResource(if (expanded) R.string.ui_hide_paths else R.string.ui_show_paths)) },
                             modifier = Modifier.testTag("collection-menu-paths"),
                             onClick = { menuOpen = false; onDetails() })
-                        DropdownMenuItem(text = { Text(stringResource(if (profiles.size > 50) R.string.alpha17_next_batch else R.string.rv_test_this_collection_fa3ff3)) }, enabled = !busy,
+                        DropdownMenuItem(text = { Text(stringResource(R.string.probe_quick_test)) }, enabled = !busy,
+                            modifier = Modifier.testTag("collection-menu-quick-test"),
                             onClick = { menuOpen = false; onTest() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.probe_stability_test)) }, enabled = !busy,
+                            modifier = Modifier.testTag("collection-menu-detailed-test"),
                             onClick = { menuOpen = false; onStabilityTest() })
                         onAutomatic?.let { action -> DropdownMenuItem(text = { Text(stringResource(R.string.alpha17_smart_title)) },
                             onClick = { menuOpen = false; action() }) }
@@ -113,11 +117,19 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
             }
             if (updating) { Text(stringResource(R.string.subscription_updating_inline), style = MaterialTheme.typography.labelSmall); LinearProgressIndicator(Modifier.fillMaxWidth()) }
             accountStatus?.let { AccountStatusSummary(it) }
+            TextButton(onClick = onTest, enabled = !busy, modifier = Modifier.testTag("collection-quick-test-${ProfileCollections.key(profiles.first())}"),
+                colors = ButtonDefaults.textButtonColors(contentColor = tones.headerText)) {
+                Icon(Icons.Default.Speed, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.probe_quick_test))
+            }
             if (profiles.size > 50) MarqueeText(stringResource(R.string.alpha17_large_batch), style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
             if (profiles.any { it.needsCredentials }) MarqueeText(stringResource(R.string.collection_needs_credentials),
                 color = colors.error, style = MaterialTheme.typography.bodySmall)
             if (completed.isNotEmpty()) MarqueeText(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
                 style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
+            if (reachable > 0) MarqueeText(stringResource(R.string.probe_tcp_results, reachable),
+                style = MaterialTheme.typography.labelSmall, color = app.slipnet.presentation.theme.ConnectionSuccessColor)
         }
     }
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="probe_tcp_latency">TCP %1$d ms</string>
+    <string name="probe_tcp_details">TCP endpoint reached · tested %1$s · HTTPS and tunnel health not verified</string>
+    <string name="probe_tcp_results">%1$d reachable by TCP</string>
+</resources>

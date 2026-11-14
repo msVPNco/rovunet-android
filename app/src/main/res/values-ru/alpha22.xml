@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="probe_tcp_latency">TCP %1$d мс</string>
+    <string name="probe_tcp_details">Узел доступен по TCP · проверено %1$s · HTTPS и работа туннеля не проверены</string>
+    <string name="probe_tcp_results">%1$d доступно по TCP</string>
+</resources>

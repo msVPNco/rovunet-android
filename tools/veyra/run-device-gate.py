@@ -16,6 +16,11 @@ from slipstream_fixture import slipstream_fixture
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "app.veyra.client.candidate"
 REQUIRED = {
+    ("app.slipnet.presentation.ConnectionHistoryDeviceTest", "quickCollectionUsesOnlyTcpAndPreservesConnectionAndHistory"),
+    ("app.slipnet.security.TlsCertificateDeviceTest", "certificateEnrollmentIsAutomaticPersistentAndRejectsChangedIdentityOrWrongName"),
+    ("app.slipnet.presentation.CardInteractionDeviceTest", "tcpResultsAreGreenThenGrayAndFailuresRemainRedAcrossThemes"),
+    ("app.slipnet.presentation.CardInteractionDeviceTest", "cardButtonAndBothMenuTestsCallTheirOwnAction"),
+    ("app.slipnet.service.SlipstreamIsolationDeviceTest", "automaticCertificatePersistsAcrossWorkerDeathsWithoutDuplicates"),
     ("app.slipnet.service.SubscriptionDeviceTest", "panelFixturesRefreshPersistentlyForBothSavedUrls"),
     ("app.slipnet.data.subscription.AccountStatusDeviceTest", "suppliedPanelStatusFixturesPersistPeriodsForBothSubscriptionAliases"),
     ("app.slipnet.data.subscription.StatusTrustDeviceTest", "privateHighWaterSurvivesHealthyInvalidMissingHeadersAndReopen"),

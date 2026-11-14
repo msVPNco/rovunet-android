@@ -27,6 +27,32 @@ class ConnectionHistoryDeviceTest {
     private lateinit var repository: ProfileRepository
     private lateinit var historyStore: ConnectionHistoryStore
 
+    @Test fun quickCollectionUsesOnlyTcpAndPreservesConnectionAndHistory() = runBlocking<Unit> {
+        initializeDependencies()
+        val listener = ServerSocket(0)
+        val peer = async(Dispatchers.IO) { listener.accept().use { it.soTimeout = 5000; it.getInputStream().read() } }
+        val profile = ServerProfile(name = "Synthetic ping only", collectionId = "tcp-only-" + UUID.randomUUID(),
+            domain = "127.0.0.1", socks5ServerPort = listener.localPort, tunnelType = TunnelType.SOCKS5)
+        val id = repository.insertCollection(listOf(profile)).single()
+        try {
+            openScreen { vm, manager ->
+                val saved = vm.uiState.value.profiles.single { it.id == id }
+                val session = manager.currentSessionId
+                val selection = repository.getActiveProfile().first()?.id
+                onMain { vm.pingCollection(saved) }
+                val state = withTimeout(10000) { vm.uiState.first { !it.isPingRunning && it.pingResults[id] is PingResult.Success } }
+                val result = state.pingResults.getValue(id) as PingResult.Success
+                assertTrue(result.quick); assertFalse(result.verified); assertTrue(result.currentNetwork)
+                assertEquals(session, manager.currentSessionId)
+                assertEquals(selection, repository.getActiveProfile().first()?.id)
+                assertEquals(-1, withTimeout(5000) { peer.await() })
+                assertTrue(withTimeout(10000) { historyStore.flush() })
+                val cold = ConnectionHistoryStore(PreferencesDataStore(context)).load().results.single { it.id == id }.result as PingResult.Success
+                assertTrue(cold.quick); assertFalse(cold.verified); assertFalse(cold.currentNetwork)
+            }
+        } finally { listener.close(); peer.cancelAndJoin(); repository.deleteProfile(id) }
+    }
+
     private suspend fun initializeDependencies() {
         openScreen { vm, _ -> repository = vm.profileRepository; historyStore = vm.connectionHistoryStore }
         withTimeout(10_000) { check(historyStore.flush()) }
@@ -130,7 +156,7 @@ class ConnectionHistoryDeviceTest {
             repo.setActiveProfile(ids[0])
             openScreen { vm, _ ->
                 val profile = vm.uiState.value.profiles.single { it.id == ids[0] }
-                onMain { vm.pingCollection(profile) }
+                onMain { vm.pingCollection(profile, detailed = true) }
                 withTimeout(90_000) { vm.uiState.first { !it.isPingRunning && ids.all { id -> it.pingResults[id] is PingResult.Error } } }
                 withTimeout(15_000) { vm.uiState.first { it.profiles.filter { p -> p.id in ids }.all { p -> p.deletionReview != null } } }
                 assertTrue(ids.all { vm.uiState.value.pingResults[it] is PingResult.Error })

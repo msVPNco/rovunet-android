@@ -25,7 +25,7 @@ open class SlipstreamProbeService : VpnService() {
                             resolvers = listOf(ResolverConfig(args.getString("host").orEmpty(), args.getInt("port"), args.getBoolean("authoritative"))),
                             tcpListenPort = args.getInt("listen"), congestionControl = args.getString("cc").orEmpty(),
                             keepAliveInterval = args.getInt("keepAlive"),
-                            certificatePath = SlipstreamCertificate.materialize(this@SlipstreamProbeService, args.getString("certificate").orEmpty())).getOrThrow()
+                            certificatePath = SlipstreamCertificate.materialize(this@SlipstreamProbeService, args.getString("certificate").orEmpty(), args.getString("domain").orEmpty())).getOrThrow()
                         SlipstreamBridge.getClientPort()
                     }
                     reply?.writeNoException()
