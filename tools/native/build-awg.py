@@ -12,6 +12,13 @@ with tempfile.TemporaryDirectory(prefix='rovunet-awg-build-') as tmp:
  patch=ROOT/'tools/native/mihomo-socks-domain.patch'
  run(['git','apply','--check',patch],cwd=source)
  run(['git','apply',patch],cwd=source)
+ for name,target in [('outbound.go','adapter/outbound/rovunet_handshake.go'),('certificates.go','component/ca/rovunet.go')]:
+  shutil.copy2(ROOT/'tools/native/handshake'/name,source/target)
+ ca_config=source/'component/ca/config.go'
+ ca_text=ca_config.read_text()
+ needle='\treturn tlsConfig, nil\n'
+ assert ca_text.count(needle)==1
+ ca_config.write_text(ca_text.replace(needle,'\trovunetAutomaticCertificate(tlsConfig, opt)\n'+needle))
  dest=source/'cmd/rovunet-awg';shutil.copytree(ROOT/'tools/native/awg',dest)
  go=os.environ.get('GO','go')
  run([go,'test','./adapter/inbound','-run','TestParseSocksAddr(DomainLengths|FQDN)$','-count=1'],cwd=source)
@@ -24,3 +31,6 @@ with tempfile.TemporaryDirectory(prefix='rovunet-awg-build-') as tmp:
    env=os.environ.copy();env.update(GOOS='android',GOARCH=arch,GOARM='7',CGO_ENABLED='1',CC=str(ndk/'toolchains/llvm/prebuilt/linux-x86_64/bin'/(target+'-clang')))
    out=ROOT/'app/src/main/jniLibs'/abi/'librovunet_awg.so';out.parent.mkdir(parents=True,exist_ok=True)
    run([go,'build','-trimpath','-buildmode=pie','-ldflags=-s -w -checklinkname=0','-o',out,'./cmd/rovunet-awg'],cwd=source,env=env)
+  fixture=ROOT/'app/build/rovunet-test-fixtures/udp-protocols'
+  fixture.parent.mkdir(parents=True,exist_ok=True)
+  run([go,'test','-c','-o',fixture,'./cmd/rovunet-awg'],cwd=source)

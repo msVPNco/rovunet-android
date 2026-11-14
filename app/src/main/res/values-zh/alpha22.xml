@@ -3,4 +3,7 @@
     <string name="probe_tcp_latency">TCP %1$d 毫秒</string>
     <string name="probe_tcp_details">TCP 端点可达 · 测试时间 %1$s · 未验证 HTTPS 或隧道状态</string>
     <string name="probe_tcp_results">%1$d 条路径 TCP 可达</string>
+    <string name="probe_handshake_latency">握手 %1$d 毫秒</string>
+    <string name="probe_handshake_details">协议加密握手 · 测试时间 %1$s · 未验证互联网数据通路或 HTTPS；TUIC QUIC 握手本身不能确认账户凭据</string>
+    <string name="probe_handshake_results">%1$d 条路径握手成功</string>
 </resources>

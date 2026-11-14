@@ -96,6 +96,7 @@ object ConnectionHistory {
                             put("latency", result.latencyMs); put("verified", result.verified)
                             put("successes", result.successes); put("attempts", result.attempts)
                             put("jitter", result.jitterMs); put("setup", result.setupMs); put("quick", result.quick)
+                            put("handshake", result.handshake)
                         }
                         is PingResult.Error -> {
                             put("kind", "error"); put("at", result.measuredAt)
@@ -132,7 +133,7 @@ object ConnectionHistory {
                         val setup = item.getLong("setup")
                         require(latency >= 0 && jitter >= 0 && setup >= 0 && attempts in 1..3 && successes in 1..attempts)
                         PingResult.Success(latency, item.getBoolean("verified"), successes, attempts, jitter, setup, at,
-                            item.optBoolean("quick"), currentNetwork = false)
+                            item.optBoolean("quick"), currentNetwork = false, handshake = item.optBoolean("handshake"))
                     }
                     "error" -> PingResult.Error(item.getString("message").take(256), at, currentNetwork = false)
                     else -> error("Unknown measurement kind")

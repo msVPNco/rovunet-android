@@ -3,4 +3,7 @@
     <string name="probe_tcp_latency">TCP %1$d мс</string>
     <string name="probe_tcp_details">Узел доступен по TCP · проверено %1$s · HTTPS и работа туннеля не проверены</string>
     <string name="probe_tcp_results">%1$d доступно по TCP</string>
+    <string name="probe_handshake_latency">Рукопожатие %1$d мс</string>
+    <string name="probe_handshake_details">Криптографическое рукопожатие протокола · проверено %1$s · Интернет и HTTPS не проверены; QUIC-рукопожатие TUIC само по себе не подтверждает учётные данные</string>
+    <string name="probe_handshake_results">%1$d успешных рукопожатий</string>
 </resources>

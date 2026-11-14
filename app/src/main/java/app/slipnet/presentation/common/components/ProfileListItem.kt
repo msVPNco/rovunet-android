@@ -58,7 +58,7 @@ fun ProfileListItem(
                     if (pingResult is PingResult.Success && (pingResult.verified || pingResult.quick)) {
                         val fresh = ProbeCache.fresh(pingResult, measurementNowMillis) && (!isConnected || measurementNowMillis - pingResult.measuredAt <= 65_000)
                         val green = if (fresh) ConnectedGreen else app.slipnet.presentation.theme.PreviousResultColor
-                        Text(stringResource(if (pingResult.verified) R.string.alpha17_ping else R.string.probe_tcp_latency, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
+                        Text(stringResource(if (pingResult.verified) R.string.alpha17_ping else if (pingResult.handshake) R.string.probe_handshake_latency else R.string.probe_tcp_latency, pingResult.latencyMs), Modifier.testTag("profile-latency-${profile.id}")
                             .background(green.copy(alpha = .12f), RoundedCornerShape(8.dp)).padding(horizontal = 7.dp, vertical = 3.dp),
                             color = green, style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Ltr),
                             fontWeight = FontWeight.SemiBold)
@@ -161,7 +161,9 @@ fun ProfileListItem(
         if (details) {
             HorizontalDivider(Modifier.padding(horizontal = 12.dp), color = colors.outlineVariant)
             val text = when (pingResult) {
-                is PingResult.Success -> if (pingResult.quick && !pingResult.verified) stringResource(R.string.probe_tcp_details,
+                is PingResult.Success -> if (pingResult.handshake) stringResource(R.string.probe_handshake_details,
+                    java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
+                else if (pingResult.quick && !pingResult.verified) stringResource(R.string.probe_tcp_details,
                     java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))
                 else if (pingResult.quick) stringResource(R.string.probe_quick_details, pingResult.setupMs,
                     java.text.DateFormat.getDateTimeInstance().format(java.util.Date(pingResult.measuredAt)))

@@ -3,4 +3,7 @@
     <string name="probe_tcp_latency">TCP %1$d ms</string>
     <string name="probe_tcp_details">نقطهٔ اتصال با TCP پاسخ داد · تست %1$s · HTTPS و سلامت تونل تأیید نشده</string>
     <string name="probe_tcp_results">%1$d مسیر با پینگ TCP پاسخ داد</string>
+    <string name="probe_handshake_latency">دست‌دهی %1$d ms</string>
+    <string name="probe_handshake_details">دست‌دهی رمزنگاری‌شدهٔ پروتکل · تست %1$s · عبور اینترنت و HTTPS تأیید نشده؛ دست‌دهی QUIC در TUIC به‌تنهایی اعتبار حساب را تأیید نمی‌کند</string>
+    <string name="probe_handshake_results">دست‌دهی %1$d مسیر موفق بود</string>
 </resources>

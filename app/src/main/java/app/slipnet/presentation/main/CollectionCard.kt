@@ -44,7 +44,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
     val path = profiles.firstOrNull { it.id == (connectedProfileId ?: manualProfileId) }
     val completed = profiles.mapNotNull { results[it.id] }
     val verified = completed.count { it is PingResult.Success && it.verified && ProbeCache.fresh(it) }
-    val reachable = completed.count { it is PingResult.Success && it.quick && !it.verified && ProbeCache.fresh(it) }
+    val reachable = completed.count { it is PingResult.Success && it.quick && !it.verified && !it.handshake && ProbeCache.fresh(it) }
+    val handshakes = completed.count { it is PingResult.Success && it.handshake && ProbeCache.fresh(it) }
     val failed = completed.count { it is PingResult.Error && ProbeCache.fresh(it) }
     var menuOpen by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
@@ -129,6 +130,8 @@ fun CollectionCard(profiles: List<ServerProfile>, results: Map<Long, PingResult>
             if (completed.isNotEmpty()) MarqueeText(stringResource(R.string.probe_collection_results, verified, failed, profiles.size - verified - failed),
                 style = MaterialTheme.typography.labelSmall, color = tones.headerText.copy(alpha = .8f))
             if (reachable > 0) MarqueeText(stringResource(R.string.probe_tcp_results, reachable),
+                style = MaterialTheme.typography.labelSmall, color = app.slipnet.presentation.theme.ConnectionSuccessColor)
+            if (handshakes > 0) MarqueeText(stringResource(R.string.probe_handshake_results, handshakes),
                 style = MaterialTheme.typography.labelSmall, color = app.slipnet.presentation.theme.ConnectionSuccessColor)
         }
     }

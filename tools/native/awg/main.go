@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/metacubex/mihomo/component/auth"
+	"github.com/metacubex/mihomo/component/ca"
 	"github.com/metacubex/mihomo/config"
 	C "github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
@@ -139,6 +140,13 @@ func run() error {
 	}
 	defer os.RemoveAll(dir)
 	C.SetHomeDir(dir)
+	var supplied runtimeConfig
+	if err := json.Unmarshal(data, &supplied); err != nil {
+		return err
+	}
+	proxy := supplied.Outbounds[0].Settings
+	ca.RovunetCertificateDirectory = os.Getenv("ROVUNET_CERTIFICATE_STORE")
+	ca.RovunetCertificateEndpoint = fmt.Sprint(proxy["server"]) + ":" + fmt.Sprint(proxy["port"])
 	cfg, err := config.Parse(raw)
 	if err != nil {
 		return err
@@ -158,6 +166,13 @@ func run() error {
 	return nil
 }
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--probe" {
+		if runProbe() != nil {
+			fmt.Fprintln(os.Stdout, `{"error":"protocol handshake failed"}`)
+			os.Exit(1)
+		}
+		return
+	}
 	if run() != nil {
 		fmt.Fprintln(os.Stdout, "ROVUNET_AWG_FAILED")
 		os.Exit(1)

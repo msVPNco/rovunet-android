@@ -13,6 +13,18 @@ class ConnectionHistoryTest {
     private val profiles = listOf(ssh, naive, other)
     private fun success(time: Long = now) = PingResult.Success(85, true, measuredAt = time, quick = true)
 
+    @Test fun protocolHandshakesSurviveHistoryWithoutBecomingHttpsVerification() {
+        val measured = PingResult.Success(37, quick = true, handshake = true, measuredAt = now)
+        val saved = ConnectionHistory.capture(profiles, "one", emptyMap(), mapOf(1L to measured), false, false, now)
+        val encoded = ConnectionHistory.encode(saved)
+        val restored = ConnectionHistory.restoreResults(ConnectionHistory.decode(encoded), profiles, now).getValue(1L) as PingResult.Success
+        assertTrue(restored.handshake)
+        assertTrue(restored.quick)
+        assertFalse(restored.verified)
+        assertFalse(restored.currentNetwork)
+        assertFalse(ProbeCache.fresh(restored, now))
+    }
+
     @Test fun deletingReviewTokensMustNotInvalidateMeasurementsOrDuplicateEquality() {
         val before = ssh.copy(deletionReview = ProfileDeletionReview("ciphertext-before", "content-before"))
         val after = before.copy(isActive = true, lastConnectedAt = now, sortOrder = 20,
