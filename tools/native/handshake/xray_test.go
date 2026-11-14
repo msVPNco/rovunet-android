@@ -11,12 +11,58 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	utls "github.com/refraction-networking/utls"
 )
+
+func TestRovunetConcurrentEnrollmentPreservesTheFirstIdentity(t *testing.T) {
+	first, second := rovunetTestCertificate(t), rovunetTestCertificate(t)
+	path := filepath.Join(t.TempDir(), "identity.json")
+	start := make(chan struct{})
+	winners := make(chan []byte, 8)
+	failures := make(chan error, 8)
+	var workers sync.WaitGroup
+	for index := 0; index < 8; index++ {
+		certificate := first.Certificate[0]
+		if index%2 != 0 {
+			certificate = second.Certificate[0]
+		}
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			created, err := rovunetWriteIdentity(path, rovunetIdentity{Version: 1, Certificate: certificate}, false)
+			if err != nil {
+				failures <- err
+			} else if created {
+				winners <- certificate
+			}
+		}()
+	}
+	close(start)
+	workers.Wait()
+	close(winners)
+	close(failures)
+	for err := range failures {
+		t.Fatal(err)
+	}
+	if len(winners) != 1 {
+		t.Fatal("Enrollment did not have exactly one winner")
+	}
+	winner := <-winners
+	stored, err := rovunetReadIdentity(path)
+	if err != nil || string(stored.Certificate) != string(winner) || stored.PublicCA {
+		t.Fatal("Concurrent enrollment replaced the winning identity", err)
+	}
+	files, err := os.ReadDir(filepath.Dir(path))
+	if err != nil || len(files) != 1 {
+		t.Fatal("Concurrent enrollment left duplicate certificates or temporary files", err)
+	}
+}
 
 func rovunetTestCertificate(t *testing.T) tls.Certificate {
 	t.Helper()

@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='rovunet-awg-build-') as tmp:
  patch=ROOT/'tools/native/mihomo-socks-domain.patch'
  run(['git','apply','--check',patch],cwd=source)
  run(['git','apply',patch],cwd=source)
- for name,target in [('outbound.go','adapter/outbound/rovunet_handshake.go'),('certificates.go','component/ca/rovunet.go')]:
+ for name,target in [('outbound.go','adapter/outbound/rovunet_handshake.go'),('certificates.go','component/ca/rovunet.go'),('publish_unix.go','component/ca/rovunet_publish_unix.go'),('publish_other.go','component/ca/rovunet_publish_other.go')]:
   shutil.copy2(ROOT/'tools/native/handshake'/name,source/target)
  ca_config=source/'component/ca/config.go'
  ca_text=ca_config.read_text()

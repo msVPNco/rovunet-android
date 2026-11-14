@@ -212,7 +212,7 @@ index d6bb77e..4c99130 100644
      let prefer_static_openssl = cfg!(feature = "openssl-static");
      let openssl_no_vendor = env::var_os("OPENSSL_NO_VENDOR").is_some();
 diff --git a/crates/slipstream-client/src/pinning.rs b/crates/slipstream-client/src/pinning.rs
-index 08451bc..b26c715 100644
+index 08451bc..97719e1 100644
 --- a/crates/slipstream-client/src/pinning.rs
 +++ b/crates/slipstream-client/src/pinning.rs
 @@ -8,7 +8,10 @@ use slipstream_ffi::picoquic::{
@@ -288,7 +288,7 @@ index 08451bc..b26c715 100644
      let pem =
          fs::read(cert_path).map_err(|err| format!("Failed to read cert {}: {}", cert_path, err))?;
      let mut certs = X509::stack_from_pem(&pem)
-@@ -98,6 +125,97 @@ fn load_pinned_cert(cert_path: &str) -> Result<(Vec<u8>, PKey<Public>), String>
+@@ -98,6 +125,115 @@ fn load_pinned_cert(cert_path: &str) -> Result<(Vec<u8>, PKey<Public>), String>
      Ok((der, pkey))
  }
 
@@ -335,15 +335,33 @@ index 08451bc..b26c715 100644
 +        file.write_all(&pem)
 +            .and_then(|_| file.sync_all())
 +            .map_err(|err| err.to_string())?;
-+        // hard_link publishes a complete file atomically and cannot replace a concurrent pin.
-+        match fs::hard_link(&temporary, path) {
-+            Ok(()) => {
-+                #[cfg(unix)]
-+                fs::File::open(parent)
-+                    .and_then(|dir| dir.sync_all())
-+                    .map_err(|err| err.to_string())?;
-+                Ok(())
++        #[cfg(unix)]
++        {
++            use std::os::fd::AsRawFd;
++            let directory = fs::File::open(parent).map_err(|err| err.to_string())?;
++            // Android forbids hard links in app storage. Serialize first enrollment
++            // across processes, recheck the winner, then atomically rename the full file.
++            // The descriptor releases the lock automatically on return or process death.
++            loop {
++                // SAFETY: directory owns a live descriptor for the complete locked scope.
++                if unsafe { libc::flock(directory.as_raw_fd(), libc::LOCK_EX) } == 0 {
++                    break;
++                }
++                let error = std::io::Error::last_os_error();
++                if error.kind() != std::io::ErrorKind::Interrupted {
++                    return Err(error.to_string());
++                }
 +            }
++            if let Some(known) = load_optional_pin(path)? {
++                return matches(known);
++            }
++            fs::rename(&temporary, path).map_err(|err| err.to_string())?;
++            directory.sync_all().map_err(|err| err.to_string())?;
++            Ok(())
++        }
++        #[cfg(not(unix))]
++        match fs::hard_link(&temporary, path) {
++            Ok(()) => Ok(()),
 +            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
 +                matches(load_optional_pin(path)?.ok_or("Certificate disappeared")?)
 +            }
@@ -386,7 +404,7 @@ index 08451bc..b26c715 100644
  unsafe extern "C" fn pinned_verify_free(ctx: *mut ptls_verify_certificate_t) {
      if ctx.is_null() {
          return;
-@@ -114,7 +232,13 @@ unsafe extern "C" fn pinned_verify_certificate(
+@@ -114,7 +250,13 @@ unsafe extern "C" fn pinned_verify_certificate(
      certs: *mut ptls_iovec_t,
      num_certs: size_t,
  ) -> c_int {
@@ -401,7 +419,7 @@ index 08451bc..b26c715 100644
          return -1;
      }
      let verifier = &*(self_ptr as *const PinnedCertVerifier);
-@@ -125,15 +249,12 @@ unsafe extern "C" fn pinned_verify_certificate(
+@@ -125,15 +267,12 @@ unsafe extern "C" fn pinned_verify_certificate(
          return -1;
      }
      let leaf_bytes = std::slice::from_raw_parts(leaf.base as *const u8, leaf.len);
@@ -423,7 +441,7 @@ index 08451bc..b26c715 100644
      0
  }
 
-@@ -146,18 +267,21 @@ unsafe extern "C" fn pinned_verify_sign(
+@@ -146,18 +285,21 @@ unsafe extern "C" fn pinned_verify_sign(
      if verify_ctx.is_null() {
          return -1;
      }
@@ -448,7 +466,7 @@ index 08451bc..b26c715 100644
          Ok(false) => -1,
          Err(_) => -1,
      }
-@@ -265,3 +389,151 @@ fn verify_eddsa(
+@@ -265,3 +407,168 @@ fn verify_eddsa(
      verifier.update(data).map_err(|err| err.to_string())?;
      verifier.verify(sig).map_err(|err| err.to_string())
  }
@@ -594,8 +612,25 @@ index 08451bc..b26c715 100644
 +                job.join().unwrap().unwrap();
 +            }
 +        });
-+        assert!(persist_peer(&path, &certificate().0).is_err());
-+        assert_eq!(Some(der), load_optional_pin(&path).unwrap());
++        let (other, _) = certificate();
++        assert!(persist_peer(&path, &other).is_err());
++        assert_eq!(Some(der.clone()), load_optional_pin(&path).unwrap());
++        fs::remove_file(&path).unwrap();
++        let barrier = std::sync::Barrier::new(2);
++        std::thread::scope(|scope| {
++            let first = scope.spawn(|| {
++                barrier.wait();
++                persist_peer(&path, &der)
++            });
++            let second = scope.spawn(|| {
++                barrier.wait();
++                persist_peer(&path, &other)
++            });
++            let outcomes = [first.join().unwrap(), second.join().unwrap()];
++            assert_eq!(1, outcomes.iter().filter(|result| result.is_ok()).count());
++        });
++        let stored = load_optional_pin(&path).unwrap();
++        assert!(stored == Some(der) || stored == Some(other));
 +        assert_eq!(1, fs::read_dir(&dir).unwrap().count());
 +        fs::remove_dir_all(dir).unwrap();
 +    }

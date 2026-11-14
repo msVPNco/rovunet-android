@@ -143,7 +143,7 @@ func rovunetWriteIdentity(path string, identity rovunetIdentity, replacePublic b
 	if replacePublic {
 		err = os.Rename(temporary, path)
 	} else {
-		err = os.Link(temporary, path)
+		err = rovunetPublishFirst(temporary, path)
 	}
 	if os.IsExist(err) && !replacePublic {
 		return false, nil

@@ -15,6 +15,8 @@ def patch(source):
     assert 'option.' not in text
     target = source / 'transport/internet/tls'
     (target / 'rovunet.go').write_text(text, encoding='utf-8')
+    for name in ('publish_unix.go', 'publish_other.go'):
+        (target / ('rovunet_' + name)).write_text((shared.parent/name).read_text(encoding='utf-8').replace('package ca\n', 'package tls\n', 1), encoding='utf-8')
     config = target / 'config.go'
     text = config.read_text(encoding='utf-8')
     needle = '\n\treturn config\n}\n\n// Option for building TLS config.'
